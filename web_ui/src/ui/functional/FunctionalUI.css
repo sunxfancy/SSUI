@@ -1,0 +1,35 @@
+
+.functional-ui-root {
+    padding-left: 30px;
+    padding-right: 30px;
+}
+
+.functional-ui-container {
+    margin-top: 20px;
+    display: flex;
+    flex-direction: row;
+    align-items: stretch;
+    justify-content: center;
+}
+
+.functional-ui-input {
+    flex: 1;
+}
+
+.functional-ui-output {
+    flex: 1;
+}
+
+.functional-ui-button {
+    padding: 20px;
+}
+
+.functional-ui-select {
+    min-width: 200px !important;
+}
+
+
+.functional-ui-card {
+    margin: 10px;
+    padding: 20px;
+}

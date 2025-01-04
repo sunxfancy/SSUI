@@ -1,0 +1,19 @@
+{
+  "identifier": "desktop-capability",
+  "platforms": [
+    "macOS",
+    "windows",
+    "linux"
+  ],
+  "windows": [
+    "main"
+  ],
+  "permissions": [
+    "updater:default",
+    "upload:default",
+    "window-state:default",
+    "store:default",
+    "dialog:default",
+    "process:default"
+  ]
+}

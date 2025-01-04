@@ -1,0 +1,39 @@
+[tool.poetry]
+name = "ssui"
+version = "0.1.0"
+description = "A web-based user interface for stable scripts"
+authors = ["西风逍遥游 <sunxfancy@gmail.com>"]
+license = "GPL-3"
+readme = "README.md"
+packages = [{include = "ssui"}]
+
+[tool.poetry.dependencies]
+python = "^3.12"
+einops = "^0.8.0"
+transformers = "^4.47.1"
+tokenizers = "^0.21.0"
+safetensors = "^0.4.5"
+aiohttp = "^3.11.11"
+pyyaml = "^6.0.2"
+pillow = "^11.0.0"
+virtualenv = "^20.28.0"
+fastapi = {extras = ["standard"], version = "^0.115.6"}
+websockets = "^14.1"
+torch = {version = "^2.4.0+cu124", source = "pytorch-gpu-src"}
+torchvision = {version = "^0.19.0+cu124", source = "pytorch-gpu-src"}
+torchaudio = {version = "^2.4.0+cu124", source = "pytorch-gpu-src"}
+torchsde = "^0.2.6"
+diffusers = {extras = ["torch"], version = "^0.31.0"}
+accelerate = "^1.2.1"
+pydantic-settings = "^2.7.0"
+pydantic = "^2.10.4"
+
+
+[[tool.poetry.source]]
+name = "pytorch-gpu-src"
+url = "https://download.pytorch.org/whl/cu124"
+priority = "explicit"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"

@@ -1,0 +1,19 @@
+{
+  "name": "ssui",
+  "private": true,
+  "version": "1.0.0",
+  "author": "西风逍遥游 <sunxfancy@gmail.com>",
+  "license": "GPL-3.0-only",
+  "workspaces": [
+    "desktop",
+    "web_ui"
+  ],
+  "scripts": {
+    "server": "cd server && poetry run fastapi dev server.py --port=7422",
+    "web_ui": "cd web_ui && yarn dev",
+    "desktop": "cd desktop && yarn tauri dev",
+
+    "package_win": "poetry build && cd web_ui && yarn build && cd ../desktop && yarn tauri build",
+    "check_deps": "yarn --version && poetry --version && rustc --version && cargo --version"
+  }
+}

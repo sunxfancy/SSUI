@@ -1,0 +1,5 @@
+-name: ExampleModule
+-version: 1.0.0
+-venv: shared
+-dependencies:
+  - numpy = ^1.21.2
