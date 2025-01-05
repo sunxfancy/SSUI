@@ -37,12 +37,11 @@ class Sandbox:
 
 class VenvManager:
     def __init__(self, path: str):
-        self.venvs = {}        
+        self.venvs = {}
+        self.app_venvs = {} # index with project path
     
     def create_for_module(self, name: str):
         pass
     
-    
-        
-        
-        
+    def create_for_app(self, path: str):
+        pass

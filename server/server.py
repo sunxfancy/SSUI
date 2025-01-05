@@ -8,7 +8,7 @@ import os
 import json
 
 sys.path.append(os.path.join(os.path.dirname(__file__), ".."))
-from ss_executor import SSLoader
+from ss_executor import SSLoader, search_project_root
 
 from pydantic_settings import BaseSettings
 
@@ -36,11 +36,7 @@ async def device():
     return output
 
 
-def search_project_root(path):
-    while True:
-        if os.path.exists(os.path.join(path, "ssproject.yaml")):
-            return path
-        path = os.path.dirname(path)
+
 
 
 @app.get("/api/script")

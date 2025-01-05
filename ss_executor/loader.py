@@ -4,6 +4,8 @@ import importlib.machinery
 import inspect
 import os
 import sys
+import yaml
+
 sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
 
 from ssui.annotation import get_callables, reset_callables
@@ -34,10 +36,10 @@ class SSLoader:
     # Execute the module and get the callables
     def Execute(self):
         reset_callables()
-        M = self.spec.loader.exec_module(self.module)
+        self.spec.loader.exec_module(self.module)
         self.callables = get_callables()
-        if M.config:
-            self.config = M.config
+        if self.module.config:
+            self.config = self.module.config
 
     # Prepare call the target function
     def GetConfig(self, name: str, args: dict):
@@ -62,8 +64,39 @@ class SSLoader:
             print()
 
 
+class SSProject:
+    def __init__(self, path: str):
+        self.path = path
+        self.config = yaml.load(open(os.path.join(path, "ssproject.yaml"), "r"), Loader=yaml.FullLoader)
+    
+    def version(self):
+        return self.config['ssui_version']
+    
+    def dependencies(self):
+        def parse_version(version_str: str):
+            parts = version_str.split(' = ')
+            return parts[0], parts[1]
+        
+        deps_map = {}
+        for dep in self.config['dependencies']:
+            name, version = parse_version(dep)
+            deps_map[name] = version
+            
+        return deps_map
+        
+def search_project_root(path):
+    while True:
+        if os.path.exists(os.path.join(path, "ssproject.yaml")):
+            return path
+        path = os.path.dirname(path)
+
 if __name__ == '__main__':
     loader = SSLoader()
     loader.load(sys.argv[1])
     loader.Execute()
     loader.Show()
+    
+    root = search_project_root(sys.argv[1])
+    project = SSProject(root)
+    print(project.version())
+    print(project.dependencies())
