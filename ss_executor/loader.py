@@ -83,7 +83,7 @@ class SSProject:
             deps_map[name] = version
             
         return deps_map
-        
+
 def search_project_root(path):
     while True:
         if os.path.exists(os.path.join(path, "ssproject.yaml")):

@@ -36,9 +36,6 @@ async def device():
     return output
 
 
-
-
-
 @app.get("/api/script")
 async def script(script_path: str):
     script_path = os.path.normpath(script_path)
@@ -84,7 +81,6 @@ async def model(model_path: str):
 async def available_models(category: str):
     pass
 
-
 @app.post("/api/prepare")
 async def prepare(script_path: str, callable: str, params: dict):
     script_path = os.path.normpath(script_path)
@@ -94,8 +90,6 @@ async def prepare(script_path: str, callable: str, params: dict):
     loader.load(script_path)
     loader.Execute()
     return loader.GetConfig(callable, params)
-    
-    
 
 @app.post("/api/execute")
 async def execute(script_path: str, callable: str, params: dict):
