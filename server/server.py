@@ -10,16 +10,17 @@ import json
 sys.path.append(os.path.join(os.path.dirname(__file__), ".."))
 from ss_executor import SSLoader, search_project_root
 
-from pydantic_settings import BaseSettings
+from .extensions import ExtensionManager
 
+from pydantic_settings import BaseSettings
 
 class Settings(BaseSettings):
     host_web_ui: str = "../web_ui/dist"
 
-
 settings = Settings()
 app = FastAPI()
 
+ExtensionManager.instance().detectExtensions(app)
 
 @app.get("/api/version")
 async def version():
@@ -106,6 +107,9 @@ async def execute(script_path: str, callable: str, params: dict):
             # TODO：Convert the parameters to the correct type
             return func(**params)
 
+@app.get("/api/extensions")
+async def extensions():
+    return ExtensionManager.instance().extensions
 
 @app.websocket("/ws")
 async def websocket_endpoint(websocket: WebSocket):

@@ -14,7 +14,8 @@
     "@blueprintjs/table": "^5.3.1",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
-    "react-use": "^17.6.0"
+    "react-use": "^17.6.0",
+    "ssui_interface": "file:../ssui_interface"
   },
   "devDependencies": {
     "@types/react": "^18.3.1",

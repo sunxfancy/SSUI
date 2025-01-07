@@ -6,12 +6,15 @@
   "license": "GPL-3.0-only",
   "workspaces": [
     "desktop",
-    "web_ui"
+    "web_ui",
+    "ssui_interface"
   ],
   "scripts": {
     "server": "cd server && poetry run fastapi dev server.py --port=7422",
     "web_ui": "cd web_ui && yarn dev",
     "desktop": "cd desktop && yarn tauri dev",
+    "interface": "cd ssui_interface && yarn build",
+    "example": "cd extensions/example && yarn build",
 
     "package_win": "poetry build && cd web_ui && yarn build && cd ../desktop && yarn tauri build",
     "check_deps": "yarn --version && poetry --version && rustc --version && cargo --version"

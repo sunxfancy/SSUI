@@ -1,0 +1,11 @@
+name: ExampleExtension
+version: 1.0.0
+server:
+  venv: shared
+  dependencies:
+    - numpy = ^1.21.2
+  main: example_extension.py
+
+web_ui:
+  main: dist/example_extension_ui.js
+  
