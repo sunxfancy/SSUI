@@ -1,22 +1,19 @@
 
-type ExtensionMeta = {
-    name: string;
-    js_url: string;
-}
 
-class ExtensionLoader {
+export class ExtensionLoader {
     public async loadExtensions() {
         let response = await fetch('/api/extensions');
         if (!response.ok) {
             throw new Error('Failed to fetch extensions');
         }
-        let data = await response.json() as ExtensionMeta[];
-        for (let meta of data) {
+        let data = await response.json();
+        for (let key of Object.keys(data)) {
             let script = document.createElement('script');
-            script.src = window.location.host + meta.js_url;
-            script.setAttribute('name', meta.name);
+            script.src = 'http://' + window.location.host + data[key];
+            script.type='module';
+            script.setAttribute('name', key);
             document.head.appendChild(script);
-            this.extensions.set(meta.name, script);
+            this.extensions.set(key, script);
         }
     }
 

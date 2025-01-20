@@ -1,9 +1,11 @@
 import os
 import yaml
 from fastapi import FastAPI
+from fastapi.staticfiles import StaticFiles
 
 class ExtensionManager:
     def __init__(self, path: str = None):
+        self.modules = {}
         self.extensions = {}
         if path is None:
             path = os.path.join(os.path.dirname(__file__), "..", "extensions")
@@ -23,6 +25,7 @@ class ExtensionManager:
                         self.extensions[data["name"]] = data
                         
         self.loadPythonScripts(app)
+        self.setFileAPIforExtension(app)
                     
     @staticmethod
     def instance():
@@ -44,8 +47,15 @@ class ExtensionManager:
                         module = importlib.util.module_from_spec(spec)
                         module.app = app
                         spec.loader.exec_module(module)
-                        self.extensions[name]["module"] = module
+                        self.modules[name] = module
                     except Exception as e:
                         print(e)
-                        self.extensions[name]["module"] = None
-                    
+                        self.modules[name] = None
+
+    def setFileAPIforExtension(self, app: FastAPI):
+        for name, data in self.extensions.items():
+            if "web_ui" in data:
+                if "dist" in data["web_ui"]:
+                    dist_path = os.path.normpath(os.path.join(data["path"], data["web_ui"]["dist"]))
+                    print(f"Setting static files for {name} at {dist_path}")
+                    app.mount(f"/extension/{name}/dist", StaticFiles(directory=dist_path), name=name)

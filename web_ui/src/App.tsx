@@ -2,6 +2,11 @@
 import './App.css';
 import './components/InternalComponents';
 import { getUIProvider } from './ui/UIProvider';
+import { ExtensionLoader } from './extension/loader';
+
+
+let loader = new ExtensionLoader();
+loader.loadExtensions();
 
 function App() {
   function getView() {

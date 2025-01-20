@@ -130,6 +130,10 @@ export function FunctionalUI({ path }: FunctionalUIProps) {
         </div>
     }
 
+    function run(event: React.MouseEvent<HTMLElement, MouseEvent>) {
+        console.log('Run');
+    }
+
     function render(meta: ScriptMeta) {
         let selected = selectedFunc?.name ?? Object.keys(meta)[0];
 
@@ -141,7 +145,7 @@ export function FunctionalUI({ path }: FunctionalUIProps) {
                     {renderInputs(meta[selected])}
                 </div>
                 <div className="functional-ui-button">
-                    <Button intent="primary" text="Run" />
+                    <Button intent="primary" text="Run" onClick={run} />
                 </div>
                 <div className="functional-ui-output">
                     Output

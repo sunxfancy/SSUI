@@ -109,7 +109,10 @@ async def execute(script_path: str, callable: str, params: dict):
 
 @app.get("/api/extensions")
 async def extensions():
-    return ExtensionManager.instance().extensions
+    extension_dir = {}
+    for name, data in ExtensionManager.instance().extensions.items():
+        extension_dir[name] = "/extension/" + name + "/dist/" + data['web_ui']['main']
+    return extension_dir
 
 @app.websocket("/ws")
 async def websocket_endpoint(websocket: WebSocket):

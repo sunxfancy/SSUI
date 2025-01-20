@@ -7,5 +7,6 @@ server:
   main: example_extension.py
 
 web_ui:
-  main: dist/example_extension_ui.js
+  dist: dist/
+  main: main.js
   
