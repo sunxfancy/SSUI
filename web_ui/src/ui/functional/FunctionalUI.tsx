@@ -8,6 +8,7 @@ import "@blueprintjs/core/lib/css/blueprint.css";
 import "@blueprintjs/icons/lib/css/blueprint-icons.css";
 import { ItemPredicate, ItemRenderer, Select } from "@blueprintjs/select";
 import { getComponentsByType } from "../../components/ComponentsManager";
+import { IComponent } from "../../components/IComponent";
 
 interface callable {
     rank: number;
@@ -45,6 +46,17 @@ export function FunctionalUI({ path }: FunctionalUIProps) {
 
     const state = useAsync(queryScriptMeta, [path]);
     const [selectedFunc, setSelectedFunc] = React.useState<callable | undefined>();
+
+    let ref_inputs = new Map<string, React.RefObject<IComponent>>();
+    let ref_outputs = new Map<string, React.RefObject<IComponent>>();
+    const getRef = (index: string, container: Map<string, React.RefObject<IComponent>>) => {
+        if (container.has(index)) {
+            return container.get(index) ?? React.createRef<IComponent>();
+        }
+        let new_ref = React.createRef<IComponent>();
+        container.set(index, new_ref);
+        return new_ref;
+    }
 
     function renderSelect(meta: ScriptMeta) {
         const first = Object.keys(meta)[0];
@@ -94,7 +106,7 @@ export function FunctionalUI({ path }: FunctionalUIProps) {
 
         return <Tabs id={name} key={name}>
             {components.filter(c => c.port == 'input')
-                .map(c => <Tab key={c.name} id={c.name} title={c.name} panel={c.component}></Tab>)}
+                .map(c => <Tab key={c.name} id={c.name} title={c.name} panel={c.createComponent(getRef(c.name, ref_inputs))}></Tab>)}
         </Tabs>
     }
 
@@ -116,7 +128,7 @@ export function FunctionalUI({ path }: FunctionalUIProps) {
 
         return <Tabs id="outputTabs">
             {components.filter(c => c.port == 'output')
-                .map(c=> <Tab key={c.name} id={c.name} title={c.name} panel={c.component}></Tab>)}
+                .map(c=> <Tab key={c.name} id={c.name} title={c.name} panel={c.createComponent(getRef(c.name, ref_outputs))}></Tab>)}
         </Tabs>
     }
 
@@ -130,12 +142,15 @@ export function FunctionalUI({ path }: FunctionalUIProps) {
         </div>
     }
 
-    function run(event: React.MouseEvent<HTMLElement, MouseEvent>) {
-        console.log('Run');
-    }
-
     function render(meta: ScriptMeta) {
         let selected = selectedFunc?.name ?? Object.keys(meta)[0];
+
+        function run(event: React.MouseEvent<HTMLElement, MouseEvent>) {
+            console.log('Run', meta[selected]);
+            Object.entries(meta[selected].params).map(([key, value]) =>
+                console.log(key, ref_inputs.get(key)?.current?.onExecute())
+            );
+        }
 
         return <div>
             {renderSelect(meta)}

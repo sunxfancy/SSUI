@@ -3,12 +3,20 @@ export interface ComponentRegister {
     type: string;
     port: string;
     component: any;
+    createComponent(ref: React.RefObject<IComponent>): JSX.Element;
 }
 
-let components: { [key : string] : ComponentRegister } = {};
+import React from 'react';
+import { IComponent } from './IComponent';
+
+let components: { [key: string]: ComponentRegister } = {};
 
 export function registerComponent(component: ComponentRegister) {
     components[component.name] = component;
+    if (!component.createComponent)
+        component.createComponent = (ref: React.RefObject<IComponent>) => {
+            return React.createElement(component.component, {'ref': ref});
+        }
 }
 
 export function registerComponents(components: ComponentRegister[]) {

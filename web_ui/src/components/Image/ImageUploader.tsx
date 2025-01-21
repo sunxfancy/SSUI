@@ -1,13 +1,17 @@
-import React from 'react';
+import { IComponent } from '../IComponent';
 
 type ImageUploaderState = {
     image: string;
 }
 
-export class ImageUploader extends React.Component<{}, ImageUploaderState> {
+export class ImageUploader extends IComponent<{}, ImageUploaderState> {
     constructor(props: {}) {
         super(props);
         this.state = { image: '' };
+    }
+
+    onExecute() {
+        return { 'image': this.state.image };
     }
 
     onclick() {
@@ -30,24 +34,22 @@ export class ImageUploader extends React.Component<{}, ImageUploaderState> {
     }
 }
 
-function ImageUploaderFunc() {
-    return <ImageUploader />;
-}
-
 type ImagePreviewProps = {
     src: string;
 }
 
-export function ImagePreview({ src }: ImagePreviewProps) {
-    return <div>
-        {src ? <img src={src} alt="placeholder" /> : <p>No image</p>}
-    </div>
+export class ImagePreview extends IComponent<ImagePreviewProps, ImageUploaderState> {
+    render() {
+        return <div>
+            {this.props.src ? <img src={this.props.src} alt="placeholder" /> : <p>No image</p>}
+        </div>
+    }
 }
 
 // Register into the component manager
 import { registerComponent, ComponentRegister } from '../ComponentsManager';
 
 [
-    { 'name': 'ImageUploader', 'type': 'ssui.base.Image', 'port': 'input', 'component': ImageUploaderFunc } as ComponentRegister,
+    { 'name': 'ImageUploader', 'type': 'ssui.base.Image', 'port': 'input', 'component': ImageUploader } as ComponentRegister,
     { 'name': 'ImagePreview', 'type': 'ssui.base.Image', 'port': 'output', 'component': ImagePreview } as ComponentRegister
 ].forEach(registerComponent);

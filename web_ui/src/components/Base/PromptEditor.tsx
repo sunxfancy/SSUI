@@ -1,12 +1,26 @@
 import {TextArea} from '@blueprintjs/core';
+import React from 'react';
+import { IComponent } from '../IComponent';
 
-export function PromptEditor() {
-    // const [state, setState] = React.useState({textContent: ''});
-    // const onInputChange = (event: React.ChangeEvent<HTMLTextAreaElement>) => {
-    //     setState({textContent: event.target.value});
-    // }
+class PromptEditor extends IComponent<{}, {textContent: string}> {
+    constructor(props: {}) {
+        super(props);
+        this.state = {textContent: ''};
+        this.onInputChange = this.onInputChange.bind(this);
+    }
 
-    return <TextArea fill={true} value="" />
+    onInputChange(event: React.ChangeEvent<HTMLTextAreaElement>) {
+        this.setState({textContent: event.target.value});
+    }
+
+    onExecute(): any {
+        console.log('PromptEditor: Execute');
+        return { 'textContent': this.state.textContent };
+    }
+
+    render() {
+        return <TextArea fill={true} value={this.state.textContent} onChange={this.onInputChange} />
+    }
 }
 
 

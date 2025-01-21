@@ -1,14 +1,23 @@
-import {Text} from '@blueprintjs/core';
+import { Text } from '@blueprintjs/core';
+import { IComponent } from '../IComponent';
 
-export function StringEditor() {
-    return <Text>String Editor</Text>
+export class StringEditor extends IComponent<{}, { textContent: string }> {
+    render(): ReactNode {
+        return <Text>String Editor</Text>
+    }
+
+    onExecute(): any {
+        return { 'textContent': this.state.textContent };
+    }
 }
 
-export function StringPreview() {
-    return <p>String Preview</p>
+export class StringPreview extends IComponent<{}, { textContent: string }> {
+    render() {
+        return <p>String Preview</p>
+    }
 }
 
-
+import { ReactNode } from 'react';
 // Register into the component manager
 import { registerComponent, ComponentRegister } from '../ComponentsManager';
 [
