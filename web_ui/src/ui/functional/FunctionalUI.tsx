@@ -49,12 +49,13 @@ export function FunctionalUI({ path }: FunctionalUIProps) {
 
     let ref_inputs = new Map<string, React.RefObject<IComponent>>();
     let ref_outputs = new Map<string, React.RefObject<IComponent>>();
-    const getRef = (index: string, container: Map<string, React.RefObject<IComponent>>) => {
+    const getRef = (index: string, cname:string, container: Map<string, React.RefObject<IComponent>>) => {
         if (container.has(index)) {
             return container.get(index) ?? React.createRef<IComponent>();
         }
         let new_ref = React.createRef<IComponent>();
         container.set(index, new_ref);
+        console.log('New ref', index, new_ref);
         return new_ref;
     }
 
@@ -106,7 +107,7 @@ export function FunctionalUI({ path }: FunctionalUIProps) {
 
         return <Tabs id={name} key={name}>
             {components.filter(c => c.port == 'input')
-                .map(c => <Tab key={c.name} id={c.name} title={c.name} panel={c.createComponent(getRef(c.name, ref_inputs))}></Tab>)}
+                .map(c => <Tab key={c.name} id={c.name} title={c.name} panel={c.createComponent(getRef(name, c.name, ref_inputs))}></Tab>)}
         </Tabs>
     }
 
@@ -123,12 +124,12 @@ export function FunctionalUI({ path }: FunctionalUIProps) {
         </div>
     }
 
-    function renderOutput(type: string) {
+    function renderOutput(key: number, type: string) {
         let components = getComponentsByType(type);
 
         return <Tabs id="outputTabs">
             {components.filter(c => c.port == 'output')
-                .map(c=> <Tab key={c.name} id={c.name} title={c.name} panel={c.createComponent(getRef(c.name, ref_outputs))}></Tab>)}
+                .map(c=> <Tab key={c.name} id={c.name} title={c.name} panel={c.createComponent(getRef(key.toString(), c.name, ref_outputs))}></Tab>)}
         </Tabs>
     }
 
@@ -136,7 +137,7 @@ export function FunctionalUI({ path }: FunctionalUIProps) {
         return <div>
             {Object.entries(meta.returns).map(([key, value]) =>
                 <Card key={key} elevation={Elevation.TWO} className="functional-ui-card">
-                    {renderOutput(value)}
+                    {renderOutput(key, value)}
                 </Card>
             )}
         </div>
@@ -147,9 +148,11 @@ export function FunctionalUI({ path }: FunctionalUIProps) {
 
         function run(event: React.MouseEvent<HTMLElement, MouseEvent>) {
             console.log('Run', meta[selected]);
-            Object.entries(meta[selected].params).map(([key, value]) =>
-                console.log(key, ref_inputs.get(key)?.current?.onExecute())
-            );
+            console.log(ref_inputs)
+            Object.entries(meta[selected].params).map(([key, value]) => {
+                console.log(ref_inputs.get(key), ref_inputs.get(key)?.current);
+                console.log(key, ref_inputs.get(key)?.current?.onExecute());
+            });
         }
 
         return <div>
