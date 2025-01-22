@@ -6,9 +6,11 @@ import './FunctionalUI.css';
 import "normalize.css";
 import "@blueprintjs/core/lib/css/blueprint.css";
 import "@blueprintjs/icons/lib/css/blueprint-icons.css";
+import { Collapse } from "@blueprintjs/core";
 import { ItemPredicate, ItemRenderer, Select } from "@blueprintjs/select";
 import { getComponentsByType } from "../../components/ComponentsManager";
 import { IComponent } from "../../components/IComponent";
+
 
 interface callable {
     rank: number;
@@ -46,6 +48,7 @@ export function FunctionalUI({ path }: FunctionalUIProps) {
 
     const state = useAsync(queryScriptMeta, [path]);
     const [selectedFunc, setSelectedFunc] = React.useState<callable | undefined>();
+    const [isOpen, setIsOpen] = React.useState(false);
 
     let ref_inputs = new Map<string, React.RefObject<IComponent>>();
     let ref_outputs = new Map<string, React.RefObject<IComponent>>();
@@ -124,12 +127,13 @@ export function FunctionalUI({ path }: FunctionalUIProps) {
         </div>
     }
 
-    function renderOutput(key: number, type: string) {
+    function renderOutput(key: string, type: string) {
+        console.log('Render output', key, type);
         let components = getComponentsByType(type);
 
         return <Tabs id="outputTabs">
             {components.filter(c => c.port == 'output')
-                .map(c=> <Tab key={c.name} id={c.name} title={c.name} panel={c.createComponent(getRef(key.toString(), c.name, ref_outputs))}></Tab>)}
+                .map(c=> <Tab key={c.name} id={c.name} title={c.name} panel={c.createComponent(getRef(key, c.name, ref_outputs))}></Tab>)}
         </Tabs>
     }
 
@@ -170,6 +174,14 @@ export function FunctionalUI({ path }: FunctionalUIProps) {
                     {renderOutputs(meta[selected])}
                 </div>
             </div>
+            <Button intent="primary" onClick={() => setIsOpen(!isOpen)}>
+                {isOpen ? "Hide Details" : "Show Details"}
+            </Button>
+            <Collapse isOpen={isOpen}>
+                <p>
+                    Here are some details about the script.
+                </p>
+            </Collapse>
         </div>
 
     }
