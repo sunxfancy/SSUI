@@ -10,7 +10,7 @@ import { Collapse } from "@blueprintjs/core";
 import { ItemPredicate, ItemRenderer, Select } from "@blueprintjs/select";
 import { getComponentsByType } from "../../components/ComponentsManager";
 import { IComponent } from "../../components/IComponent";
-
+import { DetailsPanel } from "./Details";
 
 interface callable {
     rank: number;
@@ -178,9 +178,7 @@ export function FunctionalUI({ path }: FunctionalUIProps) {
                 {isOpen ? "Hide Details" : "Show Details"}
             </Button>
             <Collapse isOpen={isOpen}>
-                <p>
-                    Here are some details about the script.
-                </p>
+                <DetailsPanel path={path} selected={selected} />
             </Collapse>
         </div>
 

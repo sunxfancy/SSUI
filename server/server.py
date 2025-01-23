@@ -83,14 +83,17 @@ async def available_models(category: str):
     pass
 
 @app.post("/api/prepare")
-async def prepare(script_path: str, callable: str, params: dict):
+async def prepare(script_path: str, callable: str):
+    print("/api/prepare")
+    print(script_path, callable)
+    
     script_path = os.path.normpath(script_path)
     project_root = search_project_root(os.path.dirname(script_path))
     
     loader = SSLoader()
     loader.load(script_path)
     loader.Execute()
-    return loader.GetConfig(callable, params)
+    return loader.GetConfig(callable)
 
 @app.post("/api/execute")
 async def execute(script_path: str, callable: str, params: dict):

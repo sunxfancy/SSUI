@@ -8,11 +8,12 @@ config = SSUIConfig()
 
 @workflow
 def txt2img(model: SD1Model, positive: Prompt, negative: Prompt) -> Image:
+    print(model, positive, negative)
     positive, negative = SD1Clip(config("Prompt To Condition"), model, positive, negative)
     random_noise = Noise(config("Generate Noise"))
     latent = SD1Latent(config("Noise To Latent"), random_noise, model)
     latent = SD1Denoise(config("Denoise"), model, latent, positive, negative)
-    return SD1LatentDecode(config("Latent to Image"), latent)
+    return SD1LatentDecode(config("Latent to Image"), model, latent)
 
 
 @workflow

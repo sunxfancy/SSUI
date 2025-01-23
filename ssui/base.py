@@ -5,4 +5,5 @@ class Prompt():
     pass
 
 class Noise():
-    pass
+    def __init__(self, config):
+        self.config = config

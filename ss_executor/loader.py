@@ -42,16 +42,23 @@ class SSLoader:
             self.config = self.module.config
 
     # Prepare call the target function
-    def GetConfig(self, name: str, args: dict):
+    def GetConfig(self, name: str):
         callable = None
-        for func in self.callables:
+        for func, param_types, return_type in self.callables:
             if func.__name__ == name:
                 callable = func
+                param_types = param_types
+                return_type = return_type
                 break
         
         if callable:
             self.config.set_prepared()
-            callable(*args)
+            params = {}
+            for param in param_types:
+                params[param] = None
+            print(f"Config: {callable.__name__}")
+            print(f"Parameters: {params}")
+            callable(**params)
 
     def Show(self):
         print(self.callables)
