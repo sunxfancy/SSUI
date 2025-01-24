@@ -59,6 +59,7 @@ class SSLoader:
             print(f"Config: {callable.__name__}")
             print(f"Parameters: {params}")
             callable(**params)
+            return self.config._config
 
     def Show(self):
         print(self.callables)

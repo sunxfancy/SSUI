@@ -4,9 +4,19 @@ class SSUIConfig:
     
     def __init__(self):
         self._is_prepare = False
+        self._config = {}
+        self._current = None
     
     def __call__(self, name):
-        pass
+        self._config[name] = {}
+        self._current = name
+        return self
+    
+    def __getitem__(self, name):
+        return self._config[self._current][name]
+    
+    def __setitem__(self, name, value):
+        self._config[self._current][name] = value
     
     def is_prepare(self):
         return self._is_prepare

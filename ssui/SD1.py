@@ -1,4 +1,5 @@
 from .base import Prompt, Noise
+from .annotation import param
 
 class SD1Model:
     pass
@@ -6,12 +7,16 @@ class SD1Model:
 class SD1Condition:
     pass
 
+@param("ignoreLastLayer", bool, default=False)
 def SD1Clip(config, model: SD1Model, positive: Prompt, negative: Prompt):
     return SD1Condition(), SD1Condition()
 
+@param("width", int, default=512)
+@param("height", int, default=512)
 class SD1Latent:
     def __init__(self, config, noise: Noise, model: SD1Model):
-        self.config = config
+        width = config["width"]
+        height = config["height"]
         self.noise = noise
         self.model = model
 
