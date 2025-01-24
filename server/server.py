@@ -88,7 +88,11 @@ async def prepare(script_path: str, callable: str):
     print(script_path, callable)
     
     script_path = os.path.normpath(script_path)
+    if not os.path.exists(script_path):
+        return {"error": "Path not found"}
     project_root = search_project_root(os.path.dirname(script_path))
+    if project_root is None:
+        return {"error": "Project root not found"}
     
     loader = SSLoader()
     loader.load(script_path)

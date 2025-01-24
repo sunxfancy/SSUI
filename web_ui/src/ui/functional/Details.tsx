@@ -11,16 +11,19 @@ type DetailsProps = {
 };
 
 export function DetailsPanel({ path, selected }: DetailsProps) {
-    async function queryDetails(callable: string, params: any): Promise<ScriptDetails> {
-        let response = await fetch('/api/prepare', {
+    console.log('DetailsPanel', path, selected);
+    async function queryDetails(): Promise<ScriptDetails> {
+        console.log('queryDetails', path, selected);
+        let response = await fetch('/api/prepare?' + new URLSearchParams({
+            script_path: path,
+            callable: selected,
+        }), {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'
             },
             body: JSON.stringify({
-                script_path: path,
-                callable: callable,
-                params: params
+                params: {}
             })
         });
         if (!response.ok) {
@@ -30,7 +33,7 @@ export function DetailsPanel({ path, selected }: DetailsProps) {
         console.log('Details', data);
         return data;
     }
-    const state = useAsync(queryDetails, [path, selected]);
+    const state = useAsync(queryDetails);
 
     function render(value: ScriptDetails) {
         return <div>

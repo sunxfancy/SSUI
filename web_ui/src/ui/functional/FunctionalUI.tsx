@@ -46,7 +46,7 @@ export function FunctionalUI({ path }: FunctionalUIProps) {
         return data;
     }
 
-    const state = useAsync(queryScriptMeta, [path]);
+    const state = useAsync(queryScriptMeta);
     const [selectedFunc, setSelectedFunc] = React.useState<callable | undefined>();
     const [isOpen, setIsOpen] = React.useState(false);
 

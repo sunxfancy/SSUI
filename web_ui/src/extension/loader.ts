@@ -7,6 +7,7 @@ export class ExtensionLoader {
             throw new Error('Failed to fetch extensions');
         }
         let data = await response.json();
+        console.log(data);
         // for (let key of Object.keys(data)) {
         //     let script = document.createElement('script');
         //     script.src = 'http://' + window.location.host + data[key];

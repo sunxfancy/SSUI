@@ -57,5 +57,6 @@ class ExtensionManager:
             if "web_ui" in data:
                 if "dist" in data["web_ui"]:
                     dist_path = os.path.normpath(os.path.join(data["path"], data["web_ui"]["dist"]))
-                    print(f"Setting static files for {name} at {dist_path}")
-                    app.mount(f"/extension/{name}/dist", StaticFiles(directory=dist_path), name=name)
+                    if os.path.exists(dist_path):
+                        print(f"Setting static files for {name} at {dist_path}")
+                        app.mount(f"/extension/{name}/dist", StaticFiles(directory=dist_path), name=name)
