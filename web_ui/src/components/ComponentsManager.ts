@@ -1,3 +1,6 @@
+import React from 'react';
+import { IComponent } from './IComponent';
+
 export interface ComponentRegister {
     name: string;
     type: string;
@@ -5,9 +8,6 @@ export interface ComponentRegister {
     component: any;
     createComponent(ref: React.RefObject<IComponent>): JSX.Element;
 }
-
-import React from 'react';
-import { IComponent } from './IComponent';
 
 let components: { [key: string]: ComponentRegister } = {};
 

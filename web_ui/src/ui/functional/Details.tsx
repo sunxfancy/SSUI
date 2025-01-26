@@ -1,8 +1,17 @@
 import { useAsync } from "react-use";
+import { Section, SectionCard } from "@blueprintjs/core";
+import '../../controlers/InternalControlers'; // Register controlers
+import { ControlerRef } from "../../controlers/ControlerRef";
 
 
 type ScriptDetails = {
-    [key: string]: any;
+    [key: string]: {
+        [key: string]: {
+            controler: string;
+            args: any;
+            default: any;
+        };
+    };
 }
 
 type DetailsProps = {
@@ -35,10 +44,32 @@ export function DetailsPanel({ path, selected }: DetailsProps) {
     }
     const state = useAsync(queryDetails);
 
+    function renderControlers(details: ScriptDetails) {
+        return Object.entries(details).map(([section, controls]) => (
+            <Section 
+                key={section} 
+                title={section} 
+                collapsible={true} 
+                collapseProps={{ defaultIsOpen: true }}
+            >
+                {Object.entries(controls).map(([name, control]) => (
+                    <SectionCard key={name}>
+                        <ControlerRef
+                            name={name}
+                            type={control.controler}
+                            params={control.args}
+                            default={control.default}
+                        />
+                    </SectionCard>
+                ))}
+            </Section>
+        ));
+    }
+
     function render(value: ScriptDetails) {
         return <div>
             <h3>Details</h3>
-            <pre>{JSON.stringify(value, null, 2)}</pre>
+            {renderControlers(value)}
         </div>
     }
 

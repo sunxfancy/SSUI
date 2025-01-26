@@ -36,12 +36,16 @@ def reset_callables():
 def get_callables():
     return callables
 
-def param(name, type, default=None, controler=None):
+def param(name, controler, default=None):
     def decorator(target):
         if inspect.isfunction(target):
             @functools.wraps(target)
             def wrapper(config: SSUIConfig, *args, **kwargs):
-                config[name] = default
+                config[name] = {
+                    "controler": controler.__class__.__name__,
+                    "args": controler,
+                    "default": default
+                }
                 print(config)
                 result = target(config, *args, **kwargs)
                 return result
@@ -49,7 +53,11 @@ def param(name, type, default=None, controler=None):
         elif inspect.isclass(target):
             original_init = target.__init__
             def new_init(self, config: SSUIConfig, *args, **kwargs):
-                config[name] = default
+                config[name] = {
+                    "controler": controler.__class__.__name__,
+                    "args": controler,
+                    "default": default
+                }
                 print(config)
                 print(args)
                 original_init(self, config, *args, **kwargs)

@@ -8,8 +8,7 @@ import "@blueprintjs/core/lib/css/blueprint.css";
 import "@blueprintjs/icons/lib/css/blueprint-icons.css";
 import { Collapse } from "@blueprintjs/core";
 import { ItemPredicate, ItemRenderer, Select } from "@blueprintjs/select";
-import { getComponentsByType } from "../../components/ComponentsManager";
-import { IComponent } from "../../components/IComponent";
+import { ComponentTabRef } from "../../components/ComponentRef";
 import { DetailsPanel } from "./Details";
 
 interface callable {
@@ -50,13 +49,13 @@ export function FunctionalUI({ path }: FunctionalUIProps) {
     const [selectedFunc, setSelectedFunc] = React.useState<callable | undefined>();
     const [isOpen, setIsOpen] = React.useState(false);
 
-    let ref_inputs = new Map<string, React.RefObject<IComponent>>();
-    let ref_outputs = new Map<string, React.RefObject<IComponent>>();
-    const getRef = (index: string, cname:string, container: Map<string, React.RefObject<IComponent>>) => {
+    let ref_inputs = new Map<string, React.RefObject<ComponentTabRef>>();
+    let ref_outputs = new Map<string, React.RefObject<ComponentTabRef>>();
+    const getRef = (index: string, container: Map<string, React.RefObject<ComponentTabRef>>) => {
         if (container.has(index)) {
-            return container.get(index) ?? React.createRef<IComponent>();
+            return container.get(index) ?? React.createRef<ComponentTabRef>();
         }
-        let new_ref = React.createRef<IComponent>();
+        let new_ref = React.createRef<ComponentTabRef>();
         container.set(index, new_ref);
         console.log('New ref', index, new_ref);
         return new_ref;
@@ -105,43 +104,24 @@ export function FunctionalUI({ path }: FunctionalUIProps) {
         </Select>
     }
 
-    function renderInput(name: string, type: string) {
-        let components = getComponentsByType(type);
-
-        return <Tabs id={name} key={name}>
-            {components.filter(c => c.port == 'input')
-                .map(c => <Tab key={c.name} id={c.name} title={c.name} panel={c.createComponent(getRef(name, c.name, ref_inputs))}></Tab>)}
-        </Tabs>
-    }
-
     function renderInputs(meta: Params) {
         return <div>
             {Object.entries(meta.params).map(([key, value]) =>
                 <Card key={key} elevation={Elevation.TWO} className="functional-ui-card">
                     <Label className="bp5-label" >
                         {key}
-                        {renderInput(key, value)}
+                        <ComponentTabRef type={value} port='input' ref={getRef(key, ref_inputs)} />
                     </Label>
                 </Card>
             )}
         </div>
     }
 
-    function renderOutput(key: string, type: string) {
-        console.log('Render output', key, type);
-        let components = getComponentsByType(type);
-
-        return <Tabs id="outputTabs">
-            {components.filter(c => c.port == 'output')
-                .map(c=> <Tab key={c.name} id={c.name} title={c.name} panel={c.createComponent(getRef(key, c.name, ref_outputs))}></Tab>)}
-        </Tabs>
-    }
-
     function renderOutputs(meta: Params) {
         return <div>
             {Object.entries(meta.returns).map(([key, value]) =>
                 <Card key={key} elevation={Elevation.TWO} className="functional-ui-card">
-                    {renderOutput(key, value)}
+                    <ComponentTabRef type={value} port='output' ref={getRef(key, ref_outputs)} />
                 </Card>
             )}
         </div>
