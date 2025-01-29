@@ -21,7 +21,8 @@ export class ControlerRef extends IComponent<ControlerRefProps> {
     render() {
         let c = getControler(this.props.type);
         return c ?
-            <Label>{this.props.name}{c.createControler(this.props.params, this.props.default, this.ref)}</Label> :
+            <div><Label>{this.props.name}</Label>
+            {c.createControler(this.props.params, this.props.default, this.ref)}</div> :
             <div>Controler {this.props.type} not found</div>;
     }
 

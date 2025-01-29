@@ -14,17 +14,26 @@ export class SliderControler extends IControler<{ value: number }> {
         return this.state.value;
     }
 
-    setValue(value: number) {
+    setValue = (value: number) => {
         this.setState({ value: value });
     }
 
     render() {
-        return <Slider value={this.state.value}
-            min={this.props.params?.min ?? 0}
-            max={this.props.params?.max ?? 0}
-            stepSize={this.props.params?.step ?? 1}
-            labelStepSize={this.props.params?.step * 20}
-            onRelease={this.setValue} />;
+        if (this.props.params?.labels == undefined) {
+            return <Slider value={this.state.value}
+                min={this.props.params?.min ?? 0}
+                max={this.props.params?.max ?? 0}
+                stepSize={this.props.params?.step ?? 1}
+                labelStepSize={this.props.params?.max - this.props.params?.min}
+                onChange={this.setValue} />;
+        } else {
+            return <Slider value={this.state.value}
+                min={this.props.params?.min ?? 0}
+                max={this.props.params?.max ?? 0}
+                stepSize={this.props.params?.step ?? 1}
+                labelValues={this.props.params?.labels}
+                onChange={this.setValue} />;
+        }
     }
 }
 
@@ -41,7 +50,7 @@ export class SwitchControler extends IControler<{ value: boolean }> {
         return this.state.value;
     }
 
-    setValue(event: React.FormEvent<HTMLInputElement>) {
+    setValue = (event: React.FormEvent<HTMLInputElement>) => {
         this.setState({ value: event.currentTarget.checked });
     }
 
