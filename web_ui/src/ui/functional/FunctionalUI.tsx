@@ -137,6 +137,22 @@ export function FunctionalUI({ path }: FunctionalUIProps) {
                 console.log(ref_inputs.get(key), ref_inputs.get(key)?.current);
                 console.log(key, ref_inputs.get(key)?.current?.onExecute());
             });
+
+            let params: { [key: string]: any } = {};
+            for (let [key, value] of Object.entries(meta[selected].params)) {
+                params[key] = ref_inputs.get(key)?.current?.onExecute();
+            }
+
+            fetch('/api/execute?' + new URLSearchParams({
+                script_path: path,
+                callable: selected,
+            }), {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({params}),
+            });
         }
 
         return <div>

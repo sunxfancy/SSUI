@@ -111,8 +111,10 @@ async def execute(script_path: str, callable: str, params: dict):
 
     for func, param_types, return_type in loader.callables:
         if func.__name__ == callable:
+
+            print(script_path, callable, params)
             # TODO：Convert the parameters to the correct type
-            return func(**params)
+            # return func(**params)
 
 @app.get("/api/extensions")
 async def extensions():
