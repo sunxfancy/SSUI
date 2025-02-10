@@ -116,6 +116,8 @@ async def execute(script_path: str, callable: str, params: dict):
             # TODO：Convert the parameters to the correct type
             # return func(**params)
 
+            
+
 @app.get("/api/extensions")
 async def extensions():
     extension_dir = {}
