@@ -1,11 +1,12 @@
 import React, { Component } from 'react';
-import { Tabs, Tab } from "@blueprintjs/core";
+import { Tabs, Tab, TabId } from "@blueprintjs/core";
 import { Allotment } from "allotment";
 
 interface TabData {
   id: string;
   title: string;
   content: JSX.Element;
+  parent?: PaneNode;
 }
 
 interface PaneNode {
@@ -17,12 +18,12 @@ interface PaneNode {
 
 interface State {
   rootPane: PaneNode;
-  selectedTabId: { [key: string]: string };
+  selectedTab?: TabData;
 }
 
 class TabWindowManager extends Component<{}, State> {
   state: State = {
-    rootPane: {
+    rootPane: this.linkTabAndPane({
       id: "root",
       vertical: true,
       children: [
@@ -40,19 +41,43 @@ class TabWindowManager extends Component<{}, State> {
           ]
         }
       ]
-    },
-    selectedTabId: { pane1: "tab1" }
+    })
   };
 
-  handleTabChange = (paneId: string, newTabId: string | number) => {
-    this.setState(prevState => ({
-      selectedTabId: { ...prevState.selectedTabId, [paneId]: newTabId.toString() }
-    }));
+  linkTabAndPane(pane: PaneNode) {
+    if (pane.tabs) {
+      pane.tabs.forEach(tab => {
+        tab.parent = pane;
+      });
+    }
+    if (pane.children) {
+      pane.children.forEach(child => this.linkTabAndPane(child)); 
+    }
+    return pane;
+  }
+
+  handleTabChange = (newTabId: string | number) => {
+    const findTab = (pane: PaneNode, tabId: string): TabData | undefined => {
+      if (pane.tabs) {
+        const tab = pane.tabs.find(tab => tab.id === tabId);
+        if (tab) return tab;
+      }
+      if (pane.children) {
+        for (const child of pane.children) {
+          const result = findTab(child, tabId);
+          if (result) return result;
+        }
+      }
+    }
+
+    this.setState({
+      selectedTab: findTab(this.state.rootPane, newTabId.toString())
+    });
   };
 
-  handleTabDragEnd = (tabId: string, targetPaneId: string, position: 'left' | 'right' | 'top' | 'bottom') => {
+  handleTabDragEnd = (tab: TabData, targetPaneId: string, position: 'left' | 'right' | 'top' | 'bottom') => {
     this.setState(prevState => {
-      const newRootPane = this.updatePaneStructure(prevState.rootPane, tabId, targetPaneId, position);
+      const newRootPane = this.updatePaneStructure(prevState.rootPane, tab.id, targetPaneId, position);
       return { rootPane: newRootPane };
     });
   };
@@ -64,12 +89,14 @@ class TabWindowManager extends Component<{}, State> {
         const newPane: PaneNode = { id: `newPane-${tabId}`, tabs: [newTab] };
         return {
           ...pane,
+          tabs: undefined,
           children: position === 'left' ? [newPane, pane] : [pane, newPane]
         };
       } else {
         const newPane: PaneNode = { id: `newPane-${tabId}`, tabs: [newTab] };
         return {
           ...pane,
+          tabs: undefined,
           children: position === 'top' ? [newPane, pane] : [pane, newPane]
         };
       }
@@ -86,7 +113,24 @@ class TabWindowManager extends Component<{}, State> {
   };
 
   openFile = (filePath: string) => {
-    
+    let currentPane = this.state.selectedTab?.parent;
+
+    let newTab = {
+      id: filePath,
+      title: filePath,
+      content: <iframe src={"http://localhost:7420/?path=" + filePath} />
+    } as TabData;
+
+    if (!currentPane) {
+      this.setState({
+        rootPane: this.linkTabAndPane({
+          id: "root",
+          tabs: [newTab]
+        })
+      });
+      currentPane = this.state.rootPane;
+    }
+
   }
 
   renderPane = (pane: PaneNode) => {
@@ -96,8 +140,8 @@ class TabWindowManager extends Component<{}, State> {
         <div>
           <Tabs
             id={`Tabs-${pane.id}`}
-            onChange={(newTabId: string | number) => this.handleTabChange(pane.id, newTabId)}
-            selectedTabId={this.state.selectedTabId[pane.id]}
+            onChange={(newTabId: TabId) => this.handleTabChange(newTabId)}
+            selectedTabId={this.state.selectedTab?.id}
           >
             {pane.tabs.map(tab => (
               <Tab
@@ -108,7 +152,7 @@ class TabWindowManager extends Component<{}, State> {
                 draggable
                 onDragEnd={(e) => {
                   const position = this.determineDropPosition(e); // Implement this function to determine the drop position
-                  this.handleTabDragEnd(tab.id, pane.id, position);
+                  this.handleTabDragEnd(tab, pane.id, position);
                 }}
               />
             ))}
