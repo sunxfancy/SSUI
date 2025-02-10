@@ -28,15 +28,18 @@ class Sidebar extends Component<{
         }
     }
 
-    async fetchFileTree(directory: string) {
+    async fetchFileTree(directory: string, parent: TreeNodeInfo | null = null) {
         try {
+            console.log('fetchFileTree', directory);
             const files = await readDir(directory);
-            console.log(files);
             return await Promise.all(files.map(async (file) => ({
                 id: file.name,
                 label: file.name,
                 isFile: !file.isDirectory,
-                nodeData: { path: await join(directory, file.name)},
+                nodeData: { 
+                    path: await join(directory, file.name),
+                    parent: parent
+                },
                 childNodes: file.isDirectory ? [] : undefined
             })));
         } catch (error) {
@@ -45,42 +48,62 @@ class Sidebar extends Component<{
         }
     }
 
-    updateFileTreeWithChildren(parent: TreeNodeInfo, childNodes: TreeNodeInfo[]) {
-        let path = (parent.nodeData as any).path as string;
-        let dirs = path.split("\\");
-        
+    getPathToRoot(node: TreeNodeInfo): string[] {
+        const path = [];
+        let currentNode: TreeNodeInfo | null = node;
+        while (currentNode) {
+            path.unshift(currentNode.id as string);
+            currentNode = (currentNode.nodeData as any).parent as TreeNodeInfo | null;
+        }
+        return path;
+    }
+
+    updateFileTreeWithChildren(node: TreeNodeInfo, isExpanded: boolean, childNodes: TreeNodeInfo[] | undefined) {
+        const path = this.getPathToRoot(node);
+        console.log('updateFileTreeWithChildren', node, isExpanded, childNodes, path);
+        const updateChildNodes = (nodes: TreeNodeInfo[], path: string[]): TreeNodeInfo[] => {
+            if (path.length === 0) return nodes;
+
+            return nodes.map(n => {
+                if (n.id === path[0]) {
+                    if (path.length === 1) {
+                        if (childNodes) {
+                            return { ...n, childNodes, isExpanded };
+                        } else {
+                            return { ...n, isExpanded };
+                        }
+                    } else {
+                        return {
+                            ...n,
+                            childNodes: n.childNodes ? updateChildNodes(n.childNodes, path.slice(1)) : n.childNodes
+                        };
+                    }
+                }
+                return n;
+            });
+        };
+
         this.setState(state => {
-            const fileTree = state.fileTree.map(n =>
-                n.id === parent.id ? { ...n, childNodes, isExpanded: true } : n
-            );
+            const fileTree = updateChildNodes(state.fileTree, path);
             return { fileTree };
         });
-
-
-
     }
 
     handleNodeExpand = async (node: TreeNodeInfo) => {
         console.log('handleNodeExpand', node);
         if (node.childNodes && node.childNodes.length === 0) {
-            const childNodes = await this.fetchFileTree((node.nodeData as any).path as string);
-            this.updateFileTreeWithChildren(node, childNodes);
+            const childNodes = await this.fetchFileTree((node.nodeData as any).path as string, node);
+            this.updateFileTreeWithChildren(node, true, childNodes);
         } else {
-            this.setState(state => {
-                const fileTree = state.fileTree.map(n =>
-                    n.id === node.id ? { ...n, isExpanded: false } : n
-                );
-                return { fileTree };
-            });
+            this.updateFileTreeWithChildren(node, true, undefined);
         }
     }
 
 
     handleNodeCollapse = (node: TreeNodeInfo) => {
-        console.log('handleNodeCollapse', node);
-        node.isExpanded = false;
-        this.forceUpdate();
+        this.updateFileTreeWithChildren(node, false, undefined);
     }
+
 
     render() {
         const { currentWorkspace, onOpenWorkspace } = this.props;
