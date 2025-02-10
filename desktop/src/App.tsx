@@ -7,9 +7,11 @@ import { Allotment } from "allotment";
 import "allotment/dist/style.css";
 
 class App extends Component {
+  tabWindowManagerRef = React.createRef<TabWindowManager>();
   state = {
     currentWorkspace: null,
   };
+
 
   async onClick() {
     const store = await load('settings.json', { autoSave: false });
@@ -21,15 +23,18 @@ class App extends Component {
     this.setState({ currentWorkspace: workspace });
   }
 
+  onFileOpen = (filePath: string) => {
+    this.tabWindowManagerRef.current?.openFile(filePath);
+  }
+
   render() {
     return (
       <Allotment>
         <Allotment.Pane minSize={100} maxSize={500}>
-          <Sidebar currentWorkspace={this.state.currentWorkspace} onOpenWorkspace={this.onOpenWorkspace} />
-
+          <Sidebar currentWorkspace={this.state.currentWorkspace} onOpenWorkspace={this.onOpenWorkspace} onFileOpen={this.onFileOpen} />
         </Allotment.Pane>
         <Allotment.Pane>
-          <TabWindowManager />
+          <TabWindowManager ref={this.tabWindowManagerRef} />
         </Allotment.Pane>
       </Allotment>
     );

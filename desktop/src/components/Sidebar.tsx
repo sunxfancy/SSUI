@@ -7,13 +7,30 @@ import { join } from '@tauri-apps/api/path';
 
 class Sidebar extends Component<{
     currentWorkspace: string | null,
-    onOpenWorkspace?: (workspace: string) => void
+    onOpenWorkspace?: (workspace: string) => void,
+    onFileOpen?: (filePath: string) => void
 }, { fileTree: TreeNodeInfo[] }> {
+    ignoredPaths: string[];
     constructor(props: Sidebar['props']) {
         super(props);
         this.state = {
             fileTree: []
         };
+
+        this.ignoredPaths = [
+            '.git',
+            '__pycache__',
+            '.idea',
+            '.vscode',
+            '.DS_Store',
+            '*.pyc',
+            '*.pyo',
+            '*.pyd',
+            '.pytest_cache',
+            '.env',
+            'venv',
+            '.venv'
+        ];
     }
 
     componentDidMount() {
@@ -32,7 +49,19 @@ class Sidebar extends Component<{
         try {
             console.log('fetchFileTree', directory);
             const files = await readDir(directory);
-            return await Promise.all(files.map(async (file) => ({
+            
+            // 过滤掉被忽略的文件和目录
+            const filteredFiles = files.filter(file => {
+                return !this.ignoredPaths.some(ignorePath => {
+                    if (ignorePath.startsWith('*')) {
+                        const extension = ignorePath.slice(1);
+                        return file.name.endsWith(extension);
+                    }
+                    return file.name === ignorePath;
+                });
+            });
+
+            return await Promise.all(filteredFiles.map(async (file) => ({
                 id: file.name,
                 label: file.name,
                 isFile: !file.isDirectory,
@@ -104,6 +133,12 @@ class Sidebar extends Component<{
         this.updateFileTreeWithChildren(node, false, undefined);
     }
 
+    handleNodeClick = (node: TreeNodeInfo) => {
+        console.log('handleNodeClick', node);
+        if (node.childNodes == undefined && this.props.onFileOpen) {
+            this.props.onFileOpen((node.nodeData as any).path as string);
+        }
+    }
 
     render() {
         const { currentWorkspace, onOpenWorkspace } = this.props;
@@ -116,6 +151,7 @@ class Sidebar extends Component<{
                         contents={fileTree}
                         onNodeExpand={this.handleNodeExpand}
                         onNodeCollapse={this.handleNodeCollapse}
+                        onNodeClick={this.handleNodeClick}
                     />
                 ) : (
                     <div style={{ display: 'flex', justifyContent: 'center', marginTop: '30px' }}>
