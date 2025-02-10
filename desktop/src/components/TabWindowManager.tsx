@@ -113,33 +113,32 @@ class TabWindowManager extends Component<{}, State> {
   };
 
   openFile = (filePath: string) => {
+    console.log("openFile", filePath);
     let currentPane = this.state.selectedTab?.parent;
-
     let newTab = {
       id: filePath,
-      title: filePath,
-      content: <iframe src={"http://localhost:7420/?path=" + filePath} />
+      title: "Opened File",
+      content: <iframe src={"http://localhost:7420/?path=" + filePath} style={{ width: "100%", height: "100%" }} />
     } as TabData;
+
 
     if (!currentPane) {
       this.setState({
         rootPane: this.linkTabAndPane({
           id: "root",
           tabs: [newTab]
-        })
+        }),
+        selectedTab: newTab
       });
-      currentPane = this.state.rootPane;
     }
 
   }
 
   renderPane = (pane: PaneNode) => {
-    return (
-      <Allotment key={pane.id} vertical={pane.vertical}>
-        {pane.tabs && pane.tabs.length > 0 && (
-        <div>
+    return (pane.tabs && pane.tabs.length > 0) ?
           <Tabs
             id={`Tabs-${pane.id}`}
+            className='tabs-container'
             onChange={(newTabId: TabId) => this.handleTabChange(newTabId)}
             selectedTabId={this.state.selectedTab?.id}
           >
@@ -158,12 +157,10 @@ class TabWindowManager extends Component<{}, State> {
             ))}
             {/* 可以根据需要动态添加更多标签 */}
           </Tabs>
-          </div>
-        )}
+        :
+      <Allotment key={pane.id} vertical={pane.vertical}>
         {pane.children && pane.children.map(childPane => this.renderPane(childPane))}
-      </Allotment>
-
-    );
+      </Allotment>;
   };
 
   determineDropPosition = (e: React.DragEvent): 'left' | 'right' | 'top' | 'bottom' => {
