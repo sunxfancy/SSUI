@@ -7,7 +7,7 @@ class SD1ModelLoader extends Component {
     };
 
     onExecute() {
-        return { 'file': this.state.filePath, 'type': 'ssui.SD1.SD1Model' };
+        return { 'function': 'ssui.SD1.SD1Model.load', 'params': { 'path': this.state.filePath } };
     }
 
     render() {

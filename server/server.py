@@ -109,14 +109,29 @@ async def execute(script_path: str, callable: str, params: dict):
     loader.load(script_path)
     loader.Execute()
 
+    def convert_param(param: dict): 
+        name = param['function']
+        params = param['params']
+
+        # 动态导入并获取属性,支持任意层级的包/模块/类/函数访问
+        parts = name.split('.')
+        current = __import__(parts[0])
+        for part in parts[1:]:
+            current = getattr(current, part)
+        return current(**params)
+
     for func, param_types, return_type in loader.callables:
         if func.__name__ == callable:
 
             print(script_path, callable, params)
-            # TODO：Convert the parameters to the correct type
-            # return func(**params)
+            new_params = {}
+            for name, param in params['params'].items():
+                print(name, param)
+                new_params[name] = convert_param(param)
 
-            
+            return func(**new_params)
+
+
 
 @app.get("/api/extensions")
 async def extensions():

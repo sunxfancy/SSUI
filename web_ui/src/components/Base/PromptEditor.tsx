@@ -14,8 +14,7 @@ class PromptEditor extends IComponent<{}, {textContent: string}> {
     }
 
     onExecute(): any {
-        console.log('PromptEditor: Execute');
-        return { 'textContent': this.state.textContent };
+        return { 'function': 'ssui.base.Prompt.create', 'params': { 'text': this.state.textContent } };
     }
 
     render() {
