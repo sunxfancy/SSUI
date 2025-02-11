@@ -1,6 +1,8 @@
 import React, { Component } from 'react';
 import { Tabs, Tab, TabId } from "@blueprintjs/core";
 import { Allotment } from "allotment";
+import { basename } from '@tauri-apps/api/path';
+
 
 interface TabData {
   id: string;
@@ -12,6 +14,7 @@ interface TabData {
 interface PaneNode {
   id: string;
   tabs?: TabData[];
+  selected?: TabData;
   vertical?: boolean;
   children?: PaneNode[];
 }
@@ -112,12 +115,27 @@ class TabWindowManager extends Component<{}, State> {
     return pane;
   };
 
-  openFile = (filePath: string) => {
+  updatePaneWithNewTabs = (rootPane: PaneNode, targetPaneId: string, updatedPane: PaneNode): PaneNode => {
+    if (rootPane.id === targetPaneId) {
+      return updatedPane;
+    }
+
+    if (rootPane.children) {
+      return {
+        ...rootPane,
+        children: rootPane.children.map(child => this.updatePaneWithNewTabs(child, targetPaneId, updatedPane))
+      };
+    }
+
+    return rootPane;
+  };
+
+  openFile = async (filePath: string) => {
     console.log("openFile", filePath);
     let currentPane = this.state.selectedTab?.parent;
     let newTab = {
       id: filePath,
-      title: "Opened File",
+      title: await basename(filePath),
       content: <iframe src={"http://localhost:7420/?path=" + filePath} style={{ width: "100%", height: "100%" }} />
     } as TabData;
 
@@ -130,6 +148,16 @@ class TabWindowManager extends Component<{}, State> {
         }),
         selectedTab: newTab
       });
+    } else {
+      const updatedPane = {
+        ...currentPane,
+        tabs: currentPane.tabs ? [...currentPane.tabs, newTab] : [newTab]
+      };
+
+      this.setState({
+        rootPane: this.updatePaneWithNewTabs(this.state.rootPane, currentPane.id, updatedPane),
+        selectedTab: newTab
+      });
     }
 
   }
@@ -140,7 +168,7 @@ class TabWindowManager extends Component<{}, State> {
             id={`Tabs-${pane.id}`}
             className='tabs-container'
             onChange={(newTabId: TabId) => this.handleTabChange(newTabId)}
-            selectedTabId={this.state.selectedTab?.id}
+            selectedTabId={pane.selected?.id}
           >
             {pane.tabs.map(tab => (
               <Tab
