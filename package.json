@@ -16,6 +16,7 @@
     "desktop": "cd desktop && yarn tauri dev",
     "interface": "cd ssui_interface && yarn build",
     "example": "cd extensions/example && yarn build",
+    "test": "poetry run python tests/run_tests.py",
 
     "package_win": "poetry build && cd web_ui && yarn build && cd ../desktop && yarn tauri build",
     "check_deps": "yarn --version && poetry --version && rustc --version && cargo --version"

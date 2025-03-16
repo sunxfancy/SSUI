@@ -16,15 +16,15 @@ class SSLoader:
 
     def load(self, path):
         file_path = os.path.abspath(path)
+        # Check if spec is None (e.g., file not found)
+        if not os.path.exists(file_path):
+            raise FileNotFoundError(f"Could not find module at: {file_path}")
+        
         # Define the module name and file path
         module_name = file_path.split("/")[-1].split(".")[0]
 
         # Create a module specification
         self.spec = importlib.util.spec_from_file_location(module_name, file_path)
-
-        # Check if spec is None (e.g., file not found)
-        if self.spec is None:
-            raise FileNotFoundError(f"Could not find module at: {file_path}")
 
         # Create a module object from the specification
         self.module = importlib.util.module_from_spec(self.spec)

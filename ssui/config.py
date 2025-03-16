@@ -21,5 +21,5 @@ class SSUIConfig:
     def is_prepare(self):
         return self._is_prepare
     
-    def set_prepared(self):
-        self._is_prepare = True
+    def set_prepared(self, is_prepare: bool = True):
+        self._is_prepare = is_prepare

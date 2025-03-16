@@ -27,6 +27,19 @@ diffusers = {extras = ["torch"], version = "^0.31.0"}
 accelerate = "^1.2.1"
 pydantic-settings = "^2.7.0"
 pydantic = "^2.10.4"
+spandrel = "^0.4.1"
+gguf = "^0.14.0"
+controlnet-aux = "^0.0.9"
+clip-anytorch = "^2.6.0"
+compel = "^2.0.3"
+deprecated = "^1.2.18"
+blake3 = "^1.0.4"
+onnxruntime = "^1.21.0"
+onnx = "^1.17.0"
+picklescan = "^0.0.24"
+matplotlib = "^3.10.1"
+mediapipe = "^0.10.21"
+bitsandbytes = "^0.45.3"
 
 
 [[tool.poetry.source]]
