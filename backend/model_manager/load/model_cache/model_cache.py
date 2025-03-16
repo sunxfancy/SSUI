@@ -125,9 +125,7 @@ class ModelCache:
         self._max_ram_cache_size_gb = max_ram_cache_size_gb
         self._max_vram_cache_size_gb = max_vram_cache_size_gb
 
-        # self._logger = PrefixedLoggerAdapter(
-        #     logger or InvokeAILogger.get_logger(self.__class__.__name__), "MODEL CACHE"
-        # )
+        self._logger = logger
         self._log_memory_usage = log_memory_usage
         self._stats: Optional[CacheStats] = None
 
@@ -266,7 +264,7 @@ class ModelCache:
             cache_entry.unlock()
             raise
 
-        self._log_cache_state()
+        # self._log_cache_state()
 
     @synchronized
     def unlock(self, cache_entry: CacheRecord) -> None:
@@ -318,9 +316,9 @@ class ModelCache:
             # as it may still be loaded from a previous use.
             vram_bytes_freed_from_own_model = self._move_model_to_ram(cache_entry, -vram_available)
             vram_available = self._get_vram_available(working_mem_bytes)
-            self._logger.debug(
-                f"Unloaded {vram_bytes_freed_from_own_model/MB:.2f}MB from the model being locked ({cache_entry.key})."
-            )
+            # self._logger.debug(
+            #     f"Unloaded {vram_bytes_freed_from_own_model/MB:.2f}MB from the model being locked ({cache_entry.key})."
+            # )
 
         # Move as much of the model as possible into VRAM.
         # For testing, only allow 10% of the model to be loaded into VRAM.
@@ -614,7 +612,7 @@ class ModelCache:
         garbage-collected.
         """
         # self._logger.debug(f"Making room for {bytes_needed/MB:.2f}MB of RAM.")
-        self._log_cache_state(title="Before dropping models:")
+        # self._log_cache_state(title="Before dropping models:")
 
         ram_bytes_available = self._get_ram_available()
         ram_bytes_to_free = max(0, bytes_needed - ram_bytes_available)
@@ -655,7 +653,7 @@ class ModelCache:
 
         TorchDevice.empty_cache()
         # self._logger.debug(f"Dropped {models_cleared} models to free {ram_bytes_freed/MB:.2f}MB of RAM.")
-        self._log_cache_state(title="After dropping models:")
+        # self._log_cache_state(title="After dropping models:")
 
     def _delete_cache_entry(self, cache_entry: CacheRecord) -> None:
         """Delete cache_entry from the cache if it exists. No exception is thrown if it doesn't exist."""

@@ -9,7 +9,6 @@ import torch
 from safetensors.torch import load_file
 from transformers import AutoConfig, AutoModelForTextEncoding, CLIPTextModel, CLIPTokenizer, T5EncoderModel, T5Tokenizer
 
-from app.services.config.config_default import get_config
 from backend.flux.controlnet.instantx_controlnet_flux import InstantXControlNetFlux
 from backend.flux.controlnet.state_dict_utils import (
     convert_diffusers_instantx_state_dict_to_bfl_format,
@@ -54,7 +53,6 @@ from backend.model_manager.util.model_util import (
 )
 from backend.quantization.gguf.loaders import gguf_sd_loader
 from backend.quantization.gguf.utils import TORCH_COMPATIBLE_QTYPES
-from backend.util.silence_warnings import SilenceWarnings
 
 try:
     from backend.quantization.bnb_llm_int8 import quantize_model_llm_int8
@@ -63,8 +61,6 @@ try:
     bnb_available = True
 except ImportError:
     bnb_available = False
-
-app_config = get_config()
 
 
 @ModelLoaderRegistry.register(base=BaseModelType.Flux, type=ModelType.VAE, format=ModelFormat.Checkpoint)
@@ -311,14 +307,13 @@ class FluxBnbQuantizednf4bCheckpointModel(ModelLoader):
             )
         model_path = Path(config.path)
 
-        with SilenceWarnings():
-            with accelerate.init_empty_weights():
-                model = Flux(params[config.config_path])
-                model = quantize_model_nf4(model, modules_to_not_convert=set(), compute_dtype=torch.bfloat16)
-            sd = load_file(model_path)
-            if "model.diffusion_model.double_blocks.0.img_attn.norm.key_norm.scale" in sd:
-                sd = convert_bundle_to_flux_transformer_checkpoint(sd)
-            model.load_state_dict(sd, assign=True)
+        with accelerate.init_empty_weights():
+            model = Flux(params[config.config_path])
+            model = quantize_model_nf4(model, modules_to_not_convert=set(), compute_dtype=torch.bfloat16)
+        sd = load_file(model_path)
+        if "model.diffusion_model.double_blocks.0.img_attn.norm.key_norm.scale" in sd:
+            sd = convert_bundle_to_flux_transformer_checkpoint(sd)
+        model.load_state_dict(sd, assign=True)
         return model
 
 

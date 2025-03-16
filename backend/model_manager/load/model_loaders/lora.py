@@ -8,7 +8,6 @@ from typing import Optional
 import torch
 from safetensors.torch import load_file
 
-from app.services.config import InvokeAIAppConfig
 from backend.model_manager import (
     AnyModel,
     AnyModelConfig,
@@ -17,6 +16,7 @@ from backend.model_manager import (
     ModelType,
     SubModelType,
 )
+from backend.model_manager.load.load_base import ModelLoaderConfig
 from backend.model_manager.load.load_default import ModelLoader
 from backend.model_manager.load.model_cache.model_cache import ModelCache
 from backend.model_manager.load.model_loader_registry import ModelLoaderRegistry
@@ -49,7 +49,7 @@ class LoRALoader(ModelLoader):
     # We cheat a little bit to get access to the model base
     def __init__(
         self,
-        app_config: InvokeAIAppConfig,
+        app_config: ModelLoaderConfig,
         logger: Logger,
         ram_cache: ModelCache,
     ):

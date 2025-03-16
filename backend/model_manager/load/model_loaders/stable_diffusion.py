@@ -28,7 +28,6 @@ from backend.model_manager.config import (
 from backend.model_manager.load.model_cache.model_cache import get_model_cache_key
 from backend.model_manager.load.model_loader_registry import ModelLoaderRegistry
 from backend.model_manager.load.model_loaders.generic_diffusers import GenericDiffusersLoader
-from backend.util.silence_warnings import SilenceWarnings
 
 VARIANT_TO_IN_CHANNEL_MAP = {
     ModelVariantType.Normal: 4,
@@ -121,8 +120,7 @@ class StableDiffusionDiffusersModel(GenericDiffusersLoader):
         # Some weights of the model checkpoint were not used when initializing CLIPTextModelWithProjection:
         # ['text_model.embeddings.position_ids']
 
-        with SilenceWarnings():
-            pipeline = load_class.from_single_file(config.path, torch_dtype=self._torch_dtype)
+        pipeline = load_class.from_single_file(config.path, torch_dtype=self._torch_dtype)
 
         if not submodel_type:
             return pipeline

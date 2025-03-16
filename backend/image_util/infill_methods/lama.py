@@ -48,7 +48,7 @@ class LaMA:
     @staticmethod
     def load_jit_model(url_or_path: str | Path, device: torch.device | str = "cpu") -> torch.nn.Module:
         model_path = url_or_path
-        logger.info(f"Loading model from: {model_path}")
+        # logger.info(f"Loading model from: {model_path}")
         model: torch.nn.Module = torch.jit.load(model_path, map_location="cpu").to(device)  # type: ignore
         model.eval()
         return model

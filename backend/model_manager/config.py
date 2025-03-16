@@ -31,7 +31,7 @@ from diffusers.models.modeling_utils import ModelMixin
 from pydantic import BaseModel, ConfigDict, Discriminator, Field, Tag, TypeAdapter
 from typing_extensions import Annotated, Any, Dict
 
-from app.util.misc import uuid_string
+import uuid
 from backend.model_hash.hash_validator import validate_hash
 from backend.raw_model import RawModel
 from backend.stable_diffusion.schedulers.schedulers import SCHEDULER_NAME_VALUES
@@ -41,6 +41,11 @@ from backend.stable_diffusion.schedulers.schedulers import SCHEDULER_NAME_VALUES
 AnyModel = Union[
     ModelMixin, RawModel, torch.nn.Module, Dict[str, torch.Tensor], diffusers.DiffusionPipeline, ort.InferenceSession
 ]
+
+
+def uuid_string() -> str:
+    res = uuid.uuid4()
+    return str(res)
 
 
 class InvalidModelConfigException(Exception):
@@ -450,7 +455,7 @@ class IPAdapterInvokeAIConfig(IPAdapterBaseConfig):
 
     @staticmethod
     def get_tag() -> Tag:
-        return Tag(f"{ModelType.IPAdapter.value}.{ModelFormat.value}")
+        return Tag(f"{ModelType.IPAdapter.value}.{ModelFormat.InvokeAI.value}")
 
 
 class IPAdapterCheckpointConfig(IPAdapterBaseConfig):

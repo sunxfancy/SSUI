@@ -1,6 +1,6 @@
 # Copyright (c) 2024, Lincoln D. Stein and the InvokeAI Development Team
 """
-Base class for model loading in 
+Base class for model loading in InvokeAI.
 """
 
 from abc import ABC, abstractmethod

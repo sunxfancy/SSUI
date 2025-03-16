@@ -35,10 +35,10 @@ class SpandrelImageToImageModelLoader(ModelLoader):
 
         torch_dtype = self._torch_dtype
         if not model.supports_dtype(torch_dtype):
-            self._logger.warning(
-                f"The configured dtype ('{self._torch_dtype}') is not supported by the {model.get_model_type_name()} "
-                "model. Falling back to 'float32'."
-            )
+            # self._logger.warning(
+            #     f"The configured dtype ('{self._torch_dtype}') is not supported by the {model.get_model_type_name()} "
+            #     "model. Falling back to 'float32'."
+            # )
             torch_dtype = torch.float32
         model.to(dtype=torch_dtype)
 

@@ -8,9 +8,6 @@ be suppressed or deferred
 import numpy as np
 from PIL import Image
 
-import backend.util.logging as logger
-from app.services.config.config_default import get_config
-
 
 class PatchMatch:
     """
@@ -27,16 +24,16 @@ class PatchMatch:
     def _load_patch_match(cls):
         if cls.tried_load:
             return
-        if get_config().patchmatch:
-            from patchmatch import patch_match as pm
+        # if get_config().patchmatch:
+        #     from patchmatch import patch_match as pm
 
-            if pm.patchmatch_available:
-                logger.info("Patchmatch initialized")
-                cls.patch_match = pm
-            else:
-                logger.info("Patchmatch not loaded (nonfatal)")
-        else:
-            logger.info("Patchmatch loading disabled")
+        #     if pm.patchmatch_available:
+        #         logger.info("Patchmatch initialized")
+        #         cls.patch_match = pm
+        #     else:
+        #         logger.info("Patchmatch not loaded (nonfatal)")
+        # else:
+        #     logger.info("Patchmatch loading disabled")
         cls.tried_load = True
 
     @classmethod
@@ -61,7 +58,7 @@ def infill_patchmatch(image: Image.Image) -> Image.Image:
     IS_PATCHMATCH_AVAILABLE = PatchMatch.patchmatch_available()
 
     if not IS_PATCHMATCH_AVAILABLE:
-        logger.warning("PatchMatch is not available on this system")
+        # logger.warning("PatchMatch is not available on this system")
         return image
 
     return PatchMatch.inpaint(image)
