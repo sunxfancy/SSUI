@@ -102,7 +102,7 @@ class LoadedModel(LoadedModelWithoutConfig):
 
 
 class ModelLoaderConfig(BaseModel):
-    models_dir: Path = Field(default=Path("models"), description="Path to the models directory.")
+    models_path: Path = Field(default=Path("models"), description="Path to the models directory.")
 
 class ModelLoaderBase(ABC):
     """Abstract base class for loading models into RAM/VRAM."""
