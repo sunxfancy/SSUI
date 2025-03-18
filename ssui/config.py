@@ -5,6 +5,7 @@ class SSUIConfig:
     def __init__(self):
         self._is_prepare = False
         self._config = {}
+        self._update = {}
         self._current = None
     
     def __call__(self, name):
@@ -13,7 +14,13 @@ class SSUIConfig:
         return self
     
     def __getitem__(self, name):
-        return self._config[self._current][name]
+        if self.is_prepare():
+            return self._config[self._current][name]
+        else:
+            if self._update.get(self._current) is not None:
+                if self._update[self._current].get(name) is not None:
+                    return self._update[self._current][name]
+            return self._config[self._current][name]['default']
     
     def __setitem__(self, name, value):
         self._config[self._current][name] = value

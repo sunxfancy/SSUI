@@ -48,155 +48,156 @@ from .model import UNetModel, VAEModel
 
 
 
-def get_noise(
-    width: int,
-    height: int,
-    device: torch.device,
-    seed: int = 0,
-    latent_channels: int = 4,
-    downsampling_factor: int = 8,
-    use_cpu: bool = True,
-    perlin: float = 0.0,
-):
-    """Generate noise for a given image size."""
-    noise_device_type = "cpu" if use_cpu else device.type
-
-    # limit noise to only the diffusion image channels, not the mask channels
-    input_channels = min(latent_channels, 4)
-    generator = torch.Generator(device=noise_device_type).manual_seed(seed)
-
-    noise_tensor = torch.randn(
-        [
-            1,
-            input_channels,
-            height // downsampling_factor,
-            width // downsampling_factor,
-        ],
-        dtype=TorchDevice.choose_torch_dtype(device=device),
-        device=noise_device_type,
-        generator=generator,
-    ).to("cpu")
-
-    return noise_tensor
-
-
-def get_scheduler(
-    scheduler_info: LoadedModel,
-    scheduler_name: str,
-    seed: int,
-    unet_config: AnyModelConfig,
-) -> Scheduler:
-    """Load a scheduler and apply some scheduler-specific overrides."""
-    # TODO(ryand): Silently falling back to ddim seems like a bad idea. Look into why this was added and remove if
-    # possible.
-    scheduler_class, scheduler_extra_config = SCHEDULER_MAP.get(
-        scheduler_name, SCHEDULER_MAP["ddim"]
-    )
-    orig_scheduler_info = scheduler_info
-
-    with orig_scheduler_info as orig_scheduler:
-        scheduler_config = orig_scheduler.config
-
-    if "_backup" in scheduler_config:
-        scheduler_config = scheduler_config["_backup"]
-    scheduler_config = {
-        **scheduler_config,
-        **scheduler_extra_config,  # FIXME
-        "_backup": scheduler_config,
-    }
-
-    if hasattr(unet_config, "prediction_type"):
-        scheduler_config["prediction_type"] = unet_config.prediction_type
-
-    # make dpmpp_sde reproducable(seed can be passed only in initializer)
-    if scheduler_class is DPMSolverSDEScheduler:
-        scheduler_config["noise_sampler_seed"] = seed
-
-    if (
-        scheduler_class is DPMSolverMultistepScheduler
-        or scheduler_class is DPMSolverSinglestepScheduler
-    ):
-        if (
-            scheduler_config["_class_name"] == "DEISMultistepScheduler"
-            and scheduler_config["algorithm_type"] == "deis"
-        ):
-            scheduler_config["algorithm_type"] = "dpmsolver++"
-
-    scheduler = scheduler_class.from_config(scheduler_config)
-
-    # hack copied over from generate.py
-    if not hasattr(scheduler, "uses_inpainting_model"):
-        scheduler.uses_inpainting_model = lambda: False
-    assert isinstance(scheduler, Scheduler)
-    return scheduler
-
-
-def init_scheduler(
-    scheduler: Union[Scheduler, ConfigMixin],
-    device: torch.device,
-    steps: int,
-    denoising_start: float,
-    denoising_end: float,
-    seed: int,
-) -> Tuple[torch.Tensor, torch.Tensor, Dict[str, Any]]:
-    assert isinstance(scheduler, ConfigMixin)
-    if scheduler.config.get("cpu_only", False):
-        scheduler.set_timesteps(steps, device="cpu")
-        timesteps = scheduler.timesteps.to(device=device)
-    else:
-        scheduler.set_timesteps(steps, device=device)
-        timesteps = scheduler.timesteps
-
-    # skip greater order timesteps
-    _timesteps = timesteps[:: scheduler.order]
-
-    # get start timestep index
-    t_start_val = int(
-        round(scheduler.config["num_train_timesteps"] * (1 - denoising_start))
-    )
-    t_start_idx = len(list(filter(lambda ts: ts >= t_start_val, _timesteps)))
-
-    # get end timestep index
-    t_end_val = int(
-        round(scheduler.config["num_train_timesteps"] * (1 - denoising_end))
-    )
-    t_end_idx = len(list(filter(lambda ts: ts >= t_end_val, _timesteps[t_start_idx:])))
-
-    # apply order to indexes
-    t_start_idx *= scheduler.order
-    t_end_idx *= scheduler.order
-
-    init_timestep = timesteps[t_start_idx : t_start_idx + 1]
-    timesteps = timesteps[t_start_idx : t_start_idx + t_end_idx]
-
-    scheduler_step_kwargs: Dict[str, Any] = {}
-    scheduler_step_signature = inspect.signature(scheduler.step)
-    if "generator" in scheduler_step_signature.parameters:
-        # At some point, someone decided that schedulers that accept a generator should use the original seed with
-        # all bits flipped. I don't know the original rationale for this, but now we must keep it like this for
-        # reproducibility.
-        #
-        # These Invoke-supported schedulers accept a generator as of 2024-06-04:
-        #   - DDIMScheduler
-        #   - DDPMScheduler
-        #   - DPMSolverMultistepScheduler
-        #   - EulerAncestralDiscreteScheduler
-        #   - EulerDiscreteScheduler
-        #   - KDPM2AncestralDiscreteScheduler
-        #   - LCMScheduler
-        #   - TCDScheduler
-        scheduler_step_kwargs.update(
-            {"generator": torch.Generator(device=device).manual_seed(seed ^ 0xFFFFFFFF)}
-        )
-    if isinstance(scheduler, TCDScheduler):
-        scheduler_step_kwargs.update({"eta": 1.0})
-
-    return timesteps, init_timestep, scheduler_step_kwargs
-
-
-
 torch.no_grad()
 def denoise_image(model: UNetModel, positive: BasicConditioningInfo, negative: BasicConditioningInfo, seed: int, width: int, height: int, scheduler_name: str, cfg_scale: float, steps: int):
+
+    def get_noise(
+        width: int,
+        height: int,
+        device: torch.device,
+        seed: int = 0,
+        latent_channels: int = 4,
+        downsampling_factor: int = 8,
+        use_cpu: bool = True,
+        perlin: float = 0.0,
+    ):
+        """Generate noise for a given image size."""
+        noise_device_type = "cpu" if use_cpu else device.type
+
+        # limit noise to only the diffusion image channels, not the mask channels
+        input_channels = min(latent_channels, 4)
+        generator = torch.Generator(device=noise_device_type).manual_seed(seed)
+
+        noise_tensor = torch.randn(
+            [
+                1,
+                input_channels,
+                height // downsampling_factor,
+                width // downsampling_factor,
+            ],
+            dtype=TorchDevice.choose_torch_dtype(device=device),
+            device=noise_device_type,
+            generator=generator,
+        ).to("cpu")
+
+        return noise_tensor
+
+
+    def get_scheduler(
+        scheduler_info: LoadedModel,
+        scheduler_name: str,
+        seed: int,
+        unet_config: AnyModelConfig,
+    ) -> Scheduler:
+        """Load a scheduler and apply some scheduler-specific overrides."""
+        # TODO(ryand): Silently falling back to ddim seems like a bad idea. Look into why this was added and remove if
+        # possible.
+        scheduler_class, scheduler_extra_config = SCHEDULER_MAP.get(
+            scheduler_name, SCHEDULER_MAP["ddim"]
+        )
+        orig_scheduler_info = scheduler_info
+
+        with orig_scheduler_info as orig_scheduler:
+            scheduler_config = orig_scheduler.config
+
+        if "_backup" in scheduler_config:
+            scheduler_config = scheduler_config["_backup"]
+        scheduler_config = {
+            **scheduler_config,
+            **scheduler_extra_config,  # FIXME
+            "_backup": scheduler_config,
+        }
+
+        if hasattr(unet_config, "prediction_type"):
+            scheduler_config["prediction_type"] = unet_config.prediction_type
+
+        # make dpmpp_sde reproducable(seed can be passed only in initializer)
+        if scheduler_class is DPMSolverSDEScheduler:
+            scheduler_config["noise_sampler_seed"] = seed
+
+        if (
+            scheduler_class is DPMSolverMultistepScheduler
+            or scheduler_class is DPMSolverSinglestepScheduler
+        ):
+            if (
+                scheduler_config["_class_name"] == "DEISMultistepScheduler"
+                and scheduler_config["algorithm_type"] == "deis"
+            ):
+                scheduler_config["algorithm_type"] = "dpmsolver++"
+
+        scheduler = scheduler_class.from_config(scheduler_config)
+
+        # hack copied over from generate.py
+        if not hasattr(scheduler, "uses_inpainting_model"):
+            scheduler.uses_inpainting_model = lambda: False
+        assert isinstance(scheduler, Scheduler)
+        return scheduler
+
+
+    def init_scheduler(
+        scheduler: Union[Scheduler, ConfigMixin],
+        device: torch.device,
+        steps: int,
+        denoising_start: float,
+        denoising_end: float,
+        seed: int,
+    ) -> Tuple[torch.Tensor, torch.Tensor, Dict[str, Any]]:
+        assert isinstance(scheduler, ConfigMixin)
+        if scheduler.config.get("cpu_only", False):
+            scheduler.set_timesteps(steps, device="cpu")
+            timesteps = scheduler.timesteps.to(device=device)
+        else:
+            scheduler.set_timesteps(steps, device=device)
+            timesteps = scheduler.timesteps
+
+        # skip greater order timesteps
+        _timesteps = timesteps[:: scheduler.order]
+
+        # get start timestep index
+        t_start_val = int(
+            round(scheduler.config["num_train_timesteps"] * (1 - denoising_start))
+        )
+        t_start_idx = len(list(filter(lambda ts: ts >= t_start_val, _timesteps)))
+
+        # get end timestep index
+        t_end_val = int(
+            round(scheduler.config["num_train_timesteps"] * (1 - denoising_end))
+        )
+        t_end_idx = len(list(filter(lambda ts: ts >= t_end_val, _timesteps[t_start_idx:])))
+
+        # apply order to indexes
+        t_start_idx *= scheduler.order
+        t_end_idx *= scheduler.order
+
+        init_timestep = timesteps[t_start_idx : t_start_idx + 1]
+        timesteps = timesteps[t_start_idx : t_start_idx + t_end_idx]
+
+        scheduler_step_kwargs: Dict[str, Any] = {}
+        scheduler_step_signature = inspect.signature(scheduler.step)
+        if "generator" in scheduler_step_signature.parameters:
+            # At some point, someone decided that schedulers that accept a generator should use the original seed with
+            # all bits flipped. I don't know the original rationale for this, but now we must keep it like this for
+            # reproducibility.
+            #
+            # These Invoke-supported schedulers accept a generator as of 2024-06-04:
+            #   - DDIMScheduler
+            #   - DDPMScheduler
+            #   - DPMSolverMultistepScheduler
+            #   - EulerAncestralDiscreteScheduler
+            #   - EulerDiscreteScheduler
+            #   - KDPM2AncestralDiscreteScheduler
+            #   - LCMScheduler
+            #   - TCDScheduler
+            scheduler_step_kwargs.update(
+                {"generator": torch.Generator(device=device).manual_seed(seed ^ 0xFFFFFFFF)}
+            )
+        if isinstance(scheduler, TCDScheduler):
+            scheduler_step_kwargs.update({"eta": 1.0})
+
+        return timesteps, init_timestep, scheduler_step_kwargs
+
+
+
     unet = model.unet
     scheduler = model.scheduler
 

@@ -4,3 +4,8 @@ __pycache__/
 node_modules/
 dist/
 test_env/
+
+*.safetensors
+*.pt
+*.pth
+*.ckpt

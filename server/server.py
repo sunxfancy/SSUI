@@ -1,3 +1,4 @@
+import datetime
 from fastapi import FastAPI, WebSocket
 from fastapi.responses import RedirectResponse
 from fastapi.staticfiles import StaticFiles
@@ -6,6 +7,8 @@ import torch.torch_version
 import sys
 import os
 import json
+import ssui
+from ssui.base import Image
 
 sys.path.append(os.path.join(os.path.dirname(__file__), ".."))
 from ss_executor import SSLoader, search_project_root
@@ -120,16 +123,38 @@ async def execute(script_path: str, callable: str, params: dict):
             current = getattr(current, part)
         return current(**params)
 
-    for func, param_types, return_type in loader.callables:
-        if func.__name__ == callable:
+    def find_callable(loader, callable):
+        for func, param_types, return_type in loader.callables:
+            if func.__name__ == callable:
+                return func, param_types, return_type
+        
+    func, param_types, return_type = find_callable(loader, callable)
 
-            print(script_path, callable, params)
-            new_params = {}
-            for name, param in params['params'].items():
-                print(name, param)
-                new_params[name] = convert_param(param)
+    print(script_path, callable, params)
+    new_params = {}
+    for name, param in params['params'].items():
+        print(name, param)
+        new_params[name] = convert_param(param)
 
-            return func(**new_params)
+    # 注入配置
+    # loader.config._config = config
+
+    result = func(**new_params)
+
+
+    def convert_return(result):
+        if isinstance(result, tuple):
+            return [convert_return(r) for r in result]
+        
+        if isinstance(result, Image):
+            current_time = datetime.datetime.now()
+            path = "image_" + current_time.strftime("%Y%m%d%H%M%S") + ".png"
+            result._image.save(path)
+            return {"type": "image", "path": path}
+
+        return result
+
+    return convert_return(result)
 
 
 

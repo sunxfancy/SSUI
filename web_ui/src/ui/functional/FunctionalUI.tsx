@@ -143,6 +143,11 @@ export function FunctionalUI({ path }: FunctionalUIProps) {
                 params[key] = ref_inputs.get(key)?.current?.onExecute();
             }
 
+            let config: { [key: string]: any } = {};
+            if (isOpen) {
+                // TODO: collect config and pass to the server
+            }
+
             fetch('/api/execute?' + new URLSearchParams({
                 script_path: path,
                 callable: selected,

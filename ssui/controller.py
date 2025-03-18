@@ -8,6 +8,10 @@ class Slider:
         if labels is not None:
             self.labels = labels
         
+class Select:
+    def __init__(self, *args):
+        self.options = args
+
 class Switch:
     def __init__(self):
         pass

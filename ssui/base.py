@@ -1,5 +1,10 @@
+import PIL.Image
+from dataclasses import dataclass
+
 class Image():
-    pass
+    def __init__(self, image: PIL.Image.Image = None):
+        self._image = image
+
 
 class Prompt():
     @staticmethod

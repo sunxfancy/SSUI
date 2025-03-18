@@ -10,8 +10,7 @@ config = SSUIConfig()
 def txt2img(model: SD1Model, positive: Prompt, negative: Prompt) -> Image:
     print(model, positive, negative)
     positive, negative = SD1Clip(config("Prompt To Condition"), model, positive, negative)
-    random_noise = Noise(config("Generate Noise"))
-    latent = SD1Latent(config("Noise To Latent"), random_noise, model)
+    latent = SD1Latent(config("Create Empty Latent"))
     latent = SD1Denoise(config("Denoise"), model, latent, positive, negative)
     return SD1LatentDecode(config("Latent to Image"), model, latent)
 
@@ -19,8 +18,7 @@ def txt2img(model: SD1Model, positive: Prompt, negative: Prompt) -> Image:
 @workflow
 def txt2imgWithRef(model: SD1Model, positive: Prompt, negative: Prompt, reference: Image) -> Tuple[Image, Image]:
     positive, negative = SD1Clip(config("Prompt To Condition"), model, positive, negative)
-    random_noise = Noise(config("Generate Noise"))
-    latent = SD1Latent(config("Noise To Latent"), random_noise, model)
+    latent = SD1Latent(config("Create Empty Latent"))
     adapter = SD1IPAdapter(config("Image Reference"), reference)
     latent = SD1Denoise(config("Denoise"), model, latent, positive, negative, adapter)
     return SD1LatentDecode(config("Latent to Image"), latent)
@@ -32,8 +30,7 @@ def txt2imgWithLora(model: SD1Model, loras: List[SD1Lora], positive: Prompt, neg
     for lora in loras:
         model_w_lora = SD1Lora(config("Apply Lora"), model_w_lora, lora)
     positive, negative = SD1Clip(config("Prompt To Condition"), model, positive, negative)
-    random_noise = Noise(config("Generate Noise"))
-    latent = SD1Latent(config("Noise To Latent"), random_noise, model)
+    latent = SD1Latent(config("Create Empty Latent"))
     latent = SD1Denoise(config("Denoise"), model, latent, positive, negative)
     image = SD1LatentDecode(config("Latent to Image"), latent)
     
