@@ -17,8 +17,10 @@ Stable Scripts UI is a web-based user interface for `Stable Scripts` - a kind of
 - DiffusionModel
   - SD1
   - SD2
+  - SD3
   - SDXL
     - Pony
+    - Illustrious
   - Flux
 - Clip
 - VAE

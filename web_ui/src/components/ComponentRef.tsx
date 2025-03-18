@@ -21,6 +21,10 @@ export class ComponentRef extends IComponent<{ name: string }> {
     onExecute() {
         return this.ref.current?.onExecute();
     }
+
+    onUpdate(data: any) {
+        return this.ref.current?.onUpdate(data);
+    }
 }
 
 export class ComponentTabRef extends IComponent<{ type: string, port: string }> {
@@ -46,9 +50,15 @@ export class ComponentTabRef extends IComponent<{ type: string, port: string }> 
         </Tabs>
     }
 
-    onExecute() {
+    override onExecute() {
         let selected = this.tabs_ref.current?.state.selectedTabId;
         if (!selected) return;
         return this.ref_array[selected]?.current?.onExecute();
+    }
+
+    override onUpdate(data: any): void {
+        let selected = this.tabs_ref.current?.state.selectedTabId;
+        if (!selected) return;
+        this.ref_array[selected]?.current?.onUpdate(data);
     }
 }

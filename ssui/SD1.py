@@ -55,6 +55,8 @@ def SD1Clip(config, model: SD1Model, positive: Prompt, negative: Prompt):
 
     print("SD1Clip executed")
     print("ignoreLastLayer:", config["ignoreLastLayer"])
+    print("positive:", positive.text)
+    print("negative:", negative.text)
     
     positive_condition = create_conditioning(positive.text, model.clip)
     negative_condition = create_conditioning(negative.text, model.clip)
@@ -102,7 +104,7 @@ class SD1Lora:
 @param(
     "steps",
     Slider(1, 100, 1, labels=[1, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100]),
-    default=20,
+    default=30,
 )
 @param(
     "scheduler",
@@ -140,7 +142,7 @@ class SD1Lora:
     ),
     default="ddim",
 )
-@param("CFG", Slider(0, 1, 0.05), default=0.7)
+@param("CFG", Slider(0, 15, 0.1), default=7.5)
 def SD1Denoise(
     config,
     model: SD1Model,
@@ -149,7 +151,7 @@ def SD1Denoise(
     negative: SD1Condition,
 ):
     if config.is_prepare():
-        return SD1Latent()
+        return SD1Latent(config("DenoiseToLatents"))
 
     print("SD1Denoise executed")
     print("scheduler:", config["scheduler"])
@@ -160,7 +162,7 @@ def SD1Denoise(
         model=model.unet,
         positive=positive.condition_info,
         negative=negative.condition_info,
-        seed=12345,
+        seed=123454321,
         width=latent.width,
         height=latent.height,
         scheduler_name=config["scheduler"],

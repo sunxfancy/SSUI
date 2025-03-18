@@ -10,7 +10,7 @@ export class ImageUploader extends IComponent<{}, ImageUploaderState> {
         this.state = { image: '' };
     }
 
-    onExecute() {
+    override onExecute() {
         return { 'image': this.state.image };
     }
 
@@ -24,7 +24,7 @@ export class ImageUploader extends IComponent<{}, ImageUploaderState> {
         }
     }
 
-    render() {
+    override render() {
         return <div>
             <h5>Image Uploader</h5>
             <input name='file_field' type="file" />
@@ -34,15 +34,22 @@ export class ImageUploader extends IComponent<{}, ImageUploaderState> {
     }
 }
 
-type ImagePreviewProps = {
-    src: string;
-}
 
-export class ImagePreview extends IComponent<ImagePreviewProps, ImageUploaderState> {
-    render() {
+export class ImagePreview extends IComponent<{}, ImageUploaderState> {
+    constructor(props: {}) {
+        super(props);
+        this.state = { image: '' };
+    }
+
+    override render() {
         return <div>
-            {this.props.src ? <img src={this.props.src} alt="placeholder" /> : <p>No image</p>}
+            {this.state.image != '' ? <img src={'/file?path=' +this.state.image} alt="placeholder" /> : <p>No image</p>}
         </div>
+    }
+
+    override onUpdate(data: any): void {
+        console.log('ImagePreview onUpdate:', data);
+        this.setState({ image: data.path });
     }
 }
 

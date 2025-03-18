@@ -33,6 +33,10 @@ export default defineConfig(async () => ({
         target: 'http://127.0.0.1:7422',
         changeOrigin: true,
       },
+      "/file" : {
+        target: 'http://127.0.0.1:7422',
+        changeOrigin: true,
+      },
       "/ws": {
         target: 'ws://127.0.0.1:7422',
         changeOrigin: true,

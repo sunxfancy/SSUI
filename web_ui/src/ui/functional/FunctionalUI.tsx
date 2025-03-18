@@ -157,6 +157,20 @@ export function FunctionalUI({ path }: FunctionalUIProps) {
                     'Content-Type': 'application/json'
                 },
                 body: JSON.stringify({params}),
+            }).then(res => {
+                if (res.ok) {
+                    res.json().then(data => {
+                        console.log('Execute result:', data);
+                        for (let i = 0; i < data.length; i++) {
+                            let item = data[i];
+                            let output_component = getRef(i.toString(), ref_outputs).current;
+                            console.log('Output component:', output_component);
+                            if (output_component) {
+                                output_component.onUpdate(item);
+                            }
+                        }
+                    });
+                }
             });
         }
 

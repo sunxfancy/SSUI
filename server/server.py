@@ -1,12 +1,13 @@
 import datetime
 from fastapi import FastAPI, WebSocket
-from fastapi.responses import RedirectResponse
+from fastapi.responses import FileResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 import torch
 import torch.torch_version
 import sys
 import os
 import json
+from server.resource_manager import FileResourceProvider, ResourceManager
 import ssui
 from ssui.base import Image
 
@@ -141,21 +142,38 @@ async def execute(script_path: str, callable: str, params: dict):
 
     result = func(**new_params)
 
-
     def convert_return(result):
         if isinstance(result, tuple):
             return [convert_return(r) for r in result]
         
         if isinstance(result, Image):
             current_time = datetime.datetime.now()
-            path = "image_" + current_time.strftime("%Y%m%d%H%M%S") + ".png"
+            output_dir = os.path.join(project_root, "output")
+            if not os.path.exists(output_dir):
+                os.makedirs(output_dir)
+            path = os.path.join(output_dir, "image_" + current_time.strftime("%Y%m%d%H%M%S") + ".png")
             result._image.save(path)
             return {"type": "image", "path": path}
 
         return result
 
+    # 确保返回一个数组
+    if not isinstance(result, tuple):
+        result = (result,)
+
     return convert_return(result)
 
+@app.get("/file")
+async def file(path: str):
+    print("access file: ", path)
+    if os.path.exists(path):
+        if path.endswith(".png"):
+            return FileResponse(path, media_type='image/png')
+        elif path.endswith(".jpg") or path.endswith(".jpeg"):
+            return FileResponse(path, media_type='image/jpeg')
+        else:
+            return FileResponse(path)
+    return None
 
 
 @app.get("/api/extensions")
