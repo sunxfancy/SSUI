@@ -1,6 +1,7 @@
 import unittest
 import sys
 import os
+import argparse
 
 def run_all_tests():
     """运行tests目录下的所有测试用例"""
@@ -14,9 +15,21 @@ def run_all_tests():
     loader = unittest.TestLoader()
     suite = loader.discover(tests_dir, pattern='*_test.py')
     
-    # 运行测试
-    runner = unittest.TextTestRunner(verbosity=2)
-    result = runner.run(suite)
+    # 添加命令行参数解析
+    parser = argparse.ArgumentParser(description='运行测试')
+    parser.add_argument('--test', type=str, help='指定要运行的单个测试名称')
+    args = parser.parse_args()
+    
+    # 根据参数决定运行哪些测试
+    if args.test:
+        # 只运行指定的测试
+        specific_test = unittest.defaultTestLoader.loadTestsFromName(args.test)
+        runner = unittest.TextTestRunner(verbosity=2)
+        result = runner.run(specific_test)
+    else:
+        # 运行所有测试
+        runner = unittest.TextTestRunner(verbosity=2)
+        result = runner.run(suite)
     
     # 返回测试结果，用于确定退出码
     return result.wasSuccessful()

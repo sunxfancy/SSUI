@@ -1,6 +1,12 @@
-
+from contextlib import ExitStack
+from backend.flux.extensions.regional_prompting_extension import RegionalPromptingExtension
+from backend.flux.modules.conditioner import HFEncoder
+from backend.flux.text_conditioning import FluxTextConditioning
+from backend.model_manager.config import ModelFormat
+from backend.patches.model_patch_raw import ModelPatchRaw
 from backend.stable_diffusion.diffusion.conditioning_data import (
     BasicConditioningInfo,
+    FLUXConditioningInfo,
     Range,
     SDXLConditioningInfo,
     TextConditioningData,
@@ -8,26 +14,27 @@ from backend.stable_diffusion.diffusion.conditioning_data import (
 )
 
 from backend.util.devices import TorchDevice
-from transformers import CLIPTextModel,  CLIPTokenizer
+from transformers import CLIPTextModel, CLIPTextModelWithProjection, CLIPTokenizer, T5EncoderModel, T5Tokenizer, T5TokenizerFast
 import torchvision
 
-from typing import Any, Callable, Dict, Optional, Tuple, Union
+from typing import Any, Callable, Dict, Iterator, Literal, Optional, Tuple, Union, cast
 import torch
 
 from safetensors.torch import load_file as safetensors_load_file
 from torch import load as torch_load
-from compel import Compel
+from compel import Compel, ReturnedEmbeddingsType
 
 
 from backend.util.devices import TorchDevice
 from backend.util.mask import to_standard_float_mask
 
-from .model import ClipModel
+from .model import ClipModel, T5EncoderModel as ModelT5Encoder
+
 
 def create_conditioning(prompt: str, clip_model: ClipModel):
     text_encoder = clip_model.text_encoder
     tokenizer = clip_model.tokenizer
-    
+
     with (text_encoder.model_on_device() as (cached_weights, text_encoder),):
         tokenizer = tokenizer.model
         print("text_encoder: ", text_encoder)
@@ -47,7 +54,137 @@ def create_conditioning(prompt: str, clip_model: ClipModel):
         c, _options = compel.build_conditioning_tensor_for_conjunction(conjunction)
         c = c.detach().to("cpu")
         return BasicConditioningInfo(embeds=c)
-    
+
+
+def run_clip_compel(
+    clip_model: ClipModel,
+    prompt: str,
+    get_pooled: bool,
+    zero_on_empty: bool,
+) -> Tuple[torch.Tensor, Optional[torch.Tensor]]:
+    text_encoder_info = clip_model.text_encoder
+    tokenizer = clip_model.tokenizer
+    # return zero on empty
+    if prompt == "" and zero_on_empty:
+        cpu_text_encoder = text_encoder_info.model
+        assert isinstance(cpu_text_encoder, torch.nn.Module)
+        c = torch.zeros(
+            (
+                1,
+                cpu_text_encoder.config.max_position_embeddings,
+                cpu_text_encoder.config.hidden_size,
+            ),
+            dtype=cpu_text_encoder.dtype,
+        )
+        if get_pooled:
+            c_pooled = torch.zeros(
+                (1, cpu_text_encoder.config.hidden_size),
+                dtype=c.dtype,
+            )
+        else:
+            c_pooled = None
+        return c, c_pooled
+
+    with (
+        # apply all patches while the model is on the target device
+        text_encoder_info.model_on_device() as (cached_weights, text_encoder),
+    ):
+        assert isinstance(text_encoder, (CLIPTextModel, CLIPTextModelWithProjection))
+        assert isinstance(tokenizer.model, CLIPTokenizer)
+
+        text_encoder = cast(CLIPTextModel, text_encoder)
+        compel = Compel(
+            tokenizer=tokenizer.model,
+            text_encoder=text_encoder,
+            dtype_for_device_getter=TorchDevice.choose_torch_dtype,
+            truncate_long_prompts=False,  # TODO:
+            returned_embeddings_type=ReturnedEmbeddingsType.PENULTIMATE_HIDDEN_STATES_NON_NORMALIZED,  # TODO: clip skip
+            requires_pooled=get_pooled,
+            device=TorchDevice.choose_torch_device(),
+        )
+
+        conjunction = Compel.parse_prompt_string(prompt)
+
+        # TODO: ask for optimizations? to not run text_encoder twice
+        c, _options = compel.build_conditioning_tensor_for_conjunction(conjunction)
+        if get_pooled:
+            c_pooled = compel.conditioning_provider.get_pooled_embeddings([prompt])
+        else:
+            c_pooled = None
+
+    del tokenizer
+    del text_encoder
+    del text_encoder_info
+
+    c = c.detach().to("cpu")
+    if c_pooled is not None:
+        c_pooled = c_pooled.detach().to("cpu")
+
+    return c, c_pooled
+
+
+def create_sdxl_conditioning(
+    prompt: str,
+    style: str,
+    clip_model: ClipModel,
+    refiner_clip_model: ClipModel,
+    original_height: int,
+    original_width: int,
+    crop_top: int,
+    crop_left: int,
+    target_height: int,
+    target_width: int,
+):
+    c1, c1_pooled = run_clip_compel(clip_model, prompt, False, zero_on_empty=True)
+    if style.strip() == "":
+        c2, c2_pooled = run_clip_compel(
+            refiner_clip_model, prompt, True, zero_on_empty=True
+        )
+    else:
+        c2, c2_pooled = run_clip_compel(
+            refiner_clip_model, style, True, zero_on_empty=True
+        )
+
+    original_size = (original_height, original_width)
+    crop_coords = (crop_top, crop_left)
+    target_size = (target_height, target_width)
+
+    add_time_ids = torch.tensor([original_size + crop_coords + target_size])
+
+    # [1, 77, 768], [1, 154, 1280]
+    if c1.shape[1] < c2.shape[1]:
+        c1 = torch.cat(
+            [
+                c1,
+                torch.zeros(
+                    (c1.shape[0], c2.shape[1] - c1.shape[1], c1.shape[2]),
+                    device=c1.device,
+                    dtype=c1.dtype,
+                ),
+            ],
+            dim=1,
+        )
+
+    elif c1.shape[1] > c2.shape[1]:
+        c2 = torch.cat(
+            [
+                c2,
+                torch.zeros(
+                    (c2.shape[0], c1.shape[1] - c2.shape[1], c2.shape[2]),
+                    device=c2.device,
+                    dtype=c2.dtype,
+                ),
+            ],
+            dim=1,
+        )
+
+    assert c2_pooled is not None
+    return SDXLConditioningInfo(
+        embeds=torch.cat([c1, c2], dim=-1),
+        pooled_embeds=c2_pooled,
+        add_time_ids=add_time_ids,
+    )
+
 
 def get_conditioning_data(
     positive_conditioning_field: Union[
@@ -243,3 +380,95 @@ def get_conditioning_data(
         guidance_rescale_multiplier=cfg_rescale_multiplier,
     )
     return conditioning_data
+
+
+
+def create_flux_conditioning(prompt: str, t5_encoder: ModelT5Encoder, clip_model: ClipModel):
+    def _t5_encode(prompt: str) -> torch.Tensor:
+        prompt = [prompt]
+
+        t5_encoder_info = t5_encoder.text_encoder
+        t5_encoder_config = t5_encoder_info.config
+        assert t5_encoder_config is not None
+        t5_tokenizer = t5_encoder.tokenizer.model
+
+        with (
+            t5_encoder_info.model_on_device() as (cached_weights, t5_text_encoder),
+            ExitStack() as exit_stack,
+        ):
+            assert isinstance(t5_text_encoder, T5EncoderModel)
+            assert isinstance(t5_tokenizer, (T5Tokenizer, T5TokenizerFast))
+
+            # Determine if the model is quantized.
+            # If the model is quantized, then we need to apply the LoRA weights as sidecar layers. This results in
+            # slower inference than direct patching, but is agnostic to the quantization format.
+            if t5_encoder_config.format in [ModelFormat.T5Encoder, ModelFormat.Diffusers]:
+                model_is_quantized = False
+            elif t5_encoder_config.format in [
+                ModelFormat.BnbQuantizedLlmInt8b,
+                ModelFormat.BnbQuantizednf4b,
+                ModelFormat.GGUFQuantized,
+            ]:
+                model_is_quantized = True
+            else:
+                raise ValueError(f"Unsupported model format: {t5_encoder_config.format}")
+
+            hf_t5_encoder = HFEncoder(t5_text_encoder, t5_tokenizer, False, t5_encoder.max_seq_length)
+            prompt_embeds = hf_t5_encoder(prompt)
+
+        assert isinstance(prompt_embeds, torch.Tensor)
+        return prompt_embeds
+
+    def _clip_encode(prompt: str) -> torch.Tensor:
+        prompt = [prompt]
+
+        clip_text_encoder_info = clip_model.text_encoder
+        clip_text_encoder_config = clip_text_encoder_info.config
+        assert clip_text_encoder_config is not None
+        clip_tokenizer = clip_model.tokenizer.model
+
+        with (
+            clip_text_encoder_info.model_on_device() as (cached_weights, clip_text_encoder),
+            ExitStack() as exit_stack,
+        ):
+            assert isinstance(clip_text_encoder, CLIPTextModel)
+            assert isinstance(clip_tokenizer, CLIPTokenizer)
+
+            clip_encoder = HFEncoder(clip_text_encoder, clip_tokenizer, True, 77)
+            pooled_prompt_embeds = clip_encoder(prompt)
+
+        assert isinstance(pooled_prompt_embeds, torch.Tensor)
+        return pooled_prompt_embeds
+
+    t5_embeddings = _t5_encode(prompt)
+    clip_embeddings = _clip_encode(prompt)
+    return FLUXConditioningInfo(clip_embeds=clip_embeddings, t5_embeds=t5_embeddings)
+
+def _load_text_conditioning(
+    cond_list: list[FLUXConditioningInfo],
+    masks: Optional[list[Optional[torch.Tensor]]],
+    packed_height: int,
+    packed_width: int,
+    dtype: torch.dtype,
+    device: torch.device,
+) -> list[FluxTextConditioning]:
+    """Load text conditioning data from a FluxConditioningField or a list of FluxConditioningFields."""
+
+    text_conditionings: list[FluxTextConditioning] = []
+    for flux_conditioning_idx, flux_conditioning in enumerate(cond_list):
+        # Load the text embeddings.
+        flux_conditioning = flux_conditioning.to(dtype=dtype, device=device)
+        t5_embeddings = flux_conditioning.t5_embeds
+        clip_embeddings = flux_conditioning.clip_embeds
+
+        # Load the mask, if provided.
+        mask: Optional[torch.Tensor] = masks[flux_conditioning_idx] if masks is not None else None
+        if mask is not None:
+            mask = mask.to(device=device)
+            mask = RegionalPromptingExtension.preprocess_regional_prompt_mask(
+                mask, packed_height, packed_width, dtype, device
+            )
+
+        text_conditionings.append(FluxTextConditioning(t5_embeddings, clip_embeddings, mask))
+
+    return text_conditionings

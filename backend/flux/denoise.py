@@ -1,5 +1,5 @@
 import math
-from typing import Callable
+from typing import Callable, Optional
 
 import torch
 from tqdm import tqdm
@@ -23,7 +23,7 @@ def denoise(
     neg_regional_prompting_extension: RegionalPromptingExtension | None,
     # sampling parameters
     timesteps: list[float],
-    step_callback: Callable[[PipelineIntermediateState], None],
+    step_callback: Optional[Callable[[PipelineIntermediateState], None]],
     guidance: float,
     cfg_scale: list[float],
     inpaint_extension: InpaintExtension | None,
@@ -35,15 +35,16 @@ def denoise(
 ):
     # step 0 is the initial state
     total_steps = len(timesteps) - 1
-    step_callback(
-        PipelineIntermediateState(
-            step=0,
-            order=1,
-            total_steps=total_steps,
-            timestep=int(timesteps[0]),
-            latents=img,
-        ),
-    )
+    if step_callback is not None:
+        step_callback(
+            PipelineIntermediateState(
+                step=0,
+                order=1,
+                total_steps=total_steps,
+                timestep=int(timesteps[0]),
+                latents=img,
+            ),
+        )
     # guidance_vec is ignored for schnell.
     guidance_vec = torch.full((img.shape[0],), guidance, device=img.device, dtype=img.dtype)
     for step_index, (t_curr, t_prev) in tqdm(list(enumerate(zip(timesteps[:-1], timesteps[1:], strict=True)))):
@@ -122,13 +123,14 @@ def denoise(
             img = inpaint_extension.merge_intermediate_latents_with_init_latents(img, t_prev)
             preview_img = inpaint_extension.merge_intermediate_latents_with_init_latents(preview_img, 0.0)
 
-        step_callback(
-            PipelineIntermediateState(
-                step=step_index + 1,
-                order=1,
-                total_steps=total_steps,
-                timestep=int(t_curr),
-                latents=preview_img,
+        if step_callback is not None:
+            step_callback(
+                PipelineIntermediateState(
+                    step=step_index + 1,
+                    order=1,
+                    total_steps=total_steps,
+                    timestep=int(t_curr),
+                    latents=preview_img,
             ),
         )
 

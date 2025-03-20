@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 from typing import Optional
-from ssui_api.conditioning import BasicConditioningInfo, create_conditioning
+from ssui_api.conditioning import BasicConditioningInfo, create_conditioning, create_sdxl_conditioning
 from ssui_api.denoise import decode_latents, denoise_image
 from ssui_api.model import (
     ModelLoaderService,
@@ -24,7 +24,7 @@ def getModelLoader():
     return _loader_instance
 
 
-class SD1Model:
+class SDXLModel:
     def __init__(
         self,
         path: str = "",
@@ -40,63 +40,63 @@ class SD1Model:
     @staticmethod
     def load(path: str):
         unet, clip, vae = load_model(getModelLoader(), path)
-        return SD1Model(path, unet, clip, vae)
+        return SDXLModel(path, unet, clip, vae)
 
 
-class SD1Condition:
+class SDXLCondition:
     def __init__(self, condition_info: Optional[BasicConditioningInfo] = None):
         self.condition_info = condition_info
 
 
 @param("ignoreLastLayer", Switch(), default=False)
-def SD1Clip(config, model: SD1Model, positive: Prompt, negative: Prompt):
+def SDXLClip(config, model: SDXLModel, positive: Prompt, negative: Prompt):
     if config.is_prepare():
-        return SD1Condition(), SD1Condition()
+        return SDXLCondition(), SDXLCondition()
 
-    print("SD1Clip executed")
+    print("SDXLClip executed")
     print("ignoreLastLayer:", config["ignoreLastLayer"])
     print("positive:", positive.text)
     print("negative:", negative.text)
-    
-    positive_condition = create_conditioning(positive.text, model.clip)
-    negative_condition = create_conditioning(negative.text, model.clip)
 
-    return SD1Condition(positive_condition), SD1Condition(negative_condition)
+    positive_condition = create_sdxl_conditioning(positive.text, "", model.clip, model.clip, 1024, 1024, 0, 0, 1024, 1024)
+    negative_condition = create_sdxl_conditioning(negative.text, "", model.clip, model.clip, 1024, 1024, 0, 0, 1024, 1024)
+
+    return SDXLCondition(positive_condition), SDXLCondition(negative_condition)
 
 
 @param(
     "width",
     Slider(512, 4096, 64, labels=[512, 768, 1024, 1536, 1920, 2048, 3840, 4096]),
-    default=512,
+    default=1024,
 )
 @param(
     "height",
     Slider(512, 4096, 64, labels=[512, 768, 1024, 1536, 1920, 2048, 3840, 4096]),
-    default=512,
+    default=1024,
 )
-class SD1Latent:
+class SDXLLatent:
     def __init__(self, config, tensor=None):
         self.width = config["width"]
         self.height = config["height"]
         self.tensor = tensor
-        
+
         if config.is_prepare():
             return
-        
-        print("SD1Latent executed")
+
+        print("SDXLLatent executed")
         print("width:", self.width)
         print("height:", self.height)
 
     @staticmethod
-    def from_image(image: Image) -> "SD1Latent":
+    def from_image(image: Image) -> "SDXLLatent":
         pass
 
 
-def SD1Decode(config):
+def SDXLDecode(config):
     pass
 
 
-class SD1Lora:
+class SDXLLora:
     def __init__(self, config):
         self.config = config
 
@@ -140,20 +140,20 @@ class SD1Lora:
         "lcm",
         "tcd",
     ),
-    default="ddim",
+    default="euler_a",
 )
 @param("CFG", Slider(0, 15, 0.1), default=7.5)
-def SD1Denoise(
+def SDXLDenoise(
     config,
-    model: SD1Model,
-    latent: SD1Latent,
-    positive: SD1Condition,
-    negative: SD1Condition,
+    model: SDXLModel,
+    latent: SDXLLatent,
+    positive: SDXLCondition,
+    negative: SDXLCondition,
 ):
     if config.is_prepare():
-        return SD1Latent(config("DenoiseToLatents"))
+        return SDXLLatent(config("DenoiseToLatents"))
 
-    print("SD1Denoise executed")
+    print("SDXLDenoise executed")
     print("scheduler:", config["scheduler"])
     print("steps:", config["steps"])
     print("CFG:", config["CFG"])
@@ -169,15 +169,14 @@ def SD1Denoise(
         steps=config["steps"],
         cfg_scale=config["CFG"],
     )
-    return SD1Latent(config("DenoiseToLatents"), tensor)
+    return SDXLLatent(config("DenoiseToLatents"), tensor)
 
 
-def SD1LatentDecode(config, model: SD1Model, latent: SD1Latent):
+def SDXLLatentDecode(config, model: SDXLModel, latent: SDXLLatent):
     if config.is_prepare():
         return Image()
 
-    print("SD1LatentDecode executed")
+    print("SDXLLatentDecode executed")
 
     image = decode_latents(model.vae, latent.tensor)
     return Image(image)
-

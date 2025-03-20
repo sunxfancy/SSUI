@@ -617,7 +617,7 @@ class VaeCheckpointProbe(CheckpointProbeBase):
             (r"xl", BaseModelType.StableDiffusionXL),
             (r"sd2", BaseModelType.StableDiffusion2),
             (r"vae", BaseModelType.StableDiffusion1),
-            (r"FLUX.1-schnell_ae", BaseModelType.Flux),
+            (r"FLUX", BaseModelType.Flux),
         ]:
             if re.search(regexp, self.model_path.name, re.IGNORECASE):
                 return basetype
