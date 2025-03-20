@@ -321,7 +321,7 @@ def denoise_image(
     print("result_latents: ", result_latents)
     return Latents(result_latents)
 
-
+@torch.no_grad()
 def decode_latents(model: VAEModel, result_latents: Latents) -> PIL.Image.Image | None:
     vae = model.vae
     assert isinstance(vae.model, (AutoencoderKL, AutoencoderTiny))
