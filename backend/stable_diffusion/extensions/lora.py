@@ -10,26 +10,22 @@ from backend.patches.model_patch_raw import ModelPatchRaw
 from backend.stable_diffusion.extensions.base import ExtensionBase
 
 if TYPE_CHECKING:
-    from app.invocations.model import ModelIdentifierField
-    from app.services.shared.invocation_context import InvocationContext
     from backend.util.original_weights_storage import OriginalWeightsStorage
 
 
 class LoRAExt(ExtensionBase):
     def __init__(
         self,
-        node_context: InvocationContext,
-        model_id: ModelIdentifierField,
+        lora_model,
         weight: float,
     ):
         super().__init__()
-        self._node_context = node_context
-        self._model_id = model_id
+        self._lora_model = lora_model
         self._weight = weight
 
     @contextmanager
     def patch_unet(self, unet: UNet2DConditionModel, original_weights: OriginalWeightsStorage):
-        lora_model = self._node_context.models.load(self._model_id).model
+        lora_model = self._lora_model
         assert isinstance(lora_model, ModelPatchRaw)
         LayerPatcher.apply_smart_model_patch(
             model=unet,

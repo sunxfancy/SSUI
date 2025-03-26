@@ -6,7 +6,7 @@ from PIL.Image import Image
 
 LATENT_SCALE_FACTOR = 8
 
-from backend.controlnet_utils import CONTROLNET_RESIZE_VALUES, prepare_control_image
+from backend.stable_diffusion.util.controlnet_utils import CONTROLNET_RESIZE_VALUES, prepare_control_image
 from backend.flux.controlnet.controlnet_flux_output import ControlNetFluxOutput
 from backend.flux.controlnet.instantx_controlnet_flux import (
     InstantXControlNetFlux,

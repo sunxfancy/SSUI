@@ -5,7 +5,6 @@ import numpy as np
 import torch
 from PIL import Image
 
-import backend.util.logging as logger
 from backend.model_manager.config import AnyModel
 from backend.model_manager.load.model_cache.utils import get_effective_device
 

@@ -1,16 +1,15 @@
-from dataclasses import dataclass
+from pydantic import BaseModel, ConfigDict, Field
 from backend.model_manager.load.load_base import ModelLoaderConfig
 from backend.model_manager.probe import ModelProbe
 from backend.util.devices import TorchDevice
 
-from typing import Any, Callable, Dict, Optional, Tuple
+from typing import Any, Callable, Dict, List, Optional, Tuple
 from enum import Enum
 from pathlib import Path
 from typing import Callable, Optional
 
 from safetensors.torch import load_file as safetensors_load_file
 from torch import load as torch_load
-
 
 from backend.model_manager import AnyModel, AnyModelConfig, SubModelType
 from backend.model_manager.load import (
@@ -23,6 +22,7 @@ from backend.model_manager.load.model_loaders.generic_diffusers import (
     GenericDiffusersLoader,
 )
 from backend.util.devices import TorchDevice
+from backend.util.freeu import FreeUConfig
 
 
 class BaseModelType(str, Enum):
@@ -72,6 +72,7 @@ class SubModelType(str, Enum):
     VAEEncoder = "vae_encoder"
     Scheduler = "scheduler"
     SafetyChecker = "safety_checker"
+
 
 def load_model_from_path(
     model_path: Path, loader: Optional[Callable[[Path], AnyModel]] = None
@@ -151,78 +152,172 @@ class ModelLoaderService:
         ).load_model(model_config, submodel_type)
         return loaded_model
 
-@dataclass
-class UNetModel:
-    unet: LoadedModel
-    scheduler: LoadedModel
 
-@dataclass
-class ClipModel:
-    text_encoder: LoadedModel
-    tokenizer: LoadedModel
+class LoRAModel(BaseModel):
+    lora: "LoadedModel" = Field(description="The lora model", validate=False)
+    weight: float = Field(default=1, description="Weight to apply to lora model")
+    model_config = ConfigDict(arbitrary_types_allowed=True)
 
-@dataclass
-class VAEModel:
-    vae: LoadedModel
 
-def _load_model_service(service: ModelLoaderService, config: AnyModelConfig, submodel_type: SubModelType) -> LoadedModel:
+class UNetModel(BaseModel):
+    unet: "LoadedModel" = Field(description="The basic unet model", validate=False)
+    scheduler: "LoadedModel" = Field(
+        description="A scheduler object defined in the model", validate=False
+    )
+    loras: List[LoRAModel] = Field(
+        default_factory=list, description="LoRAs to apply on model loading"
+    )
+    seamless_axes: List[str] = Field(
+        default_factory=list, description='Axes("x" and "y") to which apply seamless'
+    )
+    freeu_config: Optional[FreeUConfig] = Field(default=None, description="Info to load freeu config")
+    model_config = ConfigDict(arbitrary_types_allowed=True)
+
+
+class ClipModel(BaseModel):
+    text_encoder: "LoadedModel" = Field(
+        description="The text encoder model", validate=False
+    )
+    tokenizer: "LoadedModel" = Field(description="The tokenizer model", validate=False)
+    skipped_layers: int = Field(
+        default=0, description="Number of skipped layers in text_encoder"
+    )
+    loras: List[LoRAModel] = Field(
+        default_factory=list, description="LoRAs to apply on model loading"
+    )
+    model_config = ConfigDict(arbitrary_types_allowed=True)
+
+
+class VAEModel(BaseModel):
+    vae: "LoadedModel" = Field(description="The vae model", validate=False)
+    seamless_axes: List[str] = Field(
+        default_factory=list, description='Axes("x" and "y") to which apply seamless'
+    )
+    model_config = ConfigDict(arbitrary_types_allowed=True)
+
+
+def _load_model_service(
+    service: ModelLoaderService, config: AnyModelConfig, submodel_type: SubModelType
+) -> LoadedModel:
     return service.load_model(
         config.model_copy(update={"submodel_type": submodel_type}),
         submodel_type,
     )
 
-def load_model(model_loader_service: ModelLoaderService, model_path: Path) -> Tuple[UNetModel, ClipModel, VAEModel]:
+
+def load_model(
+    model_loader_service: ModelLoaderService, model_path: Path
+) -> Tuple[UNetModel, ClipModel, VAEModel]:
     model_config = ModelProbe.probe(Path(model_path))
     unet = _load_model_service(model_loader_service, model_config, SubModelType.UNet)
-    scheduler = _load_model_service(model_loader_service, model_config, SubModelType.Scheduler)
+    scheduler = _load_model_service(
+        model_loader_service, model_config, SubModelType.Scheduler
+    )
     vae = _load_model_service(model_loader_service, model_config, SubModelType.VAE)
-    text_encoder = _load_model_service(model_loader_service, model_config, SubModelType.TextEncoder)
-    tokenizer = _load_model_service(model_loader_service, model_config, SubModelType.Tokenizer)
-    return UNetModel(unet, scheduler), ClipModel(text_encoder, tokenizer), VAEModel(vae)
+    text_encoder = _load_model_service(
+        model_loader_service, model_config, SubModelType.TextEncoder
+    )
+    tokenizer = _load_model_service(
+        model_loader_service, model_config, SubModelType.Tokenizer
+    )
+    return (
+        UNetModel(unet=unet, scheduler=scheduler),
+        ClipModel(text_encoder=text_encoder, tokenizer=tokenizer),
+        VAEModel(vae=vae),
+    )
 
 
-def load_sdxl_model(model_loader_service: ModelLoaderService, model_path: Path) -> Tuple[UNetModel, ClipModel, VAEModel]:
+def load_sdxl_model(
+    model_loader_service: ModelLoaderService, model_path: Path
+) -> Tuple[UNetModel, ClipModel, VAEModel]:
     model_config = ModelProbe.probe(Path(model_path))
     unet = _load_model_service(model_loader_service, model_config, SubModelType.UNet)
-    scheduler = _load_model_service(model_loader_service, model_config, SubModelType.Scheduler)
+    scheduler = _load_model_service(
+        model_loader_service, model_config, SubModelType.Scheduler
+    )
     vae = _load_model_service(model_loader_service, model_config, SubModelType.VAE)
-    text_encoder = _load_model_service(model_loader_service, model_config, SubModelType.TextEncoder)
-    tokenizer = _load_model_service(model_loader_service, model_config, SubModelType.Tokenizer)
-    text_encoder2 = _load_model_service(model_loader_service, model_config, SubModelType.TextEncoder2)
-    tokenizer2 = _load_model_service(model_loader_service, model_config, SubModelType.Tokenizer2)
-    return UNetModel(unet, scheduler), ClipModel(text_encoder, tokenizer), ClipModel(text_encoder2, tokenizer2), VAEModel(vae)
+    text_encoder = _load_model_service(
+        model_loader_service, model_config, SubModelType.TextEncoder
+    )
+    tokenizer = _load_model_service(
+        model_loader_service, model_config, SubModelType.Tokenizer
+    )
+    text_encoder2 = _load_model_service(
+        model_loader_service, model_config, SubModelType.TextEncoder2
+    )
+    tokenizer2 = _load_model_service(
+        model_loader_service, model_config, SubModelType.Tokenizer2
+    )
+    return (
+        UNetModel(unet=unet, scheduler=scheduler),
+        ClipModel(text_encoder=text_encoder, tokenizer=tokenizer),
+        ClipModel(text_encoder=text_encoder2, tokenizer=tokenizer2),
+        VAEModel(vae=vae),
+    )
 
-def load_sdxl_refiner_model(model_loader_service: ModelLoaderService, model_path: Path) -> Tuple[UNetModel, ClipModel, VAEModel]:
+
+def load_sdxl_refiner_model(
+    model_loader_service: ModelLoaderService, model_path: Path
+) -> Tuple[UNetModel, ClipModel, VAEModel]:
     model_config = ModelProbe.probe(Path(model_path))
     unet = _load_model_service(model_loader_service, model_config, SubModelType.UNet)
-    scheduler = _load_model_service(model_loader_service, model_config, SubModelType.Scheduler)
+    scheduler = _load_model_service(
+        model_loader_service, model_config, SubModelType.Scheduler
+    )
     vae = _load_model_service(model_loader_service, model_config, SubModelType.VAE)
-    text_encoder2 = _load_model_service(model_loader_service, model_config, SubModelType.TextEncoder2)
-    tokenizer2 = _load_model_service(model_loader_service, model_config, SubModelType.Tokenizer2)
-    return UNetModel(unet, scheduler), ClipModel(text_encoder2, tokenizer2), VAEModel(vae)
+    text_encoder2 = _load_model_service(
+        model_loader_service, model_config, SubModelType.TextEncoder2
+    )
+    tokenizer2 = _load_model_service(
+        model_loader_service, model_config, SubModelType.Tokenizer2
+    )
+    return (
+        UNetModel(unet=unet, scheduler=scheduler),
+        ClipModel(text_encoder=text_encoder2, tokenizer=tokenizer2),
+        VAEModel(vae=vae),
+    )
 
 
-@dataclass
-class FluxModel:
-    transformer: LoadedModel
+class FluxModel(BaseModel):
+    transformer: "LoadedModel" = Field(
+        description="The transformer model", validate=False
+    )
+    loras: List[LoRAModel] = Field(description="LoRAs to apply on model loading")
+    model_config = ConfigDict(arbitrary_types_allowed=True)
 
-@dataclass
-class T5EncoderModel:
-    text_encoder: LoadedModel
-    tokenizer: LoadedModel
-    max_seq_length: int
 
-def load_flux_model(model_loader_service: ModelLoaderService, model_path: Path, t5_encoder_path: Path, clip_path: Path, vae_path: Path) -> Tuple[LoadedModel, LoadedModel, LoadedModel, LoadedModel]:
+class T5EncoderModel(BaseModel):
+    text_encoder: "LoadedModel" = Field(
+        description="The text encoder model", validate=False
+    )
+    tokenizer: "LoadedModel" = Field(description="The tokenizer model", validate=False)
+    max_seq_length: int = Field(description="The maximum sequence length")
+    model_config = ConfigDict(arbitrary_types_allowed=True)
+
+
+def load_flux_model(
+    model_loader_service: ModelLoaderService,
+    model_path: Path,
+    t5_encoder_path: Path,
+    clip_path: Path,
+    vae_path: Path,
+) -> Tuple[LoadedModel, LoadedModel, LoadedModel, LoadedModel]:
     model_config = ModelProbe.probe(Path(model_path))
     t5_config = ModelProbe.probe(Path(t5_encoder_path))
     clip_config = ModelProbe.probe(Path(clip_path))
     vae_config = ModelProbe.probe(Path(vae_path))
 
-    transformer = _load_model_service(model_loader_service, model_config, SubModelType.Transformer)
+    transformer = _load_model_service(
+        model_loader_service, model_config, SubModelType.Transformer
+    )
     vae = _load_model_service(model_loader_service, vae_config, SubModelType.VAE)
 
-    clip_tokenizer = _load_model_service(model_loader_service, clip_config, SubModelType.Tokenizer)
-    clip_encoder = _load_model_service(model_loader_service, clip_config, SubModelType.TextEncoder)
+    clip_tokenizer = _load_model_service(
+        model_loader_service, clip_config, SubModelType.Tokenizer
+    )
+    clip_encoder = _load_model_service(
+        model_loader_service, clip_config, SubModelType.TextEncoder
+    )
 
     def preprocess_t5_encoder_model_identifier(model_identifier):
         """A helper function to normalize a T5 encoder model identifier so that T5 models associated with FLUX
@@ -246,11 +341,28 @@ def load_flux_model(model_loader_service: ModelLoaderService, model_path: Path, 
         else:
             raise ValueError(f"Unsupported model base: {model_identifier.base}")
 
-    t5_tokenizer = _load_model_service(model_loader_service, t5_config, preprocess_t5_tokenizer_model_identifier(t5_config  ))
-    t5_encoder = _load_model_service(model_loader_service, t5_config, preprocess_t5_encoder_model_identifier(t5_config))
-    
+    t5_tokenizer = _load_model_service(
+        model_loader_service,
+        t5_config,
+        preprocess_t5_tokenizer_model_identifier(t5_config),
+    )
+    t5_encoder = _load_model_service(
+        model_loader_service,
+        t5_config,
+        preprocess_t5_encoder_model_identifier(t5_config),
+    )
+
     max_seq_lengths = {
         "flux-dev": 512,
         "flux-schnell": 256,
     }
-    return FluxModel(transformer), T5EncoderModel(t5_encoder, t5_tokenizer, max_seq_lengths[model_config.config_path]), ClipModel(clip_encoder, clip_tokenizer), VAEModel(vae)
+    return (
+        FluxModel(transformer=transformer),
+        T5EncoderModel(
+            text_encoder=t5_encoder,
+            tokenizer=t5_tokenizer,
+            max_seq_length=max_seq_lengths[model_config.config_path],
+        ),
+        ClipModel(text_encoder=clip_encoder, tokenizer=clip_tokenizer),
+        VAEModel(vae=vae),
+    )

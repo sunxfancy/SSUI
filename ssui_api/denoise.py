@@ -1,6 +1,6 @@
-from dataclasses import dataclass
 import PIL
 from einops import rearrange
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 from backend.flux.denoise import denoise as flux_denoise
 from backend.flux.extensions.inpaint_extension import InpaintExtension
 from backend.flux.extensions.regional_prompting_extension import (
@@ -9,7 +9,7 @@ from backend.flux.extensions.regional_prompting_extension import (
 from backend.flux.model import Flux
 from backend.flux.modules.autoencoder import AutoEncoder
 from backend.flux.text_conditioning import FluxTextConditioning
-from backend.model_manager.config import ModelFormat
+from backend.model_manager.config import BaseModelType, ModelFormat, ModelVariantType
 from backend.model_patcher import ModelPatcher
 from backend.stable_diffusion.denoise_context import DenoiseContext, DenoiseInputs
 from backend.stable_diffusion.diffusion.conditioning_data import (
@@ -18,14 +18,23 @@ from backend.stable_diffusion.diffusion.conditioning_data import (
 )
 from backend.stable_diffusion.diffusion_backend import StableDiffusionBackend
 from backend.stable_diffusion.extension_callback_type import ExtensionCallbackType
+from backend.stable_diffusion.extensions.controlnet import ControlNetExt
+from backend.stable_diffusion.extensions.freeu import FreeUExt
+from backend.stable_diffusion.extensions.inpaint import InpaintExt
+from backend.stable_diffusion.extensions.inpaint_model import InpaintModelExt
+from backend.stable_diffusion.extensions.lora import LoRAExt
+from backend.stable_diffusion.extensions.rescale_cfg import RescaleCFGExt
+from backend.stable_diffusion.extensions.seamless import SeamlessExt
+from backend.stable_diffusion.extensions.t2i_adapter import T2IAdapterExt
 from backend.stable_diffusion.extensions_manager import ExtensionsManager
+from backend.stable_diffusion.util.controlnet_utils import CONTROLNET_RESIZE_VALUES, CONTROLNET_MODE_VALUES
 from backend.util.devices import TorchDevice
 import inspect
 from contextlib import ExitStack
 from torchvision.transforms.functional import resize as tv_resize
 import torchvision.transforms as tv_transforms
 
-from typing import Any, Dict, Tuple, Union
+from typing import Any, Dict, List, Optional, Tuple, Union
 import torch
 
 
@@ -99,9 +108,94 @@ def get_noise(
     return noise_tensor
 
 
-@dataclass
-class Latents:
-    tensor: torch.Tensor
+
+class Latents(BaseModel):
+    tensor: torch.Tensor = Field(description="The latents to be denoised", validate=False)
+    model_config = ConfigDict(arbitrary_types_allowed=True)
+
+class DenoiseMask(BaseModel):
+    mask_image: torch.Tensor = Field(description="The mask image to be used for inpainting", validate=False)
+    masked_latents: Optional[Latents] = Field(default=None, description="The latents to be used for inpainting")
+    gradient: bool = Field(default=False, description="Whether the mask is a gradient mask")
+    model_config = ConfigDict(arbitrary_types_allowed=True)
+
+class ApplyRange(BaseModel):
+    begin_step_percent: float = Field(
+        default=0, ge=0, le=1, description="When the ControlNet is first applied (% of total steps)"
+    )
+    end_step_percent: float = Field(
+        default=1, ge=0, le=1, description="When the ControlNet is last applied (% of total steps)"
+    )
+
+    @model_validator(mode="after")
+    def validate_begin_end_step_percent(self):
+        if self.begin_step_percent >= self.end_step_percent:
+            raise ValueError("Begin step percent must be less than or equal to end step percent")
+        return self
+
+class ControlNet(BaseModel):
+    image: PIL.Image.Image = Field(description="The control image", validate=False)
+    control_model: LoadedModel = Field(description="The ControlNet model to use", validate=False)
+    control_weight: Union[float, List[float]] = Field(default=1, description="The weight given to the ControlNet")
+    apply_range: ApplyRange = Field(default=ApplyRange(), description="The range of steps to apply the ControlNet")
+    control_mode: CONTROLNET_MODE_VALUES = Field(default="balanced", description="The control mode to use")
+    resize_mode: CONTROLNET_RESIZE_VALUES = Field(default="just_resize", description="The resize mode to use")
+    model_config = ConfigDict(arbitrary_types_allowed=True)
+
+    @field_validator("control_weight")
+    @classmethod
+    def validate_control_weight(cls, weights):
+        to_validate = weights if isinstance(weights, list) else [weights]
+        if any(i < -1 or i > 2 for i in to_validate):
+            raise ValueError("Control weights must be within -1 to 2 range")
+        return weights
+
+    @model_validator(mode="after")
+    def validate_begin_end_step_percent(self):
+        if self.begin_step_percent >= self.end_step_percent:
+            raise ValueError("Begin step percent must be less than or equal to end step percent")
+        return self
+
+
+class IPAdapter(BaseModel):
+    image: Union['PIL.Image.Image', List['PIL.Image.Image']] = Field(description="The IP-Adapter image prompt(s).", validate=False)
+    ip_adapter_model: 'LoadedModel' = Field(description="The IP-Adapter model to use", validate=False)
+    image_encoder_model: 'LoadedModel' = Field(description="The name of the CLIP image encoder model", validate=False)
+    weight: Union[float, List[float]] = Field(default=1, description="The weight given to the IP-Adapter.")
+    target_blocks: List[str] = Field(default=[], description="The IP Adapter blocks to apply")
+    apply_range: ApplyRange = Field(description="The range of steps to apply the IP-Adapter")
+    mask: Optional[torch.Tensor] = Field(
+        default=None,
+        description="The bool mask associated with this IP-Adapter. Excluded regions should be set to False, included "
+        "regions should be set to True.",
+    )
+
+    @field_validator("weight")
+    @classmethod
+    def validate_ip_adapter_weight(cls, weights: float) -> float:
+        to_validate = weights if isinstance(weights, list) else [weights]
+        if any(i < -1 or i > 2 for i in to_validate):
+            raise ValueError("Control weights must be within -1 to 2 range")
+        return weights
+    model_config = ConfigDict(arbitrary_types_allowed=True)
+
+
+
+class T2IAdapter(BaseModel):
+    image: 'PIL.Image.Image' = Field(description="The T2I-Adapter image prompt", validate=False)
+    t2i_adapter_model: 'LoadedModel' = Field(description="The T2I-Adapter model to use", validate=False)
+    weight: Union[float, list[float]] = Field(default=1, description="The weight given to the T2I-Adapter")
+    apply_range: ApplyRange = Field(description="The range of steps to apply the IP-Adapter")
+    resize_mode: CONTROLNET_RESIZE_VALUES = Field(default="just_resize", description="The resize mode to use")
+    model_config = ConfigDict(arbitrary_types_allowed=True)
+
+    @field_validator("weight")
+    @classmethod
+    def validate_t2i_adapter_weight(cls, weights: float) -> float:
+        to_validate = weights if isinstance(weights, list) else [weights]
+        if any(i < -1 or i > 2 for i in to_validate):
+            raise ValueError("Control weights must be within -1 to 2 range")
+        return weights
 
 
 @torch.no_grad()
@@ -109,13 +203,20 @@ def denoise_image(
     model: UNetModel,
     positive: BasicConditioningInfo,
     negative: BasicConditioningInfo,
-    seed: int,
-    width: int,
-    height: int,
-    scheduler_name: str,
-    cfg_scale: float,
-    steps: int,
+    seed: int = 123454321,
+    width: int = 1024,
+    height: int = 1024,
+    scheduler_name: str = "ddim",
+    cfg_scale: float = 7.5,
+    cfg_rescale_multiplier: float = 1.0,
+    steps: int = 20,
+    latents: Optional[Latents] = None,
+    denoise_mask: Optional[DenoiseMask] = None,
+    control: Optional[ControlNet] = None,
+    ip_adapter: Optional[IPAdapter] = None,
+    t2i_adapter: Optional[T2IAdapter] = None,
 ) -> Latents:
+    
     def get_scheduler(
         scheduler_info: LoadedModel,
         scheduler_name: str,
@@ -234,15 +335,107 @@ def denoise_image(
 
         return timesteps, init_timestep, scheduler_step_kwargs
 
+    def prep_inpaint_mask(
+        denoise_mask: DenoiseMask, latents: torch.Tensor
+    ) -> Tuple[Optional[torch.Tensor], Optional[torch.Tensor], bool]:
+        if denoise_mask is None:
+            return None, None, False
+
+        mask = denoise_mask.mask_image
+        mask = tv_resize(mask, latents.shape[-2:], tv_transforms.InterpolationMode.BILINEAR, antialias=False)
+        if denoise_mask.masked_latents is not None:
+            masked_latents = denoise_mask.masked_latents
+        else:
+            masked_latents = torch.where(mask < 0.5, 0.0, latents)
+
+        return mask, masked_latents, denoise_mask.gradient
+
+    def parse_controlnet_field(
+        exit_stack: ExitStack,
+        control_input: ControlNet | list[ControlNet] | None,
+        ext_manager: ExtensionsManager,
+    ) -> None:
+        # Normalize control_input to a list.
+        control_list: list[ControlNet]
+        if isinstance(control_input, ControlNet):
+            control_list = [control_input]
+        elif isinstance(control_input, list):
+            control_list = control_input
+        elif control_input is None:
+            control_list = []
+        else:
+            raise ValueError(f"Unexpected control_input type: {type(control_input)}")
+
+        for control_info in control_list:
+            model = exit_stack.enter_context(control_info.control_model)
+            ext_manager.add_extension(
+                ControlNetExt(
+                    model=model,
+                    image=control_info.image,
+                    weight=control_info.control_weight,
+                    begin_step_percent=control_info.apply_range.begin_step_percent,
+                    end_step_percent=control_info.apply_range.end_step_percent,
+                    control_mode=control_info.control_mode,
+                    resize_mode=control_info.resize_mode,
+                )
+            )
+
+    def parse_t2i_adapter_field(
+        exit_stack: ExitStack,
+        t2i_adapters: Optional[Union[T2IAdapter, list[T2IAdapter]]],
+        ext_manager: ExtensionsManager,
+        bgr_mode: bool = False,
+    ) -> None:
+        if t2i_adapters is None:
+            return
+
+        # Handle the possibility that t2i_adapters could be a list or a single T2IAdapterField.
+        if isinstance(t2i_adapters, T2IAdapter):
+            t2i_adapters = [t2i_adapters]
+
+        for t2i_adapter in t2i_adapters:
+            image = t2i_adapter.image
+            if bgr_mode:  # SDXL t2i trained on cv2's BGR outputs, but PIL won't convert straight to BGR
+                r, g, b = image.split()
+                image = PIL.Image.merge("RGB", (b, g, r))
+            
+            downscale = 0
+            if t2i_adapter.t2i_adapter_model.config.base == BaseModelType.StableDiffusion1:
+                downscale = 8
+            elif t2i_adapter.t2i_adapter_model.config.base == BaseModelType.StableDiffusionXL:
+                downscale = 4
+            else:
+                raise ValueError(f"Unexpected T2I-Adapter base model type: '{t2i_adapter.t2i_adapter_model.config.base}'.")
+
+            ext_manager.add_extension(
+                T2IAdapterExt(
+                    t2i_model=t2i_adapter.t2i_adapter_model,
+                    unet_downscale=downscale,
+                    image=t2i_adapter.image,
+                    weight=t2i_adapter.weight,
+                    begin_step_percent=t2i_adapter.apply_range.begin_step_percent,
+                    end_step_percent=t2i_adapter.apply_range.end_step_percent,
+                    resize_mode=t2i_adapter.resize_mode,
+                )
+            )
+    ##################################################
+    # Start of the denoise process
+    ##################################################
+
     unet = model.unet
     scheduler = model.scheduler
-
     device = TorchDevice.choose_torch_device()
     dtype = TorchDevice.choose_torch_dtype()
+    unet_config = model.scheduler.config
+    noise = get_noise(width=width, height=height, device=device, seed=seed)
+
+    if latents is not None:
+        latents = latents.tensor
+    else:
+        latents = torch.zeros_like(noise)
 
     print("conditioning created: ", positive, negative)
-    seed = 123454321
-    noise = get_noise(width=width, height=height, device=device, seed=seed)
+    
     latents = torch.zeros_like(noise)
     print("noise created: ", noise)
     _, _, latent_height, latent_width = latents.shape
@@ -264,7 +457,7 @@ def denoise_image(
         scheduler_info=scheduler,
         scheduler_name=scheduler_name,
         seed=seed,
-        unet_config=model.scheduler.config,
+        unet_config=unet_config,
     )
 
     timesteps, init_timestep, scheduler_step_kwargs = init_scheduler(
@@ -277,6 +470,39 @@ def denoise_image(
     )
 
     ext_manager = ExtensionsManager()
+
+    ### cfg rescale
+    if cfg_rescale_multiplier > 0:
+        ext_manager.add_extension(RescaleCFGExt(cfg_rescale_multiplier))
+
+    ### freeu
+    if model.freeu_config:
+        ext_manager.add_extension(FreeUExt(model.freeu_config))
+
+    ### lora
+    if model.loras:
+        for lora_field in model.loras:
+            ext_manager.add_extension(
+                LoRAExt(
+                    lora_model=lora_field.lora,
+                    model_id=lora_field.lora,
+                    weight=lora_field.weight,
+                )
+            )
+    ### seamless
+    if model.seamless_axes:
+        ext_manager.add_extension(SeamlessExt(model.seamless_axes))
+
+    ### inpaint
+    mask, masked_latents, is_gradient_mask = prep_inpaint_mask(denoise_mask, latents)
+    # NOTE: We used to identify inpainting models by inspecting the shape of the loaded UNet model weights. Now we
+    # use the ModelVariantType config. During testing, there was a report of a user with models that had an
+    # incorrect ModelVariantType value. Re-installing the model fixed the issue. If this issue turns out to be
+    # prevalent, we will have to revisit how we initialize the inpainting extensions.
+    if unet_config.variant == ModelVariantType.Inpaint:
+        ext_manager.add_extension(InpaintModelExt(mask, masked_latents, is_gradient_mask))
+    elif mask is not None:
+        ext_manager.add_extension(InpaintExt(mask, is_gradient_mask))
 
     # Initialize context for modular denoise
     latents = latents.to(device=device, dtype=dtype)
@@ -298,6 +524,14 @@ def denoise_image(
     )
 
     with ExitStack() as exit_stack:
+        # later should be smth like:
+        # for extension_field in self.extensions:
+        #    ext = extension_field.to_extension(exit_stack, context, ext_manager)
+        #    ext_manager.add_extension(ext)
+        parse_controlnet_field(exit_stack, control, ext_manager)
+        bgr_mode = unet.config.base == BaseModelType.StableDiffusionXL
+        parse_t2i_adapter_field(exit_stack, t2i_adapter, ext_manager, bgr_mode)
+
         ext_manager.run_callback(ExtensionCallbackType.SETUP, denoise_ctx)
 
         with (
@@ -305,7 +539,9 @@ def denoise_image(
             ModelPatcher.patch_unet_attention_processor(
                 unet, denoise_ctx.inputs.attention_processor_cls
             ),
+            # ext: controlnet
             ext_manager.patch_extensions(denoise_ctx),
+            # ext: freeu, seamless, ip adapter, lora
             ext_manager.patch_unet(unet, cached_weights),
         ):
             sd_backend = StableDiffusionBackend(unet, scheduler)
@@ -319,7 +555,7 @@ def denoise_image(
         TorchDevice.empty_cache()
 
     print("result_latents: ", result_latents)
-    return Latents(result_latents)
+    return Latents(tensor=result_latents)
 
 @torch.no_grad()
 def decode_latents(model: VAEModel, result_latents: Latents) -> PIL.Image.Image | None:
@@ -346,10 +582,9 @@ def decode_latents(model: VAEModel, result_latents: Latents) -> PIL.Image.Image 
             return image
 
 
-@dataclass
-class FLuxLatents:
-    tensor: torch.Tensor
-
+class FLuxLatents(BaseModel):
+    tensor: torch.Tensor = Field(description="The latents to be denoised", validate=False)
+    model_config = ConfigDict(arbitrary_types_allowed=True)
 
 @torch.no_grad()
 def flux_denoise_image(

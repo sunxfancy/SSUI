@@ -9,7 +9,9 @@ from logging import Logger
 from pathlib import Path
 from typing import Any, Dict, Generator, Optional, Tuple
 from pydantic.main import BaseModel
-from pydantic import Field
+from pydantic import Field, GetCoreSchemaHandler
+
+from pydantic_core import CoreSchema, core_schema
 
 import torch
 

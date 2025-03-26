@@ -8,7 +8,7 @@ import torch
 from PIL.Image import Image
 
 LATENT_SCALE_FACTOR = 8
-from backend.controlnet_utils import CONTROLNET_MODE_VALUES, CONTROLNET_RESIZE_VALUES, prepare_control_image
+from backend.stable_diffusion.util.controlnet_utils import CONTROLNET_MODE_VALUES, CONTROLNET_RESIZE_VALUES, prepare_control_image
 from backend.stable_diffusion.denoise_context import UNetKwargs
 from backend.stable_diffusion.diffusion.conditioning_data import ConditioningMode
 from backend.stable_diffusion.extension_callback_type import ExtensionCallbackType
@@ -16,7 +16,7 @@ from backend.stable_diffusion.extensions.base import ExtensionBase, callback
 
 if TYPE_CHECKING:
     from backend.stable_diffusion.denoise_context import DenoiseContext
-    from backend.util.hotfixes import ControlNetModel
+    from backend.stable_diffusion.util.hotfixes import ControlNetModel
 
 
 class ControlNetExt(ExtensionBase):

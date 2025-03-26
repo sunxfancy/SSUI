@@ -19,11 +19,12 @@ pillow = "^11.0.0"
 virtualenv = "^20.28.0"
 fastapi = {extras = ["standard"], version = "^0.115.6"}
 websockets = "^14.1"
-torch = {version = "^2.4.0+cu124", source = "pytorch-gpu-src"}
-torchvision = {version = "^0.19.0+cu124", source = "pytorch-gpu-src"}
-torchaudio = {version = "^2.4.0+cu124", source = "pytorch-gpu-src"}
+torch = {version = "=2.4.1+cu124", source = "pytorch-gpu-src"}
+triton-windows = {version = "=3.1.0.post17", platform = "win32"}
+torchvision = {version = "=0.19.1+cu124", source = "pytorch-gpu-src"}
+torchaudio = {version = "=2.4.1+cu124", source = "pytorch-gpu-src"}
 xformers = {version = "=0.0.28.post1", source = "pytorch-gpu-src"}
-torchsde = "^0.2.6"
+torchsde = "=0.2.6"
 diffusers = {extras = ["torch"], version = "^0.31.0"}
 accelerate = "^1.2.1"
 pydantic-settings = "^2.7.0"

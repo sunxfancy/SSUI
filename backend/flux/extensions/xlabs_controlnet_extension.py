@@ -11,10 +11,10 @@ factor is hard-coded to a literal '8' rather than using this constant.
 The ratio of image:latent dimensions is LATENT_SCALE_FACTOR:1, or 8:1.
 """
 
-from ...controlnet_utils import CONTROLNET_RESIZE_VALUES, prepare_control_image
-from ..controlnet.controlnet_flux_output import ControlNetFluxOutput
-from ..controlnet.xlabs_controlnet_flux import XLabsControlNetFlux, XLabsControlNetFluxOutput
-from .base_controlnet_extension import BaseControlNetExtension
+from backend.stable_diffusion.util.controlnet_utils import CONTROLNET_RESIZE_VALUES, prepare_control_image
+from backend.flux.controlnet.controlnet_flux_output import ControlNetFluxOutput
+from backend.flux.controlnet.xlabs_controlnet_flux import XLabsControlNetFlux, XLabsControlNetFluxOutput
+from backend.flux.extensions.base_controlnet_extension import BaseControlNetExtension
 
 
 class XLabsControlNetExtension(BaseControlNetExtension):

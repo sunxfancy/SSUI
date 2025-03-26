@@ -7,25 +7,23 @@ import torch
 from diffusers import T2IAdapter
 from PIL.Image import Image
 
-from backend.controlnet_utils import prepare_control_image
 from backend.model_manager import BaseModelType
+from backend.model_manager.config import AnyModelConfig
 from backend.stable_diffusion.diffusion.conditioning_data import ConditioningMode
 from backend.stable_diffusion.extension_callback_type import ExtensionCallbackType
 from backend.stable_diffusion.extensions.base import ExtensionBase, callback
 from backend.util.devices import TorchDevice
 
 if TYPE_CHECKING:
-    from app.invocations.model import ModelIdentifierField
-    from app.services.shared.invocation_context import InvocationContext
-    from app.util.controlnet_utils import CONTROLNET_RESIZE_VALUES
+    from backend.stable_diffusion.util.controlnet_utils import prepare_control_image, CONTROLNET_RESIZE_VALUES
     from backend.stable_diffusion.denoise_context import DenoiseContext
 
 
 class T2IAdapterExt(ExtensionBase):
     def __init__(
         self,
-        node_context: InvocationContext,
-        model_id: ModelIdentifierField,
+        t2i_model: T2IAdapter,
+        unet_downscale: int,
         image: Image,
         weight: Union[float, List[float]],
         begin_step_percent: float,
@@ -33,8 +31,8 @@ class T2IAdapterExt(ExtensionBase):
         resize_mode: CONTROLNET_RESIZE_VALUES,
     ):
         super().__init__()
-        self._node_context = node_context
-        self._model_id = model_id
+        self._t2i_model = t2i_model
+        self._max_unet_downscale = unet_downscale
         self._image = image
         self._weight = weight
         self._resize_mode = resize_mode
@@ -44,13 +42,13 @@ class T2IAdapterExt(ExtensionBase):
         self._adapter_state: Optional[List[torch.Tensor]] = None
 
         # The max_unet_downscale is the maximum amount that the UNet model downscales the latent image internally.
-        model_config = self._node_context.models.get_config(self._model_id.key)
-        if model_config.base == BaseModelType.StableDiffusion1:
-            self._max_unet_downscale = 8
-        elif model_config.base == BaseModelType.StableDiffusionXL:
-            self._max_unet_downscale = 4
-        else:
-            raise ValueError(f"Unexpected T2I-Adapter base model type: '{model_config.base}'.")
+        # model_config = self._node_context.models.get_config(self._model_id.key)
+        # if model_config.base == BaseModelType.StableDiffusion1:
+        #     self._max_unet_downscale = 8
+        # elif model_config.base == BaseModelType.StableDiffusionXL:
+        #     self._max_unet_downscale = 4
+        # else:
+        #     raise ValueError(f"Unexpected T2I-Adapter base model type: '{model_config.base}'.")
 
     @callback(ExtensionCallbackType.SETUP)
     def setup(self, ctx: DenoiseContext):
