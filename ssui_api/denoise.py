@@ -912,7 +912,7 @@ def flux_denoise_image(
 
     result_latents = unpack(x.float(), height, width)
     result_latents = result_latents.detach().to("cpu")
-    return FLuxLatents(result_latents)
+    return FLuxLatents(tensor=result_latents)
 
 
 @torch.no_grad()

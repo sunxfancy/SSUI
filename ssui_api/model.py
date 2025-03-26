@@ -282,7 +282,7 @@ class FluxModel(BaseModel):
     transformer: "LoadedModel" = Field(
         description="The transformer model", validate=False
     )
-    loras: List[LoRAModel] = Field(description="LoRAs to apply on model loading")
+    loras: List[LoRAModel] = Field(default_factory=list, description="LoRAs to apply on model loading")
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
 
@@ -291,7 +291,7 @@ class T5EncoderModel(BaseModel):
         description="The text encoder model", validate=False
     )
     tokenizer: "LoadedModel" = Field(description="The tokenizer model", validate=False)
-    max_seq_length: int = Field(description="The maximum sequence length")
+    max_seq_length: int = Field(default=512, description="The maximum sequence length")
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
 
