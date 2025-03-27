@@ -1,16 +1,27 @@
 import PIL
 from einops import rearrange
+import numpy as np
+import numpy.typing as npt
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
+from backend.flux.controlnet.instantx_controlnet_flux import InstantXControlNetFlux
+from backend.flux.controlnet.xlabs_controlnet_flux import XLabsControlNetFlux
 from backend.flux.denoise import denoise as flux_denoise
 from backend.flux.extensions.inpaint_extension import InpaintExtension
+from backend.flux.extensions.instantx_controlnet_extension import InstantXControlNetExtension
 from backend.flux.extensions.regional_prompting_extension import (
     RegionalPromptingExtension,
 )
+from backend.flux.extensions.xlabs_controlnet_extension import XLabsControlNetExtension
+from backend.flux.extensions.xlabs_ip_adapter_extension import XLabsIPAdapterExtension
+from backend.flux.ip_adapter.xlabs_ip_adapter_flux import XlabsIpAdapterFlux
 from backend.flux.model import Flux
 from backend.flux.modules.autoencoder import AutoEncoder
 from backend.flux.text_conditioning import FluxTextConditioning
 from backend.model_manager.config import BaseModelType, ModelFormat, ModelVariantType
 from backend.model_patcher import ModelPatcher
+from backend.patches.layer_patcher import LayerPatcher
+from backend.patches.lora_conversions.flux_lora_constants import FLUX_LORA_TRANSFORMER_PREFIX
+from backend.patches.model_patch_raw import ModelPatchRaw
 from backend.stable_diffusion.denoise_context import DenoiseContext, DenoiseInputs
 from backend.stable_diffusion.diffusion.conditioning_data import (
     BasicConditioningInfo,
@@ -33,8 +44,9 @@ import inspect
 from contextlib import ExitStack
 from torchvision.transforms.functional import resize as tv_resize
 import torchvision.transforms as tv_transforms
+from transformers import CLIPImageProcessor, CLIPVisionModelWithProjection
 
-from typing import Any, Dict, List, Optional, Tuple, Union
+from typing import Any, Dict, Iterator, List, Optional, Tuple, Union
 import torch
 
 
@@ -65,7 +77,7 @@ from diffusers.models.autoencoders.autoencoder_tiny import AutoencoderTiny
 from diffusers.image_processor import VaeImageProcessor
 
 from .conditioning import _load_text_conditioning, get_conditioning_data
-from .model import FluxModel, UNetModel, VAEModel
+from .model import ControlLoRAModel, FluxModel, LoRAModel, UNetModel, VAEModel
 from backend.flux.sampling_utils import (
     clip_timestep_schedule_fractional,
     generate_img_ids,
@@ -150,11 +162,22 @@ class ControlNet(BaseModel):
             raise ValueError("Control weights must be within -1 to 2 range")
         return weights
 
-    @model_validator(mode="after")
-    def validate_begin_end_step_percent(self):
-        if self.begin_step_percent >= self.end_step_percent:
-            raise ValueError("Begin step percent must be less than or equal to end step percent")
-        return self
+class FluxControlNet(BaseModel):
+    image: PIL.Image.Image = Field(description="The control image", validate=False)
+    control_model: LoadedModel = Field(description="The ControlNet model to use", validate=False)
+    control_weight: float | list[float] = Field(default=1, description="The weight given to the ControlNet")
+    apply_range: ApplyRange = Field(default=ApplyRange(), description="The range of steps to apply the ControlNet")
+    resize_mode: CONTROLNET_RESIZE_VALUES = Field(default="just_resize", description="The resize mode to use")
+    instantx_control_mode: int | None = Field(default=-1, description="The control mode for InstantX ControlNet union models. Ignored for other ControlNet models. The standard mapping is: canny (0), tile (1), depth (2), blur (3), pose (4), gray (5), low quality (6). Negative values will be treated as 'None'.")
+    model_config = ConfigDict(arbitrary_types_allowed=True)
+
+    @field_validator("control_weight")
+    @classmethod
+    def validate_control_weight(cls, weights):
+        to_validate = weights if isinstance(weights, list) else [weights]
+        if any(i < -1 or i > 2 for i in to_validate):
+            raise ValueError("Control weights must be within -1 to 2 range")
+        return weights
 
 
 class IPAdapter(BaseModel):
@@ -593,6 +616,10 @@ def flux_denoise_image(
     negative: FLUXConditioningInfo | list[FLUXConditioningInfo] | None = None,
     init_latents: FLuxLatents | None = None,
     denoise_mask: torch.Tensor | None = None,
+    control: FluxControlNet | list[FluxControlNet] | None = None,
+    controlnet_vae: VAEModel | None = None,
+    ip_adapter: IPAdapter | list[IPAdapter] | None = None,
+    control_lora: Optional[ControlLoRAModel] = None,
     seed: int = 123454321,
     width: int = 1024,
     height: int = 1024,
@@ -703,6 +730,219 @@ def flux_denoise_image(
         ]
 
         return clipped_cfg_scale
+    
+    def _prep_controlnet_extensions(
+        control: Optional[FluxControlNet | list[FluxControlNet]],
+        controlnet_vae: Optional[VAEModel],
+        latent_height: int,
+        latent_width: int,
+        dtype: torch.dtype,
+        device: torch.device,
+    ) -> list[XLabsControlNetExtension | InstantXControlNetExtension]:
+        # Normalize the controlnet input to list[ControlField].
+        controlnets: list[FluxControlNet]
+        if control is None:
+            controlnets = []
+        elif isinstance(control, FluxControlNet):
+            controlnets = [control]
+        elif isinstance(control, list):
+            controlnets = control
+
+        # TODO(ryand): Add a field to the model config so that we can distinguish between XLabs and InstantX ControlNets
+        # before loading the models. Then make sure that all VAE encoding is done before loading the ControlNets to
+        # minimize peak memory.
+
+        # Calculate the controlnet conditioning tensors.
+        # We do this before loading the ControlNet models because it may require running the VAE, and we are trying to
+        # keep peak memory down.
+        controlnet_conds: list[torch.Tensor] = []
+        for controlnet in controlnets:
+            image = controlnet.image
+
+            # HACK(ryand): We have to load the ControlNet model to determine whether the VAE needs to be run. We really
+            # shouldn't have to load the model here. There's a risk that the model will be dropped from the model cache
+            # before we load it into VRAM and thus we'll have to load it again (context:
+            # https://github.com/invoke-ai/InvokeAI/issues/7513).
+            controlnet_model = controlnet.control_model
+            if isinstance(controlnet_model.model, InstantXControlNetFlux):
+                if controlnet_vae is None:
+                    raise ValueError("A ControlNet VAE is required when using an InstantX FLUX ControlNet.")
+                vae_info = controlnet_vae.vae
+                controlnet_conds.append(
+                    InstantXControlNetExtension.prepare_controlnet_cond(
+                        controlnet_image=image,
+                        vae_info=vae_info,
+                        latent_height=latent_height,
+                        latent_width=latent_width,
+                        dtype=dtype,
+                        device=device,
+                        resize_mode=controlnet.resize_mode,
+                    )
+                )
+            elif isinstance(controlnet_model.model, XLabsControlNetFlux):
+                controlnet_conds.append(
+                    XLabsControlNetExtension.prepare_controlnet_cond(
+                        controlnet_image=image,
+                        latent_height=latent_height,
+                        latent_width=latent_width,
+                        dtype=dtype,
+                        device=device,
+                        resize_mode=controlnet.resize_mode,
+                    )
+                )
+
+        # Finally, load the ControlNet models and initialize the ControlNet extensions.
+        controlnet_extensions: list[XLabsControlNetExtension | InstantXControlNetExtension] = []
+        for controlnet, controlnet_cond in zip(controlnets, controlnet_conds, strict=True):
+            model = controlnet.control_model.model
+
+            if isinstance(model, XLabsControlNetFlux):
+                controlnet_extensions.append(
+                    XLabsControlNetExtension(
+                        model=model,
+                        controlnet_cond=controlnet_cond,
+                        weight=controlnet.control_weight,
+                        begin_step_percent=controlnet.begin_step_percent,
+                        end_step_percent=controlnet.end_step_percent,
+                    )
+                )
+            elif isinstance(model, InstantXControlNetFlux):
+                instantx_control_mode: torch.Tensor | None = None
+                if controlnet.instantx_control_mode is not None and controlnet.instantx_control_mode >= 0:
+                    instantx_control_mode = torch.tensor(controlnet.instantx_control_mode, dtype=torch.long)
+                    instantx_control_mode = instantx_control_mode.reshape([-1, 1])
+
+                controlnet_extensions.append(
+                    InstantXControlNetExtension(
+                        model=model,
+                        controlnet_cond=controlnet_cond,
+                        instantx_control_mode=instantx_control_mode,
+                        weight=controlnet.control_weight,
+                        begin_step_percent=controlnet.begin_step_percent,
+                        end_step_percent=controlnet.end_step_percent,
+                    )
+                )
+            else:
+                raise ValueError(f"Unsupported ControlNet model type: {type(model)}")
+
+        return controlnet_extensions
+    
+    def _prep_ip_adapter_extensions(
+        ip_adapter_fields: list[IPAdapter],
+        pos_image_prompt_clip_embeds: list[torch.Tensor],
+        neg_image_prompt_clip_embeds: list[torch.Tensor],
+        exit_stack: ExitStack,
+        dtype: torch.dtype,
+    ) -> tuple[list[XLabsIPAdapterExtension], list[XLabsIPAdapterExtension]]:
+        pos_ip_adapter_extensions: list[XLabsIPAdapterExtension] = []
+        neg_ip_adapter_extensions: list[XLabsIPAdapterExtension] = []
+        for ip_adapter_field, pos_image_prompt_clip_embed, neg_image_prompt_clip_embed in zip(
+            ip_adapter_fields, pos_image_prompt_clip_embeds, neg_image_prompt_clip_embeds, strict=True
+        ):
+            ip_adapter_model = ip_adapter_field.ip_adapter_model.model
+            assert isinstance(ip_adapter_model, XlabsIpAdapterFlux)
+            ip_adapter_model = ip_adapter_model.to(dtype=dtype)
+            if ip_adapter_field.mask is not None:
+                raise ValueError("IP-Adapter masks are not yet supported in Flux.")
+            ip_adapter_extension = XLabsIPAdapterExtension(
+                model=ip_adapter_model,
+                image_prompt_clip_embed=pos_image_prompt_clip_embed,
+                weight=ip_adapter_field.weight,
+                begin_step_percent=ip_adapter_field.begin_step_percent,
+                end_step_percent=ip_adapter_field.end_step_percent,
+            )
+            ip_adapter_extension.run_image_proj(dtype=dtype)
+            pos_ip_adapter_extensions.append(ip_adapter_extension)
+
+            ip_adapter_extension = XLabsIPAdapterExtension(
+                model=ip_adapter_model,
+                image_prompt_clip_embed=neg_image_prompt_clip_embed,
+                weight=ip_adapter_field.weight,
+                begin_step_percent=ip_adapter_field.begin_step_percent,
+                end_step_percent=ip_adapter_field.end_step_percent,
+            )
+            ip_adapter_extension.run_image_proj(dtype=dtype)
+            neg_ip_adapter_extensions.append(ip_adapter_extension)
+
+        return pos_ip_adapter_extensions, neg_ip_adapter_extensions
+
+    def _lora_iterator(model: FluxModel, control_lora: Optional[Union[ControlLoRAModel, list[ControlLoRAModel]]]) -> Iterator[Tuple[ModelPatchRaw, float]]:
+        loras: list[Union[LoRAModel, ControlLoRAModel]] = [*model.loras]
+        if control_lora:
+            # Note: Since FLUX structural control LoRAs modify the shape of some weights, it is important that they are
+            # applied last.
+            loras.append(control_lora)
+        for lora in loras:
+            lora_info = lora.lora
+            assert isinstance(lora_info.model, ModelPatchRaw)
+            yield (lora_info.model, lora.weight)
+            del lora_info
+
+    def _normalize_ip_adapter_fields() -> list[IPAdapter]:
+        if ip_adapter is None:
+            return []
+        elif isinstance(ip_adapter, IPAdapter):
+            return [ip_adapter]
+        elif isinstance(ip_adapter, list):
+            return ip_adapter
+        
+    def _prep_ip_adapter_image_prompt_clip_embeds(
+        ip_adapter_fields: list[IPAdapter],
+        device: torch.device,
+    ) -> tuple[list[torch.Tensor], list[torch.Tensor]]:
+        """Run the IPAdapter CLIPVisionModel, returning image prompt embeddings."""
+        clip_image_processor = CLIPImageProcessor()
+
+        pos_image_prompt_clip_embeds: list[torch.Tensor] = []
+        neg_image_prompt_clip_embeds: list[torch.Tensor] = []
+        for ip_adapter_field in ip_adapter_fields:
+            # `ip_adapter_field.image` could be a list or a single ImageField. Normalize to a list here.
+            ipa_image_fields: list[PIL.Image.Image]
+            if isinstance(ip_adapter_field.image, PIL.Image.Image):
+                ipa_image_fields = [ip_adapter_field.image]
+            elif isinstance(ip_adapter_field.image, list):
+                ipa_image_fields = ip_adapter_field.image
+            else:
+                raise ValueError(f"Unsupported IP-Adapter image type: {type(ip_adapter_field.image)}")
+
+            if len(ipa_image_fields) != 1:
+                raise ValueError(
+                    f"FLUX IP-Adapter only supports a single image prompt (received {len(ipa_image_fields)})."
+                )
+
+            ipa_images = [*ipa_image_fields]
+
+            pos_images: list[npt.NDArray[np.uint8]] = []
+            neg_images: list[npt.NDArray[np.uint8]] = []
+            for ipa_image in ipa_images:
+                assert ipa_image.mode == "RGB"
+                pos_image = np.array(ipa_image)
+                # We use a black image as the negative image prompt for parity with
+                # https://github.com/XLabs-AI/x-flux-comfyui/blob/45c834727dd2141aebc505ae4b01f193a8414e38/nodes.py#L592-L593
+                # An alternative scheme would be to apply zeros_like() after calling the clip_image_processor.
+                neg_image = np.zeros_like(pos_image)
+                pos_images.append(pos_image)
+                neg_images.append(neg_image)
+
+            with ip_adapter_field.image_encoder_model as image_encoder_model:
+                assert isinstance(image_encoder_model, CLIPVisionModelWithProjection)
+
+                clip_image: torch.Tensor = clip_image_processor(images=pos_images, return_tensors="pt").pixel_values
+                clip_image = clip_image.to(device=device, dtype=image_encoder_model.dtype)
+                pos_clip_image_embeds = image_encoder_model(clip_image).image_embeds
+
+                clip_image = clip_image_processor(images=neg_images, return_tensors="pt").pixel_values
+                clip_image = clip_image.to(device=device, dtype=image_encoder_model.dtype)
+                neg_clip_image_embeds = image_encoder_model(clip_image).image_embeds
+
+            pos_image_prompt_clip_embeds.append(pos_clip_image_embeds)
+            neg_image_prompt_clip_embeds.append(neg_clip_image_embeds)
+
+        return pos_image_prompt_clip_embeds, neg_image_prompt_clip_embeds
+        
+    ################################################################################
+    # Start of the main function
+    ################################################################################
 
     inference_dtype = torch.bfloat16
 
@@ -837,6 +1077,10 @@ def flux_denoise_image(
 
     # Compute the IP-Adapter image prompt clip embeddings.
     # We do this before loading other models to minimize peak memory.
+    ip_adapter_fields = _normalize_ip_adapter_fields()
+    pos_image_prompt_clip_embeds, neg_image_prompt_clip_embeds = _prep_ip_adapter_image_prompt_clip_embeds(
+        ip_adapter_fields, device=x.device
+    )
 
     cfg_scale = prep_cfg_scale(
         cfg_scale=cfg_scale,
@@ -846,6 +1090,17 @@ def flux_denoise_image(
     )
 
     with ExitStack() as exit_stack:
+        # Prepare ControlNet extensions.
+        # Note: We do this before loading the transformer model to minimize peak memory (see implementation).
+        controlnet_extensions = _prep_controlnet_extensions(
+            control=control,
+            controlnet_vae=controlnet_vae,
+            latent_height=latent_h,
+            latent_width=latent_w,
+            dtype=inference_dtype,
+            device=x.device,
+        )
+
         # Load the transformer model.
         (cached_weights, transformer) = exit_stack.enter_context(
             model.transformer.model_on_device()
@@ -870,28 +1125,27 @@ def flux_denoise_image(
 
         # Apply LoRA models to the transformer.
         # Note: We apply the LoRA after the transformer has been moved to its target device for faster patching.
-        # exit_stack.enter_context(
-        #     LayerPatcher.apply_smart_model_patches(
-        #         model=transformer,
-        #         patches=self._lora_iterator(context),
-        #         prefix=FLUX_LORA_TRANSFORMER_PREFIX,
-        #         dtype=inference_dtype,
-        #         cached_weights=cached_weights,
-        #         force_sidecar_patching=model_is_quantized,
-        #     )
-        # )
+        exit_stack.enter_context(
+            LayerPatcher.apply_smart_model_patches(
+                model=transformer,
+                patches=_lora_iterator(model, control_lora),
+                prefix=FLUX_LORA_TRANSFORMER_PREFIX,
+                dtype=inference_dtype,
+                cached_weights=cached_weights,
+                force_sidecar_patching=model_is_quantized,
+            )
+        )
 
         # Prepare IP-Adapter extensions.
-        # pos_ip_adapter_extensions, neg_ip_adapter_extensions = (
-        #     self._prep_ip_adapter_extensions(
-        #         pos_image_prompt_clip_embeds=pos_image_prompt_clip_embeds,
-        #         neg_image_prompt_clip_embeds=neg_image_prompt_clip_embeds,
-        #         ip_adapter_fields=ip_adapter_fields,
-        #         context=context,
-        #         exit_stack=exit_stack,
-        #         dtype=inference_dtype,
-        #     )
-        # )
+        pos_ip_adapter_extensions, neg_ip_adapter_extensions = (
+            _prep_ip_adapter_extensions(
+                ip_adapter_fields=ip_adapter_fields,
+                pos_image_prompt_clip_embeds=pos_image_prompt_clip_embeds,
+                neg_image_prompt_clip_embeds=neg_image_prompt_clip_embeds,
+                exit_stack=exit_stack,
+                dtype=inference_dtype,
+            )
+        )
 
         x = flux_denoise(
             model=transformer,
@@ -904,9 +1158,9 @@ def flux_denoise_image(
             cfg_scale=cfg_scale,
             inpaint_extension=inpaint_extension,
             img_cond=img_cond,
-            controlnet_extensions=[],
-            pos_ip_adapter_extensions=[],
-            neg_ip_adapter_extensions=[],
+            controlnet_extensions=controlnet_extensions,
+            pos_ip_adapter_extensions=pos_ip_adapter_extensions,
+            neg_ip_adapter_extensions=neg_ip_adapter_extensions,
             step_callback=None,
         )
 

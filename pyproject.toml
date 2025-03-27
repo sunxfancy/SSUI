@@ -56,6 +56,8 @@ kaolin = {url = "https://nvidia-kaolin.s3.us-east-2.amazonaws.com/torch-2.4.0_cu
 diffrp-nvdiffrast = {path = "trellis/diffrp_nvdiffrast/dist/diffrp_nvdiffrast-0.3.3.1-cp312-cp312-win_amd64.whl"}
 spconv-cu124 = "^2.3.8"
 diff-gaussian-rasterization = {path = "trellis/diff-gaussian-rasterization/dist/diff_gaussian_rasterization-0.0.0-cp312-cp312-win_amd64.whl"}
+torch-scatter = {url = "https://data.pyg.org/whl/torch-2.4.0%2Bcu124/torch_scatter-2.1.2%2Bpt24cu124-cp312-cp312-win_amd64.whl"}
+kornia = "^0.8.0"
 
 
 [[tool.poetry.source]]

@@ -1,3 +1,4 @@
+import PIL
 from pydantic import BaseModel, ConfigDict, Field
 from backend.model_manager.load.load_base import ModelLoaderConfig
 from backend.model_manager.probe import ModelProbe
@@ -156,6 +157,10 @@ class ModelLoaderService:
 class LoRAModel(BaseModel):
     lora: "LoadedModel" = Field(description="The lora model", validate=False)
     weight: float = Field(default=1, description="Weight to apply to lora model")
+    model_config = ConfigDict(arbitrary_types_allowed=True)
+
+class ControlLoRAModel(LoRAModel):
+    img: PIL.Image.Image = Field(description="Image to use in structural conditioning", validate=False)
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
 
