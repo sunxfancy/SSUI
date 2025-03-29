@@ -21,13 +21,3 @@ html, body, #root {
   -webkit-text-size-adjust: 100%;
 }
 
-
-.tabs-container {
-  height: 100vh;
-}
-
-
-.bp5-tab-panel {
-  height: 100vh;
-}
-

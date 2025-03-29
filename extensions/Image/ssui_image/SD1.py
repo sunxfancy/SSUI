@@ -1,17 +1,16 @@
-from dataclasses import dataclass
 from typing import Optional
-from ssui_api.conditioning import BasicConditioningInfo, create_conditioning
-from ssui_api.denoise import decode_latents, denoise_image
-from ssui_api.model import (
+from .api.conditioning import BasicConditioningInfo, create_conditioning
+from .api.denoise import decode_latents, denoise_image
+from .api.model import (
     ModelLoaderService,
     UNetModel,
     ClipModel,
     VAEModel,
     load_model,
 )
-from .base import Prompt, Noise, Image
-from .annotation import param
-from .controller import Select, Switch, Slider
+from ssui.base import Prompt, Image
+from ssui.annotation import param
+from ssui.controller import Select, Switch, Slider
 
 
 _loader_instance = None
@@ -180,4 +179,10 @@ def SD1LatentDecode(config, model: SD1Model, latent: SD1Latent):
 
     image = decode_latents(model.vae, latent.tensor)
     return Image(image)
+
+
+class SD1IPAdapter:
+    def __init__(self, config):
+        self.config = config
+
 

@@ -1,5 +1,4 @@
 import React, { Component } from 'react';
-import { Button } from "@blueprintjs/core";
 import { load } from '@tauri-apps/plugin-store';
 import Sidebar from './components/Sidebar.tsx';
 import TabWindowManager from './components/TabWindowManager';
@@ -24,7 +23,7 @@ class App extends Component {
   }
 
   onFileOpen = (filePath: string) => {
-    this.tabWindowManagerRef.current?.openFile(filePath);
+    this.tabWindowManagerRef.current?.openFile(filePath, "http://localhost:7420/?path=" + filePath);
   }
 
   render() {

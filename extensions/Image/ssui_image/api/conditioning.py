@@ -17,11 +17,9 @@ from backend.util.devices import TorchDevice
 from transformers import CLIPTextModel, CLIPTextModelWithProjection, CLIPTokenizer, T5EncoderModel, T5Tokenizer, T5TokenizerFast
 import torchvision
 
-from typing import Any, Callable, Dict, Iterator, Literal, Optional, Tuple, Union, cast
+from typing import Optional, Tuple, Union, cast
 import torch
 
-from safetensors.torch import load_file as safetensors_load_file
-from torch import load as torch_load
 from compel import Compel, ReturnedEmbeddingsType
 
 

@@ -4,7 +4,7 @@ from backend.model_manager.load.load_base import ModelLoaderConfig
 from backend.model_manager.probe import ModelProbe
 from backend.util.devices import TorchDevice
 
-from typing import Any, Callable, Dict, List, Optional, Tuple
+from typing import Callable, List, Optional, Tuple
 from enum import Enum
 from pathlib import Path
 from typing import Callable, Optional

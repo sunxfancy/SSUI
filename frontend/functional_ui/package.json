@@ -1,5 +1,5 @@
 {
-  "name": "ssui-web_ui",
+  "name": "ssui-functional_ui",
   "private": true,
   "version": "0.1.0",
   "type": "module",
@@ -15,7 +15,7 @@
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "react-use": "^17.6.0",
-    "ssui_interface": "file:../ssui_interface"
+    "ssui_components": "file:../ssui_components"
   },
   "devDependencies": {
     "@types/react": "^18.3.1",

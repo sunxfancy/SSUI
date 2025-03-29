@@ -50,7 +50,7 @@ from typing import Any, Dict, Iterator, List, Optional, Tuple, Union
 import torch
 
 
-from backend.model_manager import AnyModel, AnyModelConfig
+from backend.model_manager import AnyModelConfig
 from backend.model_manager.load import (
     LoadedModel,
 )

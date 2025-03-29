@@ -1,206 +1,434 @@
 import React, { Component } from 'react';
-import { Tabs, Tab, TabId } from "@blueprintjs/core";
+import { Tabs, Tab, TabId, Button } from "@blueprintjs/core";
 import { Allotment } from "allotment";
-import { basename } from '@tauri-apps/api/path';
+import "allotment/dist/style.css";
+
+import "@blueprintjs/core/lib/css/blueprint.css";
+import "@blueprintjs/icons/lib/css/blueprint-icons.css";
+import "./TabWindowManager.css";
+import { produce } from 'immer';
 
 
 interface TabData {
   id: string;
   title: string;
   content: JSX.Element;
-  parent?: PaneNode;
+  parent: TabsNode;
 }
 
 interface PaneNode {
   id: string;
-  tabs?: TabData[];
+  parent?: ContainerNode;
+  isTabs(): boolean;
+  isEmpty(): boolean;
+  find(predicate: (tab: TabData) => boolean): TabData | undefined;
+  findPane(predicate: (pane: PaneNode) => boolean): PaneNode | undefined;
+}
+
+class TabsNode implements PaneNode {
+  id: string;
+  tabs: TabData[];
   selected?: TabData;
-  vertical?: boolean;
-  children?: PaneNode[];
+  parent?: ContainerNode;
+
+  constructor(id: string, tabs: TabData[] = [], selected?: TabData) {
+    this.id = id;
+    this.tabs = tabs;
+    this.selected = selected;
+  }
+
+  isTabs(): boolean {
+    return true;
+  }
+  isEmpty(): boolean {
+    return this.tabs.length === 0;
+  }
+
+  find(predicate: (tab: TabData) => boolean): TabData | undefined {
+    return this.tabs.find(predicate);
+  }
+
+  findPane(predicate: (pane: PaneNode) => boolean): PaneNode | undefined {
+    if (predicate(this)) {
+      return this;
+    }
+    return undefined;
+  }
+}
+
+class ContainerNode implements PaneNode {
+  id: string;
+  children: PaneNode[];
+  vertical: boolean;
+  parent?: ContainerNode;
+
+  constructor(id: string, children: PaneNode[] = [], vertical: boolean = false) {
+    this.id = id;
+    this.children = children;
+    this.vertical = vertical;
+  }
+
+  isTabs(): boolean {
+    return false;
+  }
+  isEmpty(): boolean {
+    return this.children.length === 0;
+  }
+
+  find(predicate: (tab: TabData) => boolean): TabData | undefined {
+    for (const child of this.children) {
+      const result = child.find(predicate);
+      if (result) return result;
+    }
+    return undefined;
+  }
+
+  findPane(predicate: (pane: PaneNode) => boolean): PaneNode | undefined {
+    if (predicate(this)) {
+      return this;
+    }
+    for (const child of this.children) {
+      const result = child.findPane(predicate);
+      if (result) return result;
+    }
+    return undefined;
+  }
 }
 
 interface State {
   rootPane: PaneNode;
   selectedTab?: TabData;
+  visualRect?: { left: number, top: number, width: number, height: number };
 }
 
-class TabWindowManager extends Component<{}, State> {
+type DropPosition = 'left' | 'right' | 'top' | 'bottom' | 'center';
+
+export class TabWindowManager extends Component<{}, State> {
   state: State = {
-    rootPane: this.linkTabAndPane({
-      id: "root",
-      vertical: true,
-      children: [
-        {
-          id: "pane1",
-          tabs: [
-            { id: "tab1", title: "Tab 1", content: <div>Content of Tab 1</div> },
-            { id: "tab2", title: "Tab 2", content: <div>Content of Tab 2</div> }
-          ]
-        },
-        {
-          id: "additionalPane",
-          tabs: [
-            { id: "tab3", title: "Tab 3", content: <div>Content of Tab 3</div> }
-          ]
-        }
-      ]
-    })
+    rootPane: new TabsNode("root")
   };
 
-  linkTabAndPane(pane: PaneNode) {
-    if (pane.tabs) {
-      pane.tabs.forEach(tab => {
-        tab.parent = pane;
-      });
-    }
-    if (pane.children) {
-      pane.children.forEach(child => this.linkTabAndPane(child)); 
-    }
-    return pane;
-  }
-
-  handleTabChange = (newTabId: string | number) => {
-    const findTab = (pane: PaneNode, tabId: string): TabData | undefined => {
-      if (pane.tabs) {
-        const tab = pane.tabs.find(tab => tab.id === tabId);
-        if (tab) return tab;
+  handleTabActivate = (newTabId: string | number) => {
+    console.log("handleTabActivate", newTabId);
+    this.setState(prevState => produce(prevState, draft => {
+      draft.selectedTab = draft.rootPane.find(t => t.id === newTabId.toString());
+      if (draft.selectedTab?.parent) {
+        draft.selectedTab.parent.selected = draft.selectedTab;
       }
-      if (pane.children) {
-        for (const child of pane.children) {
-          const result = findTab(child, tabId);
-          if (result) return result;
+    }));
+  };
+
+  handleTabDragEnd = (tab: TabData, targetPaneId: string, position: DropPosition) => {
+    console.log("handleTabDragEnd", tab.id, targetPaneId, position);
+    this.setState({ visualRect: undefined });
+
+    this.setState(prevState => produce(prevState, draft => {
+      // 找到拖动的标签和目标面板
+      let draftTab = draft.rootPane.find((t: TabData) => t.id === tab.id);
+      let targetPane = draft.rootPane.findPane(p => p.id === targetPaneId);
+
+      if (!draftTab || !targetPane) return;
+
+      let draftTab_copy = {
+        id: draftTab.id,
+        title: draftTab.title,
+        content: draftTab.content,
+        parent: draftTab.parent
+      };
+
+      // 从原面板移除标签
+      this.removeTab(draftTab);
+
+      if (position === 'center') {
+        // 如果目标是标签面板，直接添加到此面板
+        if (targetPane.isTabs()) {
+          const tabsPane = targetPane as TabsNode;
+          draftTab_copy.parent = tabsPane;
+          tabsPane.tabs.push(draftTab_copy);
+          tabsPane.selected = draftTab_copy;
         }
-      }
-    }
-
-    this.setState({
-      selectedTab: findTab(this.state.rootPane, newTabId.toString())
-    });
-  };
-
-  handleTabDragEnd = (tab: TabData, targetPaneId: string, position: 'left' | 'right' | 'top' | 'bottom') => {
-    this.setState(prevState => {
-      const newRootPane = this.updatePaneStructure(prevState.rootPane, tab.id, targetPaneId, position);
-      return { rootPane: newRootPane };
-    });
-  };
-
-  updatePaneStructure = (pane: PaneNode, tabId: string, targetPaneId: string, position: 'left' | 'right' | 'top' | 'bottom'): PaneNode => {
-    if (pane.id === targetPaneId) {
-      const newTab = { id: tabId, title: `New Tab ${tabId}`, content: <div>Content of {tabId}</div> };
-      if (position === 'left' || position === 'right') {
-        const newPane: PaneNode = { id: `newPane-${tabId}`, tabs: [newTab] };
-        return {
-          ...pane,
-          tabs: undefined,
-          children: position === 'left' ? [newPane, pane] : [pane, newPane]
-        };
       } else {
-        const newPane: PaneNode = { id: `newPane-${tabId}`, tabs: [newTab] };
-        return {
-          ...pane,
-          tabs: undefined,
-          children: position === 'top' ? [newPane, pane] : [pane, newPane]
-        };
+        // 创建新的标签面板
+        let newTabsNode = new TabsNode(`tabs-${Date.now()}`, [draftTab_copy]);
+        draftTab_copy.parent = newTabsNode;
+        newTabsNode.selected = draftTab_copy;
+
+        // 根据位置确定是垂直还是水平分割
+        const isVertical = position === 'top' || position === 'bottom';
+
+        if (targetPane.parent) {
+          // 目标已经在容器中
+          let parent = targetPane.parent;
+
+          // 如果父容器方向与当前拖放方向一致，直接添加到父容器
+          if ((parent.vertical && isVertical) || (!parent.vertical && !isVertical)) {
+            const insertIndex = parent.children.findIndex(c => c.id === targetPane.id);
+            const newIndex = position === 'bottom' || position === 'right' ? insertIndex + 1 : insertIndex;
+            parent.children.splice(newIndex, 0, newTabsNode);
+            newTabsNode.parent = parent;
+          } else {
+            // 创建新的容器节点替换目标在父容器中的位置
+            let newContainer = new ContainerNode(`container-${Date.now()}`, [], isVertical);
+            newContainer.parent = parent;
+
+            // 在父容器中替换目标节点
+            for (let i = 0; i < parent.children.length; i++) {
+              if (parent.children[i].id === targetPane.id) {
+                parent.children[i] = newContainer;
+                break;
+              }
+            }
+
+            // 根据拖放位置决定子节点顺序
+            if (position === 'top' || position === 'left') {
+              newContainer.children = [newTabsNode, targetPane];
+            } else {
+              newContainer.children = [targetPane, newTabsNode];
+            }
+
+            newTabsNode.parent = newContainer;
+            targetPane.parent = newContainer;
+          }
+        } else {
+          // 目标是根节点，创建新的容器作为根节点
+          let newContainer = new ContainerNode("root-container", [], isVertical);
+
+          // 根据拖放位置决定子节点顺序
+          if (position === 'top' || position === 'left') {
+            newContainer.children = [newTabsNode, targetPane];
+          } else {
+            newContainer.children = [targetPane, newTabsNode];
+          }
+
+          newTabsNode.parent = newContainer;
+          targetPane.parent = newContainer;
+
+          // 更新根节点
+          draft.rootPane = newContainer;
+        }
+      }
+
+      // 更新选中的标签
+      draft.selectedTab = draftTab_copy;
+    }));
+  };
+
+  public removeTab(tab: TabData) {
+    let tabsNode = tab.parent;
+    if (tabsNode) {
+      tabsNode.tabs = tabsNode.tabs.filter(t => t.id !== tab.id);
+      if (tabsNode.tabs.length === 0 && tabsNode.parent) {
+        this.removePane(tabsNode);
       }
     }
-
-    if (pane.children) {
-      return {
-        ...pane,
-        children: pane.children.map(child => this.updatePaneStructure(child, tabId, targetPaneId, position))
-      };
-    }
-
-    return pane;
-  };
-
-  updatePaneWithNewTabs = (rootPane: PaneNode, targetPaneId: string, updatedPane: PaneNode): PaneNode => {
-    if (rootPane.id === targetPaneId) {
-      return updatedPane;
-    }
-
-    if (rootPane.children) {
-      return {
-        ...rootPane,
-        children: rootPane.children.map(child => this.updatePaneWithNewTabs(child, targetPaneId, updatedPane))
-      };
-    }
-
-    return rootPane;
-  };
-
-  openFile = async (filePath: string) => {
-    console.log("openFile", filePath);
-    let currentPane = this.state.selectedTab?.parent;
-    let newTab = {
-      id: filePath,
-      title: await basename(filePath),
-      content: <iframe src={"http://localhost:7420/?path=" + filePath} style={{ width: "100%", height: "100%" }} />
-    } as TabData;
-
-
-    if (!currentPane) {
-      this.setState({
-        rootPane: this.linkTabAndPane({
-          id: "root",
-          tabs: [newTab]
-        }),
-        selectedTab: newTab
-      });
-    } else {
-      const updatedPane = {
-        ...currentPane,
-        tabs: currentPane.tabs ? [...currentPane.tabs, newTab] : [newTab]
-      };
-
-      this.setState({
-        rootPane: this.updatePaneWithNewTabs(this.state.rootPane, currentPane.id, updatedPane),
-        selectedTab: newTab
-      });
-    }
-
   }
 
-  renderPane = (pane: PaneNode) => {
-    return (pane.tabs && pane.tabs.length > 0) ?
-          <Tabs
-            id={`Tabs-${pane.id}`}
-            className='tabs-container'
-            onChange={(newTabId: TabId) => this.handleTabChange(newTabId)}
-            selectedTabId={pane.selected?.id}
-          >
-            {pane.tabs.map(tab => (
-              <Tab
-                key={tab.id}
-                id={tab.id}
-                title={tab.title}
-                panel={tab.content}
-                draggable
-                onDragEnd={(e) => {
-                  const position = this.determineDropPosition(e); // Implement this function to determine the drop position
-                  this.handleTabDragEnd(tab, pane.id, position);
-                }}
-              />
-            ))}
-            {/* 可以根据需要动态添加更多标签 */}
-          </Tabs>
-        :
-      <Allotment key={pane.id} vertical={pane.vertical}>
-        {pane.children && pane.children.map(childPane => this.renderPane(childPane))}
+  public removePane(pane: PaneNode) {
+    let parent = pane.parent;
+    let removed_id = pane.id;
+    if (parent) {
+      parent.children = parent.children.filter(child => child.id !== removed_id);
+      if (parent.children.length === 1) {
+        let grandParent = parent.parent;
+        if (grandParent) {
+          // 将parent的第一个子节点移动到grandParent的children中
+          for (let i = 0; i < grandParent.children.length; i++) {
+            if (grandParent.children[i].id === parent.id) {
+              grandParent.children[i] = parent.children[0];
+              parent.children[0].parent = grandParent;
+              break;
+            }
+          }
+        }
+      }
+    }
+  }
+
+  public async openFile(filePath: string, url: string, title?: string) {
+    console.log("openFile", filePath);
+
+    this.setState(produce(this.state, draft => {
+      // Find if the file is already open
+      let find_tab = draft.rootPane.find(t => t.id === filePath);
+      if (find_tab) {
+        this.handleTabActivate(find_tab.id);
+        return;
+      }
+      let currentPane = draft.selectedTab?.parent ?? draft.rootPane as TabsNode;
+
+      let newTab = {
+        id: filePath,
+        title: title || basename(filePath),
+        content: <iframe src={url} style={{ width: "100%", height: "100%" }} />,
+        parent: currentPane
+      } as TabData;
+
+      let draft_panel = draft.rootPane.findPane(p => p.id === currentPane.id);
+      if (draft_panel) {
+        let tab_panel = (draft_panel as TabsNode);
+        tab_panel.tabs.push(newTab);
+        tab_panel.selected = newTab;
+      }
+      draft.selectedTab = newTab;
+    }));
+  }
+
+  handleTabClose = (tab: TabData): void => {
+    this.setState(prevState => produce(prevState, draft => {
+      let draft_tab = draft.rootPane.find(t => t.id === tab.id);
+      if (draft_tab) { this.removeTab(draft_tab); }
+    }));
+  }
+
+  draggingTab?: TabData;
+
+  renderTabs(tabs: TabsNode, pane: PaneNode) {
+    if (tabs.isEmpty()) {
+      return [<NoTabs key="no-tabs" />];
+    }
+    return tabs.tabs.map(tab => (<Tab
+      key={tab.id}
+      id={tab.id}
+      title={<TabTitle title={tab.title} onClose={() => this.handleTabClose(tab)} />}
+      panel={tab.content}
+      draggable
+      onDragStart={(e) => {
+        console.log("onDragStart", tab.id);
+        this.draggingTab = tab;
+      }}
+      onDragOver={(e) => {
+        const target = e.currentTarget as HTMLElement;
+        const rect = target.getBoundingClientRect();
+        let visualRect = {
+          left: rect.left,
+          top: rect.top,
+          width: rect.width,
+          height: rect.height
+        }
+        this.setState({
+          visualRect: visualRect
+        });
+      }}
+      onDragEnd={(e) => {
+        if (this.draggingTab) {
+          const position = this.determineDropPosition(e);
+          this.handleTabDragEnd(this.draggingTab, pane.id, position);
+        }
+      }}
+    />));
+  }
+
+  renderPane(pane: PaneNode) {
+    if (pane.isTabs()) {
+      return <Tabs
+        id={`Tabs-${pane.id}`}
+        className='tabs-container'
+        onChange={(newTabId: TabId, prevTabId?: TabId) => {
+          if (newTabId != prevTabId) {this.handleTabActivate(newTabId)}
+        }}
+        selectedTabId={(pane as TabsNode).selected?.id}
+      >
+        {this.renderTabs(pane as TabsNode, pane)}
+      </Tabs>
+    } else {
+      return <Allotment className='allotment-container' key={pane.id} vertical={(pane as ContainerNode).vertical} minSize={150}>
+        {(pane as ContainerNode).children && (pane as ContainerNode).children.map(childPane => this.renderPane(childPane))}
       </Allotment>;
+    }
   };
 
-  determineDropPosition = (e: React.DragEvent): 'left' | 'right' | 'top' | 'bottom' => {
-    // Implement logic to determine the drop position based on the event
-    // For example, you can use the mouse position relative to the pane
+  determineDropPosition = (e: React.DragEvent): DropPosition => {
+    const target = e.target as HTMLElement;
+    const rect = target.getBoundingClientRect();
+    const mouse = { x: e.clientX, y: e.clientY };
+    const centerRect = {
+      left: rect.left + (rect.width * 0.1),
+      top: rect.top + (rect.height * 0.1),
+      width: rect.width * 0.8,
+      height: rect.height * 0.8
+    }
 
-    return 'right'; // Placeholder return value
+    if (mouse.x > centerRect.left && mouse.x < centerRect.left + centerRect.width && mouse.y > centerRect.top && mouse.y < centerRect.top + centerRect.height) {
+      return 'center';
+    }
+
+    if (mouse.x > centerRect.left && mouse.x < centerRect.left + centerRect.width) {
+      return mouse.y > centerRect.top ? 'bottom' : 'top';
+    }
+
+    if (mouse.y > centerRect.top && mouse.y < centerRect.top + centerRect.height) {
+      return mouse.x > centerRect.left ? 'right' : 'left';
+    }
+
+    return 'center';
   };
 
   render() {
-    return this.renderPane(this.state.rootPane);
+    return (
+      <>
+        {this.state.visualRect && (
+          <div
+            style={{
+              position: 'fixed',
+              left: this.state.visualRect.left + 'px',
+              top: this.state.visualRect.top + 'px',
+              width: this.state.visualRect.width + 'px',
+              height: this.state.visualRect.height + 'px',
+              backgroundColor: 'rgba(0, 120, 255, 0.2)',
+              border: '2px dashed rgba(0, 120, 255, 0.8)',
+              pointerEvents: 'none',
+              zIndex: 9999
+            }}
+          />
+        )}
+        {this.renderPane(this.state.rootPane)}
+      </>
+    );
   }
 }
+
+class TabTitle extends React.Component<{ title: string, onClose: () => void }> {
+  state = {
+    isHovered: false
+  };
+
+  handleMouseEnter = () => {
+    this.setState({ isHovered: true });
+  };
+
+  handleMouseLeave = () => {
+    this.setState({ isHovered: false });
+  };
+
+  render() {
+    return (
+      <span
+        onMouseEnter={this.handleMouseEnter}
+        onMouseLeave={this.handleMouseLeave}
+      >
+        {this.props.title}
+        <Button
+          icon="cross"
+          variant='minimal'
+          onClick={this.props.onClose}
+          style={{
+            visibility: this.state.isHovered ? 'visible' : 'hidden',
+            opacity: this.state.isHovered ? 1 : 0,
+            transition: 'opacity 0.2s ease-in-out'
+          }}
+        />
+      </span>
+    );
+  }
+}
+
+
+class NoTabs extends React.Component {
+  render() {
+    return <div className='no-tabs-container'>Open a file to start browsing</div>;
+  }
+}
+
+function basename(path: string) { return path.split(/[/\\]/).reverse()[0]; }
 
 export default TabWindowManager;

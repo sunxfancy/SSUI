@@ -1,6 +1,6 @@
 
 from ssui import workflow, Prompt, Image, Noise
-from ssui.SD1 import SD1Model, SD1Clip, SD1Latent, SD1Lora, SD1Denoise, SD1LatentDecode, SD1IPAdapter
+from ssui_image.SD1 import SD1Model, SD1Clip, SD1Latent, SD1Lora, SD1Denoise, SD1LatentDecode, SD1IPAdapter
 from ssui.config import SSUIConfig
 from typing import List, Tuple
 

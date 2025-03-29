@@ -1,4 +1,5 @@
 import os
+import sys
 import yaml
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
@@ -40,7 +41,11 @@ class ExtensionManager:
         for name, data in self.extensions.items():
             if "server" in data:
                 if "main" in data["server"]:
+                    print(f"Loading {name} from {data['server']['main']}")
                     script_path = os.path.join(data["path"], data["server"]["main"])
+                    dir_path = os.path.dirname(script_path)
+                    sys.path.append(dir_path)
+                    print(f"Appending {dir_path} to sys.path")
                     import importlib.util
                     try:
                         spec = importlib.util.spec_from_file_location(name, script_path)

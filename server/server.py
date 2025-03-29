@@ -19,7 +19,7 @@ from .extensions import ExtensionManager
 from pydantic_settings import BaseSettings
 
 class Settings(BaseSettings):
-    host_web_ui: str = "../web_ui/dist"
+    host_web_ui: str = os.path.join(os.path.dirname(__file__), "..", "frontend", "functional_ui", "dist")
 
 settings = Settings()
 app = FastAPI()

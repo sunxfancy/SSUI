@@ -1,16 +1,16 @@
 import unittest
-from ssui_api.model import (
+from ssui_image.api.model import (
     ModelLoaderService,
     load_flux_model,
     load_model,
     load_sdxl_model,
 )
-from ssui_api.conditioning import (
+from ssui_image.api.conditioning import (
     create_conditioning,
     create_flux_conditioning,
     create_sdxl_conditioning,
 )
-from ssui_api.denoise import (
+from ssui_image.api.denoise import (
     denoise_image,
     decode_latents,
     flux_decode_latents,

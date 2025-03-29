@@ -1,94 +1,51 @@
-import React, { Component } from 'react';
+import { Component } from 'react';
 import { Tree, TreeNodeInfo } from "@blueprintjs/core";
 import { open } from '@tauri-apps/plugin-dialog';
-import { readDir, BaseDirectory } from '@tauri-apps/plugin-fs';
-import { join } from '@tauri-apps/api/path';
+import { TauriFilesystemProvider, IFilesystemProvider } from '../services/FilesystemProvider';
 
+import "@blueprintjs/core/lib/css/blueprint.css";
+import "@blueprintjs/icons/lib/css/blueprint-icons.css";
 
-class Sidebar extends Component<{
+export class Sidebar extends Component<{
     currentWorkspace: string | null,
     onOpenWorkspace?: (workspace: string) => void,
-    onFileOpen?: (filePath: string) => void
+    onFileOpen?: (filePath: string) => void,
+    filesystemProvider?: IFilesystemProvider,
 }, { fileTree: TreeNodeInfo[] }> {
-    ignoredPaths: string[];
+    filesystemProvider: IFilesystemProvider;
+    
     constructor(props: Sidebar['props']) {
         super(props);
         this.state = {
             fileTree: []
         };
-
-        this.ignoredPaths = [
-            '.git',
-            '__pycache__',
-            '.idea',
-            '.vscode',
-            '.DS_Store',
-            '*.pyc',
-            '*.pyo',
-            '*.pyd',
-            '.pytest_cache',
-            '.env',
-            'venv',
-            '.venv'
-        ];
-    }
-
-    componentDidMount() {
-        if (this.props.currentWorkspace) {
-            this.fetchFileTree(this.props.currentWorkspace);
+        if (this.props.filesystemProvider) {
+            this.filesystemProvider = this.props.filesystemProvider;
+        } else {
+            this.filesystemProvider = new TauriFilesystemProvider();
         }
     }
 
-    componentDidUpdate(prevProps: Sidebar['props']) {
+    async componentDidMount() {
+        if (this.props.currentWorkspace) {
+            const childNodes = await this.fetchFileTree(this.props.currentWorkspace);
+            this.setState({ fileTree: childNodes });
+        }
+    }
+
+    async componentDidUpdate(prevProps: Sidebar['props']) {
         if (prevProps.currentWorkspace !== this.props.currentWorkspace && this.props.currentWorkspace) {
-            this.fetchFileTree(this.props.currentWorkspace);
+            const childNodes = await this.fetchFileTree(this.props.currentWorkspace);
+            this.setState({ fileTree: childNodes });
         }
     }
 
     async fetchFileTree(directory: string, parent: TreeNodeInfo | null = null) {
-        try {
-            console.log('fetchFileTree', directory);
-            const files = await readDir(directory);
-            
-            // 过滤掉被忽略的文件和目录
-            const filteredFiles = files.filter(file => {
-                return !this.ignoredPaths.some(ignorePath => {
-                    if (ignorePath.startsWith('*')) {
-                        const extension = ignorePath.slice(1);
-                        return file.name.endsWith(extension);
-                    }
-                    return file.name === ignorePath;
-                });
-            });
-
-            return await Promise.all(filteredFiles.map(async (file) => ({
-                id: file.name,
-                label: file.name,
-                isFile: !file.isDirectory,
-                nodeData: { 
-                    path: await join(directory, file.name),
-                    parent: parent
-                },
-                childNodes: file.isDirectory ? [] : undefined
-            })));
-        } catch (error) {
-            console.error("Error reading directory:", error);
-            return [];
-        }
-    }
-
-    getPathToRoot(node: TreeNodeInfo): string[] {
-        const path = [];
-        let currentNode: TreeNodeInfo | null = node;
-        while (currentNode) {
-            path.unshift(currentNode.id as string);
-            currentNode = (currentNode.nodeData as any).parent as TreeNodeInfo | null;
-        }
-        return path;
+        return await this.filesystemProvider.fetchFileTree(directory, parent);
     }
 
     updateFileTreeWithChildren(node: TreeNodeInfo, isExpanded: boolean, childNodes: TreeNodeInfo[] | undefined) {
-        const path = this.getPathToRoot(node);
+        const path = this.filesystemProvider.getPathToRoot(node);
         console.log('updateFileTreeWithChildren', node, isExpanded, childNodes, path);
         const updateChildNodes = (nodes: TreeNodeInfo[], path: string[]): TreeNodeInfo[] => {
             if (path.length === 0) return nodes;
@@ -128,7 +85,6 @@ class Sidebar extends Component<{
         }
     }
 
-
     handleNodeCollapse = (node: TreeNodeInfo) => {
         this.updateFileTreeWithChildren(node, false, undefined);
     }
@@ -140,8 +96,21 @@ class Sidebar extends Component<{
         }
     }
 
+    handleOpenWorkspaceBtn = () => {
+        const options = {
+            directory: true,
+            multiple: false
+        };
+        const onOpenWorkspace = this.props.onOpenWorkspace;
+        open(options).then(async (result: string | null) => {
+            if (result && onOpenWorkspace) {
+                onOpenWorkspace(result);
+            }
+        });
+    }
+
     render() {
-        const { currentWorkspace, onOpenWorkspace } = this.props;
+        const { currentWorkspace } = this.props;
         const { fileTree } = this.state;
 
         return (
@@ -155,21 +124,7 @@ class Sidebar extends Component<{
                     />
                 ) : (
                     <div style={{ display: 'flex', justifyContent: 'center', marginTop: '30px' }}>
-                        <button onClick={() => {
-                            const options = {
-                                directory: true,
-                                multiple: false
-                            };
-                            open(options).then(async (result: string | null) => {
-                                if (result && onOpenWorkspace) {
-                                    onOpenWorkspace(result);
-                                    const childNodes = await this.fetchFileTree(result);
-                                    this.setState({ fileTree: childNodes });
-                                }
-                            });
-
-                        }}>打开工作空间</button>
-
+                            <button onClick={this.handleOpenWorkspaceBtn}>打开工作空间</button>
                     </div>
                 )}
             </div>

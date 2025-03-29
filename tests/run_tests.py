@@ -7,6 +7,11 @@ def run_all_tests():
     """运行tests目录下的所有测试用例"""
     # 获取tests目录的路径
     tests_dir = os.path.dirname(os.path.abspath(__file__))
+    extensions_dir = os.path.abspath(os.path.join(tests_dir, "..", "extensions"))
+    for extension in os.listdir(extensions_dir):
+        extension_dir = os.path.join(extensions_dir, extension)
+        if os.path.isdir(extension_dir):
+            sys.path.insert(0, extension_dir)
     
     # 将tests目录添加到Python路径中
     sys.path.insert(0, os.path.dirname(tests_dir))
