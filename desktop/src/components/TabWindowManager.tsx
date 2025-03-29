@@ -111,9 +111,14 @@ export class TabWindowManager extends Component<{}, State> {
   handleTabActivate = (newTabId: string | number) => {
     console.log("handleTabActivate", newTabId);
     this.setState(prevState => produce(prevState, draft => {
-      draft.selectedTab = draft.rootPane.find(t => t.id === newTabId.toString());
+      let find_tab = draft.rootPane.find(t => t.id === newTabId.toString());
+      if (find_tab && find_tab.id != draft.selectedTab?.id) {
+        draft.selectedTab = find_tab;
+      }
       if (draft.selectedTab?.parent) {
-        draft.selectedTab.parent.selected = draft.selectedTab;
+        if (draft.selectedTab.parent.selected?.id != draft.selectedTab.id) {
+          draft.selectedTab.parent.selected = draft.selectedTab;
+        }
       }
     }));
   };
@@ -137,7 +142,7 @@ export class TabWindowManager extends Component<{}, State> {
       };
 
       // 从原面板移除标签
-      this.removeTab(draftTab);
+      this.removeTab(draftTab, draft);
 
       if (position === 'center') {
         // 如果目标是标签面板，直接添加到此面板
@@ -213,12 +218,39 @@ export class TabWindowManager extends Component<{}, State> {
     }));
   };
 
-  public removeTab(tab: TabData) {
+  public removeTab(tab: TabData, state: State) {
     let tabsNode = tab.parent;
     if (tabsNode) {
+      let onlyOneTabLeft = tabsNode.tabs.length === 1;
+
+      // 如果选中的标签被删除，则选中后一个，如没有则选中前一个
+      if (tabsNode.selected?.id === tab.id && !onlyOneTabLeft) {
+        let index = tabsNode.tabs.findIndex(t => t.id === tab.id);
+        if (index < tabsNode.tabs.length - 1) {
+          tabsNode.selected = tabsNode.tabs[index + 1];
+        } else if (index > 0) {
+          tabsNode.selected = tabsNode.tabs[index - 1];
+        } 
+      }
+
       tabsNode.tabs = tabsNode.tabs.filter(t => t.id !== tab.id);
-      if (tabsNode.tabs.length === 0 && tabsNode.parent) {
+      if (onlyOneTabLeft && tabsNode.parent) {
         this.removePane(tabsNode);
+      } 
+
+      // 如果全局最近选中的标签被删除，则选中刚刚选中的标签
+      if (state.selectedTab?.id === tab.id) {
+        if (!onlyOneTabLeft) {
+          state.selectedTab = tabsNode.selected;
+        } else {
+          let root = state.rootPane;
+          while (root instanceof ContainerNode) {
+            root = root.children[0];
+          }
+          if (root instanceof TabsNode) {
+            state.selectedTab = root.selected;
+          }
+        }
       }
     }
   }
@@ -276,7 +308,7 @@ export class TabWindowManager extends Component<{}, State> {
   handleTabClose = (tab: TabData): void => {
     this.setState(prevState => produce(prevState, draft => {
       let draft_tab = draft.rootPane.find(t => t.id === tab.id);
-      if (draft_tab) { this.removeTab(draft_tab); }
+      if (draft_tab) { this.removeTab(draft_tab, draft); }
     }));
   }
 
@@ -291,6 +323,10 @@ export class TabWindowManager extends Component<{}, State> {
       id={tab.id}
       title={<TabTitle title={tab.title} onClose={() => this.handleTabClose(tab)} />}
       panel={tab.content}
+      onClickCapture={(e) => {
+        this.handleTabActivate(tab.id);
+      }}
+
       draggable
       onDragStart={(e) => {
         console.log("onDragStart", tab.id);
