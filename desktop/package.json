@@ -9,7 +9,7 @@
     "preview": "vite preview",
     "tauri": "tauri",
     "storybook": "sb dev -p 6006",
-    "copy-resources": "node scripts/copy-resources.js",
+    "copy-resources": "node scripts/copy-resources.cjs",
     "prebuild": "yarn copy-resources",
     "predev": "yarn copy-resources"
   },

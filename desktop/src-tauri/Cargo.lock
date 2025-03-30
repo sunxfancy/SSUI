@@ -3840,8 +3840,10 @@ dependencies = [
 name = "ssui"
 version = "0.1.0"
 dependencies = [
+ "flate2",
  "serde",
  "serde_json",
+ "tar",
  "tauri",
  "tauri-build",
  "tauri-plugin-dialog",
@@ -3856,6 +3858,7 @@ dependencies = [
  "tauri-plugin-upload",
  "tauri-plugin-websocket",
  "tauri-plugin-window-state",
+ "tokio",
  "winreg 0.55.0",
  "wmi",
 ]
@@ -4669,6 +4672,7 @@ dependencies = [
  "bytes",
  "libc",
  "mio",
+ "parking_lot",
  "pin-project-lite",
  "signal-hook-registry",
  "socket2",

@@ -29,7 +29,11 @@
     "fs:write-all",
     {
       "identifier": "fs:scope",
-      "allow": [{ "path": "**/*" }]
+      "allow": [
+        {
+          "path": "**/*"
+        }
+      ]
     }
   ]
 }

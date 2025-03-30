@@ -2,7 +2,7 @@ const fs = require('fs');
 const path = require('path');
 
 // 源文件和目标目录路径
-const sourceDir = path.resolve(__dirname, '../src/assets');
+const sourceDir = path.resolve(__dirname, '../../dependencies');
 const targetDir = path.resolve(__dirname, '../src-tauri/resources/dependencies');
 
 // 确保目标目录存在

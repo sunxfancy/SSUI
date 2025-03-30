@@ -1,10 +1,14 @@
-import { IInstallerProvider } from '../providers/IInstallerProvider';
+import { CommandInfo, IInstallerProvider } from '../providers/IInstallerProvider';
 
 export class MockInstallerProvider implements IInstallerProvider {
   private mockPlatform = 'darwin';
 
   async getAppDataDir(): Promise<string> {
     return '/mock/app/data/dir';
+  }
+
+  async getUserDir(): Promise<string> {
+    return '/mock/user/dir';
   }
 
   async selectFolder(): Promise<string | null> {
@@ -27,42 +31,57 @@ export class MockInstallerProvider implements IInstallerProvider {
     this.mockPlatform = platform;
   }
 
-  async createVirtualEnv(installDir: string) {
-    const mockCommand = {
-      onProgress: (callback: (data: string) => void) => {
-        setTimeout(() => callback('创建虚拟环境中...'), 500);
-        setTimeout(() => callback('虚拟环境创建完成'), 1000);
-      },
-      onError: (callback: (error: string) => void) => {},
-      onComplete: (callback: (code: number) => void) => {
-        setTimeout(() => callback(0), 1500);
-      },
-      execute: async () => {
-        console.log('模拟执行创建虚拟环境命令');
-      }
+  async checkPythonInstalled(installDir: string): Promise<CommandInfo> {
+    console.log(`检查Python安装: ${installDir}`);
+    // 模拟Python已安装
+    return {
+      success: true,
+      message: '已安装 Python 3.12.0'
     };
-    
-    return mockCommand;
   }
 
-  async installPackages(installDir: string, lockFile: string) {
-    const mockCommand = {
-      onProgress: (callback: (data: string) => void) => {
-        setTimeout(() => callback('安装依赖包中...'), 500);
-        setTimeout(() => callback('安装numpy...'), 1000);
-        setTimeout(() => callback('安装pandas...'), 1500);
-        setTimeout(() => callback('依赖包安装完成'), 2000);
-      },
-      onError: (callback: (error: string) => void) => {},
-      onComplete: (callback: (code: number) => void) => {
-        setTimeout(() => callback(0), 2500);
-      },
-      execute: async () => {
-        console.log(`模拟执行安装依赖包命令，使用锁文件: ${lockFile}`);
-      }
+  async downloadPython(installDir: string): Promise<CommandInfo> {
+    console.log(`模拟下载Python: ${installDir}`);
+    return {
+      success: true,
+      message: 'Python 3.12.0 下载并安装成功'
     };
-    
-    return mockCommand;
+  }
+
+  async checkVirtualEnvExists(installDir: string): Promise<CommandInfo> {
+    console.log(`检查虚拟环境: ${installDir}`);
+    // 模拟虚拟环境不存在，需要创建
+    return {
+      success: false,
+      message: '虚拟环境不存在'
+    };
+  }
+
+  async createVirtualEnv(installDir: string): Promise<CommandInfo> {
+    console.log(`模拟创建虚拟环境: ${installDir}`);
+    await new Promise(resolve => setTimeout(resolve, 1000)); // 模拟延迟
+    return {
+      success: true,
+      message: '虚拟环境创建成功'
+    };
+  }
+
+  async checkPackagesInstalled(installDir: string): Promise<CommandInfo> {
+    console.log(`检查包安装状态: ${installDir}`);
+    // 模拟包未安装
+    return {
+      success: false,
+      message: '依赖包未安装'
+    };
+  }
+
+  async installPackages(installDir: string, lockFile: string): Promise<CommandInfo> {
+    console.log(`模拟安装依赖包: ${installDir}, 使用锁文件: ${lockFile}`);
+    await new Promise(resolve => setTimeout(resolve, 2000)); // 模拟延迟
+    return {
+      success: true,
+      message: '依赖包安装成功'
+    };
   }
 
   async saveSettings(installConfig: {

@@ -1,5 +1,9 @@
+use downloader::download_python;
+use gpu_detector::detect_gpu;
+use python::run_python;
 mod gpu_detector;
-
+mod downloader;
+mod python;
 // Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
 #[tauri::command]
 fn greet(name: &str) -> String {
@@ -21,7 +25,7 @@ pub fn run() {
         // .plugin(tauri_plugin_updater::Builder::new().build())
         .plugin(tauri_plugin_upload::init())
         .plugin(tauri_plugin_opener::init())
-        .invoke_handler(tauri::generate_handler![greet])
+        .invoke_handler(tauri::generate_handler![greet, download_python, detect_gpu, run_python])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }
