@@ -45,6 +45,16 @@ pub async fn download_python(version: &str, release_date: &str, architecture: &s
     return Ok("success".to_string());
 }
 
+#[tauri::command(rename_all = "snake_case")]
+pub async fn unpack_app(tar_path: &str, target_path: &str) -> Result<String, String> {
+    let tar = std::fs::File::open(tar_path).map_err(|e| e.to_string())?;
+    let tar = flate2::read::GzDecoder::new(tar);
+    let mut archive = tar::Archive::new(tar);
+    archive.unpack(target_path).map_err(|e| e.to_string())?;
+
+    return Ok("success".to_string());
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

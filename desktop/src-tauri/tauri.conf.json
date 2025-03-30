@@ -32,7 +32,8 @@
       "icons/icon.ico"
     ],
     "resources": [
-      "resources/dependencies/*"
+      "resources/dependencies/*",
+      "resources/app.tar.gz"
     ]
   }
 }
