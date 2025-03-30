@@ -1,12 +1,7 @@
 import React from 'react';
 import { Dialog, Button, Checkbox, FormGroup, InputGroup, Intent, Classes, ProgressBar, Callout } from '@blueprintjs/core';
-import { exit, relaunch } from '@tauri-apps/plugin-process';
-import { load } from '@tauri-apps/plugin-store';
-import { appDataDir } from '@tauri-apps/api/path';
-import { open } from '@tauri-apps/plugin-dialog';  // Tauri Dialog API用于选择目录
-
-
-const appDataDirPath = await appDataDir();
+import { IInstallerProvider } from './providers/IInstallerProvider';
+import { TauriInstallerProvider } from './providers/TauriInstallerProvider';
 
 interface InstallPageState {
   isOpen: boolean;
@@ -16,20 +11,36 @@ interface InstallPageState {
   isInstalling: boolean;
   installProgress: number;
   shellOutput: string;
+  currentPlatform: string;
 }
 
-class InstallPage extends React.Component<{}, InstallPageState> {
-  constructor(props: {}) {
+interface InstallPageProps {
+  provider?: IInstallerProvider;
+}
+
+class InstallPage extends React.Component<InstallPageProps, InstallPageState> {
+  private provider: IInstallerProvider;
+  
+  constructor(props: InstallPageProps) {
     super(props);
+    this.provider = props.provider || new TauriInstallerProvider();
+    
     this.state = {
       isOpen: true,
-      installDir: appDataDirPath,
+      installDir: '',
       enableGPU: true,
       enableAutoUpdate: true,
       isInstalling: false,
       installProgress: 0,
       shellOutput: '',
+      currentPlatform: '',
     };
+  }
+  
+  async componentDidMount() {
+    const appDataDirPath = await this.provider.getAppDataDir();
+    this.setState({ installDir: appDataDirPath });
+    await this.detectPlatform();
   }
 
   handleInstallDirChange(event: React.ChangeEvent<HTMLInputElement>) {
@@ -47,40 +58,37 @@ class InstallPage extends React.Component<{}, InstallPageState> {
   handleSubmit() {
     const { installDir, enableGPU, enableAutoUpdate } = this.state;
 
-    console.log('Install Directory:', installDir);
-    console.log('Enable GPU:', enableGPU);
-    console.log('Enable Auto Update:', enableAutoUpdate);
+    console.log('安装目录:', installDir);
+    console.log('启用GPU:', enableGPU);
+    console.log('启用自动更新:', enableAutoUpdate);
 
-    // Start the installation process
+    // 开始安装过程
     this.setState({ isOpen: false, isInstalling: true, installProgress: 0, shellOutput: '' });
     this.simulateInstallation();
+    this.installDependencies();
   }
 
   async handleCancel() {
-    // Close the current window when cancel is clicked using Tauri's window.close()
-    await exit();
+    await this.provider.exitApp();
   }
 
-  // Handle folder selection via Tauri Dialog API
+  // 通过Provider处理文件夹选择
   async handleSelectFolder() {
-    const selectedFolder = await open({
-      directory: true, // Open folder selection dialog
-      multiple: false, // Allow only one folder selection
-    });
+    const selectedFolder = await this.provider.selectFolder();
     if (selectedFolder) {
-      this.setState({ installDir: selectedFolder as string });
+      this.setState({ installDir: selectedFolder });
     }
   };
 
   simulateInstallation() {
     let progress = 0;
-    let output = 'Starting installation...\n';
+    let output = '开始安装...\n';
     this.setState({ shellOutput: output });
 
-    // Simulate installation steps and progress
+    // 模拟安装步骤和进度
     const interval = setInterval(async () => {
       progress += 10;
-      output += `Progress: ${progress}%\n`;
+      output += `进度: ${progress}%\n`;
 
       this.setState({
         installProgress: progress,
@@ -89,14 +97,136 @@ class InstallPage extends React.Component<{}, InstallPageState> {
 
       if (progress >= 100) {
         clearInterval(interval);
-        this.setState({ shellOutput: output + 'Installation complete!\n', isInstalling: false });
-        // 写入安装成功的配置
-        const store = await load('settings.json', { autoSave: false });
-        await store.set('root', { path: this.state.installDir, version: '0.1.0' });
-        await store.save();
-        await relaunch();
       }
     }, 1000);
+  }
+
+  async detectPlatform() {
+    const platformType = await this.provider.detectPlatform();
+    this.setState({ currentPlatform: platformType });
+    console.log('检测到平台:', platformType);
+  }
+
+  async installDependencies() {
+    const { currentPlatform, installDir } = this.state;
+    let lockFile = '';
+    
+    // 根据平台选择正确的lock文件
+    if (currentPlatform === 'darwin') {
+      lockFile = 'dependencies/macosx.lock';
+      this.setState({ shellOutput: this.state.shellOutput + '检测到macOS系统，使用macosx.lock...\n' });
+    } else if (currentPlatform === 'win32') {
+      lockFile = 'dependencies/windows.lock';
+      this.setState({ shellOutput: this.state.shellOutput + '检测到Windows系统，使用windows.lock...\n' });
+    } else {
+      // 假设Linux或其他系统使用macosx.lock
+      lockFile = 'dependencies/macosx.lock';
+      this.setState({ shellOutput: this.state.shellOutput + `检测到${currentPlatform}系统，使用macosx.lock作为默认选择...\n` });
+    }
+
+    try {
+      // 创建一个虚拟环境
+      this.setState({ 
+        shellOutput: this.state.shellOutput + '正在创建Python虚拟环境...\n',
+        installProgress: 10
+      });
+      
+      const createVenvCommand = await this.provider.createVirtualEnv(installDir);
+      
+      createVenvCommand.onProgress((line) => {
+        this.setState({ 
+          shellOutput: this.state.shellOutput + line + '\n',
+        });
+      });
+      
+      createVenvCommand.onError((error) => {
+        this.setState({ 
+          shellOutput: this.state.shellOutput + `错误: ${error}\n`,
+        });
+      });
+      
+      createVenvCommand.onComplete(async (code) => {
+        this.setState({ 
+          shellOutput: this.state.shellOutput + `虚拟环境创建完成，退出代码: ${code}\n`,
+          installProgress: 30
+        });
+        
+        if (code === 0) {
+          await this.installPackages(lockFile);
+        } else {
+          this.setState({ 
+            shellOutput: this.state.shellOutput + '创建虚拟环境失败!\n',
+          });
+        }
+      });
+      
+      await createVenvCommand.execute();
+      
+    } catch (error) {
+      this.setState({ 
+        shellOutput: this.state.shellOutput + `安装过程中出错: ${error}\n`,
+      });
+    }
+  }
+  
+  async installPackages(lockFile: string) {
+    const { installDir, currentPlatform, enableGPU, enableAutoUpdate } = this.state;
+    
+    this.setState({ 
+      shellOutput: this.state.shellOutput + '正在安装依赖包...\n',
+      installProgress: 40
+    });
+    
+    try {
+      const installCommand = await this.provider.installPackages(installDir, lockFile);
+      
+      installCommand.onProgress((line) => {
+        // 更新进度
+        const progress = Math.min(40 + Math.floor(Math.random() * 50), 99);
+        this.setState({ 
+          shellOutput: this.state.shellOutput + line + '\n',
+          installProgress: progress
+        });
+      });
+      
+      installCommand.onError((error) => {
+        this.setState({ 
+          shellOutput: this.state.shellOutput + `警告: ${error}\n`,
+        });
+      });
+      
+      installCommand.onComplete(async (code) => {
+        if (code === 0) {
+          this.setState({ 
+            shellOutput: this.state.shellOutput + '依赖包安装完成!\n',
+            installProgress: 100,
+            isInstalling: false
+          });
+          
+          // 保存安装成功的配置
+          await this.provider.saveSettings({ 
+            path: installDir, 
+            version: '0.1.0', 
+            platform: currentPlatform,
+            enableGPU,
+            enableAutoUpdate
+          });
+          
+          await this.provider.relaunchApp();
+        } else {
+          this.setState({ 
+            shellOutput: this.state.shellOutput + `安装依赖失败，退出代码: ${code}\n`,
+          });
+        }
+      });
+      
+      await installCommand.execute();
+      
+    } catch (error) {
+      this.setState({ 
+        shellOutput: this.state.shellOutput + `安装依赖时出错: ${error}\n`,
+      });
+    }
   }
 
   render() {
