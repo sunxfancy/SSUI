@@ -276,7 +276,7 @@ export class TabWindowManager extends Component<{}, State> {
     }
   }
 
-  public async openFile(filePath: string, url: string, title?: string) {
+  public openFile(filePath: string, url: string, title?: string) {
     console.log("openFile", filePath);
 
     this.setState(produce(this.state, draft => {
@@ -292,6 +292,33 @@ export class TabWindowManager extends Component<{}, State> {
         id: filePath,
         title: title || basename(filePath),
         content: <iframe src={url} style={{ width: "100%", height: "100%" }} />,
+        parent: currentPane
+      } as TabData;
+
+      let draft_panel = draft.rootPane.findPane(p => p.id === currentPane.id);
+      if (draft_panel) {
+        let tab_panel = (draft_panel as TabsNode);
+        tab_panel.tabs.push(newTab);
+        tab_panel.selected = newTab;
+      }
+      draft.selectedTab = newTab;
+    }));
+  }
+
+  public openReactComponent(component: React.ReactNode, title: string) {
+    this.setState(produce(this.state, draft => {
+      // Find if the file is already open
+      let find_tab = draft.rootPane.find(t => t.id === '#internal-'+title);
+      if (find_tab) {
+        this.handleTabActivate(find_tab.id);
+        return;
+      }
+      let currentPane = draft.selectedTab?.parent ?? draft.rootPane as TabsNode;
+
+      let newTab = {
+        id: '#internal-'+title,
+        title: title,
+        content: component,
         parent: currentPane
       } as TabData;
 
@@ -442,7 +469,7 @@ class TabTitle extends React.Component<{ title: string, onClose: () => void }> {
         onMouseEnter={this.handleMouseEnter}
         onMouseLeave={this.handleMouseLeave}
       >
-        {this.props.title}
+        <span style={{ marginLeft: '15px' }}>{this.props.title}</span>
         <Button
           icon="cross"
           variant='minimal'

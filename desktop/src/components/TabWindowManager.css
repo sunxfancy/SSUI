@@ -2,10 +2,12 @@
     height: 100vh;
     min-height: 150px;
     min-width: 50px;
+    display: flex;
+    flex-direction: column;
 }
 
-.bp5-tab-panel {
-    height: 100vh;
+.tabs-container .bp5-tab-panel {
+    flex: 1;
 }
 
 .allotment-container {

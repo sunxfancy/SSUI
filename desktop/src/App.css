@@ -21,3 +21,6 @@ html, body, #root {
   -webkit-text-size-adjust: 100%;
 }
 
+.bp5-tab-panel {
+  margin-top: 0px !important;
+}

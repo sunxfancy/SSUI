@@ -1,6 +1,5 @@
 import { Component } from 'react';
-import { Tree, TreeNodeInfo } from "@blueprintjs/core";
-import { open } from '@tauri-apps/plugin-dialog';
+import { Button, Tree, TreeNodeInfo } from "@blueprintjs/core";
 import { TauriFilesystemProvider, IFilesystemProvider } from '../services/FilesystemProvider';
 
 import "@blueprintjs/core/lib/css/blueprint.css";
@@ -8,7 +7,8 @@ import "@blueprintjs/icons/lib/css/blueprint-icons.css";
 
 export class Sidebar extends Component<{
     currentWorkspace: string | null,
-    onOpenWorkspace?: (workspace: string) => void,
+    onOpenWorkspace?: () => void,
+    onSelectWorkflow?: () => void,
     onFileOpen?: (filePath: string) => void,
     filesystemProvider?: IFilesystemProvider,
 }, { fileTree: TreeNodeInfo[] }> {
@@ -96,19 +96,6 @@ export class Sidebar extends Component<{
         }
     }
 
-    handleOpenWorkspaceBtn = () => {
-        const options = {
-            directory: true,
-            multiple: false
-        };
-        const onOpenWorkspace = this.props.onOpenWorkspace;
-        open(options).then(async (result: string | null) => {
-            if (result && onOpenWorkspace) {
-                onOpenWorkspace(result);
-            }
-        });
-    }
-
     render() {
         const { currentWorkspace } = this.props;
         const { fileTree } = this.state;
@@ -123,8 +110,15 @@ export class Sidebar extends Component<{
                         onNodeClick={this.handleNodeClick}
                     />
                 ) : (
-                    <div style={{ display: 'flex', justifyContent: 'center', marginTop: '30px' }}>
-                            <button onClick={this.handleOpenWorkspaceBtn}>打开工作空间</button>
+                    <div style={{ display: 'flex', flexDirection: 'column',  justifyContent: 'center', padding: '20px', height: '100%' }}>
+                        <p>当前没有打开的目录, 您可以：</p>
+                        <div style={{ display: 'flex', justifyContent: 'center', marginTop: '10px', marginBottom: '20px' }} >
+                            <Button onClick={this.props.onOpenWorkspace} icon="folder-open" size="large" variant="solid">打开已有工作空间</Button>
+                        </div>
+                        <p>或者，选择我们准备的预制工作流：</p>
+                        <div style={{ display: 'flex', justifyContent: 'center', marginTop: '10px', marginBottom: '10px' }} >
+                            <Button onClick={this.props.onSelectWorkflow} icon="generate" size="large" variant="solid">从预制工作流开始</Button>
+                        </div>
                     </div>
                 )}
             </div>

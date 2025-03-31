@@ -10,7 +10,8 @@
     "tauri": "tauri",
     "storybook": "sb dev -p 6006",
     "copy-resources": "node scripts/copy-resources.cjs",
-    "prebuild": "yarn copy-resources"
+    "prebuild": "yarn copy-resources",
+    "predev": "yarn copy-resources"
   },
   "dependencies": {
     "@blueprintjs/core": "^5.16.2",
