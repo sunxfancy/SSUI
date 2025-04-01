@@ -27,24 +27,23 @@ set DOWNLOAD_URL=https://github.com/astral-sh/python-build-standalone/releases/d
 rem 创建.build文件夹并将Python放入其中
 if not exist ".build" mkdir .build
 
-echo Extracting Python...
+echo "Extracting Python..."
 rem 下载并解压Python
-echo Downloading Python from %DOWNLOAD_URL%...
+echo "Downloading Python from %DOWNLOAD_URL%..."
 curl -L %DOWNLOAD_URL% -o .build\python.tar.gz
 
 powershell -Command "cd .build; tar -xvzf python.tar.gz"
 powershell -Command "Remove-Item -Path '.build\python.tar.gz' -Force"
 
 rem 使用virtualenv创建虚拟环境
-echo Creating virtual environment...
+echo "Creating virtual environment..."
 .build\python\python.exe -m venv .build\base
 
 rem 激活虚拟环境并安装依赖
-echo Installing dependencies from requirements.txt...
-poetry export -f requirements.txt > .build\requirements.txt
-.build\base\Scripts\pip install --require-hashes --no-deps -r .build\requirements.txt
+echo "Installing dependencies from requirements.txt..."
+.build\base\Scripts\pip install --no-deps -r .build\requirements.txt
 
 mklink /j ".venv" ".build\base" 
 
-echo Installation complete!
+echo "Installation complete!"
 pause

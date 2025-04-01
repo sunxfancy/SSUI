@@ -46,8 +46,7 @@ echo "Creating virtual environment..."
 
 # 激活虚拟环境并安装依赖
 echo "Installing dependencies from requirements.txt..."
-poetry export -f requirements.txt > .build/requirements.txt
-.build/base/bin/pip install --require-hashes --no-deps -r .build/requirements.txt
+.build/base/bin/pip install --no-deps -r .build/requirements.txt
 
 # 创建符号链接
 rm -f .venv
