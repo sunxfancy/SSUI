@@ -23,6 +23,7 @@
     "build:example": "cd extensions/example && yarn build",
     "test_all": "poetry run python tests/run_tests.py",
     "test": "poetry run python tests/run_tests.py --test",
+    "postinstall": "node dependencies/install.cjs",
     
     "package_win": "poetry build && yarn build:components && yarn build:functional_ui && yarn build:desktop_ui",
     "check_deps": "yarn --version && poetry --version && rustc --version && cargo --version",
