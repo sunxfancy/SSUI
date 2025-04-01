@@ -1,10 +1,12 @@
-name: ImageExtension
+name: Video
 version: 0.1.0
 server:
   venv: shared
+  extension_dependencies:
+    - Image
   dependencies:
     - numpy = ^1.21.2
-  main: extension.py
+  main: image_extension.py
 
 web_ui:
   dist: dist/

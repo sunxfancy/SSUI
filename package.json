@@ -25,6 +25,13 @@
     "test": "poetry run python tests/run_tests.py --test",
     
     "package_win": "poetry build && yarn build:components && yarn build:functional_ui && yarn build:desktop_ui",
-    "check_deps": "yarn --version && poetry --version && rustc --version && cargo --version"
+    "check_deps": "yarn --version && poetry --version && rustc --version && cargo --version",
+    "requirements": "node dependencies/combine_requirements.cjs",
+    "update-lock": "node dependencies/update_lock.cjs",
+    "update-lock:no-upgrade": "node dependencies/update_lock.cjs --no-upgrade"
+  },
+  "dependencies": {
+    "js-yaml": "^4.1.0",
+    "semver": "^7.5.4"
   }
 }

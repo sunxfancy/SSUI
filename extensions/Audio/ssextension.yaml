@@ -1,4 +1,4 @@
-name: ImageExtension
+name: Audio
 version: 0.1.0
 server:
   venv: shared
