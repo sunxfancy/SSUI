@@ -11,18 +11,19 @@
     "ssui-vscode"
   ],
   "scripts": {
+    "dev": "concurrently \"yarn dev:desktop\" \"yarn dev:server\" \"yarn dev:functional_ui\"",
     "dev:desktop_ui": "cd desktop && yarn dev",
     "dev:desktop": "cd desktop && yarn tauri dev",
     "dev:server": "node dependencies/venv.cjs fastapi dev server/server.py --port=7422",
     "dev:functional_ui": "cd frontend/functional_ui && yarn dev",
     "dev:components": "cd frontend/ssui_components && yarn dev",
-
+    
     "build:desktop_ui": "cd desktop && yarn build",
     "build:desktop": "cd desktop && yarn tauri build",
     "build:components": "cd frontend/ssui_components && yarn build",
     "build:functional_ui": "cd frontend/functional_ui && yarn build",
     "build:example": "cd extensions/example && yarn build",
-    
+
     "test_all": "node dependencies/venv.cjs python tests/run_tests.py",
     "test": "node dependencies/venv.cjs python tests/run_tests.py --test",
     
@@ -37,6 +38,7 @@
     "postinstall": "node dependencies/install.cjs && yarn requirements && yarn install-requirements"
   },
   "devDependencies": {
+    "concurrently": "^9.1.2",
     "js-yaml": "^4.1.0",
     "semver": "^7.5.4"
   }

@@ -10,6 +10,7 @@ virtualenv>=20.28.0
 fastapi[standard]>=0.115.6
 websockets>=14.1
 diffusers[torch]>=0.31.0
+torchsde==0.2.6
 accelerate>=1.2.1
 pydantic-settings>=2.7.0
 pydantic>=2.10.4
