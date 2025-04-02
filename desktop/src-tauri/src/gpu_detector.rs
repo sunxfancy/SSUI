@@ -1,6 +1,10 @@
 use std::collections::HashMap;
+
+#[cfg(target_os = "windows")]
 use wmi::{COMLibrary, WMIConnection};
+#[cfg(target_os = "windows")]
 use winreg::enums::*;
+#[cfg(target_os = "windows")]
 use winreg::RegKey;
 
 #[tauri::command]

@@ -14,7 +14,7 @@ if (!fs.existsSync(buildDir)) {
 function getPlatform() {
   const platform = os.platform();
   if (platform === 'win32') return 'windows';
-  if (platform === 'darwin') return 'mac';
+  if (platform === 'darwin') return 'macosx';
   if (platform === 'linux') return 'linux';
   throw new Error(`不支持的平台: ${platform}`);
 }

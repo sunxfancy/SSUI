@@ -1,6 +1,6 @@
 {
     "rust-analyzer.linkedProjects": [
-        "desktop\\src-tauri\\Cargo.toml"
+        "desktop/src-tauri/Cargo.toml"
     ],
     "python.analysis.extraPaths": [
         "./extensions/Image",
