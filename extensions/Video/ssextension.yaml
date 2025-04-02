@@ -5,8 +5,8 @@ server:
   extension_dependencies:
     - Image
   dependencies:
-    - numpy = ^1.21.2
-  main: image_extension.py
+    - numpy>=1.21.2
+  main: extension.py
 
 web_ui:
   dist: dist/

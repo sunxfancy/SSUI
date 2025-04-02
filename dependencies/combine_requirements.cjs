@@ -4,8 +4,8 @@ const yaml = require('js-yaml');
 const os = require('os');
 const semver = require('semver');
 
-// 确保.build目录存在
-const buildDir = path.join(__dirname, '..', '.build');
+// 确保.venv目录存在
+const buildDir = path.join(__dirname, '..', '.venv');
 if (!fs.existsSync(buildDir)) {
   fs.mkdirSync(buildDir, { recursive: true });
 }
@@ -16,7 +16,7 @@ function getPlatform() {
   if (platform === 'win32') return 'windows';
   if (platform === 'darwin') return 'mac';
   if (platform === 'linux') return 'linux';
-  return 'common'; // 默认平台
+  throw new Error(`不支持的平台: ${platform}`);
 }
 
 // 解析版本约束
@@ -80,7 +80,7 @@ function parseVersionConstraint(constraint) {
     };
   }
   
-  return null;
+  return constraint;
 }
 
 // 计算两个版本约束的交集
@@ -148,7 +148,7 @@ function mergeConstraints(constraint1, constraint2) {
 // 格式化约束为字符串
 function formatConstraint(constraint) {
   if (!constraint) return '';
-  if (!constraint.min && !constraint.max) return '';
+  if (!constraint.min && !constraint.max) return constraint;
   
   if (constraint.min && constraint.max) {
     if (constraint.min === constraint.max && constraint.includeMin && constraint.includeMax) {
@@ -175,13 +175,7 @@ function loadCoreDependencies() {
   const dependenciesPath = path.join(__dirname, '..', 'dependencies', `requirements-${platform}.txt`);
   
   if (!fs.existsSync(dependenciesPath)) {
-    console.warn(`找不到平台特定的依赖文件: ${dependenciesPath}, 尝试使用通用依赖`);
-    const commonPath = path.join(__dirname, '..', 'dependencies', 'requirements-common.txt');
-    if (!fs.existsSync(commonPath)) {
-      console.warn('找不到通用依赖文件');
-      return {};
-    }
-    return parseDependenciesFile(commonPath);
+    throw new Error(`找不到平台特定的依赖文件: ${dependenciesPath}`);
   }
   
   return parseDependenciesFile(dependenciesPath);
@@ -191,28 +185,41 @@ function loadCoreDependencies() {
 function parseDependenciesFile(filePath) {
   const content = fs.readFileSync(filePath, 'utf8');
   const dependencies = {};
+  const extras = [];
   
   content.split('\n').forEach(line => {
     line = line.trim();
-    if (line && !line.startsWith('#')) {
+    if (line && !line.startsWith('#') && !line.startsWith('--extra-index-url')) {
       const [name, version] = parseRequirement(line);
       dependencies[name] = parseVersionConstraint(version);
     }
+    if (line.startsWith('--extra-index-url')) {
+      extras.push(line);
+    }
   });
-  
-  return dependencies;
+  return { dependencies, extras };
 }
 
 // 解析单个依赖
 function parseRequirement(req) {
-  const parts = req.split('=');
-  if (parts.length === 1) {
-    return [parts[0].trim(), null];
-  } else if (parts.length >= 2) {
-    const name = parts[0].trim();
-    const version = parts.slice(1).join('=').trim();
+  // 使用正则表达式匹配包名和版本约束
+  // 这个正则可以处理：package==1.0.0、package>=1.0.0、package>1.0.0等格式
+  const match = req.match(/^([A-Za-z0-9._\-\[\]]+)\s*((?:[<>=!~^]|>=|<=|==|!=|~=){0,2}\s*[0-9A-Za-z.*+-]+)?$/);
+  
+  if (match) {
+    return [match[1].trim(), match[2] ? match[2].trim() : null];
+  }
+  
+  // 如果无法匹配标准格式，尝试使用简单的空格分割（用于处理特殊情况）
+  const spaceParts = req.trim().split(/\s+/);
+  if (spaceParts.length >= 2) {
+    const name = spaceParts[0];
+    const version = spaceParts.slice(1).join(' ');
     return [name, version];
   }
+  
+  // 如果都无法解析，则返回整个字符串作为包名，没有版本约束
+  return [req.trim(), null];
 }
 
 // 扫描扩展依赖
@@ -259,9 +266,9 @@ function scanExtensionDependencies() {
 
 // 合并所有依赖
 function combineDependencies() {
-  const coreDeps = loadCoreDependencies();
+  const { dependencies, extras } = loadCoreDependencies();
   const extensionDeps = scanExtensionDependencies();
-  const allDeps = { ...coreDeps };
+  const allDeps = { ...dependencies };
   
   // 合并扩展依赖
   Object.entries(extensionDeps).forEach(([name, constraint]) => {
@@ -276,15 +283,16 @@ function combineDependencies() {
     }
   });
   
-  return allDeps;
+  return { allDeps, extras };
 }
 
 // 将合并后的依赖写入文件
-function writeRequirements(dependencies) {
+function writeRequirements(dependencies, extras) {
   const outputPath = path.join(buildDir, 'requirements.txt');
   const lines = Object.entries(dependencies)
     .map(([name, constraint]) => `${name}${constraint ? formatConstraint(constraint) : ''}`)
     .sort();
+  lines.push(...extras);
   
   fs.writeFileSync(outputPath, lines.join('\n'));
   console.log(`已生成合并的依赖文件: ${outputPath}`);
@@ -293,8 +301,8 @@ function writeRequirements(dependencies) {
 // 主函数
 function main() {
   try {
-    const dependencies = combineDependencies();
-    writeRequirements(dependencies);
+    const { allDeps, extras } = combineDependencies();
+    writeRequirements(allDeps, extras);
   } catch (error) {
     console.error('合并依赖时出错:', error);
     process.exit(1);

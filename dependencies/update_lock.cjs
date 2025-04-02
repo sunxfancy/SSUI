@@ -60,7 +60,8 @@ function main() {
     console.log(`正在为平台 ${platformName} 生成锁文件...`);
     
     // 构建uv命令，根据参数决定是否添加--no-upgrade选项
-    let uvCommand = `uv pip compile ${requirementsFile} -o ${lockFile}`;
+    const venvPath = os.platform() === 'win32' ? '.venv\\Scripts\\uv.exe' : '.venv/bin/uv';
+    let uvCommand = `${venvPath} pip compile ${requirementsFile} -o ${lockFile}`;
     if (args.noUpgrade) {
       console.log('使用不升级模式: 已存在的包将不会升级到最新版本');
       uvCommand += ' --no-upgrade';

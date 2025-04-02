@@ -3,7 +3,7 @@ version: 0.1.0
 server:
   venv: shared
   dependencies:
-    - numpy = ^1.21.2
+    - numpy>=1.21.2
   main: extension.py
 
 web_ui:
