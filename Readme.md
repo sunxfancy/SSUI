@@ -16,8 +16,6 @@ Stable Scripts UI is a web-based user interface for `Stable Scripts` - a kind of
 
 - DiffusionModel
   - SD1
-  - SD2
-  - SD3
   - SDXL
     - Pony
     - Illustrious
@@ -31,60 +29,36 @@ Stable Scripts UI is a web-based user interface for `Stable Scripts` - a kind of
 - Conditioning
 
 
-
-
 ## Setup Development Environment
 
 ### Dependencies
 
 First, please check out the dependencies are installed on your device.
 
-- poetry and poetry-plugin-export 
-  - Please check out https://python-poetry.org/docs/#installation
-  - poetry self add poetry-plugin-export
-
-- rustc and cargo
-  - Please check out https://www.rust-lang.org/tools/install
-
 - nodejs and yarn
   - Please download from: https://nodejs.org/en/download
   - npm install --global yarn
 
-### Python Environment
+- rustc and cargo
+  - Please check out https://www.rust-lang.org/tools/install
 
-The following command will install a embedded python environment and necessary python packages for you.
 
-```bash
-poetry install
-```
+### Nodejs & Python Environment
 
-### Nodejs Environment
-
-Run yarn in the root path:
+The following command will install yarn packages and a embedded python environment in '.venv' and necessary python packages for you.
 
 ```bash
 yarn
 ```
 
-### Build web_ui
-
-```bash
-yarn build_web_ui
-```
 
 ### Run Development Server
 
-In two shells, run the following commands:
-
 ```bash
-yarn web_ui
+yarn dev
 ```
 
-```bash
-yarn server
-```
-
-Final server: http://127.0.0.1:7422/
+Application server: http://127.0.0.1:7422/
 API documentation server: http://127.0.0.1:7422/docs
 Web UI dev server: http://127.0.0.1:7420/
 Example: http://127.0.0.1:7420/script?path=<example_path>
