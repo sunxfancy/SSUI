@@ -1,6 +1,6 @@
-
 import { Component } from 'react';
 import { Tabs, Tab, Card, Elevation } from '@blueprintjs/core';
+import CivitaiModels from './components/CivitaiModels';
 
 interface ModelAddingPageProps {
   // 可以在这里添加需要的属性
@@ -34,8 +34,12 @@ export class ModelAddingPage extends Component<ModelAddingPageProps, ModelAdding
   renderCivitaiTab() {
     return (
       <Card elevation={Elevation.ZERO}>
-        {/* Civitai模型内容将在这里实现 */}
-        <div>Civitai模型内容</div>
+        <CivitaiModels 
+          onModelSelect={(model) => {
+            console.log('Selected model:', model);
+            // 这里可以添加模型选择后的处理逻辑
+          }}
+        />
       </Card>
     );
   }
