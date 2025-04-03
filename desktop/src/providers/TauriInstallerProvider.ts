@@ -2,7 +2,6 @@ import { exit, relaunch } from '@tauri-apps/plugin-process';
 import { load } from '@tauri-apps/plugin-store';
 import { appDataDir, homeDir, join, resolveResource } from '@tauri-apps/api/path';
 import { open } from '@tauri-apps/plugin-dialog';
-import { Command } from '@tauri-apps/plugin-shell';
 import { platform } from '@tauri-apps/plugin-os';
 import { IInstallerProvider, CommandInfo } from './IInstallerProvider';
 import { exists, writeTextFile } from '@tauri-apps/plugin-fs';

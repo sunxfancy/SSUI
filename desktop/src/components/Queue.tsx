@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Card, Elevation, Button, Icon, Tag, Spinner } from '@blueprintjs/core';
+import { Card, Elevation, Button, Tag, Spinner } from '@blueprintjs/core';
 
 interface QueueItem {
   id: string;
@@ -120,7 +120,7 @@ const Queue: React.FC<QueueProps> = ({
         {/* 创建一个占位容器，确保滚动条的高度正确 */}
         <div style={{ height: `${items.length * itemHeight}px` }}>
           {/* 只渲染可见的项目 */}
-          {visibleItems.map((item, index) => {
+          {visibleItems.map((item, _) => {
             // 计算项目在整个列表中的位置
             const itemIndex = items.findIndex(i => i.id === item.id);
             

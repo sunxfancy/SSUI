@@ -22,7 +22,7 @@ interface InstallPageProps {
 
 class InstallPage extends React.Component<InstallPageProps, InstallPageState> {
   private provider: IInstallerProvider;
-  private _progressInterval: number | undefined;
+  private _progressInterval: NodeJS.Timeout | undefined;
 
   constructor(props: InstallPageProps) {
     super(props);

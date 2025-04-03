@@ -2,7 +2,7 @@ use downloader::download_python;
 use downloader::unpack_app;
 use gpu_detector::detect_gpu;
 use python::run_python;
-
+use python::get_dev_root;
 mod gpu_detector;
 mod downloader;
 mod python;
@@ -23,7 +23,7 @@ pub fn run() {
         // .plugin(tauri_plugin_updater::Builder::new().build())
         .plugin(tauri_plugin_upload::init())
         .plugin(tauri_plugin_opener::init())
-        .invoke_handler(tauri::generate_handler![download_python, detect_gpu, run_python, unpack_app])
+        .invoke_handler(tauri::generate_handler![get_dev_root, download_python, detect_gpu, run_python, unpack_app])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }

@@ -350,12 +350,12 @@ export class TabWindowManager extends Component<{}, State> {
       id={tab.id}
       title={<TabTitle title={tab.title} onClose={() => this.handleTabClose(tab)} />}
       panel={tab.content}
-      onClickCapture={(e) => {
+      onClickCapture={() => {
         this.handleTabActivate(tab.id);
       }}
 
       draggable
-      onDragStart={(e) => {
+      onDragStart={() => {
         console.log("onDragStart", tab.id);
         this.draggingTab = tab;
       }}

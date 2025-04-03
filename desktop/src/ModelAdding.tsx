@@ -1,5 +1,5 @@
 
-import React, { Component } from 'react';
+import { Component } from 'react';
 import { Tabs, Tab, Card, Elevation } from '@blueprintjs/core';
 
 interface ModelAddingPageProps {

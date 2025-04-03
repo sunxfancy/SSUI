@@ -56,6 +56,7 @@ class App extends Component {
 
   handleWorkflowSelect = (workflowIds: string[], targetPath: string) => {
     // TODO：将workflowIds转换为文件然后写入到目标文件夹中
+    console.log(workflowIds);
     this.setState({ isNewWorkflowDialogOpen: false, currentWorkspace: targetPath });
   }
 
