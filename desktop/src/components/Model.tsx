@@ -14,20 +14,8 @@ import {
 } from "@blueprintjs/core";
 import "@blueprintjs/core/lib/css/blueprint.css";
 import "@blueprintjs/icons/lib/css/blueprint-icons.css";
-
-interface ModelItem {
-  id: string;
-  name: string;
-  description: string;
-  tags: string[];
-}
-
-interface ModelGroup {
-  id: string;
-  name: string;
-  models: ModelItem[];
-  isOpen: boolean;
-}
+import { IModelManagerProvider, ModelGroup, ModelItem } from '../providers/IModelManagerProvider';
+import { MockModelManagerProvider } from '../providers/MockModelManagerProvider';
 
 interface ModelState {
   groups: ModelGroup[];
@@ -38,85 +26,33 @@ interface ModelState {
 }
 
 interface ModelManagerProps {
+  provider?: IModelManagerProvider;
   addModel?: () => void;
 }
 
 export class ModelManager extends Component<ModelManagerProps, ModelState> {
   private containerRef: React.RefObject<HTMLDivElement>;
   private resizeObserver: ResizeObserver | null = null;
+  private provider: IModelManagerProvider;
   
   constructor(props: ModelManagerProps) {
     super(props);
     
-    // 示例数据 - 按组分类
-    const sampleGroups: ModelGroup[] = [
-      { 
-        id: "checkpoint", 
-        name: "Checkpoint", 
-        isOpen: false,
-        models: [
-          { id: "sd1-v1-5", name: "Stable Diffusion 1.5", description: "基础SD1.5模型", tags: ["sd1"] },
-          { id: "sd2-v2-1", name: "Stable Diffusion 2.1", description: "改进版SD2.1模型", tags: ["sd2"] },
-          { id: "sdxl-base", name: "SDXL Base", description: "大规模SDXL基础模型", tags: ["sdxl"] },
-        ] 
-      },
-      { 
-        id: "vae", 
-        name: "VAE", 
-        isOpen: false,
-        models: [
-          { id: "vae-ft-mse", name: "VAE FT-MSE", description: "优化的VAE编码器", tags: ["sd1", "sd2"] },
-          { id: "vae-sdxl", name: "VAE SDXL", description: "SDXL专用VAE", tags: ["sdxl"] },
-        ] 
-      },
-      { 
-        id: "lora", 
-        name: "LoRA", 
-        isOpen: false,
-        models: [
-          { id: "lora-anime", name: "Anime Style", description: "动漫风格LoRA", tags: ["sd1", "sd2"] },
-          { id: "lora-realistic", name: "Realistic", description: "写实风格LoRA", tags: ["sd1", "sdxl"] },
-          { id: "lora-flux", name: "Flux Style", description: "Flux引擎专用LoRA", tags: ["flux1"] },
-        ] 
-      },
-      { 
-        id: "clip", 
-        name: "CLIP", 
-        isOpen: false,
-        models: [
-          { id: "clip-vit-large", name: "ViT-L/14", description: "大型CLIP视觉编码器", tags: ["sd2", "sdxl"] },
-          { id: "clip-vit-base", name: "ViT-B/32", description: "基础CLIP视觉编码器", tags: ["sd1"] },
-        ] 
-      },
-      { 
-        id: "controlnet", 
-        name: "ControlNet", 
-        isOpen: false,
-        models: [
-          { id: "cn-canny", name: "Canny Edge", description: "边缘检测控制网络", tags: ["sd1", "sd2"] },
-          { id: "cn-depth", name: "Depth", description: "深度图控制网络", tags: ["sd1", "sdxl"] },
-          { id: "cn-pose", name: "Pose", description: "姿势控制网络", tags: ["sd2", "flux1"] },
-        ] 
-      },
-    ];
-    
-    // 从所有模型中提取标签
-    const allTags = Array.from(new Set(sampleGroups.flatMap(group => 
-      group.models.flatMap(model => model.tags)
-    )));
+    // 使用提供的provider或默认使用模拟实现
+    this.provider = props.provider || new MockModelManagerProvider();
     
     this.state = {
-      groups: sampleGroups,
+      groups: [],
       searchQuery: "",
       selectedTags: [],
-      availableTags: allTags,
+      availableTags: [],
       showButtonText: true
     };
     
     this.containerRef = React.createRef();
   }
   
-  componentDidMount() {
+  async componentDidMount() {
     // 创建ResizeObserver监听容器大小变化
     if (typeof ResizeObserver !== 'undefined') {
       this.resizeObserver = new ResizeObserver(entries => {
@@ -130,6 +66,19 @@ export class ModelManager extends Component<ModelManagerProps, ModelState> {
         this.resizeObserver.observe(this.containerRef.current);
       }
     }
+    
+    // 加载数据
+    try {
+      const groups = await this.provider.getModelGroups();
+      const availableTags = await this.provider.getAllTags();
+      
+      this.setState({
+        groups,
+        availableTags
+      });
+    } catch (error) {
+      console.error("加载模型数据失败:", error);
+    }
   }
   
   componentWillUnmount() {
@@ -140,66 +89,60 @@ export class ModelManager extends Component<ModelManagerProps, ModelState> {
   }
   
   handleSearchChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    this.setState({ searchQuery: event.target.value });
+    this.setState({ searchQuery: event.target.value }, this.updateFilteredModels);
   };
   
-  toggleGroupOpen = (groupId: string) => {
-    this.setState(prevState => ({
-      groups: prevState.groups.map(group => 
-        group.id === groupId ? { ...group, isOpen: !group.isOpen } : group
-      )
-    }));
+  toggleGroupOpen = async (groupId: string) => {
+    const group = this.state.groups.find(g => g.id === groupId);
+    if (!group) return;
+    
+    const isOpen = !group.isOpen;
+    const success = await this.provider.toggleGroupOpen(groupId, isOpen);
+    
+    if (success) {
+      this.setState(prevState => ({
+        groups: prevState.groups.map(group => 
+          group.id === groupId ? { ...group, isOpen: isOpen } : group
+        )
+      }));
+    }
   };
   
-  deleteModel = (groupId: string, modelId: string) => {
-    this.setState(prevState => ({
-      groups: prevState.groups.map(group => 
-        group.id === groupId 
-          ? { ...group, models: group.models.filter(model => model.id !== modelId) }
-          : group
-      )
-    }));
+  deleteModel = async (groupId: string, modelId: string) => {
+    const success = await this.provider.deleteModel(groupId, modelId);
+    
+    if (success) {
+      this.setState(prevState => ({
+        groups: prevState.groups.map(group => 
+          group.id === groupId 
+            ? { ...group, models: group.models.filter(model => model.id !== modelId) }
+            : group
+        ).filter(group => group.models.length > 0) // 移除空组
+      }));
+    }
   };
   
   toggleTagSelection = (tag: string) => {
     this.setState(prevState => {
-      if (prevState.selectedTags.includes(tag)) {
-        return {
-          selectedTags: prevState.selectedTags.filter(t => t !== tag)
-        };
-      } else {
-        return {
-          selectedTags: [...prevState.selectedTags, tag]
-        };
-      }
-    });
+      const newSelectedTags = prevState.selectedTags.includes(tag)
+        ? prevState.selectedTags.filter(t => t !== tag)
+        : [...prevState.selectedTags, tag];
+        
+      return {
+        selectedTags: newSelectedTags
+      };
+    }, this.updateFilteredModels);
   };
   
-  getFilteredGroups = () => {
-    const { groups, searchQuery, selectedTags } = this.state;
+  updateFilteredModels = async () => {
+    const { searchQuery, selectedTags } = this.state;
     
-    return groups.map(group => {
-      // 过滤每个组中的模型
-      const filteredModels = group.models.filter(model => {
-        // 搜索过滤
-        const matchesSearch = 
-          model.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
-          model.description.toLowerCase().includes(searchQuery.toLowerCase());
-        
-        // 标签过滤
-        const matchesTags = 
-          selectedTags.length === 0 || 
-          selectedTags.some(tag => model.tags.includes(tag));
-        
-        return matchesSearch && matchesTags;
-      });
-      
-      // 返回带有过滤后模型的组
-      return {
-        ...group,
-        models: filteredModels
-      };
-    }).filter(group => group.models.length > 0); // 只保留有模型的组
+    try {
+      const filteredGroups = await this.provider.searchModels(searchQuery, selectedTags);
+      this.setState({ groups: filteredGroups });
+    } catch (error) {
+      console.error("搜索模型失败:", error);
+    }
   };
   
   renderTagMenu = () => {
@@ -220,8 +163,7 @@ export class ModelManager extends Component<ModelManagerProps, ModelState> {
   };
   
   render() {
-    const { searchQuery, showButtonText } = this.state;
-    const filteredGroups = this.getFilteredGroups();
+    const { searchQuery, showButtonText, groups } = this.state;
     
     return (
       <div ref={this.containerRef}>
@@ -238,7 +180,7 @@ export class ModelManager extends Component<ModelManagerProps, ModelState> {
                 <Button 
                   icon="cross" 
                   variant='minimal' 
-                  onClick={() => this.setState({ searchQuery: "" })} 
+                  onClick={() => this.setState({ searchQuery: "" }, this.updateFilteredModels)} 
                 /> : undefined
               }
             />
@@ -278,7 +220,7 @@ export class ModelManager extends Component<ModelManagerProps, ModelState> {
           border: "1px solid #e1e8ed",
           borderRadius: "3px"
         }}>
-          {filteredGroups.map(group => (
+          {groups.map(group => (
             <div key={group.id}>
               <div 
                 style={{ 
@@ -344,7 +286,7 @@ export class ModelManager extends Component<ModelManagerProps, ModelState> {
             </div>
           ))}
           
-          {filteredGroups.length === 0 && (
+          {groups.length === 0 && (
             <div style={{ textAlign: "center", padding: "20px" }}>
               <p>没有找到匹配的模型</p>
             </div>

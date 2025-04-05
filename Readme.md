@@ -3,11 +3,13 @@ Stable Scripts UI
 
 Stable Scripts UI is a web-based user interface for `Stable Scripts` - a kind of python scripts can easily reproduce the same results by other users.
 
-## Features
+## Why Stable Scripts?
 
-- **Easy to use**: Quickly create, run, and share scripts, automatically download the necessary modules, models and data.
-- **Reproducible**: Scripts and its necessary modules are versioned and can be run in the same environment as the author.
-- **Management**: Manage your scripts and its dependencies in a single place
+Comparing to other stable diffusion UI, SSUI has 5 major pros:
+
+- **Easy to use**: Quickly create, run, and share stable scripts, which is self-contained and can automatically download the necessary python modules, AI models and other dependent data.
+- **Reproducible**: Scripts, its necessary modules, and the SSUI itself are versioned. Scripts can be run in the exactly same environment as the script author.
+- **Management**: Manage your models and configurations 
 - **Strong Typed**: All resources (include models) are strong types and can be prevented from being misused.
 - **Customizable**: You can customize the scripts, types, models, panels, loaders, ui framework and more.
 

@@ -5,12 +5,13 @@ import TabWindowManager from './components/TabWindowManager';
 import { Allotment } from "allotment";
 import "allotment/dist/style.css";
 import { Topbar } from './components/Topbar';
-import ModelManager from './components/Model.tsx';
+import { ModelManager } from './components/Model';
 import ModelAddingPage from './ModelAdding.tsx';
 import Queue from './components/Queue.tsx';
 import { open } from '@tauri-apps/plugin-dialog';
 import NewWorkflow from './components/NewWorkflow.tsx';
 import { Extensions } from './components/Extensions.tsx';
+import { MockModelManagerProvider } from './providers/MockModelManagerProvider';
 
 class App extends Component {
   tabWindowManagerRef = React.createRef<TabWindowManager>();
@@ -19,6 +20,8 @@ class App extends Component {
     isNewWorkflowDialogOpen: false,
   };
 
+  // 创建一个模型管理提供者实例
+  private modelManagerProvider = new MockModelManagerProvider();
 
   async onClick() {
     const store = await load('settings.json', { autoSave: false });
@@ -67,7 +70,7 @@ class App extends Component {
           <Allotment.Pane minSize={100} maxSize={500}>
             <Topbar>
               <Sidebar currentWorkspace={this.state.currentWorkspace} onOpenWorkspace={this.onOpenWorkspace} onSelectWorkflow={this.onSelectWorkflow} onFileOpen={this.onFileOpen} />
-              <ModelManager addModel={this.addModel} />
+              <ModelManager provider={this.modelManagerProvider} addModel={this.addModel} />
               <Queue />
               <Extensions onOpenExtensionStore={this.openExtensionStore} />
             </Topbar>

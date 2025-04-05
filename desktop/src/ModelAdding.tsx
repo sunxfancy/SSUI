@@ -1,6 +1,9 @@
 import { Component } from 'react';
 import { Tabs, Tab, Card, Elevation } from '@blueprintjs/core';
 import CivitaiModels from './components/CivitaiModels';
+import LocalModels from './components/LocalModels';
+import HuggingfaceModels from './components/HuggingfaceModels';
+import { MockModelsProvider } from './stories/MockModelsProvider';
 
 interface ModelAddingPageProps {
   // 可以在这里添加需要的属性
@@ -9,6 +12,9 @@ interface ModelAddingPageProps {
 interface ModelAddingPageState {
   selectedTabId: string;
 }
+
+// 创建一个模拟的模型服务提供者实例
+const mockModelsProvider = new MockModelsProvider();
 
 export class ModelAddingPage extends Component<ModelAddingPageProps, ModelAddingPageState> {
   constructor(props: ModelAddingPageProps) {
@@ -47,8 +53,12 @@ export class ModelAddingPage extends Component<ModelAddingPageProps, ModelAdding
   renderHuggingfaceTab() {
     return (
       <Card elevation={Elevation.ZERO}>
-        {/* Huggingface模型内容将在这里实现 */}
-        <div>Huggingface模型内容</div>
+        <HuggingfaceModels 
+          onModelSelect={(model) => {
+            console.log('选择的Huggingface模型:', model);
+            // 这里可以添加模型选择后的处理逻辑
+          }}
+        />
       </Card>
     );
   }
@@ -56,8 +66,13 @@ export class ModelAddingPage extends Component<ModelAddingPageProps, ModelAdding
   renderLocalModelsTab() {
     return (
       <Card elevation={Elevation.ZERO}>
-        {/* 本地模型内容将在这里实现 */}
-        <div>本地模型内容</div>
+        <LocalModels
+          modelsProvider={mockModelsProvider}
+          onModelAdd={(modelPath) => {
+            console.log('添加模型:', modelPath);
+            // 这里添加模型添加后的处理逻辑
+          }}
+        />
       </Card>
     );
   }
