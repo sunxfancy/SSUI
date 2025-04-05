@@ -8,23 +8,41 @@ import sys
 import os
 import json
 from server.resource_manager import FileResourceProvider, ResourceManager
-import ssui
 from ssui.base import Image
+from pydantic_settings import BaseSettings
 
 sys.path.append(os.path.join(os.path.dirname(__file__), ".."))
 from ss_executor import SSLoader, search_project_root
-
 from .extensions import ExtensionManager
-
-from pydantic_settings import BaseSettings
 
 class Settings(BaseSettings):
     host_web_ui: str = os.path.join(os.path.dirname(__file__), "..", "frontend", "functional_ui", "dist")
+    resources_dir: str = os.path.join(os.path.dirname(__file__), "..", "resources")
+    additional_model_dirs: list[str] = []
 
 settings = Settings()
 app = FastAPI()
 
 ExtensionManager.instance().detectExtensions(app)
+
+
+@app.post("/config/")
+async def config(config: dict):
+    for key, value in config.items():
+        if key == "additional_model_dirs":
+            settings.additional_model_dirs = value
+        elif key == "resources_dir":
+            settings.resources_dir = value
+    return {"message": "Config updated"}
+
+@app.post("/config/install_model")
+async def install_model(model_path: str):
+    model_path = os.path.normpath(model_path)
+    if not os.path.exists(model_path):
+            return {"error": "Model path not found"}
+    # TODO 创建一个模型对象，并保存详细参数
+    return {"message": "Models installed"}
+
 
 @app.get("/api/version")
 async def version():

@@ -1,0 +1,29 @@
+{
+  "name": "extension_builder",
+  "private": true,
+  "version": "0.1.0",
+  "type": "commonjs",
+  "main": "dist/index.js",
+  "bin": {
+    "ssext": "./dist/index.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/index.js"
+  },
+  "devDependencies": {
+    "@types/fs-extra": "^11.0.4",
+    "@types/inquirer": "^9.0.7",
+    "@types/node": "^18.19.3",
+    "@types/tar": "^6.1.13",
+    "typescript": "~5.6.2"
+  },
+  "dependencies": {
+    "chalk": "^4.1.2",
+    "commander": "^11.0.4",
+    "fs-extra": "^11.3.0",
+    "inquirer": "^8.2.6",
+    "tar": "~6.1.13",
+    "yaml": "^2.3.4"
+  }
+}
