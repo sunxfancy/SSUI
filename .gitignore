@@ -11,3 +11,4 @@ test_env/
 *.pt
 *.pth
 *.ckpt
+/result*.png

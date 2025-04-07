@@ -1,28 +1,19 @@
 import unittest
-from ssui_image.api.model import (
-    ModelLoaderService,
-    load_flux_model,
-    load_model,
-    load_sdxl_model,
-)
-from ssui_image.api.conditioning import (
-    create_conditioning,
-    create_flux_conditioning,
-    create_sdxl_conditioning,
-)
-from ssui_image.api.denoise import (
-    denoise_image,
-    decode_latents,
-    flux_decode_latents,
-    flux_denoise_image,
-)
-import torch
 from pathlib import Path
 
-torch.no_grad()
-
-
 def generate_image(model_path: Path, positive: str, negative: str):
+    from ssui_image.api.model import (
+        ModelLoaderService,
+        load_model,
+    )
+    from ssui_image.api.conditioning import (
+        create_conditioning,
+    )
+    from ssui_image.api.denoise import (
+        denoise_image,
+        decode_latents,
+    )
+
     model_loader_service = ModelLoaderService()
     unet, clip, vae = load_model(
         model_loader_service=model_loader_service, model_path=model_path
@@ -48,6 +39,18 @@ def generate_image(model_path: Path, positive: str, negative: str):
 
 
 def generate_sdxl_image(model_path: Path, positive: str, negative: str):
+    from ssui_image.api.model import (
+        ModelLoaderService,
+        load_sdxl_model,
+    )
+    from ssui_image.api.conditioning import (
+        create_sdxl_conditioning,
+    )
+    from ssui_image.api.denoise import (
+        denoise_image,
+        decode_latents,
+    )
+    
     model_loader_service = ModelLoaderService()
     unet, clip, clip2, vae = load_sdxl_model(model_loader_service, model_path)
 
@@ -82,6 +85,17 @@ def generate_flux_image(
     positive: str,
     negative: str,
 ):
+    from ssui_image.api.model import (
+        ModelLoaderService,
+        load_flux_model,
+    )
+    from ssui_image.api.conditioning import (
+        create_flux_conditioning,
+    )
+    from ssui_image.api.denoise import (
+        flux_decode_latents,
+        flux_denoise_image,
+    )
     model_loader_service = ModelLoaderService()
     transformer, t5_model, clip_model, vae = load_flux_model(
         model_loader_service=model_loader_service,
@@ -111,7 +125,7 @@ class TestBackend(unittest.TestCase):
 
     def test_sdxl(self):
         generate_sdxl_image(
-            Path("H:\\SSUI\\server\\AnythingXL_xl.safetensors"),
+            Path("C:\\Users\\sunxf\\InvokeAI\\models\\sdxl\\main\\Juggernaut XL v9"),
             "a beautiful girl in a red dress, masterpiece, best quality",
             "a bad image",
         )

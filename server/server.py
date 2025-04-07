@@ -7,7 +7,6 @@ import torch.torch_version
 import sys
 import os
 import json
-from server.resource_manager import FileResourceProvider, ResourceManager
 from ssui.base import Image
 from pydantic_settings import BaseSettings
 

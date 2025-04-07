@@ -1,17 +1,12 @@
 import unittest
-import torch
-import numpy as np
-
-
-import imageio
 from PIL import Image
-from trellis.pipelines import TrellisImageTo3DPipeline
-from trellis.utils import render_utils, postprocessing_utils
-
+from tests.utils import should_run_slow_tests
 
 class TrellisTest(unittest.TestCase):
-
+    @unittest.skipIf(not should_run_slow_tests(), "Skipping slow test")
     def test_trellis(self):
+        from trellis.pipelines import TrellisImageTo3DPipeline
+        from trellis.utils import render_utils, postprocessing_utils
         # Load a pipeline from a model folder or a Hugging Face model hub.
         pipeline = TrellisImageTo3DPipeline.from_pretrained("JeffreyXiang/TRELLIS-image-large")
         pipeline.cuda()

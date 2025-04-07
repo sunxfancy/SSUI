@@ -8,6 +8,7 @@ pillow>=11.0.0
 virtualenv>=20.28.0
 fastapi[standard]>=0.115.6
 websockets>=14.1
+RestrictedPython>=8.0
 
 # 基础 Torch 包（非 Windows 版本）
 torch==2.4.1

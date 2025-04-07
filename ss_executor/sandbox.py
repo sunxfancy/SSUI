@@ -1,147 +1,95 @@
-import os
-from typing import List
-
+import builtins
+from typing import Any, Dict, Optional, Callable
+from RestrictedPython import compile_restricted, safe_builtins, utility_builtins
+from RestrictedPython.Guards import safer_getattr, guarded_unpack_sequence
+from RestrictedPython.PrintCollector import PrintCollector
 
 class Sandbox:
-    def __init__(self, base_path: str, module_path: str, app_path: str):
-        self.default_level = "app" if app_path else "module"
-        self.paths = [base_path, module_path, app_path]
-
-    def base_path(self):
-        return self.paths[0]
-
-    def module_path(self):
-        return self.paths[1]
-
-    def app_path(self):
-        return self.paths[2]
-
-    def check_env(self):
-        for path in self.paths:
-            if not os.path.exists(path):
-                os.makedirs(path)
-                # create venv
-
-    def get_path(self, level=None):
-        if level is None:
-            level = self.default_level
-        if level == "base":
-            return self.base_path()
-        elif level == "module":
-            return self.module_path()
-        elif level == "app":
-            return self.app_path()
-        raise ValueError(
-            f"Invalid level({level}), only 'base', 'module', 'app' are allowed"
-        )
-
-    def install_package(self, package: str, level=None):
-        if level is None:
-            level = self.default_level
-        path = self.get_path(level)
-        # install package in venv (using pip)
-        if path:
-            pip = os.path.join(path, "Scripts", "pip.exe")
-            os.system(f"{pip} install {package}")
-
-    def install_requirements(self, requirements: str, level=None):
-        if level is None:
-            level = self.default_level
-        path = self.get_path(level)
-        # install package in venv (using pip)
-        if path:
-            pip = os.path.join(path, "Scripts", "pip.exe")
-            os.system(f"{pip} install --require-hashes --no-deps -r {requirements}")
-
-    def run_script(self, script_path: str, level=None):
-        if level is None:
-            level = self.default_level
-        path = self.get_path(level)
-        # run script in venv
-        if path:
-            python = os.path.join(path, "Scripts", "python.exe")
-            os.system(f"{python} {script_path}")
+    """
+    安全沙盒环境，用于执行受限制的Python代码，安全调用SSUI API。
+    """
+    
+    def __init__(self, ssui_api: Optional[Dict[str, Callable]] = None):
+        """
+        初始化沙盒环境
         
+        Args:
+            ssui_api: 包含允许调用的SSUI API函数的字典
+        """
+        self.ssui_api = ssui_api or {}
+        self._setup_restricted_globals()
     
-    def start_process(self, script_path: str, callable: str, args: dict):
-        pass
-
-
-class VenvManager:
-    def __init__(self, path: str):
-        self.path = path
-        self.venvs = {}
-        self.app_venvs = {}  # index with project path
-        self.detect_existing_venvs()
-
-    def detect_existing_venvs(self):
-        module_path = os.path.join(self.path, "module")
-        app_path = os.path.join(self.path, "app")
-
-        if os.path.exists(module_path):
-            for name in os.listdir(module_path):
-                self.venvs[name] = os.path.join(module_path, name)
-        if os.path.exists(app_path):
-            for name in os.listdir(app_path):
-                self.app_venvs[name] = os.path.join(app_path, name)
-
-    def create_for_module(self, name: str) -> Sandbox:
-        if name in self.venvs:
-            return Sandbox(self.get_base_path(), self.get_module_path(name), None)
-        path = self.get_module_path(name)
-        self.run_venv(path)
-        self.create_pth(path, [path, self.get_base_path()])
-        self.venvs[name] = path
-        return Sandbox(self.get_base_path(), path, None)
-
-    def create_for_app(self, module_path: str, name: str) -> Sandbox:
-        if name in self.app_venvs:
-            return Sandbox(self.get_base_path(), module_path, self.app_venvs[name])
-        path = self.get_app_path(name)
-        self.run_venv(path)
-        self.create_pth(path, [path, module_path, self.get_base_path()])
-        self.app_venvs[name] = path
-        return Sandbox(self.get_base_path(), module_path, path)
-
-    def run_venv(self, path: str):
-        python = self.get_python_bin()
-        os.system(f"{python} -m venv {path}")
-
-    def create_pth(self, path: str, search_paths: List[str]):
-        pth_path = os.path.join(path, "Lib", "site-packages", "ss.pth")
-        with open(pth_path, "w") as f:
-            for p in search_paths:
-                p = os.path.join(p, "Lib", "site-packages")
-                p = os.path.abspath(p)
-                f.write(p + "\n")
-
-    def get_python_root(self):
-        return os.path.join(self.path, "python")
-
-    def get_python_bin(self):
-        return os.path.join(self.get_python_root(), "python.exe")
-
-    def get_base_path(self):
-        return os.path.join(self.path, "base")
-
-    def get_module_path(self, name: str):
-        return os.path.join(self.path, "module", name)
-
-    def get_app_path(self, path: str):
-        return os.path.join(self.path, "app", path)
-
-
-if __name__ == "__main__":
-    import sys
-
-    build_path = os.path.join(os.path.dirname(__file__), "..", ".build")
-    manager = VenvManager(build_path)
-    module = manager.create_for_module("shared")
-    app = manager.create_for_app(manager.get_module_path("shared"), "app1")
-
-    module.install_package("obj2html")
-    app.install_package("obj2stl")
-    app.install_package("numpy==1.26")
-
-    app.run_script(sys.argv[1])
+    def _setup_restricted_globals(self):
+        """设置受限制的全局环境"""
+        # 基础安全内置函数
+        self.restricted_globals = {
+            '__builtins__': {
+                **safe_builtins,
+                **utility_builtins,
+                '_print_': PrintCollector,
+                '_getattr_': safer_getattr,
+                '_unpack_sequence_': guarded_unpack_sequence,
+                # 允许的基本内置函数
+                'sum': builtins.sum,
+                'min': builtins.min,
+                'max': builtins.max,
+                'abs': builtins.abs,
+                'round': builtins.round,
+                'len': builtins.len,
+            },
+            # 提供安全的SSUI API访问
+            'ssui': self.ssui_api
+        }
     
+    def execute(self, code: str) -> Dict[str, Any]:
+        """
+        在沙盒环境中执行代码
+        
+        Args:
+            code: 要执行的Python代码字符串
+        
+        Returns:
+            包含执行结果、输出和错误信息的字典
+        """
+        result = {
+            'success': False,
+            'result': None,
+            'output': '',
+            'error': None
+        }
+        
+        try:
+            # 编译受限代码
+            byte_code = compile_restricted(code, filename='<inline>', mode='exec')
+            
+            # 准备执行环境
+            local_vars = {}
+            global_vars = self.restricted_globals.copy()
+            
+            # 执行代码
+            exec(byte_code, global_vars, local_vars)
+            
+            # 收集打印输出
+            if '_print' in local_vars and hasattr(local_vars['_print'], 'get'):
+                result['output'] = local_vars['_print'].get()
+            
+            # 获取返回值(如果存在)
+            if 'result' in local_vars:
+                result['result'] = local_vars['result']
+            
+            result['success'] = True
+        except Exception as e:
+            result['error'] = f"{type(e).__name__}: {str(e)}"
+        
+        return result
+    
+    def set_api_function(self, name: str, func: Callable) -> None:
+        """
+        添加或更新安全API函数
+        
+        Args:
+            name: API函数名
+            func: API函数
+        """
+        self.ssui_api[name] = func
+        self._setup_restricted_globals()  # 更新全局环境

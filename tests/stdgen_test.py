@@ -1,8 +1,10 @@
 import unittest
-from stdgen.pipeline import canonicalize, multiview
+from tests.utils import should_run_slow_tests
 
 class StdGENTest(unittest.TestCase):
+    @unittest.skipIf(not should_run_slow_tests(), "Skipping slow test")
     def test_canonicalize(self):
+        from stdgen.pipeline import canonicalize
         canonicalize(
             input_dir="tests/data/",
             output_dir="tests/output",
@@ -29,7 +31,9 @@ class StdGENTest(unittest.TestCase):
             }
         )
 
+    @unittest.skipIf(not should_run_slow_tests(), "Skipping slow test")
     def test_multiview(self):
+        from stdgen.pipeline import multiview
         multiview(
             input_dir="tests/output/",
             output_dir="tests/output/multiview",

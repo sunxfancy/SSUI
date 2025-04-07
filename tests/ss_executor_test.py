@@ -3,6 +3,8 @@ import os
 import tempfile
 import yaml
 from ss_executor.loader import SSLoader, SSProject, search_project_root
+from ss_executor.model import Task
+from ss_executor.scheduler import TaskScheduler
 
 class TestSSLoader(unittest.TestCase):
     def setUp(self):
@@ -33,7 +35,7 @@ class TestSSProject(unittest.TestCase):
         with open(os.path.join(self.temp_dir, 'ssproject.yaml'), 'w') as f:
             yaml.dump(self.config_data, f)
             
-        self.project = SSProject(self.temp_dir)
+        self.project = SSProject(path=self.temp_dir)
         
     def test_version(self):
         """测试版本获取"""
@@ -41,7 +43,7 @@ class TestSSProject(unittest.TestCase):
         
     def test_dependencies(self):
         """测试依赖项解析"""
-        deps = self.project.dependencies()
+        deps = self.project.dependencies_map()
         self.assertEqual(deps['package1'], '1.0.0')
         self.assertEqual(deps['package2'], '2.0.0')
         
@@ -60,5 +62,30 @@ class TestSSProject(unittest.TestCase):
         import shutil
         shutil.rmtree(self.temp_dir)
 
-if __name__ == '__main__':
-    unittest.main()
+class TestScheduler(unittest.TestCase):
+    def test_Task(self):
+        task = Task(script="test.py", callable="test")
+        self.assertEqual(task.script, "test.py")
+        self.assertEqual(task.callable, "test")
+
+        str = task.model_dump_json()
+        task2 = Task.model_validate_json(str)
+        self.assertEqual(task2.script, "test.py")
+        self.assertEqual(task2.callable, "test")
+
+
+    def test_scheduler(self):
+        scheduler = TaskScheduler()
+        scheduler.start()
+
+        scheduler.add_task(Task(script="test.py", callable="test"))
+        
+        # 等待5秒钟，让任务有时间被处理
+        import time
+        time.sleep(5)
+        
+        # 停止调度器
+        scheduler.stop()
+    
+
+

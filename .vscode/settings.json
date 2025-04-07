@@ -4,7 +4,7 @@
     ],
     "python.analysis.extraPaths": [
         "./extensions/Image",
-        "./extensions/3D",
+        "./extensions/3D-Model",
         "./extensions/Video",
         "./extensions/Audio",
     ],
