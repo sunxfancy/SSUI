@@ -4,7 +4,8 @@ const path = require('path');
 const isWin = process.platform === 'win32';
 
 // 根据操作系统选择正确的路径
-const venvPath = isWin ? '.venv/Scripts' : '.venv/bin';
+const current_path = path.resolve(__dirname, '..');
+const venvPath = isWin ? path.join(current_path, '.venv', 'Scripts') : path.join(current_path, '.venv', 'bin');
 const cmd = path.join(venvPath, process.argv[2]);
 
 // 获取传递给脚本的其余参数

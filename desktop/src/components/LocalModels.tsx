@@ -360,11 +360,10 @@ export class LocalModels extends Component<LocalModelsProps, LocalModelsState> {
               <InputGroup
                 placeholder="选择目录..."
                 value={selectedDirectory}
-                readOnly
                 rightElement={
                   <Button 
                     icon="folder-open" 
-                    minimal 
+                    variant="minimal"
                     onClick={this.handleSelectDirectory} 
                   />
                 }

@@ -1,4 +1,4 @@
-import { IModelManagerProvider, ModelGroup, ModelItem } from './IModelManagerProvider';
+import { IModelManagerProvider, ModelGroup, ModelItem } from '../providers/IModelManagerProvider';
 
 /**
  * 模拟数据的模型管理提供者

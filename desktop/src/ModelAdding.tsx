@@ -3,7 +3,7 @@ import { Tabs, Tab, Card, Elevation } from '@blueprintjs/core';
 import CivitaiModels from './components/CivitaiModels';
 import LocalModels from './components/LocalModels';
 import HuggingfaceModels from './components/HuggingfaceModels';
-import { MockModelsProvider } from './stories/MockModelsProvider';
+import { TauriModelsProvider } from './providers/TauriModelsProvider';
 
 interface ModelAddingPageProps {
   // 可以在这里添加需要的属性
@@ -14,7 +14,7 @@ interface ModelAddingPageState {
 }
 
 // 创建一个模拟的模型服务提供者实例
-const mockModelsProvider = new MockModelsProvider();
+const modelsProvider = new TauriModelsProvider();
 
 export class ModelAddingPage extends Component<ModelAddingPageProps, ModelAddingPageState> {
   constructor(props: ModelAddingPageProps) {
@@ -67,7 +67,7 @@ export class ModelAddingPage extends Component<ModelAddingPageProps, ModelAdding
     return (
       <Card elevation={Elevation.ZERO}>
         <LocalModels
-          modelsProvider={mockModelsProvider}
+          modelsProvider={modelsProvider}
           onModelAdd={(modelPath) => {
             console.log('添加模型:', modelPath);
             // 这里添加模型添加后的处理逻辑

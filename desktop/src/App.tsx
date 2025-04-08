@@ -11,7 +11,7 @@ import Queue from './components/Queue.tsx';
 import { open } from '@tauri-apps/plugin-dialog';
 import NewWorkflow from './components/NewWorkflow.tsx';
 import { Extensions } from './components/Extensions.tsx';
-import { MockModelManagerProvider } from './providers/MockModelManagerProvider';
+import { MockModelManagerProvider } from './stories/MockModelManagerProvider.ts';
 
 class App extends Component {
   tabWindowManagerRef = React.createRef<TabWindowManager>();
