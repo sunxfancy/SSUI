@@ -52,7 +52,7 @@ class ExtensionManager:
             path = os.path.normpath(path)
         self.path = path
 
-    def loadExtension(self, yaml_path: str):
+    def loadExtension(self, yaml_path: str, dir: str):
         with open(yaml_path, "r") as f:
             yaml_data = yaml.load(f, Loader=yaml.FullLoader)
             yaml_data["path"] = os.path.join(self.path, dir)
@@ -72,7 +72,7 @@ class ExtensionManager:
         for dir in os.listdir(self.path):
             yaml_path = os.path.join(self.path, dir, "ssextension.yaml")
             if os.path.exists(yaml_path):
-                self.loadExtension(yaml_path)
+                self.loadExtension(yaml_path, dir)
                         
         self.loadPythonScripts(app)
         self.setFileAPIforExtension(app)

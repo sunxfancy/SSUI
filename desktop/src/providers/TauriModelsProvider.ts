@@ -1,7 +1,14 @@
 import { Model, ModelsProvider, WatchedDirectory } from "./IModelsProvider";
 import { open } from '@tauri-apps/plugin-dialog';
+import { Message } from "ssui_components";
 
 export class TauriModelsProvider implements ModelsProvider {
+    private message: Message;
+
+    constructor() {
+        this.message = new Message("localhost", 7420);
+    }
+
       /**
    * 从文件系统选择目录
    * @returns 返回选中的目录路径
@@ -24,8 +31,17 @@ export class TauriModelsProvider implements ModelsProvider {
    * @param directoryPath 目录路径
    * @returns 扫描到的模型列表
    */
-  scanDirectory(directoryPath: string): Promise<Model[]> {
-    return Promise.resolve([]);
+  async scanDirectory(directoryPath: string): Promise<any> {
+    return await this.message.post("config/scan_models", {
+      scan_dir: directoryPath
+    }, {
+      "find_model": (data: any) => {
+        console.log("find_model: ", data);
+      },
+      "finish": (data: any) => {
+        console.log("finish: ", data);
+      }
+    });
   }
   
   /**

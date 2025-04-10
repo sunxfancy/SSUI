@@ -5374,16 +5374,6 @@ sprintf-js@~1.0.2:
     tar "~6.1.13"
     yaml "^2.3.4"
 
-"ssui_components@file:frontend/ssui_components":
-  version "0.1.0"
-  dependencies:
-    "@blueprintjs/core" "^5.16.2"
-    "@blueprintjs/select" "^5.3.7"
-    "@blueprintjs/table" "^5.3.1"
-    react "^18.3.1"
-    react-dom "^18.3.1"
-    react-use "^17.6.0"
-
 stack-generator@^2.0.5:
   version "2.0.10"
   resolved "https://registry.yarnpkg.com/stack-generator/-/stack-generator-2.0.10.tgz#8ae171e985ed62287d4f1ed55a1633b3fb53bb4d"

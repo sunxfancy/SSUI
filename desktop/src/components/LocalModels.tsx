@@ -69,9 +69,9 @@ export class LocalModels extends Component<LocalModelsProps, LocalModelsState> {
     this.setState({ isScanning: true });
     
     try {
-      const models = await this.props.modelsProvider.scanDirectory(selectedDirectory);
+      const result = await this.props.modelsProvider.scanDirectory(selectedDirectory);
+      console.log("result: ", result);
       this.setState({ 
-        scannedModels: models,
         isScanning: false
       });
     } catch (error) {

@@ -1,5 +1,8 @@
 import datetime
-from fastapi import FastAPI, WebSocket
+import signal
+from typing import Optional
+import uuid
+from fastapi import Body, FastAPI, WebSocket
 from fastapi.responses import FileResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 import torch
@@ -9,6 +12,7 @@ import os
 import json
 from ssui.base import Image
 from pydantic_settings import BaseSettings
+from contextlib import asynccontextmanager
 
 sys.path.append(os.path.join(os.path.dirname(__file__), ".."))
 from ss_executor import SSLoader, search_project_root
@@ -19,10 +23,27 @@ class Settings(BaseSettings):
     resources_dir: str = os.path.join(os.path.dirname(__file__), "..", "resources")
     additional_model_dirs: list[str] = []
 
-settings = Settings()
-app = FastAPI()
 
-ExtensionManager.instance().detectExtensions(app)
+settings = Settings()
+
+# 这是一个全局websocket的连接用户表
+ws_clients = {}
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # 检测扩展
+    ExtensionManager.instance().detectExtensions(app)
+    yield
+    print("lifespan end")
+    # 关闭所有连接
+    for name,connection in ws_clients.items():
+        await connection.close()
+
+app = FastAPI(lifespan=lifespan)
+
+signal.signal(signal.SIGINT, lambda s, f: print("SIGINT"))
+signal.signal(signal.SIGTERM, lambda s, f: print("SIGTERM"))
 
 
 @app.post("/config/")
@@ -33,6 +54,21 @@ async def config(config: dict):
         elif key == "resources_dir":
             settings.resources_dir = value
     return {"message": "Config updated"}
+
+async def scan_target_dir(scan_dir: str):
+    if os.path.exists(scan_dir):
+        for dirpath, dirnames, filenames in os.walk(scan_dir):
+            for filename in filenames:
+                if filename.endswith(".safetensors") or filename.endswith(".pt"):
+                    model_path = os.path.join(dirpath, filename)
+
+@app.post("/config/scan_models")
+async def scan_models(scan_dir: str = Body(...)):
+    scan_dir = os.path.normpath(scan_dir)
+    if not os.path.exists(scan_dir):
+        return {"error": "Scan directory not found"}
+                    
+    return {"type": "start", "message": "Models scan started"}
 
 @app.post("/config/install_model")
 async def install_model(model_path: str):
@@ -200,16 +236,37 @@ async def extensions():
         extension_dir[name] = "/extension/" + name + "/dist/" + data['web_ui']['main']
     return extension_dir
 
-@app.websocket("/ws")
+
+@app.websocket("/")
 async def websocket_endpoint(websocket: WebSocket):
     await websocket.accept()
-    while True:
-        data = await websocket.receive_text()
-        await websocket.send_text(f"Message text was: {data}")
+    client_id = str(uuid.uuid4())
+    ws_clients[client_id] = websocket
+    try:
+        print("sending uuid to client")
+        await websocket.send_text(json.dumps({"type": "uuid", "uuid": client_id}))
+        while True:
+            await websocket.receive_text()  # 保持连接
+    except Exception as e:
+        print("client disconnected: ", e)
+        ws_clients.pop(client_id, None)
+
+def send_message(client_id: str, message: dict[str, any]):
+    message = json.dumps({"type": "callback", "request_uuid": client_id, **message})
+    if client_id in ws_clients:
+        ws_clients[client_id].send_text(message)
+
+def send_finish(client_id: str, message: Optional[dict[str, any]] = None):
+    if message is None:
+        message = {}
+    message = json.dumps({"type": "finish", "request_uuid": client_id, **message})
+    if client_id in ws_clients:
+        ws_clients[client_id].send_text(message)
 
 
+
+# 对于静态数据的请求，使用文件资源管理器
 if settings.host_web_ui:
-
     @app.get("/", response_class=RedirectResponse)
     async def root():
         return "/index.html"
