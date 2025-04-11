@@ -29,19 +29,37 @@ export class TauriModelsProvider implements ModelsProvider {
   /**
    * 扫描指定目录中的模型
    * @param directoryPath 目录路径
+   * @param onModelFound 当找到模型时的回调函数
    * @returns 扫描到的模型列表
    */
-  async scanDirectory(directoryPath: string): Promise<any> {
-    return await this.message.post("config/scan_models", {
-      scan_dir: directoryPath
+  async scanDirectory(directoryPath: string, onModelFound?: (model: Model) => void): Promise<Model[]> {
+    const models: Model[] = [];
+    
+    await this.message.post("config/scan_models", {
+      "scan_dir": directoryPath
     }, {
       "find_model": (data: any) => {
         console.log("find_model: ", data);
+        // 将找到的模型添加到列表中
+        if (data && data.path && data.name) {
+          const model: Model = {
+            id: Date.now().toString() + Math.random().toString(36).substr(2, 9), // 生成唯一ID
+            name: data.name,
+            path: data.path,
+            type: data.type || "未知类型",
+            size: data.size || "未知大小"
+          };
+          models.push(model);
+          
+          // 如果提供了回调函数，则调用它
+          if (onModelFound) {
+            onModelFound(model);
+          }
+        }
       },
-      "finish": (data: any) => {
-        console.log("finish: ", data);
-      }
     });
+    
+    return models;
   }
   
   /**

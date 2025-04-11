@@ -1,18 +1,24 @@
 import datetime
+from pathlib import Path
 import signal
+import threading
 from typing import Optional
 import uuid
 from fastapi import Body, FastAPI, WebSocket
 from fastapi.responses import FileResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
+from pydantic import BaseModel, Field
 import torch
 import torch.torch_version
 import sys
 import os
 import json
+from backend.model_manager.probe import ModelProbe
 from ssui.base import Image
 from pydantic_settings import BaseSettings
 from contextlib import asynccontextmanager
+import asyncio
+from asyncio import Queue
 
 sys.path.append(os.path.join(os.path.dirname(__file__), ".."))
 from ss_executor import SSLoader, search_project_root
@@ -28,7 +34,8 @@ settings = Settings()
 
 # 这是一个全局websocket的连接用户表
 ws_clients = {}
-
+message_queue = Queue()
+loop = asyncio.get_event_loop()
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -42,10 +49,6 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(lifespan=lifespan)
 
-signal.signal(signal.SIGINT, lambda s, f: print("SIGINT"))
-signal.signal(signal.SIGTERM, lambda s, f: print("SIGTERM"))
-
-
 @app.post("/config/")
 async def config(config: dict):
     for key, value in config.items():
@@ -55,20 +58,34 @@ async def config(config: dict):
             settings.resources_dir = value
     return {"message": "Config updated"}
 
-async def scan_target_dir(scan_dir: str):
+def scan_target_dir(scan_dir: str, client_id: str, request_uuid: str):
+    scaned_models = []
     if os.path.exists(scan_dir):
         for dirpath, dirnames, filenames in os.walk(scan_dir):
             for filename in filenames:
-                if filename.endswith(".safetensors") or filename.endswith(".pt"):
+                if filename.endswith(".safetensors") or filename.endswith(".pt") or filename.endswith(".ckpt"):
                     model_path = os.path.join(dirpath, filename)
+                    try:
+                        model_config = ModelProbe.probe(Path(model_path))
+                        scaned_models.append({ "path": model_path, "name": filename })
+                        send_message(client_id, request_uuid, { "find_model": { "path": model_path, "name": filename } })
+                    except Exception as e:
+                        continue
+    send_finish(client_id, request_uuid, { "models": scaned_models })
 
-@app.post("/config/scan_models")
-async def scan_models(scan_dir: str = Body(...)):
-    scan_dir = os.path.normpath(scan_dir)
+class ScanModelsRequest(BaseModel):
+    scan_dir: str = Field(description="The directory to scan for models")
+
+
+@app.post("/config/scan_models/{client_id}")
+async def scan_models(client_id: str, request: ScanModelsRequest):
+    scan_dir = os.path.normpath(request.scan_dir)
+    print("scan_models", client_id, scan_dir)
     if not os.path.exists(scan_dir):
         return {"error": "Scan directory not found"}
-                    
-    return {"type": "start", "message": "Models scan started"}
+    request_uuid = str(uuid.uuid4())
+    threading.Thread(target=scan_target_dir, args=(scan_dir, client_id, request_uuid), daemon=True).start()
+    return {"type": "start", "request_uuid": request_uuid, "message": "Models scan started", "callbacks": ["find_model"]}
 
 @app.post("/config/install_model")
 async def install_model(model_path: str):
@@ -251,18 +268,25 @@ async def websocket_endpoint(websocket: WebSocket):
         print("client disconnected: ", e)
         ws_clients.pop(client_id, None)
 
-def send_message(client_id: str, message: dict[str, any]):
-    message = json.dumps({"type": "callback", "request_uuid": client_id, **message})
+async def send_text(client_id: str, message: str):
     if client_id in ws_clients:
-        ws_clients[client_id].send_text(message)
+        try:
+            print("send_text: ", client_id, message)
+            await ws_clients[client_id].send_text(message)
+        except Exception as e:
+            print("send_text error: ", e)
 
-def send_finish(client_id: str, message: Optional[dict[str, any]] = None):
+def send_message(client_id: str, request_uuid: str, message: dict[str, any]):
+    print("send_message:", request_uuid, message)
+    message = json.dumps({"type": "callback", "request_uuid": request_uuid, **message})
+    loop.call_soon_threadsafe(asyncio.create_task, send_text(client_id, message))
+
+def send_finish(client_id: str, request_uuid: str, message: Optional[dict[str, any]] = None):
+    print("send_finish:", request_uuid, message)
     if message is None:
         message = {}
-    message = json.dumps({"type": "finish", "request_uuid": client_id, **message})
-    if client_id in ws_clients:
-        ws_clients[client_id].send_text(message)
-
+    message = json.dumps({"type": "finish", "request_uuid": request_uuid, **message})
+    loop.call_soon_threadsafe(asyncio.create_task, send_text(client_id, message))
 
 
 # 对于静态数据的请求，使用文件资源管理器

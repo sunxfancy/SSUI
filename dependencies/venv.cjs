@@ -9,9 +9,9 @@ const venvPath = isWin ? path.join(current_path, '.venv', 'Scripts') : path.join
 const cmd = path.join(venvPath, process.argv[2]);
 
 var detached = false;
-if (process.argv[2] === 'fastapi') {
-    detached = true;
-}
+// if (process.argv[2] === 'fastapi') {
+//     detached = true;
+// }
 
 // 获取传递给脚本的其余参数
 const args = process.argv.slice(3);

@@ -92,6 +92,9 @@ export class Message {
         const response = await fetch(address, {
             method: 'POST',
             body: data ? JSON.stringify(data) : undefined,
+            headers: {
+                'Content-Type': 'application/json'
+            }
         });
 
         if (!response.ok) {
@@ -112,7 +115,6 @@ export class Message {
             };
             this.listening_callbacks[result.request_uuid] = {};
             for (const key in callbacks) {
-                console.log(result.callbacks);
                 if (!(result.callbacks.includes(key))) {
                     reject(new Error(`Callback ${key} not found in result`));
                     this.disconnect();

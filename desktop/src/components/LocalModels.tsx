@@ -66,14 +66,26 @@ export class LocalModels extends Component<LocalModelsProps, LocalModelsState> {
     const { selectedDirectory } = this.state;
     if (!selectedDirectory) return;
     
-    this.setState({ isScanning: true });
+    this.setState({ 
+      isScanning: true,
+      scannedModels: [] // 清空之前的扫描结果
+    });
     
     try {
-      const result = await this.props.modelsProvider.scanDirectory(selectedDirectory);
-      console.log("result: ", result);
-      this.setState({ 
-        isScanning: false
-      });
+      // 使用回调函数实时更新扫描到的模型
+      const models = await this.props.modelsProvider.scanDirectory(
+        selectedDirectory,
+        (model) => {
+          // 每当找到一个模型，就更新状态
+          this.setState(prevState => ({
+            isScanning: false,
+            scannedModels: [...prevState.scannedModels, model]
+          }));
+        }
+      );
+      
+      console.log("扫描完成，共找到模型: ", models.length);
+      this.setState({ isScanning: false });
     } catch (error) {
       console.error("扫描目录失败:", error);
       this.setState({ isScanning: false });

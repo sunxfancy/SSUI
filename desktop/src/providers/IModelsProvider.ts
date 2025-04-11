@@ -30,9 +30,10 @@ export interface ModelsProvider {
   /**
    * 扫描指定目录中的模型
    * @param directoryPath 目录路径
+   * @param onModelFound 当找到模型时的回调函数
    * @returns 扫描到的模型列表
    */
-  scanDirectory(directoryPath: string): Promise<Model[]>;
+  scanDirectory(directoryPath: string, onModelFound?: (model: Model) => void): Promise<Model[]>;
   
   /**
    * 添加模型到系统
