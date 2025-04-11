@@ -10,7 +10,8 @@ import {
   NonIdealState,
   H4,
   Tag,
-  Intent
+  Intent,
+  ProgressBar
 } from '@blueprintjs/core';
 import { Model, ModelsProvider, WatchedDirectory } from '../providers/IModelsProvider';
 
@@ -78,7 +79,6 @@ export class LocalModels extends Component<LocalModelsProps, LocalModelsState> {
         (model) => {
           // 每当找到一个模型，就更新状态
           this.setState(prevState => ({
-            isScanning: false,
             scannedModels: [...prevState.scannedModels, model]
           }));
         }
@@ -216,8 +216,9 @@ export class LocalModels extends Component<LocalModelsProps, LocalModelsState> {
         onDrop={this.handleModelsDrop}
       >
         <H4>扫描结果 <small style={{ fontWeight: 'normal', color: '#888' }}>（可拖拽文件或目录到此处进行扫描）</small></H4>
-        
-        {isScanning ? (
+        {isScanning ? <ProgressBar intent='primary' /> : null}
+
+        {isScanning && scannedModels.length === 0 ? (
           <NonIdealState
             icon="search"
             title="正在扫描目录..."
