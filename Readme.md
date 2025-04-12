@@ -3,6 +3,11 @@ Stable Scripts UI
 
 Stable Scripts UI is a web-based user interface for `Stable Scripts` - a kind of python scripts can easily reproduce the same results by other users.
 
+
+![Desktop Version](doc/images/desktop.png)
+![VSCode Plugin](doc/images/vscode-plugin.png)
+
+
 ## Why Stable Scripts?
 
 Comparing to other stable diffusion UI, SSUI has 5 major pros:
