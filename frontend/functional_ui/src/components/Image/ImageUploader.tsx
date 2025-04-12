@@ -43,7 +43,19 @@ export class ImagePreview extends IComponent<{}, ImageUploaderState> {
 
     override render() {
         return <div>
-            {this.state.image != '' ? <img src={'/file?path=' +this.state.image} alt="placeholder" /> : <p>No image</p>}
+            {this.state.image != '' ? 
+                <img 
+                    src={'/file?path=' + this.state.image} 
+                    alt="placeholder" 
+                    style={{ 
+                        maxWidth: '100%', 
+                        height: 'auto', 
+                        display: 'block',
+                        margin: '0 auto'
+                    }} 
+                /> : 
+                <p>No image</p>
+            }
         </div>
     }
 

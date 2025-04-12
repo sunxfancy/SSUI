@@ -119,13 +119,14 @@ export class SelectControler extends IControler<{ value: string }> {
 }
 
 
-export class RandomControler extends IControler<{ value: number }> {
+export class RandomControler extends IControler<{ value: number; userInput: boolean }> {
     constructor(props: IControlerProps) {
         super(props);
     }
     
     state = {
-        value: Math.floor(Math.random() * 1000000000)
+        value: Math.floor(Math.random() * 1000000000),
+        userInput: false
     };
 
     componentDidMount() {
@@ -135,25 +136,37 @@ export class RandomControler extends IControler<{ value: number }> {
     }
 
     onExecute() {
-        const newValue = Math.floor(Math.random() * 1000000000);
-        this.setState({ value: newValue });
+        if (!this.state.userInput) {
+            this.setState({
+                value: Math.floor(Math.random() * 1000000000),
+            });
+        }
         return this.state.value;
     }
 
     handleInputChange = (event: React.ChangeEvent<HTMLInputElement>) => {
         const value = event.target.value;
         if (value === '') {
-            this.setState({ value: Math.floor(Math.random() * 1000000000) });
+            this.setState({ 
+                value: Math.floor(Math.random() * 1000000000),
+                userInput: false 
+            });
         } else {
             const numValue = parseInt(value, 10);
             if (!isNaN(numValue)) {
-                this.setState({ value: numValue });
+                this.setState({ 
+                    value: numValue,
+                    userInput: true 
+                });
             }
         }
     }
 
     generateRandom = () => {
-        this.setState({ value: Math.floor(Math.random() * 1000000000) });
+        this.setState({ 
+            value: Math.floor(Math.random() * 1000000000),
+            userInput: false 
+        });
     }
 
     render() {
