@@ -16,6 +16,7 @@ import "@blueprintjs/core/lib/css/blueprint.css";
 import "@blueprintjs/icons/lib/css/blueprint-icons.css";
 import { IModelManagerProvider, ModelGroup, ModelItem } from '../providers/IModelManagerProvider';
 import { MockModelManagerProvider } from '../stories/MockModelManagerProvider';
+import { ModelManagerProvider } from '../providers/ModelManagerProvider';
 
 interface ModelState {
   groups: ModelGroup[];
@@ -39,7 +40,7 @@ export class ModelManager extends Component<ModelManagerProps, ModelState> {
     super(props);
     
     // 使用提供的provider或默认使用模拟实现
-    this.provider = props.provider || new MockModelManagerProvider();
+    this.provider = props.provider || new ModelManagerProvider();
     
     this.state = {
       groups: [],

@@ -11,7 +11,7 @@ import Queue from './components/Queue.tsx';
 import { open } from '@tauri-apps/plugin-dialog';
 import NewWorkflow from './components/NewWorkflow.tsx';
 import { Extensions } from './components/Extensions.tsx';
-import { MockModelManagerProvider } from './stories/MockModelManagerProvider.ts';
+import { ModelManagerProvider } from './providers/ModelManagerProvider';
 
 class App extends Component {
   tabWindowManagerRef = React.createRef<TabWindowManager>();
@@ -21,7 +21,7 @@ class App extends Component {
   };
 
   // 创建一个模型管理提供者实例
-  private modelManagerProvider = new MockModelManagerProvider();
+  private modelManagerProvider = new ModelManagerProvider();
 
   async onClick() {
     const store = await load('settings.json', { autoSave: false });

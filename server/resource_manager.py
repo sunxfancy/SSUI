@@ -1,4 +1,8 @@
 import os
+from pathlib import Path
+
+from backend.model_manager.config import AnyModelConfig
+from backend.model_manager.probe import ModelProbe
 
 class IReadOnlyResourceProvider:
     def __init__(self, namespace: str):
@@ -62,3 +66,42 @@ class FileResourceProvider(IResourceProvider):
             f.write(data)
         return "OK"
 
+
+class ModelInfoCache:
+    def __init__(self):
+        self.cache = {}
+
+    def _get(self, model_path: str):
+        if model_path in self.cache:
+            return self.cache[model_path]
+        else:
+            try:
+                model_config = ModelProbe.probe(Path(model_path))
+                self.cache[model_path] = model_config
+                return model_config
+            except Exception as e:
+                return None
+    
+    @classmethod
+    def get(cls, model_path: str):
+        return cls.instance()._get(model_path)
+
+    def _set(self, model_path: str, model_config: AnyModelConfig):
+        self.cache[model_path] = model_config
+    
+    @classmethod
+    def set(cls, model_path: str, model_config: AnyModelConfig):
+        cls.instance()._set(model_path, model_config)
+
+    def _clear(self):
+        self.cache.clear()
+
+    @classmethod
+    def clear(cls):
+        cls.instance()._clear()
+
+    @classmethod
+    def instance(cls):
+        if not hasattr(cls, "_instance"):
+            cls._instance = cls()
+        return cls._instance

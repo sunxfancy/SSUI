@@ -22,7 +22,7 @@ export class Message {
         this.active_requests++;
         if (this.ws) { return; }
         return new Promise((resolve, reject) => {
-            let ws = new WebSocket(`ws://${this.host}:${this.port}/`);
+            let ws = new WebSocket(`ws://${this.host}:${this.port}/ws`);
             ws.onopen = () => {
                 console.log("connected to server!");
             }
@@ -126,12 +126,12 @@ export class Message {
     }
 
     async get(api_path: string) {
-        const response = await fetch(`${this.host}:${this.port}/${api_path}`);
+        const response = await fetch(`http://${this.host}:${this.port}/${api_path}`);
         return response.json();
     }
 
     async put(api_path: string, data: any) {
-        const response = await fetch(`${this.host}:${this.port}/${api_path}`, {
+        const response = await fetch(`http://${this.host}:${this.port}/${api_path}`, {
             method: 'PUT',
             body: JSON.stringify(data),
         });
@@ -140,7 +140,7 @@ export class Message {
     }
 
     async delete(api_path: string) {
-        const response = await fetch(`${this.host}:${this.port}/${api_path}`, {
+        const response = await fetch(`http://${this.host}:${this.port}/${api_path}`, {
             method: 'DELETE',
         });
 

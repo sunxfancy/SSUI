@@ -1,9 +1,8 @@
 import datetime
-from pathlib import Path
-import signal
 import threading
 from typing import Optional
 import uuid
+import aioshutil
 from fastapi import Body, FastAPI, WebSocket
 from fastapi.responses import FileResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
@@ -13,28 +12,39 @@ import torch.torch_version
 import sys
 import os
 import json
+from backend.model_manager.config import ModelType
 from backend.model_manager.probe import ModelProbe
 from ssui.base import Image
 from pydantic_settings import BaseSettings
 from contextlib import asynccontextmanager
 import asyncio
-from asyncio import Queue
+from .resource_manager import ModelInfoCache
 
 sys.path.append(os.path.join(os.path.dirname(__file__), ".."))
 from ss_executor import SSLoader, search_project_root
 from .extensions import ExtensionManager
 
+
+resources_dir: str = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "resources"))
+settings_path: str = os.path.join(resources_dir, "ssui_config.json")
+
+class ModelInfo(BaseModel):
+    path: str
+    name: str
+    description: str
+    base_model: str
+    tags: list[str]
+
+
 class Settings(BaseSettings):
     host_web_ui: str = os.path.join(os.path.dirname(__file__), "..", "frontend", "functional_ui", "dist")
-    resources_dir: str = os.path.join(os.path.dirname(__file__), "..", "resources")
     additional_model_dirs: list[str] = []
+    installed_models: list[ModelInfo] = []
 
-
-settings = Settings()
+settings = Settings() if not os.path.exists(settings_path) else Settings.model_validate_json(open(settings_path, "r").read())
 
 # 这是一个全局websocket的连接用户表
 ws_clients = {}
-message_queue = Queue()
 loop = asyncio.get_event_loop()
 
 @asynccontextmanager
@@ -66,12 +76,13 @@ def scan_target_dir(scan_dir: str, client_id: str, request_uuid: str):
                 if filename.endswith(".safetensors") or filename.endswith(".pt") or filename.endswith(".ckpt"):
                     model_path = os.path.join(dirpath, filename)
                     try:
-                        model_config = ModelProbe.probe(Path(model_path))
+                        model_config = ModelInfoCache.get(model_path)
                         scaned_models.append({ "path": model_path, "name": filename })
                         send_message(client_id, request_uuid, { "find_model": { "path": model_path, "name": filename } })
                     except Exception as e:
                         continue
     send_finish(client_id, request_uuid, { "models": scaned_models })
+
 
 class ScanModelsRequest(BaseModel):
     scan_dir: str = Field(description="The directory to scan for models")
@@ -88,11 +99,37 @@ async def scan_models(client_id: str, request: ScanModelsRequest):
     return {"type": "start", "request_uuid": request_uuid, "message": "Models scan started", "callbacks": ["find_model"]}
 
 @app.post("/config/install_model")
-async def install_model(model_path: str):
+async def install_model(model_path: str = Body(..., embed=True), create_softlink: bool = Body(False, embed=True)):
     model_path = os.path.normpath(model_path)
     if not os.path.exists(model_path):
             return {"error": "Model path not found"}
-    # TODO 创建一个模型对象，并保存详细参数
+    
+    model_config = ModelInfoCache.get(model_path)
+    if model_config is None:
+        return {"error": "Model can not be loaded"}
+    tags = []
+    tags.append(model_config.base)
+    if model_config.type == ModelType.LoRA:
+        tags.append('lora')
+    elif model_config.type == ModelType.T5Encoder:
+        tags.append('t5')
+    elif model_config.type == ModelType.VAE:
+        tags.append('vae')
+
+    if create_softlink:
+        # 创建软链接
+        settings.installed_models.append(ModelInfo(
+            path=model_path, name=model_config.name, description=model_config.description, base_model=model_config.base, tags=tags))
+    else:
+        # 复制文件
+        new_model_path = os.path.join(resources_dir, model_config.name)
+        await aioshutil.copy(model_path, new_model_path)
+        ModelInfoCache.set(model_path, model_config)
+        settings.installed_models.append(ModelInfo(
+            path=new_model_path, name=model_config.name, description=model_config.description, base_model=model_config.base, tags=tags))
+
+    # 更新配置
+    json.dump(settings.model_dump(), open(settings_path, "w"))
     return {"message": "Models installed"}
 
 
@@ -153,8 +190,9 @@ async def model(model_path: str):
     return data
 
 @app.get("/api/available_models")
-async def available_models(category: str):
-    pass
+async def available_models():
+    return settings.installed_models
+
 
 @app.post("/api/prepare")
 async def prepare(script_path: str, callable: str):
@@ -250,11 +288,11 @@ async def file(path: str):
 async def extensions():
     extension_dir = {}
     for name, data in ExtensionManager.instance().extensions.items():
-        extension_dir[name] = "/extension/" + name + "/dist/" + data['web_ui']['main']
+        extension_dir[name] = "/extension/" + name + "/dist/" + data.web_ui.dist
     return extension_dir
 
 
-@app.websocket("/")
+@app.websocket("/ws")
 async def websocket_endpoint(websocket: WebSocket):
     await websocket.accept()
     client_id = str(uuid.uuid4())
@@ -290,9 +328,9 @@ def send_finish(client_id: str, request_uuid: str, message: Optional[dict[str, a
 
 
 # 对于静态数据的请求，使用文件资源管理器
-if settings.host_web_ui:
-    @app.get("/", response_class=RedirectResponse)
-    async def root():
-        return "/index.html"
+# if settings.host_web_ui:
+#     @app.get("/", response_class=RedirectResponse)
+#     async def root():
+#         return "/index.html"
 
-    app.mount("/", StaticFiles(directory=settings.host_web_ui), name="static")
+#     app.mount("/", StaticFiles(directory=settings.host_web_ui), name="static")

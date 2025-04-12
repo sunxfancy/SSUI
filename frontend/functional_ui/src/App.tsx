@@ -11,6 +11,7 @@ loader.loadExtensions();
 function App() {
   function getView() {
     const params = new URLSearchParams(window.location.search);
+    console.log("getView", params);
     var path = '';
     if (params.has('path')) {
       path = params.get('path') ?? '';

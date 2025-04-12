@@ -6,6 +6,7 @@ __pycache__/
 node_modules/
 dist/
 test_env/
+resources/
 
 *.safetensors
 *.pt

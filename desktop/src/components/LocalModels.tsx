@@ -11,7 +11,8 @@ import {
   H4,
   Tag,
   Intent,
-  ProgressBar
+  ProgressBar,
+  Spinner
 } from '@blueprintjs/core';
 import { Model, ModelsProvider, WatchedDirectory } from '../providers/IModelsProvider';
 
@@ -27,6 +28,8 @@ interface LocalModelsState {
   watchedDirectories: WatchedDirectory[];
   isDraggingOverModels: boolean;
   isDraggingOverWatched: boolean;
+  installingModels: Set<string>; // 正在安装的模型ID集合
+  installedModels: Set<string>; // 已安装的模型ID集合
 }
 
 export class LocalModels extends Component<LocalModelsProps, LocalModelsState> {
@@ -38,7 +41,9 @@ export class LocalModels extends Component<LocalModelsProps, LocalModelsState> {
       isScanning: false,
       watchedDirectories: [],
       isDraggingOverModels: false,
-      isDraggingOverWatched: false
+      isDraggingOverWatched: false,
+      installingModels: new Set<string>(),
+      installedModels: new Set<string>()
     };
   }
 
@@ -69,7 +74,8 @@ export class LocalModels extends Component<LocalModelsProps, LocalModelsState> {
     
     this.setState({ 
       isScanning: true,
-      scannedModels: [] // 清空之前的扫描结果
+      scannedModels: [], // 清空之前的扫描结果
+      installedModels: new Set<string>() // 清空已安装模型状态
     });
     
     try {
@@ -94,13 +100,44 @@ export class LocalModels extends Component<LocalModelsProps, LocalModelsState> {
 
   // 添加单个模型
   handleAddModel = async (model: Model) => {
+    // 如果模型已经在安装中或已安装，则不执行操作
+    if (this.state.installingModels.has(model.id) || this.state.installedModels.has(model.id)) {
+      return;
+    }
+    
+    // 标记模型为正在安装
+    this.setState(prevState => {
+      const installingModels = new Set(prevState.installingModels);
+      installingModels.add(model.id);
+      return { installingModels };
+    });
+    
     try {
       const success = await this.props.modelsProvider.addModel(model.path);
-      if (success && this.props.onModelAdd) {
-        this.props.onModelAdd(model.path);
-      }
+      
+      // 更新模型状态
+      this.setState(prevState => {
+        const installingModels = new Set(prevState.installingModels);
+        installingModels.delete(model.id);
+        
+        const installedModels = new Set(prevState.installedModels);
+        if (success) {
+          installedModels.add(model.id);
+          if (this.props.onModelAdd) {
+            this.props.onModelAdd(model.path);
+          }
+        }
+        
+        return { installingModels, installedModels };
+      });
     } catch (error) {
       console.error("添加模型失败:", error);
+      // 安装失败，从安装中状态移除
+      this.setState(prevState => {
+        const installingModels = new Set(prevState.installingModels);
+        installingModels.delete(model.id);
+        return { installingModels };
+      });
     }
   }
 
@@ -205,7 +242,7 @@ export class LocalModels extends Component<LocalModelsProps, LocalModelsState> {
   }
 
   renderModelsList() {
-    const { scannedModels, isScanning, isDraggingOverModels } = this.state;
+    const { scannedModels, isScanning, isDraggingOverModels, installingModels, installedModels } = this.state;
     
     return (
       <div 
@@ -231,28 +268,63 @@ export class LocalModels extends Component<LocalModelsProps, LocalModelsState> {
             description="选择一个目录并点击扫描按钮来查找模型，或直接拖拽目录到此处。"
           />
         ) : (
-          scannedModels.map(model => (
-            <Card key={model.id} elevation={Elevation.ONE} style={{ marginBottom: 10 }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <div>
-                  <h4 style={{ margin: 0 }}>{model.name}</h4>
-                  <p style={{ margin: '5px 0', fontSize: '0.9em', color: '#555' }}>{model.path}</p>
-                  <div>
-                    <Tag intent="primary" minimal style={{ marginRight: 5 }}>{model.type}</Tag>
-                    <Tag intent="success" minimal>{model.size}</Tag>
+          <div style={{ 
+            height: '300px', 
+            overflowY: 'auto', 
+            border: '1px solid #e1e8ed', 
+            borderRadius: '3px',
+            padding: '5px'
+          }}>
+            {scannedModels.map(model => {
+              const isInstalling = installingModels.has(model.id);
+              const isInstalled = installedModels.has(model.id);
+              
+              return (
+                <Card key={model.id} elevation={Elevation.ONE} style={{ 
+                  marginBottom: 5,
+                  padding: '8px 12px',
+                  backgroundColor: isInstalled ? '#f0f8f0' : undefined
+                }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <div>
+                      <h4 style={{ margin: 0, fontSize: '14px' }}>{model.name}</h4>
+                      <p style={{ margin: '3px 0', fontSize: '0.8em', color: '#555' }}>{model.path}</p>
+                      <div>
+                        <Tag intent="primary" minimal style={{ marginRight: 5 }}>{model.type}</Tag>
+                        <Tag intent="success" minimal>{model.size}</Tag>
+                        {isInstalled && (
+                          <Tag intent="success" style={{ marginLeft: 5 }}>已安装</Tag>
+                        )}
+                      </div>
+                    </div>
+                    {isInstalling ? (
+                      <Spinner size={20} />
+                    ) : isInstalled ? (
+                      <Button 
+                        icon="tick" 
+                        intent={Intent.SUCCESS} 
+                        disabled
+                        minimal
+                        small
+                      >
+                        已安装
+                      </Button>
+                    ) : (
+                      <Button 
+                        icon="plus" 
+                        intent={Intent.SUCCESS} 
+                        onClick={() => this.handleAddModel(model)}
+                        minimal
+                        small
+                      >
+                        添加
+                      </Button>
+                    )}
                   </div>
-                </div>
-                <Button 
-                  icon="plus" 
-                  intent={Intent.SUCCESS} 
-                  onClick={() => this.handleAddModel(model)}
-                  minimal
-                >
-                  添加
-                </Button>
-              </div>
-            </Card>
-          ))
+                </Card>
+              );
+            })}
+          </div>
         )}
         
         {/* 拖拽悬停遮罩层 */}

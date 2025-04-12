@@ -67,8 +67,12 @@ export class TauriModelsProvider implements ModelsProvider {
    * @param modelPath 模型路径
    * @returns 是否添加成功
    */
-  addModel(modelPath: string): Promise<boolean> {
-    return Promise.resolve(false);
+  async addModel(modelPath: string): Promise<boolean> {
+    const result = await this.message.post("config/install_model", {
+      "model_path": modelPath,
+      "create_softlink": true
+    });
+    return result.success && result.message === "Models installed";
   }
   
   /**

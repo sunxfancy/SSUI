@@ -29,10 +29,26 @@ export default defineConfig(async () => ({
       ignored: ["**/src-tauri/**"],
     },
     proxy: {
-      "/": {
+      '/api': {
+        target: 'http://127.0.0.1:7422',
+        changeOrigin: true,
+      },
+      '/config': {
+        target: 'http://127.0.0.1:7422',
+        changeOrigin: true,
+      },
+      '/file': {
+        target: 'http://127.0.0.1:7422',
+        changeOrigin: true,
+      },
+      '/extension': {
+        target: 'http://127.0.0.1:7422',
+        changeOrigin: true,
+      },
+      "/ws": {
         target: 'ws://127.0.0.1:7422',
         changeOrigin: true,
-        ws: true
+        ws: true,
       }
     }
   },
