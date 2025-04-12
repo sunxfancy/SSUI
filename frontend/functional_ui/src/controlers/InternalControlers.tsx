@@ -119,6 +119,58 @@ export class SelectControler extends IControler<{ value: string }> {
 }
 
 
+export class RandomControler extends IControler<{ value: number }> {
+    constructor(props: IControlerProps) {
+        super(props);
+    }
+    
+    state = {
+        value: Math.floor(Math.random() * 1000000000)
+    };
+
+    componentDidMount() {
+        if (this.props.params && this.props.params.default !== undefined) {
+            this.setState({ value: this.props.params.default });
+        }
+    }
+
+    onExecute() {
+        const newValue = Math.floor(Math.random() * 1000000000);
+        this.setState({ value: newValue });
+        return this.state.value;
+    }
+
+    handleInputChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+        const value = event.target.value;
+        if (value === '') {
+            this.setState({ value: Math.floor(Math.random() * 1000000000) });
+        } else {
+            const numValue = parseInt(value, 10);
+            if (!isNaN(numValue)) {
+                this.setState({ value: numValue });
+            }
+        }
+    }
+
+    generateRandom = () => {
+        this.setState({ value: Math.floor(Math.random() * 1000000000) });
+    }
+
+    render() {
+        return (
+            <div className="functional-ui-random" style={{ display: 'flex', alignItems: 'center' }}>
+                <input
+                    type="text"
+                    value={this.state.value}
+                    onChange={this.handleInputChange}
+                    style={{ marginRight: '8px', width: '120px' }}
+                />
+                <Button icon="random" onClick={this.generateRandom} minimal={true} />
+            </div>
+        );
+    }
+}
+
 
 import { registerControler, ControlerRegister } from './IControler';
 import { ItemPredicate, ItemRenderer, Select } from "@blueprintjs/select";
@@ -126,4 +178,5 @@ import { ItemPredicate, ItemRenderer, Select } from "@blueprintjs/select";
     { 'name': 'Slider', 'component': SliderControler } as ControlerRegister,
     { 'name': 'Switch', 'component': SwitchControler } as ControlerRegister,
     { 'name': 'Select', 'component': SelectControler } as ControlerRegister,
+    { 'name': 'Random', 'component': RandomControler } as ControlerRegister,
 ].forEach(registerControler);

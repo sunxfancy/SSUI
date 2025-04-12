@@ -10,7 +10,7 @@ from .api.model import (
 )
 from ssui.base import Prompt, Image
 from ssui.annotation import param
-from ssui.controller import Select, Switch, Slider
+from ssui.controller import Random, Select, Switch, Slider
 
 
 _loader_instance = None
@@ -142,6 +142,7 @@ class SD1Lora:
     default="ddim",
 )
 @param("CFG", Slider(0, 15, 0.1), default=7.5)
+@param("seed", Random(), default=123454321)
 def SD1Denoise(
     config,
     model: SD1Model,
@@ -161,7 +162,7 @@ def SD1Denoise(
         model=model.unet,
         positive=positive.condition_info,
         negative=negative.condition_info,
-        seed=123454321,
+        seed=config["seed"],
         width=latent.width,
         height=latent.height,
         scheduler_name=config["scheduler"],

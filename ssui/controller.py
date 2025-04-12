@@ -15,3 +15,7 @@ class Select:
 class Switch:
     def __init__(self):
         pass
+
+class Random:
+    def __init__(self):
+        pass
