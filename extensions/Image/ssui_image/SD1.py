@@ -150,7 +150,7 @@ def SD1Denoise(
     negative: SD1Condition,
 ):
     if config.is_prepare():
-        return SD1Latent(config("DenoiseToLatents"))
+        return SD1Latent(config("Create Empty Latent"))
 
     print("SD1Denoise executed")
     print("scheduler:", config["scheduler"])
@@ -168,7 +168,7 @@ def SD1Denoise(
         steps=config["steps"],
         cfg_scale=config["CFG"],
     )
-    return SD1Latent(config("DenoiseToLatents"), tensor)
+    return SD1Latent(config("Create Empty Latent"), tensor)
 
 
 def SD1LatentDecode(config, model: SD1Model, latent: SD1Latent):

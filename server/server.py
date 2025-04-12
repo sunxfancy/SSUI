@@ -75,6 +75,10 @@ def scan_target_dir(scan_dir: str, client_id: str, request_uuid: str):
             for filename in filenames:
                 if filename.endswith(".safetensors") or filename.endswith(".pt") or filename.endswith(".ckpt"):
                     model_path = os.path.join(dirpath, filename)
+                    # 检查模型是否已经安装，如果已安装则跳过
+                    if any(model.path == model_path for model in settings.installed_models):
+                        print(f"跳过已安装的模型: {model_path}")
+                        continue
                     try:
                         model_config = ModelInfoCache.get(model_path)
                         scaned_models.append({ "path": model_path, "name": filename })
@@ -212,7 +216,7 @@ async def prepare(script_path: str, callable: str):
     return loader.GetConfig(callable)
 
 @app.post("/api/execute")
-async def execute(script_path: str, callable: str, params: dict):
+async def execute(script_path: str, callable: str, params: dict, details: dict):
     script_path = os.path.normpath(script_path)
     project_root = search_project_root(os.path.dirname(script_path))
     # TODO: Check dependencies
@@ -239,14 +243,14 @@ async def execute(script_path: str, callable: str, params: dict):
         
     func, param_types, return_type = find_callable(loader, callable)
 
-    print(script_path, callable, params)
+    print(script_path, callable, params, details)
     new_params = {}
-    for name, param in params['params'].items():
+    for name, param in params.items():
         print(name, param)
         new_params[name] = convert_param(param)
 
     # 注入配置
-    # loader.config._config = config
+    loader.config._update = details
 
     result = func(**new_params)
 
@@ -328,9 +332,9 @@ def send_finish(client_id: str, request_uuid: str, message: Optional[dict[str, a
 
 
 # 对于静态数据的请求，使用文件资源管理器
-# if settings.host_web_ui:
-#     @app.get("/", response_class=RedirectResponse)
-#     async def root():
-#         return "/index.html"
+if settings.host_web_ui:
+    @app.get("/", response_class=RedirectResponse)
+    async def root():
+        return "/index.html"
 
-#     app.mount("/", StaticFiles(directory=settings.host_web_ui), name="static")
+    app.mount("/", StaticFiles(directory=settings.host_web_ui), name="static")

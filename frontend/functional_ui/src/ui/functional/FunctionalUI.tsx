@@ -1,22 +1,21 @@
-import { useAsync } from "react-use";
+import React, { Component } from 'react';
+import { Label, Button, Card, Elevation, Collapse } from "@blueprintjs/core";
+import { ItemPredicate, ItemRenderer, Select } from "@blueprintjs/select";
+import { MenuItem } from "@blueprintjs/core";
+import { ComponentTabRef } from "../../components/ComponentRef";
+import { DetailsPanel } from "./Details";
 import { UIProvider } from '../UIProvider';
-import React from 'react';
-import { Label, Button, Tab, Tabs, MenuItem, Card, Elevation } from "@blueprintjs/core";
 import './FunctionalUI.css';
 import "normalize.css";
 import "@blueprintjs/core/lib/css/blueprint.css";
 import "@blueprintjs/icons/lib/css/blueprint-icons.css";
-import { Collapse } from "@blueprintjs/core";
-import { ItemPredicate, ItemRenderer, Select } from "@blueprintjs/select";
-import { ComponentTabRef } from "../../components/ComponentRef";
-import { DetailsPanel } from "./Details";
 
-interface callable {
+interface Callable {
     rank: number;
     name: string;
 }
 
-type Params = {
+interface Params {
     params: {
         [key: string]: string;
     },
@@ -25,58 +24,146 @@ type Params = {
     }
 }
 
-type ScriptMeta = {
+interface ScriptMeta {
     [key: string]: Params
 }
 
-type FunctionalUIProps = {
+interface FunctionalUIProps {
     path: string;
-};
+}
 
-export function FunctionalUI({ path }: FunctionalUIProps) {
-    async function queryScriptMeta(): Promise<ScriptMeta> {
-        let response = await fetch('/api/script?' + new URLSearchParams({
-            script_path: path
-        }));
-        if (!response.ok) {
-            throw new Error('Failed to fetch script meta');
-        }
-        let data = await response.json() as ScriptMeta;
-        return data;
+interface FunctionalUIState {
+    scriptMeta: ScriptMeta | null;
+    loading: boolean;
+    error: Error | null;
+    selectedFunc: Callable | undefined;
+    isOpen: boolean;
+}
+
+export class FunctionalUI extends Component<FunctionalUIProps, FunctionalUIState> {
+    constructor(props: FunctionalUIProps) {
+        super(props);
+        this.state = {
+            scriptMeta: null,
+            loading: true,
+            error: null,
+            selectedFunc: undefined,
+            isOpen: false
+        };
     }
 
-    const state = useAsync(queryScriptMeta);
-    const [selectedFunc, setSelectedFunc] = React.useState<callable | undefined>();
-    const [isOpen, setIsOpen] = React.useState(false);
+    refInputs: Map<string, React.RefObject<ComponentTabRef>> = new Map();
+    refOutputs: Map<string, React.RefObject<ComponentTabRef>> = new Map();
+    details: React.RefObject<DetailsPanel> = React.createRef();
 
-    let ref_inputs = new Map<string, React.RefObject<ComponentTabRef>>();
-    let ref_outputs = new Map<string, React.RefObject<ComponentTabRef>>();
-    const getRef = (index: string, container: Map<string, React.RefObject<ComponentTabRef>>) => {
+    componentDidMount() {
+        this.queryScriptMeta();
+    }
+
+    async queryScriptMeta(): Promise<void> {
+        try {
+            const response = await fetch('/api/script?' + new URLSearchParams({
+                script_path: this.props.path
+            }));
+
+            if (!response.ok) {
+                throw new Error('Failed to fetch script meta');
+            }
+
+            const data = await response.json() as ScriptMeta;
+            this.setState({
+                scriptMeta: data,
+                loading: false,
+                error: null
+            });
+        } catch (error) {
+            this.setState({
+                loading: false,
+                error: error instanceof Error ? error : new Error('Unknown error')
+            });
+        }
+    }
+
+    getRef = (index: string, container: Map<string, React.RefObject<ComponentTabRef>>): React.RefObject<ComponentTabRef> => {
         if (container.has(index)) {
             return container.get(index) ?? React.createRef<ComponentTabRef>();
         }
-        let new_ref = React.createRef<ComponentTabRef>();
-        container.set(index, new_ref);
-        console.log('New ref', index, new_ref);
-        return new_ref;
+
+        const newRef = React.createRef<ComponentTabRef>();
+        container.set(index, newRef);
+        return newRef;
     }
 
-    function renderSelect(meta: ScriptMeta) {
-        const first = Object.keys(meta)[0];
-        const keys = Object.keys(meta).map((key, idx) => ({ name: key, rank: idx + 1 } as callable));
+    handleSelectFunc = (func: Callable): void => {
+        this.setState({ selectedFunc: func });
+    }
 
-        const filterFunc: ItemPredicate<callable> = (query, Func, _index, exactMatch) => {
-            const normalizedTitle = Func.name.toLowerCase();
+    toggleDetails = (): void => {
+        this.setState(prevState => ({ isOpen: !prevState.isOpen }));
+    }
+
+    handleRun = (): void => {
+        const { scriptMeta, selectedFunc, isOpen } = this.state;
+        const { path } = this.props;
+
+        if (!scriptMeta) return;
+
+        const selected = selectedFunc?.name ?? Object.keys(scriptMeta)[0];
+        const meta = scriptMeta[selected];
+
+        // 收集输入参数
+        const params: { [key: string]: any } = {};
+        for (const [key, value] of Object.entries(meta.params)) {
+            params[key] = this.refInputs.get(key)?.current?.onExecute();
+        }
+
+        // 收集Details的数据
+        const details = this.details.current?.onExecute();
+        console.log('details', details);
+
+        // 执行API调用
+        fetch('/api/execute?' + new URLSearchParams({
+            script_path: path,
+            callable: selected,
+        }), {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ params, details }),
+        }).then(res => {
+            if (res.ok) {
+                res.json().then(data => {
+                    // 更新输出组件
+                    for (let i = 0; i < data.length; i++) {
+                        const item = data[i];
+                        const outputComponent = this.getRef(i.toString(), this.refOutputs).current;
+                        if (outputComponent) {
+                            outputComponent.onUpdate(item);
+                        }
+                    }
+                });
+            }
+        });
+    }
+
+    renderSelect = (meta: ScriptMeta): JSX.Element => {
+        const { selectedFunc } = this.state;
+        const first = Object.keys(meta)[0];
+        const keys = Object.keys(meta).map((key, idx) => ({ name: key, rank: idx + 1 } as Callable));
+
+        const filterFunc: ItemPredicate<Callable> = (query, func, _index, exactMatch) => {
+            const normalizedTitle = func.name.toLowerCase();
             const normalizedQuery = query.toLowerCase();
 
             if (exactMatch) {
                 return normalizedTitle === normalizedQuery;
             } else {
-                return `${Func.rank}. ${normalizedTitle}`.indexOf(normalizedQuery) >= 0;
+                return `${func.rank}. ${normalizedTitle}`.indexOf(normalizedQuery) >= 0;
             }
         };
 
-        const renderFunc: ItemRenderer<callable> = (Func, { handleClick, handleFocus, modifiers }) => {
+        const renderFunc: ItemRenderer<Callable> = (func, { handleClick, handleFocus, modifiers }) => {
             if (!modifiers.matchesPredicate) {
                 return null;
             }
@@ -84,133 +171,120 @@ export function FunctionalUI({ path }: FunctionalUIProps) {
                 <MenuItem
                     active={modifiers.active}
                     disabled={modifiers.disabled}
-                    key={Func.rank}
+                    key={func.rank}
                     onClick={handleClick}
                     onFocus={handleFocus}
                     roleStructure="listoption"
-                    text={`${Func.rank}. ${Func.name}`}
+                    text={`${func.rank}. ${func.name}`}
                 />
             );
         };
 
-        return <Select<callable>
-            items={keys}
-            itemPredicate={filterFunc}
-            itemRenderer={renderFunc}
-            noResults={<MenuItem disabled={true} text="No results." roleStructure="listoption" />}
-            onItemSelect={setSelectedFunc}
-        >
-            <Button className="functional-ui-select" text={selectedFunc?.name ?? first} rightIcon="double-caret-vertical" />
-        </Select>
+        return (
+            <Select<Callable>
+                items={keys}
+                itemPredicate={filterFunc}
+                itemRenderer={renderFunc}
+                noResults={<MenuItem disabled={true} text="No results." roleStructure="listoption" />}
+                onItemSelect={this.handleSelectFunc}
+            >
+                <Button
+                    className="functional-ui-select"
+                    text={selectedFunc?.name ?? first}
+                    rightIcon="double-caret-vertical"
+                />
+            </Select>
+        );
     }
 
-    function renderInputs(meta: Params) {
-        return <div>
-            {Object.entries(meta.params).map(([key, value]) =>
-                <Card key={key} elevation={Elevation.TWO} className="functional-ui-card">
-                    <Label className="bp5-label" >
-                        {key}
-                        <ComponentTabRef type={value} port='input' ref={getRef(key, ref_inputs)} />
-                    </Label>
-                </Card>
-            )}
-        </div>
-    }
-
-    function renderOutputs(meta: Params) {
-        return <div>
-            {Object.entries(meta.returns).map(([key, value]) =>
-                <Card key={key} elevation={Elevation.TWO} className="functional-ui-card">
-                    <ComponentTabRef type={value} port='output' ref={getRef(key, ref_outputs)} />
-                </Card>
-            )}
-        </div>
-    }
-
-    function render(meta: ScriptMeta) {
-        let selected = selectedFunc?.name ?? Object.keys(meta)[0];
-
-        function run(event: React.MouseEvent<HTMLElement, MouseEvent>) {
-            console.log('Run', meta[selected]);
-            console.log(ref_inputs)
-            Object.entries(meta[selected].params).map(([key, value]) => {
-                console.log(ref_inputs.get(key), ref_inputs.get(key)?.current);
-                console.log(key, ref_inputs.get(key)?.current?.onExecute());
-            });
-
-            let params: { [key: string]: any } = {};
-            for (let [key, value] of Object.entries(meta[selected].params)) {
-                params[key] = ref_inputs.get(key)?.current?.onExecute();
-            }
-
-            let config: { [key: string]: any } = {};
-            if (isOpen) {
-                // TODO: collect config and pass to the server
-            }
-
-            fetch('/api/execute?' + new URLSearchParams({
-                script_path: path,
-                callable: selected,
-            }), {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({params}),
-            }).then(res => {
-                if (res.ok) {
-                    res.json().then(data => {
-                        console.log('Execute result:', data);
-                        for (let i = 0; i < data.length; i++) {
-                            let item = data[i];
-                            let output_component = getRef(i.toString(), ref_outputs).current;
-                            console.log('Output component:', output_component);
-                            if (output_component) {
-                                output_component.onUpdate(item);
-                            }
-                        }
-                    });
-                }
-            });
-        }
-
-        return <div>
-            {renderSelect(meta)}
-            <div className="functional-ui-container">
-                <div className="functional-ui-input">
-                    Input
-                    {renderInputs(meta[selected])}
-                </div>
-                <div className="functional-ui-button">
-                    <Button intent="primary" text="Run" onClick={run} />
-                </div>
-                <div className="functional-ui-output">
-                    Output
-                    {renderOutputs(meta[selected])}
-                </div>
+    renderInputs = (meta: Params): JSX.Element => {
+        return (
+            <div>
+                {Object.entries(meta.params).map(([key, value]) => (
+                    <Card key={key} elevation={Elevation.TWO} className="functional-ui-card">
+                        <Label className="bp5-label">
+                            {key}
+                            <ComponentTabRef
+                                type={value}
+                                port='input'
+                                ref={this.getRef(key, this.refInputs)}
+                            />
+                        </Label>
+                    </Card>
+                ))}
             </div>
-            <Button intent="primary" onClick={() => setIsOpen(!isOpen)}>
-                {isOpen ? "Hide Details" : "Show Details"}
-            </Button>
-            <Collapse isOpen={isOpen}>
-                <DetailsPanel path={path} selected={selected} />
-            </Collapse>
-        </div>
-
+        );
     }
 
-    return <div className='functional-ui-root'>
-        <h1>Functional UI</h1>
-        <p>Path: {path}</p>
+    renderOutputs = (meta: Params): JSX.Element => {
 
-        {state.loading ? <p>Loading...</p> :
-            state.error ? <p>Error: {state.error.message}</p> :
-                <div>
-                    {render(state.value ?? {})}
-                </div>}
-    </div>
+        return (
+            <div>
+                {Object.entries(meta.returns).map(([key, value]) => (
+                    <Card key={key} elevation={Elevation.TWO} className="functional-ui-card">
+                        <ComponentTabRef
+                            type={value}
+                            port='output'
+                            ref={this.getRef(key, this.refOutputs)}
+                        />
+                    </Card>
+                ))}
+            </div>
+        );
+    }
+
+    renderContent = (meta: ScriptMeta): JSX.Element => {
+        const { selectedFunc, isOpen } = this.state;
+        const { path } = this.props;
+
+        const selected = selectedFunc?.name ?? Object.keys(meta)[0];
+
+        return (
+            <div>
+                {this.renderSelect(meta)}
+                <div className="functional-ui-container">
+                    <div className="functional-ui-input">
+                        Input
+                        {this.renderInputs(meta[selected])}
+                    </div>
+                    <div className="functional-ui-button">
+                        <Button intent="primary" text="Run" onClick={this.handleRun} />
+                    </div>
+                    <div className="functional-ui-output">
+                        Output
+                        {this.renderOutputs(meta[selected])}
+                    </div>
+                </div>
+                <Button intent="primary" onClick={this.toggleDetails}>
+                    {isOpen ? "Hide Details" : "Show Details"}
+                </Button>
+                <Collapse isOpen={isOpen}>
+                    <DetailsPanel path={path} selected={selected} ref={this.details} />
+                </Collapse>
+            </div>
+        );
+    }
+
+    render(): JSX.Element {
+        const { path } = this.props;
+        const { scriptMeta, loading, error } = this.state;
+
+        return (
+            <div className='functional-ui-root'>
+                <h1>Functional UI</h1>
+                <p>Path: {path}</p>
+
+                {loading ? (
+                    <p>Loading...</p>
+                ) : error ? (
+                    <p>Error: {error.message}</p>
+                ) : scriptMeta ? (
+                    this.renderContent(scriptMeta)
+                ) : null}
+            </div>
+        );
+    }
 }
-
 
 export class FunctionalUIProvider implements UIProvider {
     getName(): string {
