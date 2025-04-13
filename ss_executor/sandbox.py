@@ -13,10 +13,7 @@ from RestrictedPython.PrintCollector import PrintCollector
 from RestrictedPython.transformer import RestrictingNodeTransformer
 
 from ssui.annotation import get_callables, reset_callables
-from ssui.base import Prompt
 from ssui.config import SSUIConfig
-import ssui_image
-from ssui_image.SD1 import SD1Model
 
 if TYPE_CHECKING:
     from ss_executor.loader import ModuleExecutor
@@ -87,8 +84,7 @@ class Sandbox(ModuleExecutor):
                 "len": builtins.len,
                 # 添加导入功能
                 "__import__": self._safe_import,
-            },
-            'SD1Clip': ssui_image.SD1.SD1Clip
+            }
         }
 
     def _safe_getattr(self, obj, name):

@@ -1,6 +1,7 @@
 import asyncio
 import datetime
 import os
+from fastapi.encoders import jsonable_encoder
 import websockets
 import json
 from typing import Dict, Optional, Union
@@ -87,10 +88,13 @@ class Executor:
 
             loader = SSLoader(use_sandbox=task.use_sandbox)
             loader.load(task.script)
+            loader.Execute()
+
             if task.is_prepare:
                 # 执行prepare pass
-                loader.Execute()
                 result = loader.GetConfig(task.callable)
+                print("执行器结果：")
+                print(result)
             else:
                 # 执行execute pass
                 def convert_param(param: dict): 
@@ -108,8 +112,9 @@ class Executor:
                     for func, param_types, return_type in loader.callables:
                         if func.__name__ == callable:
                             return func, param_types, return_type
-        
-                func, param_types, return_type = find_callable(loader, callable)
+                    raise ValueError(f"未找到可调用函数: {callable}")
+                
+                func, param_types, return_type = find_callable(loader, task.callable)
                 print(task.script, task.callable, task.params, task.details)
                 new_params = {}
                 for name, param in task.params.items():
@@ -144,7 +149,7 @@ class Executor:
             task_result = TaskResult(
                 task_id=task.task_id,
                 status=TaskStatus.COMPLETED,
-                result=result
+                result=jsonable_encoder(result)
             )
             await websocket.send(task_result.model_dump_json())
             
@@ -153,7 +158,7 @@ class Executor:
             task_result = TaskResult(
                 task_id=task.task_id,
                 status=TaskStatus.FAILED,
-                error=str(e)
+                error=str(e) + '\n' + traceback.format_exc()
             )
             await websocket.send(task_result.model_dump_json())
             
@@ -161,6 +166,8 @@ class Executor:
             self.current_task = None
             
 def main():
+    import ssui
+    import ssui_image
     async def _start():
         executor = Executor()
         await executor.connect()

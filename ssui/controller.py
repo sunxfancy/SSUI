@@ -1,5 +1,4 @@
 
-
 class Slider:
     def __init__(self, min, max, step, labels=None):
         self.min = min

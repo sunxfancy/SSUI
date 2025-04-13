@@ -1,15 +1,13 @@
 # scheduler.py
 import asyncio
-import json
 import logging
-import multiprocessing
 from typing import Dict, List, Optional, Any, Union, Tuple
 from datetime import datetime
 from .model import Task, TaskStatus, ExecutorInfo, ExecutorRegister, RegisterResponse, UpdateStatus, TaskResult, ExeMessage
-import time
 import websockets
 from .executor_main import main
 import traceback
+from multiprocessing import Pool
 
 logger = logging.getLogger("TaskScheduler")
 
@@ -33,6 +31,7 @@ class TaskScheduler:
         
         # 清理任务
         self._cleanup_task: Optional[asyncio.Task] = None
+        self.pool = None
 
     async def start(self):
         """启动调度器"""
@@ -44,8 +43,9 @@ class TaskScheduler:
             )
             logger.info("任务调度器已启动")
             
-            # 启动执行器进程
-            multiprocessing.Process(target=main, daemon=True).start()
+            # 使用进程池，确保子进程和父进程使用相同的sys.path
+            self.pool = Pool(processes=1)
+            self.pool.apply_async(main)
         except Exception as e:
             logger.error(f"启动调度器失败: {e}")
             raise
@@ -53,6 +53,11 @@ class TaskScheduler:
     async def stop(self):
         """停止调度器"""
         try:
+            # 关闭进程池
+            if self.pool:
+                self.pool.terminate()
+                self.pool.join()
+            
             # 取消清理任务
             if self._cleanup_task:
                 self._cleanup_task.cancel()
