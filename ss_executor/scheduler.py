@@ -52,32 +52,32 @@ class TaskScheduler:
     
     async def stop(self):
         """停止调度器"""
-        try:
-            # 关闭进程池
-            if self.pool:
-                self.pool.terminate()
-                self.pool.join()
-            
-            # 取消清理任务
-            if self._cleanup_task:
+        # 取消清理任务
+        if self._cleanup_task:
+            try:
                 self._cleanup_task.cancel()
-                try:
-                    await self._cleanup_task
-                except asyncio.CancelledError:
-                    pass
-            
-            # 关闭WebSocket服务器
-            if self.server:
+                await self._cleanup_task
+            except asyncio.CancelledError:
+                pass
+
+        if self.server:
+            try:
+                # 关闭WebSocket服务器
                 self.server.close()
                 await self.server.wait_closed()
             
-            # 关闭所有执行器连接
-            await self._close_all_connections()
+                # 关闭所有执行器连接
+                await self._close_all_connections()
+            except Exception as e:
+                logger.error(f"停止调度器失败: {e}")
             
-            logger.info("任务调度器已停止")
-        except Exception as e:
-            logger.error(f"停止调度器失败: {e}")
-            raise
+        # 关闭进程池
+        if self.pool:
+            self.pool.terminate()
+            self.pool.join()
+            
+        logger.info("任务调度器已停止")
+        
 
     async def _close_all_connections(self):
         """关闭所有执行器连接"""
