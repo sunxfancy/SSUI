@@ -153,7 +153,8 @@ class TaskScheduler:
     async def run_task(self, task: Task):
         """运行任务"""
         self.add_task(task)
-        await self.wait_until_finished(task.task_id)
+        task = await self.wait_until_finished(task.task_id)
+        return task.result
 
     def get_task(self, task_id: str) -> Optional[Task]:
         """获取任务信息"""
@@ -275,7 +276,7 @@ class TaskScheduler:
         task.completed_at = str(datetime.now())
         task.executor_id = None
         executor.current_tasks = max(0, executor.current_tasks - 1)
-        logger.info(f"任务 {task.task_id} 失败")
+        logger.info(f"任务 {task.task_id} 失败，错误信息：{message.error}")
         
         await self._set_task_completion_event(task.task_id)
         await self._check_all_tasks_completion()

@@ -33,12 +33,17 @@ class UpdateStatus(BaseModel):
 class Task(BaseModel):
     type: Literal["task"] = Field(default="task")
     task_id: str = Field(default_factory=lambda: str(uuid.uuid4()))
-    script: str = Field(description="The script to be executed")
+
+    script: str = Field(description="The script path to be executed")
     callable: str = Field(description="The callable to be executed")
     params: Dict[str, Any] = Field(default_factory=dict, description="The parameters to be passed to the callable")
+    details: Dict[str, Any] = Field(default_factory=dict, description="The details of the task")
+    is_prepare: bool = Field(default=False, description="Whether the task is prepare-execution")
+    
     use_sandbox: bool = Field(default=True, description="Whether to use a sandbox")
     timeout: int = Field(default=300, description="The timeout for the task")
     priority: int = Field(default=0, description="The priority of the task")
+    
     status: TaskStatus = Field(default=TaskStatus.PENDING, description="The status of the task")
     started_at: Optional[str] = Field(default=None, description="The time the task was started")
     completed_at: Optional[str] = Field(default=None, description="The time the task was completed")

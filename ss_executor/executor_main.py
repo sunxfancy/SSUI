@@ -1,8 +1,13 @@
 import asyncio
+import datetime
+import os
 import websockets
 import json
 from typing import Dict, Optional, Union
 import logging
+
+from ss_executor.loader import SSLoader, search_project_root
+from ssui.base import Image
 from .sandbox import Sandbox
 from .model import TaskStatus, Task, ExecutorRegister, RegisterResponse, UpdateStatus, TaskResult, ExeMessage
 import traceback
@@ -13,7 +18,6 @@ logger = logging.getLogger(__name__)
 class Executor:
     def __init__(self, scheduler_url: str = "ws://localhost:5000/"):
         self.scheduler_url = scheduler_url
-        self.sandbox = Sandbox()
         self.current_task: Optional[Task] = None
         
     async def connect(self):
@@ -69,10 +73,9 @@ class Executor:
                 
     async def _handle_task(self, websocket, task: Task):
         """处理单个任务"""
+        logger.info(f"开始执行任务 {task.task_id}")
+        self.current_task = task
         try:
-            logger.info(f"开始执行任务 {task.task_id}")
-            self.current_task = task
-            
             # 发送任务开始状态
             status_update = UpdateStatus(
                 task_id=task.task_id,
@@ -81,8 +84,62 @@ class Executor:
             await websocket.send(status_update.model_dump_json())
             
             # 执行任务
-            result = await self.sandbox.execute(task.script)
-            
+
+            loader = SSLoader(use_sandbox=task.use_sandbox)
+            loader.load(task.script)
+            if task.is_prepare:
+                # 执行prepare pass
+                loader.Execute()
+                result = loader.GetConfig(task.callable)
+            else:
+                # 执行execute pass
+                def convert_param(param: dict): 
+                    name = param['function']
+                    params = param['params']
+
+                    # 动态导入并获取属性,支持任意层级的包/模块/类/函数访问
+                    parts = name.split('.')
+                    current = __import__(parts[0])
+                    for part in parts[1:]:
+                        current = getattr(current, part)
+                    return current(**params)
+
+                def find_callable(loader: SSLoader, callable: str):
+                    for func, param_types, return_type in loader.callables:
+                        if func.__name__ == callable:
+                            return func, param_types, return_type
+        
+                func, param_types, return_type = find_callable(loader, callable)
+                print(task.script, task.callable, task.params, task.details)
+                new_params = {}
+                for name, param in task.params.items():
+                    print(name, param)
+                    new_params[name] = convert_param(param)
+
+                def convert_return(result):
+                    if isinstance(result, tuple):
+                        return [convert_return(r) for r in result]
+                    
+                    if isinstance(result, Image):
+                        current_time = datetime.datetime.now()
+                        project_root = search_project_root(os.path.dirname(task.script))
+                        output_dir = os.path.join(project_root, "output")
+                        if not os.path.exists(output_dir):
+                            os.makedirs(output_dir)
+                        path = os.path.join(output_dir, "image_" + current_time.strftime("%Y%m%d%H%M%S") + ".png")
+                        result._image.save(path)
+                        return {"type": "image", "path": path}
+                # 注入配置
+                loader.config._update = task.details
+                # 执行
+                result = func(**new_params)
+
+                # 确保返回一个数组
+                if not isinstance(result, tuple):
+                    result = (result,)
+
+                result = convert_return(result)
+
             # 发送任务完成状态和结果
             task_result = TaskResult(
                 task_id=task.task_id,

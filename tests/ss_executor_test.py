@@ -21,6 +21,13 @@ class TestSSLoader(unittest.TestCase):
         self.loader.callables = []
         self.loader.Show()  # 不应抛出异常
 
+    def test_load_and_execute(self):
+        path = os.path.join(os.path.dirname(__file__), '..', 'examples', 'basic', 'workflow.py')
+        self.loader.load(path)
+        self.loader.Execute()
+        self.loader.GetConfig('txt2img')
+        
+
 class TestSSProject(unittest.TestCase):
     def setUp(self):
         # 创建临时目录和配置文件

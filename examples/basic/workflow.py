@@ -8,7 +8,6 @@ config = SSUIConfig()
 
 @workflow
 def txt2img(model: SD1Model, positive: Prompt, negative: Prompt) -> Image:
-    print(model, positive, negative)
     positive, negative = SD1Clip(config("Prompt To Condition"), model, positive, negative)
     latent = SD1Latent(config("Create Empty Latent"))
     latent = SD1Denoise(config("Denoise"), model, latent, positive, negative)
@@ -41,4 +40,3 @@ def txt2imgWithLora(model: SD1Model, loras: List[SD1Lora], positive: Prompt, neg
     image2 = SD1LatentDecode(config("Latent to Image with Lora"), latent)
     
     return image, image2
-

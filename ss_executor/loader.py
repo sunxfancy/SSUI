@@ -5,45 +5,41 @@ import os
 import sys
 import yaml
 from pydantic import BaseModel, Field
+from typing import Optional, Dict, Any, List, Callable, Literal
 
 sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
 
+from ss_executor.sandbox import Sandbox, NoSandbox, ModuleBundle
 from ssui.annotation import get_callables, reset_callables
 
 class SSLoader:
-    def __init__(self):
+    def __init__(self, use_sandbox: bool = True):
         self.callables = []
-        self.module : ModuleSpec = None
-        self.spec : ModuleSpec = None
+        self.use_sandbox = use_sandbox
+        self.executor = Sandbox() if use_sandbox else NoSandbox()
+        self.config = None
+        self.current_file_path = None
 
     def load(self, path: str):
-        file_path = os.path.abspath(path)
-        # Check if spec is None (e.g., file not found)
-        if not os.path.exists(file_path):
-            raise FileNotFoundError(f"Could not find module at: {file_path}")
-        
-        # Define the module name and file path
-        module_name = file_path.split("/")[-1].split(".")[0]
+        """加载模块"""
+        self.current_file_path = os.path.abspath(path)
+        self.executor.load(path)
 
-        # Create a module specification
-        self.spec = importlib.util.spec_from_file_location(module_name, file_path)
-
-        # Create a module object from the specification
-        self.module = importlib.util.module_from_spec(self.spec)
-
-        # Get the module's loader and execute the module
-        loader = SourceFileLoader(module_name, file_path)
-        self.spec.loader = loader
-
-    # Execute the module and get the callables
+    # 执行模块并获取可调用对象
     def Execute(self):
-        reset_callables()
-        self.spec.loader.exec_module(self.module)
-        self.callables = get_callables()
-        if self.module.config:
-            self.config = self.module.config
+        """执行模块并获取可调用对象"""
+        if not self.current_file_path:
+            raise ValueError("No file path set. Call load() first.")
+            
+        module_bundle = self.executor.execute_module()
+        
+        if module_bundle:
+            self.callables = module_bundle.callables
+            self.config = module_bundle.config
+        else:
+            raise ValueError("Failed to execute module.")
 
-    # Prepare call the target function
+    # 准备调用目标函数
     def GetConfig(self, name: str) -> dict | None:
         callable = None
         for func, param_types, return_type in self.callables:
@@ -58,8 +54,6 @@ class SSLoader:
             params = {}
             for param in param_types:
                 params[param] = None
-            print(f"Config: {callable.__name__}")
-            print(f"Parameters: {params}")
             callable(**params)
             return self.config._config
 
@@ -72,7 +66,6 @@ class SSLoader:
             print(f"Parameters: {param_type}")
             print(f"Return type: {return_type}")
             print()
-
 
 
 class SSProject(BaseModel):

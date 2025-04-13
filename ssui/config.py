@@ -15,8 +15,6 @@ class SSUIConfig:
         return self
     
     def __getitem__(self, name):
-        print('getitem: ', self._current, name)
-        print('current config: ', self._config)
         if self.is_prepare():
             return self._config[self._current][name]
         else:
@@ -27,9 +25,18 @@ class SSUIConfig:
     
     def __contains__(self, name):
         if self.is_prepare():
-            return self._config[self._current].get(name) is not None
+            if self._config.get(self._current) is not None:
+                return self._config[self._current].get(name) is not None
+            else:
+                return False
         else:
-            return self._update[self._current].get(name) is not None or self._config[self._current].get(name) is not None
+            if self._update.get(self._current) is not None:
+                return self._update[self._current].get(name) is not None
+            else:
+                if self._config.get(self._current) is not None:
+                    return self._config[self._current].get(name) is not None
+                else:
+                    return False
 
     def __setitem__(self, name, value):
         if self.is_prepare():

@@ -17,6 +17,7 @@
     "dev:desktop_sb": "cd desktop && yarn storyboard",
     "dev:desktop": "cd desktop && yarn tauri dev",
     "dev:server": "yarn build:functional_ui && node dependencies/venv.cjs fastapi dev server/server.py --port=7422",
+    "dev:server:no_build": "node dependencies/venv.cjs fastapi dev server/server.py --port=7422",
     "dev:functional_ui": "cd frontend/functional_ui && yarn dev",
     "dev:components": "cd frontend/ssui_components && yarn dev",
     "build:desktop_ui": "cd desktop && yarn build",
