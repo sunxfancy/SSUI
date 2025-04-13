@@ -15,7 +15,7 @@ function parseArgs() {
 function getPlatformName() {
   const platform = os.platform();
   if (platform === 'win32') return 'windows';
-  if (platform === 'darwin') return 'macos';
+  if (platform === 'darwin') return 'macosx';
   return 'linux'; // 默认为linux
 }
 
@@ -37,65 +37,74 @@ function extractIndexUrls(requirementsFile) {
   return indexUrls;
 }
 
+// 获取所有支持的平台列表
+function getAllPlatforms() {
+  return ['windows', 'macosx', 'linux'];
+}
+
 // 主函数
 function main() {
   try {
     const args = parseArgs();
-    const platformName = getPlatformName();
-    const requirementsFile = path.join('.', 'dependencies', `requirements-${platformName}.txt`);
-    const lockFile = path.join('.', 'dependencies', `${platformName}.lock`);
+    const platforms = getAllPlatforms();
     
-    // 检查requirements文件是否存在
-    if (!fs.existsSync(requirementsFile)) {
-      console.error(`错误: 未找到requirements文件: ${requirementsFile}`);
-      process.exit(1);
-    }
-
-    // 提取requirements文件中的index-url信息
-    const indexUrls = extractIndexUrls(requirementsFile);
-    if (indexUrls.length > 0) {
-      console.log(`发现以下index URL配置:`, indexUrls);
-    }
-
-    console.log(`正在为平台 ${platformName} 生成锁文件...`);
-    
-    // 构建uv命令，根据参数决定是否添加--no-upgrade选项
-    const venvPath = os.platform() === 'win32' ? '.venv\\Scripts\\uv.exe' : '.venv/bin/uv';
-    let uvCommand = `${venvPath} pip compile ${requirementsFile} -o ${lockFile}`;
-    if (args.noUpgrade) {
-      console.log('使用不升级模式: 已存在的包将不会升级到最新版本');
-      uvCommand += ' --no-upgrade';
-    }
-    
-    // 使用uv生成锁文件
-    execSync(uvCommand, { stdio: 'inherit' });
-    console.log(`已生成锁文件: ${lockFile}`);
-    
-    // 如果有index URL，将其添加到锁文件末尾
-    if (indexUrls.length > 0) {
-      console.log('正在将index URL信息添加到锁文件...');
-      let lockContent = fs.readFileSync(lockFile, 'utf8');
+    for (const platformName of platforms) {
+      const requirementsFile = path.join('.', 'dependencies', `requirements-${platformName}.txt`);
+      const lockFile = path.join('.', 'dependencies', `${platformName}.lock`);
       
-      // 添加注释和index URLs
-      lockContent += '\n\n# 以下是原始requirements文件中的index URL配置\n';
-      for (const url of indexUrls) {
-        lockContent += `${url}\n`;
+      // 检查requirements文件是否存在
+      if (!fs.existsSync(requirementsFile)) {
+        console.log(`跳过平台 ${platformName}: 未找到requirements文件: ${requirementsFile}`);
+        continue;
+      }
+
+      // 提取requirements文件中的index-url信息
+      const indexUrls = extractIndexUrls(requirementsFile);
+      if (indexUrls.length > 0) {
+        console.log(`发现以下index URL配置 (${platformName}):`, indexUrls);
+      }
+
+      console.log(`正在为平台 ${platformName} 生成锁文件...`);
+      
+      // 构建uv命令，根据参数决定是否添加--no-upgrade选项
+      const venvPath = os.platform() === 'win32' ? '.venv\\Scripts\\uv.exe' : '.venv/bin/uv';
+      let uvCommand = `${venvPath} pip compile ${requirementsFile} -o ${lockFile}`;
+      if (args.noUpgrade) {
+        console.log('使用不升级模式: 已存在的包将不会升级到最新版本');
+        uvCommand += ' --no-upgrade';
       }
       
-      fs.writeFileSync(lockFile, lockContent);
-      console.log('已将index URL信息添加到锁文件');
+      // 使用uv生成锁文件
+      execSync(uvCommand, { stdio: 'inherit' });
+      console.log(`已生成锁文件: ${lockFile}`);
+      
+      // 如果有index URL，将其添加到锁文件末尾
+      if (indexUrls.length > 0) {
+        console.log('正在将index URL信息添加到锁文件...');
+        let lockContent = fs.readFileSync(lockFile, 'utf8');
+        
+        // 添加注释和index URLs
+        lockContent += '\n\n# 以下是原始requirements文件中的index URL配置\n';
+        for (const url of indexUrls) {
+          lockContent += `${url}\n`;
+        }
+        
+        fs.writeFileSync(lockFile, lockContent);
+        console.log('已将index URL信息添加到锁文件');
+      }
+      
+      // 读取并解析锁文件
+      const lockContent = fs.readFileSync(lockFile, 'utf8');
+      const dependencies = parseLockFile(lockContent);
+      
+      // 生成YAML文件
+      const yamlContent = generateYaml(dependencies);
+      const yamlFile = path.join('.', 'dependencies', `${platformName}-dependencies.yaml`);
+      fs.writeFileSync(yamlFile, yamlContent);
+      
+      console.log(`已生成依赖YAML文件: ${yamlFile}`);
+      console.log('-----------------------------------');
     }
-    
-    // 读取并解析锁文件
-    const lockContent = fs.readFileSync(lockFile, 'utf8');
-    const dependencies = parseLockFile(lockContent);
-    
-    // 生成YAML文件
-    const yamlContent = generateYaml(dependencies);
-    const yamlFile = path.join('.', 'dependencies', `${platformName}-dependencies.yaml`);
-    fs.writeFileSync(yamlFile, yamlContent);
-    
-    console.log(`已生成依赖YAML文件: ${yamlFile}`);
   } catch (error) {
     console.error('执行过程中出错:', error);
     process.exit(1);
