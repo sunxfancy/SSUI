@@ -26,6 +26,11 @@ class TaskScheduler:
         self._cleanup_task: Optional[asyncio.Task] = None
         self.loop = None
         self.thread = None
+        # 添加任务完成事件字典，用于通知任务完成
+        self.task_completion_events: Dict[str, asyncio.Event] = {}
+        # 添加所有任务完成事件
+        self.all_tasks_completion_event = asyncio.Event()
+        self.main_loop = None
 
     def start(self):
         self.loop = asyncio.new_event_loop()
@@ -109,6 +114,11 @@ class TaskScheduler:
     def add_task(self, task: Task) -> str:
         """添加新任务"""
         self.tasks[task.task_id] = task
+        # 为任务创建完成事件
+        self.task_completion_events[task.task_id] = asyncio.Event()
+        # 重置所有任务完成事件
+        self.all_tasks_completion_event.clear()
+        
         # 尝试立即分配任务
         if self._try_assign_task(task):
             logger.info(f"任务 {task.task_id} 已立即分配给执行器")
@@ -117,10 +127,16 @@ class TaskScheduler:
             self.loop.call_soon_threadsafe(self.task_queue.put_nowait, (-task.priority, task.task_id))
             logger.info(f"任务 {task.task_id} 已加入队列")
         return task.task_id
+    
+    async def run_task(self, task: Task):
+        """运行任务"""
+        self.main_loop = asyncio.get_running_loop()
+        self.add_task(task)
+        await self.wait_until_finished(task.task_id)
             
     def get_task(self, task_id: str) -> Optional[Task]:
         """获取任务信息"""
-        return self.tasks.get(task_id)
+        return self.tasks.get(task_id) 
             
     def get_all_tasks(self) -> List[Task]:
         """获取所有任务"""
@@ -214,12 +230,56 @@ class TaskScheduler:
                             task.executor_id = None
                             executor.current_tasks = max(0, executor.current_tasks - 1)
                             logger.info(f"任务 {task_id} 已完成")
+                            
+                            # 设置任务完成事件 - 使用线程安全的方式
+                            if task_id in self.task_completion_events:
+                                # 在事件循环中设置事件
+                                asyncio.create_task(self._set_task_completion_event(task_id))
+                                
+                            # 检查是否所有任务都已完成
+                            all_completed = all(
+                                t.status in [TaskStatus.COMPLETED, TaskStatus.FAILED, TaskStatus.CANCELLED]
+                                for t in self.tasks.values()
+                            )
+                            if all_completed:
+                                # 在事件循环中设置所有任务完成事件
+                                asyncio.create_task(self._set_all_tasks_completion_event())
+                                
                         elif message.status == TaskStatus.FAILED:
                             task.error = message.error
                             task.completed_at = str(datetime.now())
                             task.executor_id = None
                             executor.current_tasks = max(0, executor.current_tasks - 1)
                             logger.info(f"任务 {task_id} 失败")
+                            
+                            # 设置任务完成事件 - 使用线程安全的方式
+                            if task_id in self.task_completion_events:
+                                # 在事件循环中设置事件
+                                if self.main_loop:
+                                    self.main_loop.call_soon_threadsafe(
+                                        asyncio.create_task, self._set_task_completion_event(task_id)
+                                    )
+                                
+                            # 检查是否所有任务都已完成
+                            all_completed = all(
+                                t.status in [TaskStatus.COMPLETED, TaskStatus.FAILED, TaskStatus.CANCELLED]
+                                for t in self.tasks.values()
+                            )
+                            if all_completed:
+                                # 在事件循环中设置所有任务完成事件
+                                if self.main_loop:
+                                    self.main_loop.call_soon_threadsafe(
+                                        asyncio.create_task, self._set_all_tasks_completion_event()
+                                    )
+    
+    async def _set_task_completion_event(self, task_id: str):
+        """在事件循环中设置任务完成事件"""
+        if task_id in self.task_completion_events:
+            self.task_completion_events[task_id].set()
+    
+    async def _set_all_tasks_completion_event(self):
+        """在事件循环中设置所有任务完成事件"""
+        self.all_tasks_completion_event.set()
                         
     async def _check_heartbeats(self):
         """检查执行器心跳"""
@@ -251,41 +311,42 @@ class TaskScheduler:
             如果指定了task_id，则返回完成的任务对象，如果超时则返回None
             如果task_id为None，则返回所有完成的任务列表，如果超时则返回None
         """
-        start_time = time.time()
-        
-        while True:
-            # 检查是否超时
-            if timeout is not None and time.time() - start_time > timeout:
-                logger.warning(f"等待任务完成超时")
-                return None
+        self.main_loop = asyncio.get_running_loop()
+        try:
+            if task_id is None:
+                # 等待所有任务完成
+                if not self.tasks:
+                    logger.info("没有任务需要等待")
+                    return []
                 
-            # 获取任务状态
-            async with self.lock:
-                if task_id is None:
-                    # 等待所有任务完成
-                    all_tasks = list(self.tasks.values())
-                    if not all_tasks:
-                        logger.info("没有任务需要等待")
-                        return []
-                        
-                    # 检查是否所有任务都已完成
-                    all_completed = all(
-                        task.status in [TaskStatus.COMPLETED, TaskStatus.FAILED, TaskStatus.CANCELLED]
-                        for task in all_tasks
-                    )
-                    
-                    if all_completed:
-                        return all_tasks
+                # 等待所有任务完成事件
+                if timeout is not None:
+                    await asyncio.wait_for(self.all_tasks_completion_event.wait(), timeout)
                 else:
-                    # 等待单个任务完成
-                    task = self.tasks.get(task_id)
-                    if not task:
-                        logger.warning(f"任务 {task_id} 不存在")
-                        return None
-                        
-                    # 检查任务是否已完成
-                    if task.status in [TaskStatus.COMPLETED, TaskStatus.FAILED, TaskStatus.CANCELLED]:
-                        return task
-                    
-            # 等待一段时间后再次检查
-            await asyncio.sleep(0.5)
+                    await self.all_tasks_completion_event.wait()
+                
+                # 返回所有任务
+                return list(self.tasks.values())
+            else:
+                # 等待单个任务完成
+                if task_id not in self.tasks:
+                    logger.warning(f"任务 {task_id} 不存在")
+                    return None
+                
+                # 如果任务已经完成，直接返回
+                task = self.tasks[task_id]
+                if task.status in [TaskStatus.COMPLETED, TaskStatus.FAILED, TaskStatus.CANCELLED]:
+                    return task
+                
+                # 等待任务完成事件
+                if timeout is not None:
+                    await asyncio.wait_for(self.task_completion_events[task_id].wait(), timeout)
+                else:
+                    await self.task_completion_events[task_id].wait()
+                
+                # 返回完成的任务
+                return self.tasks[task_id]
+                
+        except asyncio.TimeoutError:
+            logger.warning(f"等待任务完成超时")
+            return None

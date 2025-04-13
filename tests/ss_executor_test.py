@@ -1,3 +1,4 @@
+import asyncio
 import unittest
 import os
 import tempfile
@@ -79,13 +80,17 @@ class TestScheduler(unittest.TestCase):
         scheduler.start()
 
         scheduler.add_task(Task(script="test.py", callable="test"))
-        
-        # 等待5秒钟，让任务有时间被处理
-        import time
-        time.sleep(5)
+        asyncio.run(scheduler.wait_until_finished())
         
         # 停止调度器
         scheduler.stop()
     
+    def test_scheduler_async(self):
+        scheduler = TaskScheduler()
+        scheduler.start()
+
+        result = asyncio.run(scheduler.run_task(Task(script="test.py", callable="test")))
+        print(result)
+        scheduler.stop()
 
 

@@ -14,6 +14,7 @@ import os
 import json
 from backend.model_manager.config import ModelType
 from backend.model_manager.probe import ModelProbe
+from ss_executor.scheduler import TaskScheduler
 from ssui.base import Image
 from pydantic_settings import BaseSettings
 from contextlib import asynccontextmanager
@@ -46,14 +47,17 @@ settings = Settings() if not os.path.exists(settings_path) else Settings.model_v
 # 这是一个全局websocket的连接用户表
 ws_clients = {}
 loop = asyncio.get_event_loop()
+scheduler = TaskScheduler()
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # 检测扩展
     ExtensionManager.instance().detectExtensions(app)
+    scheduler.start()
     yield
-    print("lifespan end")
     # 关闭所有连接
+    print("closing scheduler and all websocket connections.")
+    scheduler.stop()
     for name,connection in ws_clients.items():
         await connection.close()
 
@@ -197,6 +201,8 @@ async def model(model_path: str):
 async def available_models():
     return settings.installed_models
 
+
+# 下面是执行器相关的API
 
 @app.post("/api/prepare")
 async def prepare(script_path: str, callable: str):
