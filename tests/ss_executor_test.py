@@ -74,23 +74,13 @@ class TestScheduler(unittest.TestCase):
         self.assertEqual(task2.script, "test.py")
         self.assertEqual(task2.callable, "test")
 
-
-    def test_scheduler(self):
-        scheduler = TaskScheduler()
-        scheduler.start()
-
-        scheduler.add_task(Task(script="test.py", callable="test"))
-        asyncio.run(scheduler.wait_until_finished())
-        
-        # 停止调度器
-        scheduler.stop()
     
     def test_scheduler_async(self):
         scheduler = TaskScheduler()
-        scheduler.start()
-
-        result = asyncio.run(scheduler.run_task(Task(script="test.py", callable="test")))
-        print(result)
-        scheduler.stop()
+        async def run_scheduler():
+            await scheduler.start()
+            await scheduler.run_task(Task(script="test.py", callable="test"))
+            await scheduler.stop()
+        asyncio.run(run_scheduler())
 
 

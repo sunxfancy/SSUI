@@ -3,7 +3,6 @@ import asyncio
 import json
 import logging
 import multiprocessing
-import threading
 from typing import Dict, List, Optional, Any, Union
 from datetime import datetime
 from .model import Task, TaskStatus, ExecutorInfo, ExecutorRegister, RegisterResponse, UpdateStatus, TaskResult, ExeMessage
@@ -24,30 +23,22 @@ class TaskScheduler:
         self.task_queue = asyncio.PriorityQueue()
         self.lock = asyncio.Lock()
         self._cleanup_task: Optional[asyncio.Task] = None
-        self.loop = None
-        self.thread = None
+        self.server = None
         # 添加任务完成事件字典，用于通知任务完成
         self.task_completion_events: Dict[str, asyncio.Event] = {}
         # 添加所有任务完成事件
         self.all_tasks_completion_event = asyncio.Event()
-        self.main_loop = None
 
-    def start(self):
-        self.loop = asyncio.new_event_loop()
-        
+    async def start(self):
         """启动调度器"""
-        self.thread = threading.Thread(target=lambda: self.loop.run_until_complete(self._start_server()), daemon=True)
-        self.thread.start()
-
+        # 启动WebSocket服务器
+        self.server = await websockets.serve(self.handle_executor_connection, "localhost", 5000)
         logger.info("任务调度器已启动")
+        
         # 为executor创建新进程
         multiprocessing.Process(target=main, daemon=True).start()
     
-    async def _start_server(self):
-        async with websockets.serve(self.handle_executor_connection, "localhost", 5000):
-            await asyncio.Future()
-
-    async def _stop(self):
+    async def stop(self):
         """停止调度器"""
         if self._cleanup_task:
             self._cleanup_task.cancel()
@@ -56,6 +47,11 @@ class TaskScheduler:
             except asyncio.CancelledError:
                 pass
             
+        # 关闭WebSocket服务器
+        if self.server:
+            self.server.close()
+            await self.server.wait_closed()
+            
         # 关闭所有WebSocket连接
         for ws in self.executor_websockets.values():
             await ws.close()
@@ -63,10 +59,6 @@ class TaskScheduler:
         self.executor_websockets.clear()
         self.executors.clear()
         logger.info("任务调度器已停止")
-        
-    def stop(self):
-        """停止调度器"""
-        self.thread.join(0)
         
     async def handle_executor_connection(self, websocket: websockets.ClientConnection):
         """处理执行器WebSocket连接"""
@@ -124,13 +116,12 @@ class TaskScheduler:
             logger.info(f"任务 {task.task_id} 已立即分配给执行器")
         else:
             # 如果无法立即分配，加入队列
-            self.loop.call_soon_threadsafe(self.task_queue.put_nowait, (-task.priority, task.task_id))
+            asyncio.create_task(self.task_queue.put((-task.priority, task.task_id)))
             logger.info(f"任务 {task.task_id} 已加入队列")
         return task.task_id
     
     async def run_task(self, task: Task):
         """运行任务"""
-        self.main_loop = asyncio.get_running_loop()
         self.add_task(task)
         await self.wait_until_finished(task.task_id)
             
@@ -255,10 +246,7 @@ class TaskScheduler:
                             # 设置任务完成事件 - 使用线程安全的方式
                             if task_id in self.task_completion_events:
                                 # 在事件循环中设置事件
-                                if self.main_loop:
-                                    self.main_loop.call_soon_threadsafe(
-                                        asyncio.create_task, self._set_task_completion_event(task_id)
-                                    )
+                                asyncio.create_task(self._set_task_completion_event(task_id))
                                 
                             # 检查是否所有任务都已完成
                             all_completed = all(
@@ -267,10 +255,7 @@ class TaskScheduler:
                             )
                             if all_completed:
                                 # 在事件循环中设置所有任务完成事件
-                                if self.main_loop:
-                                    self.main_loop.call_soon_threadsafe(
-                                        asyncio.create_task, self._set_all_tasks_completion_event()
-                                    )
+                                asyncio.create_task(self._set_all_tasks_completion_event())
     
     async def _set_task_completion_event(self, task_id: str):
         """在事件循环中设置任务完成事件"""
@@ -311,7 +296,6 @@ class TaskScheduler:
             如果指定了task_id，则返回完成的任务对象，如果超时则返回None
             如果task_id为None，则返回所有完成的任务列表，如果超时则返回None
         """
-        self.main_loop = asyncio.get_running_loop()
         try:
             if task_id is None:
                 # 等待所有任务完成
