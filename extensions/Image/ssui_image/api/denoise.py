@@ -983,7 +983,7 @@ def flux_denoise_image(
     neg_text_conditionings: list[FluxTextConditioning] | None = None
     if negative is not None:
         neg_text_conditionings = _load_text_conditioning(
-            cond_field=negative,
+            cond_list=negative,
             masks=None,
             packed_height=packed_h,
             packed_width=packed_w,

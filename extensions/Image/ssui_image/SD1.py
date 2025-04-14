@@ -1,4 +1,6 @@
 from typing import Optional
+
+from ssui.config import SSUIConfig
 from .api.conditioning import BasicConditioningInfo, create_conditioning
 from .api.denoise import decode_latents, denoise_image
 from .api.model import (
@@ -37,7 +39,7 @@ class SD1Model:
         self.vae = vae
 
     @staticmethod
-    def load(path: str):
+    def load(path: str) -> "SD1Model":
         unet, clip, vae = load_model(getModelLoader(), path)
         return SD1Model(path, unet, clip, vae)
 
@@ -48,7 +50,7 @@ class SD1Condition:
 
 
 @param("ignoreLastLayer", Switch(), default=False)
-def SD1Clip(config, model: SD1Model, positive: Prompt, negative: Prompt):
+def SD1Clip(config: SSUIConfig, model: SD1Model, positive: Prompt, negative: Prompt):
     if config.is_prepare():
         return SD1Condition(), SD1Condition()
 
@@ -74,7 +76,7 @@ def SD1Clip(config, model: SD1Model, positive: Prompt, negative: Prompt):
     default=512,
 )
 class SD1Latent:
-    def __init__(self, config, tensor=None):
+    def __init__(self, config: SSUIConfig, tensor=None):
         self.width = config["width"]
         self.height = config["height"]
         self.tensor = tensor
@@ -91,12 +93,8 @@ class SD1Latent:
         pass
 
 
-def SD1Decode(config):
-    pass
-
-
 class SD1Lora:
-    def __init__(self, config):
+    def __init__(self, config: SSUIConfig):
         self.config = config
 
 

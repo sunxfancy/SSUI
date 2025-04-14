@@ -5,7 +5,6 @@ from .SD1 import (
     SD1Condition,
     SD1Clip,
     SD1Latent,
-    SD1Decode,
     SD1Lora,
     SD1Denoise,
     SD1LatentDecode,
@@ -18,7 +17,6 @@ from .SDXL import (
     SDXLCondition,
     SDXLClip,
     SDXLLatent,
-    SDXLDecode,
     SDXLLora,
     SDXLDenoise,
     SDXLLatentDecode
@@ -32,7 +30,6 @@ __all__ = [
     "SD1Condition",
     "SD1Clip",
     "SD1Latent",
-    "SD1Decode",
     "SD1Lora",
     "SD1Denoise",
     "SD1LatentDecode",
@@ -43,7 +40,6 @@ __all__ = [
     "SDXLCondition",
     "SDXLClip",
     "SDXLLatent",
-    "SDXLDecode",
     "SDXLLora",
     "SDXLDenoise",
     "SDXLLatentDecode"

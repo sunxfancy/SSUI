@@ -132,7 +132,7 @@ def create_sdxl_conditioning(
     crop_left: int,
     target_height: int,
     target_width: int,
-):
+) -> SDXLConditioningInfo:
     c1, c1_pooled = run_clip_compel(clip_model, prompt, False, zero_on_empty=True)
     if style.strip() == "":
         c2, c2_pooled = run_clip_compel(

@@ -1,4 +1,8 @@
 from typing import Optional
+
+import torch
+from backend.stable_diffusion.diffusion.conditioning_data import SDXLConditioningInfo
+from ssui.config import SSUIConfig
 from .api.conditioning import BasicConditioningInfo, create_sdxl_conditioning
 from .api.denoise import decode_latents, denoise_image
 from .api.model import (
@@ -7,6 +11,7 @@ from .api.model import (
     ClipModel,
     VAEModel,
     load_model,
+    load_sdxl_model,
 )
 from ssui.base import Prompt, Image
 from ssui.annotation import param
@@ -29,26 +34,28 @@ class SDXLModel:
         path: str = "",
         unet: Optional[UNetModel] = None,
         clip: Optional[ClipModel] = None,
+        clip2: Optional[ClipModel] = None,
         vae: Optional[VAEModel] = None,
     ):
         self.path = path
         self.unet = unet
         self.clip = clip
+        self.clip2 = clip2
         self.vae = vae
 
     @staticmethod
-    def load(path: str):
-        unet, clip, vae = load_model(getModelLoader(), path)
-        return SDXLModel(path, unet, clip, vae)
+    def load(path: str) -> "SDXLModel":
+        unet, clip, clip2, vae = load_sdxl_model(getModelLoader(), path)
+        return SDXLModel(path, unet, clip, clip2, vae)
 
 
 class SDXLCondition:
-    def __init__(self, condition_info: Optional[BasicConditioningInfo] = None):
+    def __init__(self, condition_info: Optional[SDXLConditioningInfo] = None):
         self.condition_info = condition_info
 
 
 @param("ignoreLastLayer", Switch(), default=False)
-def SDXLClip(config, model: SDXLModel, positive: Prompt, negative: Prompt):
+def SDXLClip(config: SSUIConfig, model: SDXLModel, positive: Prompt, negative: Prompt):
     if config.is_prepare():
         return SDXLCondition(), SDXLCondition()
 
@@ -57,27 +64,28 @@ def SDXLClip(config, model: SDXLModel, positive: Prompt, negative: Prompt):
     print("positive:", positive.text)
     print("negative:", negative.text)
 
-    positive_condition = create_sdxl_conditioning(positive.text, "", model.clip, model.clip, 1024, 1024, 0, 0, 1024, 1024)
-    negative_condition = create_sdxl_conditioning(negative.text, "", model.clip, model.clip, 1024, 1024, 0, 0, 1024, 1024)
+    # TODO: 需要把这组参数处理一下
+    positive_condition = create_sdxl_conditioning(positive.text, "", model.clip, model.clip2, 1024, 1024, 0, 0, 1024, 1024)
+    negative_condition = create_sdxl_conditioning(negative.text, "", model.clip, model.clip2, 1024, 1024, 0, 0, 1024, 1024)
 
     return SDXLCondition(positive_condition), SDXLCondition(negative_condition)
 
 
 @param(
     "width",
-    Slider(512, 4096, 64, labels=[512, 768, 1024, 1536, 1920, 2048, 3840, 4096]),
+    Slider(1024, 4096, 64, labels=[1024, 1536, 1920, 2048, 3840, 4096]),
     default=1024,
 )
 @param(
     "height",
-    Slider(512, 4096, 64, labels=[512, 768, 1024, 1536, 1920, 2048, 3840, 4096]),
+    Slider(1024, 4096, 64, labels=[1024, 1536, 1920, 2048, 3840, 4096]),
     default=1024,
 )
 class SDXLLatent:
-    def __init__(self, config, tensor=None):
-        self.width = config["width"]
-        self.height = config["height"]
-        self.tensor = tensor
+    def __init__(self, config: SSUIConfig, tensor: Optional[torch.Tensor] = None):
+        self.width: int = config["width"]
+        self.height: int = config["height"]
+        self.tensor: Optional[torch.Tensor] = tensor
 
         if config.is_prepare():
             return
@@ -91,12 +99,8 @@ class SDXLLatent:
         pass
 
 
-def SDXLDecode(config):
-    pass
-
-
 class SDXLLora:
-    def __init__(self, config):
+    def __init__(self, config: SSUIConfig):
         self.config = config
 
 
@@ -143,7 +147,7 @@ class SDXLLora:
 )
 @param("CFG", Slider(0, 15, 0.1), default=7.5)
 def SDXLDenoise(
-    config,
+    config: SSUIConfig,
     model: SDXLModel,
     latent: SDXLLatent,
     positive: SDXLCondition,
@@ -171,7 +175,7 @@ def SDXLDenoise(
     return SDXLLatent(config("DenoiseToLatents"), tensor)
 
 
-def SDXLLatentDecode(config, model: SDXLModel, latent: SDXLLatent):
+def SDXLLatentDecode(config: SSUIConfig, model: SDXLModel, latent: SDXLLatent):
     if config.is_prepare():
         return Image()
 

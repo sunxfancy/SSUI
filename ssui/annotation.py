@@ -35,11 +35,11 @@ def param(name, controler, default=None):
             @functools.wraps(target)
             def wrapper(config: SSUIConfig, *args, **kwargs):
                 if name not in config:
-                    config[name] = {
+                    config.register(name, {
                         "controler": controler.__class__.__name__,
                         "args": controler,
                         "default": default
-                    }
+                    })
                 result = target(config, *args, **kwargs)
                 return result
             return wrapper
@@ -47,11 +47,11 @@ def param(name, controler, default=None):
             original_init = target.__init__
             def new_init(self, config: SSUIConfig, *args, **kwargs):    
                 if name not in config:
-                    config[name] = {
+                    config.register(name, {
                         "controler": controler.__class__.__name__,
                         "args": controler,
                         "default": default
-                    }
+                    })
                 original_init(self, config, *args, **kwargs)
             target.__init__ = new_init
             return target

@@ -16,36 +16,37 @@ class SSUIConfig:
     
     def __getitem__(self, name):
         if self.is_prepare():
+            print('getitem prepare: ', self._current, name)
             return self._config[self._current][name]
         else:
             if self._update.get(self._current) is not None:
                 if self._update[self._current].get(name) is not None:
+                    print('getitem update: ', self._update[self._current][name])
                     return self._update[self._current][name]
+            print(self._config[self._current])
+            print('getitem default: ', self._config[self._current][name]['default'])
             return self._config[self._current][name]['default']
     
     def __contains__(self, name):
-        if self.is_prepare():
-            if self._config.get(self._current) is not None:
-                return self._config[self._current].get(name) is not None
-            else:
-                return False
-        else:
+        if not self.is_prepare():
             if self._update.get(self._current) is not None:
                 return self._update[self._current].get(name) is not None
-            else:
-                if self._config.get(self._current) is not None:
-                    return self._config[self._current].get(name) is not None
-                else:
-                    return False
+            
+        if self._config.get(self._current) is not None:
+            return self._config[self._current].get(name) is not None
+        else:
+            return False
 
     def __setitem__(self, name, value):
-        if self.is_prepare():
-            self._config[self._current][name] = value
+        if self._update.get(self._current) is not None:
+            self._update[self._current][name] = value
         else:
-            if self._update.get(self._current) is not None:
-                self._update[self._current][name] = value
-            else:
-                self._update[self._current] = {name: value}
+            self._update[self._current] = {name: value}
+    
+    def register(self, name, value):
+        if self._config[self._current].get(name) is None:
+            self._config[self._current][name] = {}
+        self._config[self._current][name] = value
     
     def is_prepare(self):
         return self._is_prepare
