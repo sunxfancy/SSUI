@@ -91,6 +91,24 @@ def scan_target_dir(scan_dir: str, client_id: str, request_uuid: str):
     scaned_models = []
     if os.path.exists(scan_dir):
         for dirpath, dirnames, filenames in os.walk(scan_dir):
+            # 首先检查当前目录是否是一个模型
+            try:
+                model_config = ModelInfoCache.get(dirpath)
+                if model_config:
+                    # 如果当前目录是一个模型，则跳过扫描其子目录
+                    scaned_models.append({"path": dirpath, "name": os.path.basename(dirpath)})
+                    send_message(
+                        client_id,
+                        request_uuid,
+                        {"find_model": {"path": dirpath, "name": os.path.basename(dirpath)}},
+                    )
+                    # 清空dirnames列表，这样os.walk就不会继续扫描子目录
+                    dirnames.clear()
+                    continue
+            except Exception:
+                # 如果当前目录不是模型，继续正常扫描
+                pass
+
             for filename in filenames:
                 if (
                     filename.endswith(".safetensors")

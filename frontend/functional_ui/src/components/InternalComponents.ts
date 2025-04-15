@@ -1,4 +1,4 @@
 import './Image/ImageUploader';
-import './Loader/SD1Loader';
+import './Loader/SDLoader';
 import './Base/StringEditor';
 import './Base/PromptEditor';

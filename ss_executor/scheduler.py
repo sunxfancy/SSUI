@@ -290,6 +290,11 @@ class TaskScheduler:
         """设置任务完成事件"""
         if task_id in self.task_completion_events:
             self.task_completion_events[task_id].set()
+        # 如何还有其他任务
+        if self.task_queue.qsize() > 0:
+            priority, task_id = await self.task_queue.get()
+            logger.info(f"尝试分配任务 {task_id}")
+            self._try_assign_task(self.tasks[task_id])
 
     async def _check_all_tasks_completion(self):
         """检查是否所有任务都已完成"""
