@@ -62,10 +62,18 @@ yarn
 ### Run Development Server
 
 ```bash
-yarn dev
+yarn dev:server
+yarn dev:functional_ui
+yarn dev:desktop
 ```
 
-Application server: http://127.0.0.1:7422/
-API documentation server: http://127.0.0.1:7422/docs
-Web UI dev server: http://127.0.0.1:7420/
-Example: http://127.0.0.1:7420/script?path=<example_path>
+- Application server: http://127.0.0.1:7422/
+- API documentation server: http://127.0.0.1:7422/docs
+- Web UI dev server: http://127.0.0.1:7420/
+
+### Run the example
+
+Example URL: 
+```
+http://127.0.0.1:7420/script?path=<example_path>/basic/workflow-sd1.py
+```

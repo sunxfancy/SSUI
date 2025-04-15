@@ -12,7 +12,6 @@
     "extension_builder"
   ],
   "scripts": {
-    "dev": "concurrently \"yarn dev:desktop\" \"yarn dev:server\" \"yarn dev:functional_ui\" \"yarn dev:components\"",
     "dev:desktop_ui": "cd desktop && yarn dev",
     "dev:desktop_sb": "cd desktop && yarn storyboard",
     "dev:desktop": "cd desktop && yarn tauri dev",
