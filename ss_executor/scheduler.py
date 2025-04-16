@@ -22,7 +22,6 @@ class TaskScheduler:
         self.task_queue = asyncio.PriorityQueue()
         self.lock = asyncio.Lock()
         self.server = None
-        self.executor_process = None
         
         # 事件通知
         self.task_completion_events: Dict[str, asyncio.Event] = {}
@@ -39,25 +38,7 @@ class TaskScheduler:
                 5000
             )
             print("任务调度器已启动")
-            
-            python_path = sys.executable
-            script_path = os.path.join(os.path.dirname(__file__), 'executor_main.py')
-            
-            self.executor_process = await asyncio.create_subprocess_exec(
-                python_path,
-                script_path,
-                stdout=asyncio.subprocess.PIPE,
-                stderr=asyncio.subprocess.PIPE,
-                cwd=os.path.dirname(os.path.dirname(__file__)),
-                env={**os.environ},
-                close_fds=True
-            )
-            
-            # 创建异步任务来处理输出
-            asyncio.create_task(self._handle_process_output(self.executor_process.stdout, "STDOUT"))
-            asyncio.create_task(self._handle_process_output(self.executor_process.stderr, "STDERR"))
-            
-            print("已启动执行器进程")
+          
         except Exception as e:
             print(f"启动调度器失败: {e}")
             print(traceback.format_exc())
@@ -79,12 +60,6 @@ class TaskScheduler:
                 await self._close_all_connections()
             except Exception as e:
                 print(f"停止调度器失败: {e}")
-            
-        # 关闭进程
-        if self.executor_process:
-            self.executor_process.terminate()
-            self.executor_process.wait()
-            self.executor_process = None
             
         print("任务调度器已停止")
         
@@ -365,10 +340,3 @@ class TaskScheduler:
         
         return self.tasks[task_id]
 
-    async def _handle_process_output(self, stream, prefix):
-        """处理进程输出的异步任务"""
-        try:
-            async for line in stream:
-                print(f"[{prefix}] {line.decode('utf-8').strip()}")
-        except Exception as e:
-            print(f"处理进程输出时出错: {e}")

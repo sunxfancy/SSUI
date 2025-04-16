@@ -3,6 +3,7 @@ import threading
 from typing import Optional
 import uuid
 import aioshutil
+import time
 from fastapi import Body, FastAPI, WebSocket
 from fastapi.responses import FileResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
@@ -12,6 +13,7 @@ import torch.torch_version
 import sys
 import os
 import json
+import signal
 from backend.model_manager.config import ModelType
 from backend.model_manager.probe import ModelProbe
 from ss_executor.model import Task
