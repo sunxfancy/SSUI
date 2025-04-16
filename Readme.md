@@ -67,6 +67,11 @@ yarn dev:functional_ui
 yarn dev:desktop
 ```
 
+Then start a executor for running the task:
+```bash
+yarn dev:executor
+```
+
 - Application server: http://127.0.0.1:7422/
 - API documentation server: http://127.0.0.1:7422/docs
 - Web UI dev server: http://127.0.0.1:7420/
@@ -75,5 +80,5 @@ yarn dev:desktop
 
 Example URL: 
 ```
-http://127.0.0.1:7420/script?path=<example_path>/basic/workflow-sd1.py
+http://127.0.0.1:7420/?path=<example_path>/basic/workflow-sd1.py
 ```
