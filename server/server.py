@@ -57,6 +57,7 @@ settings = (
 
 # 这是一个全局websocket的连接用户表
 ws_clients = {}
+ws_is_running = True
 loop = asyncio.get_event_loop()
 scheduler = TaskScheduler()
 
@@ -70,6 +71,7 @@ async def lifespan(app: FastAPI):
     # 关闭所有连接
     print("closing scheduler and all websocket connections.")
     await scheduler.stop()
+    ws_is_running = False
     for name, connection in ws_clients.items():
         await connection.close()
 
@@ -337,7 +339,7 @@ async def websocket_endpoint(websocket: WebSocket):
     try:
         print("sending uuid to client")
         await websocket.send_text(json.dumps({"type": "uuid", "uuid": client_id}))
-        while True:
+        while ws_is_running:
             await websocket.receive_text()  # 保持连接
     except Exception as e:
         print("client disconnected: ", e)
@@ -371,7 +373,6 @@ def send_finish(
 
 # 对于静态数据的请求，使用文件资源管理器
 if settings.host_web_ui:
-
     @app.get("/", response_class=RedirectResponse)
     async def root():
         return "/index.html"

@@ -3,7 +3,7 @@ import asyncio
 import logging
 from typing import Dict, List, Optional, Any, Union, Tuple
 from datetime import datetime
-from .model import Task, TaskStatus, ExecutorInfo, ExecutorRegister, RegisterResponse, UpdateStatus, TaskResult, ExeMessage
+from .model import KillMessage, Task, TaskStatus, ExecutorInfo, ExecutorRegister, RegisterResponse, UpdateStatus, TaskResult, ExeMessage
 import websockets
 from .executor_main import main
 import traceback
@@ -29,9 +29,6 @@ class TaskScheduler:
         self.task_completion_events: Dict[str, asyncio.Event] = {}
         self.all_tasks_completion_event = asyncio.Event()
         
-        # 清理任务
-        self._cleanup_task: Optional[asyncio.Task] = None
-        self.pool = None
 
     async def start(self):
         """启动调度器"""
@@ -52,16 +49,12 @@ class TaskScheduler:
     
     async def stop(self):
         """停止调度器"""
-        # 取消清理任务
-        if self._cleanup_task:
-            try:
-                self._cleanup_task.cancel()
-                await self._cleanup_task
-            except asyncio.CancelledError:
-                pass
-
         if self.server:
             try:
+                # 广播停止消息
+                for ws in self.executor_websockets.values():
+                    await ws.send(KillMessage().model_dump_json())
+
                 # 关闭WebSocket服务器
                 self.server.close()
                 await self.server.wait_closed()
@@ -194,10 +187,16 @@ class TaskScheduler:
     def _find_available_executor(self) -> Tuple[Optional[ExecutorInfo], Optional[websockets.ClientConnection]]:
         """查找可用的执行器"""
         for executor_id, executor in self.executors.items():
-            if (executor.is_active and 
-                executor.current_tasks < executor.max_tasks and 
-                (datetime.now() - executor.last_heartbeat).seconds < 30):
+            is_active = executor.is_active
+            has_capacity = executor.current_tasks < executor.max_tasks
+            is_heartbeat_valid = (datetime.now() - executor.last_heartbeat).seconds < 30
+            
+            logger.debug(f"执行器 {executor_id} 状态: 活动={is_active}, 容量={has_capacity}, 心跳有效={is_heartbeat_valid}")
+            
+            if is_active and has_capacity and is_heartbeat_valid:
                 return executor, self.executor_websockets.get(executor_id)
+        
+        logger.warning("没有可用的执行器")
         return None, None
 
     def _update_task_and_executor_status(self, task: Task, executor: ExecutorInfo):
@@ -249,6 +248,12 @@ class TaskScheduler:
         task_id = message.task_id
         if task_id in self.tasks:
             self.tasks[task_id].status = message.status
+            
+            # 如果任务状态更新为RUNNING，尝试分配队列中的下一个任务
+            if message.status == TaskStatus.RUNNING and self.task_queue.qsize() > 0:
+                priority, next_task_id = await self.task_queue.get()
+                logger.info(f"状态更新触发：尝试分配任务 {next_task_id}")
+                self._try_assign_task(self.tasks[next_task_id])
 
     async def _handle_task_result(self, message: TaskResult, executor: ExecutorInfo):
         """处理任务结果"""

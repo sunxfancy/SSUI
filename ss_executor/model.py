@@ -62,7 +62,10 @@ class TaskResult(BaseModel):
     result: Optional[Any] = Field(default=None, description="The result of the task")
     error: Optional[str] = Field(default=None, description="The error of the task")
 
-ExeMessage = TypeAdapter(Annotated[Union[ExecutorRegister, RegisterResponse, UpdateStatus, Task, TaskResult], Field(discriminator="type")])
+class KillMessage(BaseModel):
+    type: Literal["kill"] = Field(default="kill")
+
+ExeMessage = TypeAdapter(Annotated[Union[ExecutorRegister, RegisterResponse, UpdateStatus, Task, TaskResult, KillMessage], Field(discriminator="type")])
 
 
 class ExecutorInfo:

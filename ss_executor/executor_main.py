@@ -10,7 +10,7 @@ import logging
 from ss_executor.loader import SSLoader, search_project_root
 from ssui.base import Image
 from .sandbox import Sandbox
-from .model import TaskStatus, Task, ExecutorRegister, RegisterResponse, UpdateStatus, TaskResult, ExeMessage
+from .model import KillMessage, TaskStatus, Task, ExecutorRegister, RegisterResponse, UpdateStatus, TaskResult, ExeMessage
 import traceback
 
 logging.basicConfig(level=logging.INFO)
@@ -20,10 +20,11 @@ class Executor:
     def __init__(self, scheduler_url: str = "ws://localhost:5000/"):
         self.scheduler_url = scheduler_url
         self.current_task: Optional[Task] = None
+        self.is_running = True
         
     async def connect(self):
         """连接到调度器服务器"""
-        while True:
+        while self.is_running:
             try:
                 async with websockets.connect(self.scheduler_url) as websocket:
                     # 发送注册消息
@@ -56,7 +57,7 @@ class Executor:
                 
     async def _handle_messages(self, websocket):
         """处理来自调度器的消息"""
-        while True:
+        while self.is_running:
             try:
                 # 使用ExeMessage解析消息
                 async for message in websocket:
@@ -66,6 +67,10 @@ class Executor:
                         await self._handle_task(websocket, exe_message)
                     elif isinstance(exe_message, UpdateStatus):
                         logger.info(f"收到更新状态消息: {exe_message}")
+                    elif isinstance(exe_message, KillMessage):
+                        logger.info(f"收到停止消息")
+                        self.is_running = False
+                        return
                     else:
                         logger.error(f"收到未知消息类型: {exe_message}")
             except Exception as e:
@@ -85,7 +90,6 @@ class Executor:
             await websocket.send(status_update.model_dump_json())
             
             # 执行任务
-
             loader = SSLoader(use_sandbox=task.use_sandbox)
             loader.load(task.script)
             loader.Execute()
