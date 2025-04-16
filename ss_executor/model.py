@@ -83,7 +83,6 @@ class ExecutorInfo:
         self.max_tasks = max_tasks
         self.capabilities = capabilities or []
         self.current_tasks = 0
-        self.last_heartbeat = time.time()
         self.is_active = True
 
     def to_dict(self) -> Dict[str, Any]:
@@ -94,7 +93,6 @@ class ExecutorInfo:
             "max_tasks": self.max_tasks,
             "capabilities": self.capabilities,
             "current_tasks": self.current_tasks,
-            "last_heartbeat": self.last_heartbeat,
             "is_active": self.is_active
         }
 
@@ -108,7 +106,6 @@ class ExecutorInfo:
             capabilities=data.get("capabilities")
         )
         executor.current_tasks = data.get("current_tasks", 0)
-        executor.last_heartbeat = data.get("last_heartbeat", time.time())
         executor.is_active = data.get("is_active", True)
         return executor
 

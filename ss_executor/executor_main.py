@@ -6,11 +6,23 @@ import websockets
 import json
 from typing import Dict, Optional, Union
 import logging
+import sys
+
+# 添加项目根目录到sys.path
+project_root = os.path.abspath(os.path.dirname(os.path.dirname(__file__)))
+sys.path.append(project_root)
+
+# 添加extensions目录到sys.path
+for dir in os.listdir(os.path.join(project_root, "extensions")):
+    yaml_path = os.path.join(project_root, "extensions", dir, "ssextension.yaml")
+    if os.path.exists(yaml_path):
+        sys.path.append(os.path.join(project_root, "extensions", dir))
+
 
 from ss_executor.loader import SSLoader, search_project_root
 from ssui.base import Image
-from .sandbox import Sandbox
-from .model import KillMessage, TaskStatus, Task, ExecutorRegister, RegisterResponse, UpdateStatus, TaskResult, ExeMessage
+from ss_executor.sandbox import Sandbox
+from ss_executor.model import KillMessage, TaskStatus, Task, ExecutorRegister, RegisterResponse, UpdateStatus, TaskResult, ExeMessage
 import traceback
 
 logging.basicConfig(level=logging.INFO)
@@ -170,6 +182,7 @@ class Executor:
             self.current_task = None
             
 def main():
+    print("executor_main.py 启动")
     import ssui
     import ssui_image
     async def _start():
@@ -177,3 +190,5 @@ def main():
         await executor.connect()
     asyncio.run(_start())
 
+if __name__ == "__main__":
+    main()

@@ -66,6 +66,7 @@ scheduler = TaskScheduler()
 async def lifespan(app: FastAPI):
     # 检测扩展
     ExtensionManager.instance().detectExtensions(app)
+    print("检测扩展完成")
     await scheduler.start()
     yield
     # 关闭所有连接

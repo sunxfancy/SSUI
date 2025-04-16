@@ -1,15 +1,13 @@
 # scheduler.py
 import asyncio
-import logging
+import os
+import sys
 from typing import Dict, List, Optional, Any, Union, Tuple
 from datetime import datetime
 from .model import KillMessage, Task, TaskStatus, ExecutorInfo, ExecutorRegister, RegisterResponse, UpdateStatus, TaskResult, ExeMessage
 import websockets
-from .executor_main import main
 import traceback
-from multiprocessing import Pool
-
-logger = logging.getLogger("TaskScheduler")
+import subprocess
 
 class TaskScheduler:
     """异步任务调度器，用于管理执行器连接和任务分配"""
@@ -24,6 +22,7 @@ class TaskScheduler:
         self.task_queue = asyncio.PriorityQueue()
         self.lock = asyncio.Lock()
         self.server = None
+        self.executor_process = None
         
         # 事件通知
         self.task_completion_events: Dict[str, asyncio.Event] = {}
@@ -33,18 +32,35 @@ class TaskScheduler:
     async def start(self):
         """启动调度器"""
         try:
+            print("启动调度器服务器，监听端口5000")
             self.server = await websockets.serve(
                 self.handle_executor_connection, 
                 "localhost", 
                 5000
             )
-            logger.info("任务调度器已启动")
+            print("任务调度器已启动")
             
-            # 使用进程池，确保子进程和父进程使用相同的sys.path
-            self.pool = Pool(processes=1)
-            self.pool.apply_async(main)
+            python_path = sys.executable
+            script_path = os.path.join(os.path.dirname(__file__), 'executor_main.py')
+            
+            self.executor_process = await asyncio.create_subprocess_exec(
+                python_path,
+                script_path,
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.PIPE,
+                cwd=os.path.dirname(os.path.dirname(__file__)),
+                env={**os.environ},
+                close_fds=True
+            )
+            
+            # 创建异步任务来处理输出
+            asyncio.create_task(self._handle_process_output(self.executor_process.stdout, "STDOUT"))
+            asyncio.create_task(self._handle_process_output(self.executor_process.stderr, "STDERR"))
+            
+            print("已启动执行器进程")
         except Exception as e:
-            logger.error(f"启动调度器失败: {e}")
+            print(f"启动调度器失败: {e}")
+            print(traceback.format_exc())
             raise
     
     async def stop(self):
@@ -62,14 +78,15 @@ class TaskScheduler:
                 # 关闭所有执行器连接
                 await self._close_all_connections()
             except Exception as e:
-                logger.error(f"停止调度器失败: {e}")
+                print(f"停止调度器失败: {e}")
             
-        # 关闭进程池
-        if self.pool:
-            self.pool.terminate()
-            self.pool.join()
+        # 关闭进程
+        if self.executor_process:
+            self.executor_process.terminate()
+            self.executor_process.wait()
+            self.executor_process = None
             
-        logger.info("任务调度器已停止")
+        print("任务调度器已停止")
         
 
     async def _close_all_connections(self):
@@ -78,7 +95,7 @@ class TaskScheduler:
             try:
                 await ws.close()
             except Exception as e:
-                logger.error(f"关闭连接失败: {e}")
+                print(f"关闭连接失败: {e}")
         
         self.executor_websockets.clear()
         self.executors.clear()
@@ -91,9 +108,9 @@ class TaskScheduler:
             await self._handle_new_connection(executor_id, websocket)
             await self._process_messages(executor_id, websocket)
         except websockets.exceptions.ConnectionClosed:
-            logger.info(f"执行器 {executor_id} 已断开连接")
+            print(f"执行器 {executor_id} 已断开连接")
         except Exception as e:
-            logger.error(f"处理执行器连接异常:\n{traceback.format_exc()}")
+            print(f"处理执行器连接异常:\n{traceback.format_exc()}")
         finally:
             await self._cleanup_connection(executor_id)
 
@@ -125,7 +142,7 @@ class TaskScheduler:
                 exe_message = ExeMessage.validate_json(message)
                 await self._process_executor_message(executor_id, exe_message)
             except Exception as e:
-                logger.error(f"处理消息失败: {e}")
+                print(f"处理消息失败: {e}")
 
     async def _cleanup_connection(self, executor_id: str):
         """清理执行器连接"""
@@ -141,10 +158,10 @@ class TaskScheduler:
         self.all_tasks_completion_event.clear()
         
         if self._try_assign_task(task):
-            logger.info(f"任务 {task.task_id} 已立即分配给执行器")
+            print(f"任务 {task.task_id} 已立即分配给执行器")
         else:
             asyncio.create_task(self.task_queue.put((-task.priority, task.task_id)))
-            logger.info(f"任务 {task.task_id} 已加入队列")
+            print(f"任务 {task.task_id} 已加入队列")
         
         return task.task_id
 
@@ -180,7 +197,7 @@ class TaskScheduler:
             asyncio.create_task(websocket.send(task.model_dump_json()))
             return True
         except Exception as e:
-            logger.error(f"分配任务时出错:\n{traceback.format_exc()}")
+            print(f"分配任务时出错:\n{traceback.format_exc()}")
             self._revert_task_assignment(task, executor)
             return False
 
@@ -189,14 +206,13 @@ class TaskScheduler:
         for executor_id, executor in self.executors.items():
             is_active = executor.is_active
             has_capacity = executor.current_tasks < executor.max_tasks
-            is_heartbeat_valid = (datetime.now() - executor.last_heartbeat).seconds < 30
             
-            logger.debug(f"执行器 {executor_id} 状态: 活动={is_active}, 容量={has_capacity}, 心跳有效={is_heartbeat_valid}")
+            print(f"执行器 {executor_id} 状态: 活动={is_active}, 容量={has_capacity}")
             
-            if is_active and has_capacity and is_heartbeat_valid:
+            if is_active and has_capacity:
                 return executor, self.executor_websockets.get(executor_id)
         
-        logger.warning("没有可用的执行器")
+        print("没有可用的执行器")
         return None, None
 
     def _update_task_and_executor_status(self, task: Task, executor: ExecutorInfo):
@@ -220,7 +236,6 @@ class TaskScheduler:
                 return
                 
             executor = self.executors[executor_id]
-            executor.last_heartbeat = datetime.now()
             
             if isinstance(message, ExecutorRegister):
                 await self._handle_executor_register(executor_id)
@@ -236,11 +251,11 @@ class TaskScheduler:
             message="注册成功"
         )
         await self.executor_websockets[executor_id].send(register_response.model_dump_json())
-        logger.info(f"执行器 {executor_id} 已注册")
+        print(f"执行器 {executor_id} 已注册")
         
         if self.task_queue.qsize() > 0:
             priority, task_id = await self.task_queue.get()
-            logger.info(f"尝试分配任务 {task_id}")
+            print(f"尝试分配任务 {task_id}")
             self._try_assign_task(self.tasks[task_id])
 
     async def _handle_status_update(self, message: UpdateStatus):
@@ -252,7 +267,7 @@ class TaskScheduler:
             # 如果任务状态更新为RUNNING，尝试分配队列中的下一个任务
             if message.status == TaskStatus.RUNNING and self.task_queue.qsize() > 0:
                 priority, next_task_id = await self.task_queue.get()
-                logger.info(f"状态更新触发：尝试分配任务 {next_task_id}")
+                print(f"状态更新触发：尝试分配任务 {next_task_id}")
                 self._try_assign_task(self.tasks[next_task_id])
 
     async def _handle_task_result(self, message: TaskResult, executor: ExecutorInfo):
@@ -275,7 +290,7 @@ class TaskScheduler:
         task.completed_at = str(datetime.now())
         task.executor_id = None
         executor.current_tasks = max(0, executor.current_tasks - 1)
-        logger.info(f"任务 {task.task_id} 已完成")
+        print(f"任务 {task.task_id} 已完成")
         
         await self._set_task_completion_event(task.task_id)
         await self._check_all_tasks_completion()
@@ -286,7 +301,7 @@ class TaskScheduler:
         task.completed_at = str(datetime.now())
         task.executor_id = None
         executor.current_tasks = max(0, executor.current_tasks - 1)
-        logger.info(f"任务 {task.task_id} 失败，错误信息：{message.error}")
+        print(f"任务 {task.task_id} 失败，错误信息：{message.error}")
         
         await self._set_task_completion_event(task.task_id)
         await self._check_all_tasks_completion()
@@ -298,7 +313,7 @@ class TaskScheduler:
         # 如何还有其他任务
         if self.task_queue.qsize() > 0:
             priority, task_id = await self.task_queue.get()
-            logger.info(f"尝试分配任务 {task_id}")
+            print(f"尝试分配任务 {task_id}")
             self._try_assign_task(self.tasks[task_id])
 
     async def _check_all_tasks_completion(self):
@@ -317,13 +332,13 @@ class TaskScheduler:
                 return await self._wait_for_all_tasks(timeout)
             return await self._wait_for_single_task(task_id, timeout)
         except asyncio.TimeoutError:
-            logger.warning(f"等待任务完成超时")
+            print(f"等待任务完成超时")
             return None
 
     async def _wait_for_all_tasks(self, timeout: Optional[float]) -> Optional[List[Task]]:
         """等待所有任务完成"""
         if not self.tasks:
-            logger.info("没有任务需要等待")
+            print("没有任务需要等待")
             return []
         
         if timeout is not None:
@@ -336,7 +351,7 @@ class TaskScheduler:
     async def _wait_for_single_task(self, task_id: str, timeout: Optional[float]) -> Optional[Task]:
         """等待单个任务完成"""
         if task_id not in self.tasks:
-            logger.warning(f"任务 {task_id} 不存在")
+            print(f"任务 {task_id} 不存在")
             return None
         
         task = self.tasks[task_id]
@@ -349,3 +364,11 @@ class TaskScheduler:
             await self.task_completion_events[task_id].wait()
         
         return self.tasks[task_id]
+
+    async def _handle_process_output(self, stream, prefix):
+        """处理进程输出的异步任务"""
+        try:
+            async for line in stream:
+                print(f"[{prefix}] {line.decode('utf-8').strip()}")
+        except Exception as e:
+            print(f"处理进程输出时出错: {e}")
