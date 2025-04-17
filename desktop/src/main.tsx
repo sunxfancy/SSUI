@@ -3,8 +3,6 @@ import ReactDOM from "react-dom/client";
 import App from "./App";
 import Install from "./Install";
 import tray_init from "./tray.js";
-import { load } from '@tauri-apps/plugin-store';
-import { invoke } from '@tauri-apps/api/core';
 import { BlueprintProvider } from "@blueprintjs/core";
 import GlobalStateManager from "./services/GlobalState";
 import ExecutorService from "./services/Executor";

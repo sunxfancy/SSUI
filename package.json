@@ -32,7 +32,7 @@
     "ext:package_Audio": "cd extensions/Audio && ssext package -o ../../desktop/src-tauri/resources/extensions/",
     "test": "node dependencies/venv.cjs python tests/run_tests.py",
     "test_on": "node dependencies/venv.cjs python tests/run_tests.py --test",
-    "package": "yarn build:components && yarn build:functional_ui && yarn build:desktop_ui",
+    "package": "yarn build:components && yarn build:functional_ui && yarn build:desktop",
     "check_deps": "yarn --version && rustc --version && cargo --version",
     "requirements": "node dependencies/combine_requirements.cjs",
     "install-requirements": "node dependencies/venv.cjs uv pip install -r .venv/requirements.txt",

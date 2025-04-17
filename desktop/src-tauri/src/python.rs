@@ -7,6 +7,8 @@ use std::sync::Mutex;
 use lazy_static::lazy_static;
 use std::process::Child;
 use std::collections::HashMap;
+#[cfg(windows)]
+use std::os::windows::process::CommandExt; // 只在windows平台引入CommandExt
 
 pub struct BackgroundProcessesGuard {
     processes: Mutex<Vec<Child>>
@@ -297,12 +299,20 @@ async fn spawn_python_process(path: &str, cwd: &str, args: Vec<&str>) -> Result<
     let error_log_file = File::create(&error_log_path)
         .map_err(|e| format!("无法创建错误日志文件: {}", e))?;
     
-    let child = Command::new(path)
-        .args(args.clone())
+    let mut cmd = Command::new(path);
+    cmd.args(args.clone())
         .current_dir(cwd)
         .stdout(log_file)
         .stderr(error_log_file)
-        .spawn()
+        .env("PYTHONIOENCODING", "utf-8");
+
+    //在Windows上设置creation_flags 防治创建cmd窗口
+    #[cfg(windows)]
+    {
+        cmd.creation_flags(0x08000000); // CREATE_NO_WINDOW
+    }
+    
+    let child = cmd.spawn()
         .map_err(|e| format!("无法启动进程: {}", e))?;
     
     Ok(child)

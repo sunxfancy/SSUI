@@ -99,7 +99,7 @@ export class TauriModelsProvider implements ModelsProvider {
    * @param directoryId 监听目录ID
    * @returns 是否移除成功
    */
-  removeWatchedDirectory(directoryId: string): Promise<boolean> {
+  removeWatchedDirectory(_: string): Promise<boolean> {
     return Promise.resolve(false);
   }
   
@@ -108,7 +108,7 @@ export class TauriModelsProvider implements ModelsProvider {
    * @param event 拖放事件
    * @returns 文件路径
    */
-  getDroppedFilePath(event: React.DragEvent): Promise<string> {
+  getDroppedFilePath(_: React.DragEvent): Promise<string> {
     return Promise.resolve('');
   }
 }
