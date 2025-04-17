@@ -4,7 +4,7 @@ import { appDataDir, homeDir, join, resolveResource } from '@tauri-apps/api/path
 import { open } from '@tauri-apps/plugin-dialog';
 import { platform } from '@tauri-apps/plugin-os';
 import { IInstallerProvider, CommandInfo } from './IInstallerProvider';
-import { exists, writeTextFile } from '@tauri-apps/plugin-fs';
+import { exists, readDir, writeTextFile } from '@tauri-apps/plugin-fs';
 import { invoke } from '@tauri-apps/api/core';
 
 export class TauriInstallerProvider implements IInstallerProvider {
@@ -248,6 +248,17 @@ export class TauriInstallerProvider implements IInstallerProvider {
         });
         console.log('解压完成: ' + output);
 
+        const extensionsPath = await resolveResource('resources/extensions');
+        const entries = await readDir(extensionsPath);
+        console.log(entries);
+        const extensionInstallPath = await join(installConfig.path, 'extensions');
+        for (const entry of entries) {
+            const output = await invoke('unpack_app', {
+                tar_path: await join(extensionsPath, entry.name),
+                target_path: extensionInstallPath
+            });
+            console.log('解压插件完成: ' + output);
+        }
 
         const store = await load('settings.json', { autoSave: false });
         await store.set('root', installConfig);

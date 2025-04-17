@@ -4,7 +4,7 @@ from typing import Optional
 import uuid
 import aioshutil
 import time
-from fastapi import Body, FastAPI, WebSocket
+from fastapi import Body, FastAPI, Request, WebSocket
 from fastapi.responses import FileResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
@@ -392,7 +392,11 @@ def send_finish(
 # 对于静态数据的请求，使用文件资源管理器
 if settings.host_web_ui:
     @app.get("/", response_class=RedirectResponse)
-    async def root():
-        return "/index.html"
+    async def root(request: Request):
+        query_string = request.url.query
+        redirect_url = "/index.html"
+        if query_string:
+            redirect_url += f"?{query_string}"
+        return RedirectResponse(url=redirect_url)
 
     app.mount("/", StaticFiles(directory=settings.host_web_ui), name="static")

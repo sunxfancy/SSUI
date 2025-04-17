@@ -49,17 +49,27 @@ export async function packageExtension(outputDir?: string): Promise<void> {
     
     // 创建临时目录存放打包文件
     const tempDir = path.join(currentDir, '.tmp_package');
-    await fs.ensureDir(tempDir);
+    const extensionDir = path.join(tempDir, config.name);
+    await fs.ensureDir(extensionDir);
     
     try {
       // 复制必要文件到临时目录
-      await fs.copy(configPath, path.join(tempDir, 'ssextension.yaml'));
+      await fs.copy(configPath, path.join(extensionDir, 'ssextension.yaml'));
       
       // 复制Python文件
       if (config.server && config.server.main) {
         const mainPyFile = path.join(currentDir, config.server.main);
         if (fs.existsSync(mainPyFile)) {
-          await fs.copy(mainPyFile, path.join(tempDir, config.server.main));
+          await fs.copy(mainPyFile, path.join(extensionDir, config.server.main));
+
+          if (config.server.packages) {
+            for (const pack of config.server.packages) {
+              const packageFile = path.join(currentDir, pack);
+              if (fs.existsSync(packageFile)) {
+                await fs.copy(packageFile, path.join(extensionDir, pack));
+              }
+            }
+          }
         } else {
           console.warn(chalk.yellow(`警告: 未找到主Python文件 ${config.server.main}`));
         }
@@ -69,7 +79,7 @@ export async function packageExtension(outputDir?: string): Promise<void> {
       if (config.web_ui && config.web_ui.dist) {
         const distDir = path.join(currentDir, config.web_ui.dist);
         if (fs.existsSync(distDir)) {
-          await fs.copy(distDir, path.join(tempDir, 'dist'));
+          await fs.copy(distDir, path.join(extensionDir, 'dist'));
         } else {
           console.warn(chalk.yellow(`警告: 未找到Web UI构建目录 ${config.web_ui.dist}`));
         }
