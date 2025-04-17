@@ -61,9 +61,7 @@ settings = (
 # 这是一个全局websocket的连接用户表
 ws_clients = {}
 ws_is_running = True
-loop = asyncio.get_event_loop()
 scheduler = TaskScheduler()
-
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -107,7 +105,7 @@ async def config(config: dict):
     return {"message": "Config updated"}
 
 
-def scan_target_dir(scan_dir: str, client_id: str, request_uuid: str):
+def scan_target_dir(scan_dir: str, client_id: str, request_uuid: str, loop: asyncio.AbstractEventLoop):
     scaned_models = []
     if os.path.exists(scan_dir):
         for dirpath, dirnames, filenames in os.walk(scan_dir):
@@ -118,6 +116,7 @@ def scan_target_dir(scan_dir: str, client_id: str, request_uuid: str):
                     # 如果当前目录是一个模型，则跳过扫描其子目录
                     scaned_models.append({"path": dirpath, "name": os.path.basename(dirpath)})
                     send_message(
+                        loop,
                         client_id,
                         request_uuid,
                         {"find_model": {"path": dirpath, "name": os.path.basename(dirpath)}},
@@ -146,13 +145,14 @@ def scan_target_dir(scan_dir: str, client_id: str, request_uuid: str):
                         model_config = ModelInfoCache.get(model_path)
                         scaned_models.append({"path": model_path, "name": filename})
                         send_message(
+                            loop,
                             client_id,
                             request_uuid,
                             {"find_model": {"path": model_path, "name": filename}},
                         )
                     except Exception as e:
                         continue
-    send_finish(client_id, request_uuid, {"models": scaned_models})
+    send_finish(loop, client_id, request_uuid, {"models": scaned_models})
 
 
 class ScanModelsRequest(BaseModel):
@@ -166,8 +166,10 @@ async def scan_models(client_id: str, request: ScanModelsRequest):
     if not os.path.exists(scan_dir):
         return {"error": "Scan directory not found"}
     request_uuid = str(uuid.uuid4())
+
+    loop = asyncio.get_running_loop()
     threading.Thread(
-        target=scan_target_dir, args=(scan_dir, client_id, request_uuid), daemon=True
+        target=scan_target_dir, args=(scan_dir, client_id, request_uuid, loop), daemon=True
     ).start()
     return {
         "type": "start",
@@ -373,14 +375,14 @@ async def send_text(client_id: str, message: str):
             print("send_text error: ", e)
 
 
-def send_message(client_id: str, request_uuid: str, message: dict[str, any]):
+def send_message(loop: asyncio.AbstractEventLoop, client_id: str, request_uuid: str, message: dict[str, any]):
     print("send_message:", request_uuid, message)
     message = json.dumps({"type": "callback", "request_uuid": request_uuid, **message})
     loop.call_soon_threadsafe(asyncio.create_task, send_text(client_id, message))
 
 
 def send_finish(
-    client_id: str, request_uuid: str, message: Optional[dict[str, any]] = None
+    loop: asyncio.AbstractEventLoop, client_id: str, request_uuid: str, message: Optional[dict[str, any]] = None
 ):
     print("send_finish:", request_uuid, message)
     if message is None:
