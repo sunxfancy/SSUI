@@ -1,5 +1,5 @@
 import { TreeNodeInfo } from "@blueprintjs/core";
-import { IFilesystemProvider } from "../services/FilesystemProvider";
+import { IFilesystemProvider } from "../providers/FilesystemProvider";
 
 export class MockFilesystemProvider implements IFilesystemProvider {
     private mockFileSystem: Map<string, TreeNodeInfo[]> = new Map();

@@ -1,5 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Card, Elevation, Button, Tag, Spinner } from '@blueprintjs/core';
+import { Card, Elevation, Button, Tag, Spinner, Icon } from '@blueprintjs/core';
+import ExecutorService from '../services/Executor';
+import ServerService from '../services/Server';
+import { CommandInfo } from '../providers/IInstallerProvider';
 
 interface QueueItem {
   id: string;
@@ -25,9 +28,38 @@ const Queue: React.FC<QueueProps> = ({
   onResumeItem 
 }) => {
   const [visibleItems, setVisibleItems] = useState<QueueItem[]>([]);
+  const [executorStatus, setExecutorStatus] = useState<CommandInfo | null>(null);
+  const [serverStatus, setServerStatus] = useState<CommandInfo | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const itemHeight = 80; // 每个队列项的估计高度
   const bufferSize = 5; // 上下缓冲区的项目数量
+
+  // 获取服务状态
+  useEffect(() => {
+    const fetchStatus = async () => {
+      try {
+        // 获取执行器状态
+        const executorResult = await ExecutorService.getInstance().getExecutorStatus();
+        setExecutorStatus(executorResult);
+        
+        // 获取服务器状态
+        const serverResult = await ServerService.getInstance().getServerStatus();
+        setServerStatus(serverResult);
+      } catch (error) {
+        console.error('获取服务状态时出错:', error);
+      }
+    };
+    
+    // 初始获取状态
+    fetchStatus();
+    
+    // 设置定时器，每 30 秒更新一次状态
+    const intervalId = setInterval(fetchStatus, 30000);
+    
+    return () => {
+      clearInterval(intervalId);
+    };
+  }, []);
 
   // 根据滚动位置计算可见项
   const calculateVisibleItems = () => {
@@ -89,12 +121,36 @@ const Queue: React.FC<QueueProps> = ({
     }
   };
 
+  // 获取服务状态图标
+  const getServiceStatusIcon = (status: CommandInfo | null) => {
+    if (!status) return <Icon icon="circle" intent="none" />;
+    
+    // 检查消息中是否包含"运行中"或"启动成功"
+    const isRunning = status.message.includes('运行中') || status.message.includes('启动成功');
+    
+    if (isRunning) {
+      return <Icon icon="circle" intent="success" />;
+    } else if (status.message.includes('未在运行中')) {
+      return <Icon icon="circle" intent="none" />;
+    } else {
+      return <Icon icon="circle" intent="danger" />;
+    }
+  };
+
   return (
     <div style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
       <div style={{ padding: '10px', borderBottom: '1px solid #e1e8ed', display: 'flex', justifyContent: 'space-between' }}>
         <div>
           <h2 style={{ margin: 0 }}>任务队列</h2>
-          <div>共 {items.length} 个任务</div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <div>共 {items.length} 个任务</div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+              <span>执行器:</span>
+              {getServiceStatusIcon(executorStatus)}
+              <span style={{ marginLeft: '10px' }}>服务器:</span>
+              {getServiceStatusIcon(serverStatus)}
+            </div>
+          </div>
         </div>
         <div style={{ display: 'flex', gap: '2px' }}>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>

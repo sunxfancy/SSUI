@@ -3841,6 +3841,7 @@ name = "ssui"
 version = "0.1.0"
 dependencies = [
  "flate2",
+ "lazy_static",
  "serde",
  "serde_json",
  "tar",
