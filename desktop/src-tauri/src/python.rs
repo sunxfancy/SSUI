@@ -283,9 +283,13 @@ async fn spawn_python_process(path: &str, cwd: &str, args: Vec<&str>) -> Result<
     // 创建唯一的日志文件名
     let log_filename = format!("python_bg_{}.log", args_identifier);
     let error_log_filename = format!("python_bg_{}_error.log", args_identifier);
-    
-    let log_path = std::path::Path::new(cwd).join(&log_filename);
-    let error_log_path = std::path::Path::new(cwd).join(&error_log_filename);
+
+    let log_dir = std::path::Path::new(cwd).join("log");
+    if !log_dir.exists() {
+        std::fs::create_dir_all(&log_dir).map_err(|e| format!("无法创建日志目录: {}", e))?;
+    }
+    let log_path = log_dir.clone().join(&log_filename);
+    let error_log_path = log_dir.join(&error_log_filename);
     
     let log_file = File::create(&log_path)
         .map_err(|e| format!("无法创建日志文件: {}", e))?;

@@ -670,7 +670,4 @@ yarl==1.18.3
     # via aiohttp
 zipp==3.21.0
     # via importlib-metadata
-
-
-# 以下是原始requirements文件中的index URL配置
 --extra-index-url https://download.pytorch.org/whl/cu124
