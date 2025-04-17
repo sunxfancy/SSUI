@@ -278,6 +278,8 @@ class InstallPage extends React.Component<InstallPageProps, InstallPageState> {
       await this.provider.saveSettings({
         path: installDir,
         version: '0.1.0',
+        host: '127.0.0.1',
+        port: 7420,
         platform: currentPlatform,
         enableGPU,
         enableAutoUpdate

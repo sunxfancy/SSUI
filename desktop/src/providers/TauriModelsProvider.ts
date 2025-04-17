@@ -1,12 +1,14 @@
 import { Model, ModelsProvider, WatchedDirectory } from "./IModelsProvider";
 import { open } from '@tauri-apps/plugin-dialog';
 import { Message } from "ssui_components";
+import GlobalStateManager from "../services/GlobalState";
 
 export class TauriModelsProvider implements ModelsProvider {
     private message: Message;
 
     constructor() {
-        this.message = new Message("localhost", 7420);
+        const rootState = GlobalStateManager.getInstance().getRootState();
+        this.message = new Message(rootState?.host || "localhost", rootState?.port || 7420);
     }
 
       /**

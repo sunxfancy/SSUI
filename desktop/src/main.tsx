@@ -19,9 +19,10 @@ import "./App.css";
 const production = import.meta.env.PROD;
 
 interface RootState {
-  root?: { path: string, version: string };
+  root?: { path: string, version: string, host: string, port: number };
   isLoading: boolean;
 }
+
 
 class Root extends Component<{}, RootState> {
   private isInitialized: boolean = false;
@@ -37,32 +38,47 @@ class Root extends Component<{}, RootState> {
   async initRoot() {
     // 如果已经初始化过，则直接返回
     if (this.isInitialized) return;
-    
+
     try {
       // 标记为已初始化
       this.isInitialized = true;
-      
+
       // 初始化全局状态
       await GlobalStateManager.getInstance().initialize();
-      
+
       // 从全局状态获取 root 信息
       const rootState = GlobalStateManager.getInstance().getRootState();
       this.setState({ root: rootState || undefined });
-      
+
       if (rootState?.path) {
         console.log('root path:', rootState.path);
         console.log('root version:', rootState.version);
         tray_init();
-        
+
         // 自动启动服务
         try {
-          // 启动执行器服务
-          const executorResult = await ExecutorService.getInstance().startExecutor();
-          console.log('执行器服务启动结果:', executorResult.message);
-          
-          // 启动服务器服务
-          const serverResult = await ServerService.getInstance().startServer();
-          console.log('服务器服务启动结果:', serverResult.message);
+          if (!production) {
+            // 开发环境，需要先检查用户是否自己启动了执行器和服务器用来调试
+            
+            if (!rootState?.isServerRunning) {
+              // 启动服务器服务
+              const serverResult = await ServerService.getInstance().startServer();
+              console.log('服务器服务启动结果:', serverResult.message);
+
+              // 启动执行器服务
+              const executorResult = await ExecutorService.getInstance().startExecutor();
+              console.log('执行器服务启动结果:', executorResult.message);
+            }
+
+          } else {
+            // 启动服务器服务
+            const serverResult = await ServerService.getInstance().startServer();
+            console.log('服务器服务启动结果:', serverResult.message);
+
+            // 启动执行器服务
+            const executorResult = await ExecutorService.getInstance().startExecutor();
+            console.log('执行器服务启动结果:', executorResult.message);
+          }
         } catch (error) {
           console.error('启动服务时出错:', error);
         }

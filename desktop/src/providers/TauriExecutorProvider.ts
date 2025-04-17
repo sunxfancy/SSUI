@@ -40,10 +40,9 @@ export class TauriExecutorProvider implements IExecutorProvider {
       const pythonPath = await join(rootPath, currentPlatform === 'windows' ? '.venv\\Scripts\\python.exe' : '.venv/bin/python');
 
       // 启动 ss_executor 包
-      const result: any = await invoke('run_python_background', {
+      const result: any = await invoke('start_executor', {
         path: pythonPath,
         cwd: rootPath,
-        args: ['-m', 'ss_executor']
       });
 
       // 假设返回的结果中包含进程 ID
@@ -113,9 +112,7 @@ export class TauriExecutorProvider implements IExecutorProvider {
 
     try {
       // 检查进程是否仍在运行
-      const isAlive = await invoke('check_process', {
-        pid: this.processId
-      });
+      const isAlive = await invoke('get_executor_status');
 
       if (isAlive) {
         return {

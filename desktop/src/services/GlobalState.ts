@@ -5,7 +5,22 @@ import { invoke } from '@tauri-apps/api/core';
 export interface RootState {
   path: string;
   version: string;
+  host: string;
+  port: number;
+  isUIServerUsed?: boolean;
+  isServerRunning?: boolean;
 }
+
+async function checkServerStatus(host: string, port: number) {
+  try {
+    const response = await fetch(`http://${host}:${port}/api/version`);
+    return response.ok;
+  } catch (error) {
+    console.error('检查服务器状态失败:', error);
+    return false;
+  }
+}
+
 
 // 全局状态管理器
 class GlobalStateManager {
@@ -31,12 +46,14 @@ class GlobalStateManager {
       const production = import.meta.env.PROD;
       
       if (!production) {
+        const isUIServerUsed = await checkServerStatus("localhost", 7420);
+        const isServerRunning = await checkServerStatus("localhost", 7422);
         const path: string = await invoke("get_dev_root");
-        this.rootState = { path, version: 'dev' };
+        this.rootState = { path, version: 'dev', host: '127.0.0.1', port: isUIServerUsed ? 7420 : 7422, isUIServerUsed, isServerRunning };
       } else {
         const store = await load('settings.json', { autoSave: true });
         const rootData = await store.get<RootState>('root');
-        this.rootState = rootData || null;
+        this.rootState = rootData || null; 
       }
       
       this.isInitialized = true;

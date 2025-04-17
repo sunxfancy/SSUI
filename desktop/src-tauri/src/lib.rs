@@ -4,7 +4,12 @@ use gpu_detector::detect_gpu;
 use python::run_python;
 use python::run_python_background;
 use python::get_dev_root;
+use python::start_server;
+use python::start_executor;
+use python::get_server_status;
+use python::get_executor_status;
 use python::PROCESSES_GUARD;
+use python::PROCESS_MANAGER;
 mod gpu_detector;
 mod downloader;
 mod python;
@@ -25,7 +30,18 @@ pub fn run() {
         // .plugin(tauri_plugin_updater::Builder::new().build())
         .plugin(tauri_plugin_upload::init())
         .plugin(tauri_plugin_opener::init())
-        .invoke_handler(tauri::generate_handler![get_dev_root, download_python, detect_gpu, run_python, run_python_background, unpack_app])
+        .invoke_handler(tauri::generate_handler![
+            get_dev_root, 
+            download_python, 
+            detect_gpu, 
+            run_python,
+            run_python_background, 
+            unpack_app,
+            start_server,
+            start_executor,
+            get_server_status,
+            get_executor_status
+        ])
         .setup(|app| {
             Ok(())
         })
@@ -35,7 +51,10 @@ pub fn run() {
     app.run(move |_app_handle, _event| {
         match _event {
             tauri::RunEvent::Exit => {
+                // 关闭所有后台进程
                 PROCESSES_GUARD.kill_all_processes();
+                // 关闭特定类型进程
+                PROCESS_MANAGER.kill_all_processes();
             }
             _ => {}
         }
