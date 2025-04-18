@@ -74,7 +74,8 @@ export class TauriModelsProvider implements ModelsProvider {
       "model_path": modelPath,
       "create_softlink": true
     });
-    return result.success && result.message === "Models installed";
+    let success = result.message && result.message === "Models installed";
+    return success;
   }
   
   /**
