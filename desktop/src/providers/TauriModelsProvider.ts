@@ -40,8 +40,8 @@ export class TauriModelsProvider implements ModelsProvider {
     await this.message.post("config/scan_models", {
       "scan_dir": directoryPath
     }, {
-      "find_model": (data: any) => {
-        console.log("find_model: ", data);
+      "model_found": (data: any) => {
+        console.log("model_found: ", data);
         // 将找到的模型添加到列表中
         if (data && data.path && data.name) {
           const model: Model = {
@@ -74,7 +74,7 @@ export class TauriModelsProvider implements ModelsProvider {
       "model_path": modelPath,
       "create_softlink": true
     });
-    let success = result.message && result.message === "Models installed";
+    let success = result.type && result.type === "success";
     return success;
   }
   
