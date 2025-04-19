@@ -7,6 +7,7 @@ use std::sync::Mutex;
 use lazy_static::lazy_static;
 use std::process::Child;
 use std::collections::HashMap;
+use log::{info, error, warn, debug};
 #[cfg(windows)]
 use std::os::windows::process::CommandExt; // 只在windows平台引入CommandExt
 
@@ -22,18 +23,20 @@ impl BackgroundProcessesGuard {
     }
 
     pub fn add_process(&self, child: Child) {
+        debug!("添加后台进程");
         self.processes.lock().unwrap().push(child);
     }
 
     pub fn kill_all_processes(&self) {
-        println!("开始关闭后台进程");
+        info!("开始关闭所有后台进程");
         let mut processes = self.processes.lock().unwrap();
         for child in processes.iter_mut() {
             if let Err(e) = child.kill() {
-                eprintln!("无法终止进程: {}", e);
+                error!("无法终止进程: {}", e);
             }
         }
         processes.clear();
+        info!("所有后台进程已关闭");
     }
 }
 
@@ -50,13 +53,13 @@ impl ProcessManager {
     }
 
     pub fn add_process(&self, process_type: &str, child: Child) {
-        let mut processes = self.processes.lock().unwrap();
-        processes.insert(process_type.to_string(), child);
+        debug!("添加进程: {}", process_type);
+        self.processes.lock().unwrap().insert(process_type.to_string(), child);
     }
 
     pub fn get_process(&self, process_type: &str) -> Option<Child> {
-        let mut processes = self.processes.lock().unwrap();
-        processes.remove(process_type)
+        debug!("获取进程: {}", process_type);
+        self.processes.lock().unwrap().remove(process_type)
     }
 
     pub fn is_process_running(&self, process_type: &str) -> bool {
@@ -66,6 +69,7 @@ impl ProcessManager {
             match child.try_wait() {
                 Ok(Some(_)) => {
                     // 进程已退出，从管理器中移除
+                    info!("进程 {} 已终止", process_type);
                     processes.remove(process_type);
                     false
                 },
@@ -73,8 +77,9 @@ impl ProcessManager {
                     // 进程仍在运行
                     true
                 },
-                Err(_) => {
+                Err(e) => {
                     // 发生错误，假设进程仍在运行
+                    error!("终止进程 {} 失败: {}", process_type, e);
                     true
                 }
             }
@@ -99,14 +104,17 @@ impl ProcessManager {
     }
 
     pub fn kill_all_processes(&self) {
-        println!("开始关闭特定类型进程");
+        info!("开始关闭所有特定类型进程");
         let mut processes = self.processes.lock().unwrap();
         for (process_type, child) in processes.iter_mut() {
             if let Err(e) = child.kill() {
-                eprintln!("无法终止进程 {}: {}", process_type, e);
+                error!("无法终止进程 {}: {}", process_type, e);
+            } else {
+                info!("进程 {} 已终止", process_type);
             }
         }
         processes.clear();
+        info!("所有特定类型进程已关闭");
     }
 }
 
@@ -117,6 +125,8 @@ lazy_static! {
 
 #[tauri::command]
 pub async fn run_python(path: &str, cwd: &str, args: Vec<&str>) -> Result<String, String> {
+    info!("运行Python脚本: {} 在目录: {}", path, cwd);
+    debug!("Python参数: {:?}", args);
     let output = Command::new(path)
         .args(args.clone())
         .current_dir(cwd)
@@ -125,9 +135,14 @@ pub async fn run_python(path: &str, cwd: &str, args: Vec<&str>) -> Result<String
 
     let stdout = String::from_utf8(output.stdout).expect("failed to convert stdout to string");
     let stderr = String::from_utf8(output.stderr).expect("failed to convert stderr to string");
+
     if output.status.success() {
+        info!("Python脚本执行成功");
+        debug!("Python输出: {}", stdout);
         Ok(stdout)
     } else {
+        let err_msg = format!("Python脚本执行失败: {}", stderr);
+        error!("{}", err_msg);
         Err(stderr)
     }
 }
@@ -158,7 +173,7 @@ pub async fn run_python_background(path: &str, cwd: &str, args: Vec<&str>) -> Re
     } else {
         "no_args".to_string()
     };
-    
+    info!("在后台运行Python脚本: {} 在目录: {}", path, cwd);
     // 创建唯一的日志文件名
     let log_filename = format!("python_bg_{}_{}.log", args_identifier, timestamp);
     let error_log_filename = format!("python_bg_{}_{}_error.log", args_identifier, timestamp);
@@ -181,6 +196,7 @@ pub async fn run_python_background(path: &str, cwd: &str, args: Vec<&str>) -> Re
         .map_err(|e| format!("无法启动进程: {}", e))?;
 
     let pid = child.id().to_string();
+    info!("后台Python进程已启动，PID: {}", pid);
     // 将子进程添加到全局列表中
     PROCESSES_GUARD.add_process(child);
 
@@ -191,8 +207,10 @@ pub async fn run_python_background(path: &str, cwd: &str, args: Vec<&str>) -> Re
 // 启动服务器
 #[tauri::command]
 pub async fn start_server(path: &str, cwd: &str) -> Result<PythonCommand, String> {
+    info!("启动服务器: {} 在目录: {}", path, cwd);
     // 检查服务器是否已经运行
     if PROCESS_MANAGER.is_process_running("server") {
+        warn!("服务器已经在运行中");
         // 获取进程ID
         let pid = PROCESS_MANAGER.get_process_pid("server")
             .ok_or_else(|| "无法获取服务器进程ID".to_string())?;
@@ -205,6 +223,9 @@ pub async fn start_server(path: &str, cwd: &str) -> Result<PythonCommand, String
     
     // 记录服务器进程
     let pid = child.id().to_string();
+    info!("服务器进程已启动，PID: {}", pid);
+    
+    // 将进程添加到进程管理器
     PROCESS_MANAGER.add_process("server", child);
     
     Ok(PythonCommand { pid })
@@ -213,8 +234,11 @@ pub async fn start_server(path: &str, cwd: &str) -> Result<PythonCommand, String
 // 启动执行器
 #[tauri::command]
 pub async fn start_executor(path: &str, cwd: &str) -> Result<PythonCommand, String> {
-    // 检查执行器是否已经运行
+    info!("启动执行器: {} 在目录: {}", path, cwd);
+    
+    // 检查执行器是否已经在运行
     if PROCESS_MANAGER.is_process_running("executor") {
+        warn!("执行器已经在运行中");
         // 获取进程ID
         let pid = PROCESS_MANAGER.get_process_pid("executor")
             .ok_or_else(|| "无法获取执行器进程ID".to_string())?;
@@ -227,6 +251,9 @@ pub async fn start_executor(path: &str, cwd: &str) -> Result<PythonCommand, Stri
     
     // 记录执行器进程
     let pid = child.id().to_string();
+    info!("执行器进程已启动，PID: {}", pid);
+    
+    // 将进程添加到进程管理器
     PROCESS_MANAGER.add_process("executor", child);
     
     Ok(PythonCommand { pid })
@@ -235,6 +262,7 @@ pub async fn start_executor(path: &str, cwd: &str) -> Result<PythonCommand, Stri
 // 查询服务器状态
 #[tauri::command]
 pub async fn get_server_status() -> Result<ProcessStatus, String> {
+    debug!("获取服务器状态");
     let is_running = PROCESS_MANAGER.is_process_running("server");
     let pid = if is_running {
         PROCESS_MANAGER.get_process_pid("server")
@@ -251,6 +279,7 @@ pub async fn get_server_status() -> Result<ProcessStatus, String> {
 // 查询执行器状态
 #[tauri::command]
 pub async fn get_executor_status() -> Result<ProcessStatus, String> {
+    debug!("获取执行器状态");
     let is_running = PROCESS_MANAGER.is_process_running("executor");
     let pid = if is_running {
         PROCESS_MANAGER.get_process_pid("executor")
@@ -267,6 +296,7 @@ pub async fn get_executor_status() -> Result<ProcessStatus, String> {
 // 获取进程PID
 impl ProcessManager {
     pub fn get_process_pid(&self, process_type: &str) -> Option<String> {
+        debug!("获取进程 {} 的PID", process_type);
         let processes = self.processes.lock().unwrap();
         processes.get(process_type).map(|child| child.id().to_string())
     }

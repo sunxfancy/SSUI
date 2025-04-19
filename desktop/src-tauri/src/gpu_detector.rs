@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use log::{info, error, warn, debug};
 
 #[cfg(target_os = "windows")]
 use wmi::{COMLibrary, WMIConnection};
@@ -9,6 +10,7 @@ use winreg::RegKey;
 
 #[tauri::command]
 pub fn detect_gpu() -> Result<Vec<GpuInfo>, String> {
+    info!("开始检测GPU");
     let mut gpus = Vec::new();
 
     #[cfg(target_os = "windows")]
@@ -20,12 +22,14 @@ pub fn detect_gpu() -> Result<Vec<GpuInfo>, String> {
         let results: Vec<HashMap<String, wmi::Variant>> = wmi_con
             .raw_query("SELECT Caption, AdapterRAM FROM Win32_VideoController")
             .map_err(|e| e.to_string())?;
-
+        
         for gpu in results {
             let name = match gpu.get("Caption") {
                 Some(wmi::Variant::String(s)) => s.clone(),
                 _ => String::from("Unknown"),
             };
+            
+            debug!("GPU名称: {}", name);
             
             let mut vram: u64 = match gpu.get("AdapterRAM") {
                 Some(wmi::Variant::UI4(v)) => (*v as u64) / (1024 * 1024),
@@ -48,14 +52,16 @@ pub fn detect_gpu() -> Result<Vec<GpuInfo>, String> {
 
             let gpu_type = if name.to_lowercase().contains("nvidia") {
                 "NVIDIA"
-            } else if name.to_lowercase().contains("amd") {
+            } else if name.to_lowercase().contains("amd") || name.to_lowercase().contains("radeon") {
                 "AMD"
             } else if name.to_lowercase().contains("intel") {
                 "Intel"
             } else {
                 "Unknown"
             };
-
+            
+            debug!("GPU类型: {}", gpu_type);
+            
             gpus.push(GpuInfo {
                 name,
                 gpu_type: gpu_type.to_string(),
@@ -133,6 +139,7 @@ pub fn detect_gpu() -> Result<Vec<GpuInfo>, String> {
         }
     }
 
+    info!("GPU检测完成，找到 {} 个GPU", gpus.len());
     Ok(gpus)
 }
 

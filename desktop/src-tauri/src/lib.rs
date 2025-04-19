@@ -17,6 +17,10 @@ mod python;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
+    // 初始化日志系统
+    env_logger::init();
+    log::info!("应用程序启动");
+    
     let app = tauri::Builder::default()
         .plugin(tauri_plugin_os::init())
         .plugin(tauri_plugin_dialog::init())
@@ -43,6 +47,7 @@ pub fn run() {
             get_executor_status
         ])
         .setup(|app| {
+            log::info!("应用程序设置完成");
             Ok(())
         })
         .build(tauri::generate_context!())
@@ -51,6 +56,7 @@ pub fn run() {
     app.run(move |_app_handle, _event| {
         match _event {
             tauri::RunEvent::Exit => {
+                log::info!("应用程序退出，清理资源");
                 // 关闭所有后台进程
                 PROCESSES_GUARD.kill_all_processes();
                 // 关闭特定类型进程
