@@ -10,6 +10,7 @@ use python::get_server_status;
 use python::get_executor_status;
 use python::PROCESSES_GUARD;
 use python::PROCESS_MANAGER;
+use std::env;
 mod gpu_detector;
 mod downloader;
 mod python;
@@ -18,6 +19,11 @@ mod python;
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     // 初始化日志系统
+    #[cfg(debug_assertions)]
+    if env::var("RUST_LOG").is_err() {
+        env::set_var("RUST_LOG", "info")
+    }
+
     env_logger::init();
     log::info!("应用程序启动");
     

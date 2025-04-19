@@ -6,21 +6,13 @@ if not exist ".venv" mkdir .venv
 rem 检查Python是否已经存在
 if not exist ".venv\python\python.exe" (
     rem 检查操作系统类型
-    set OS_TYPE=%OS%
-    set ARCHITECTURE=%PROCESSOR_ARCHITECTURE%
     set PYTHON_VERSION=3.12.8
     set RELEASE_DATE=20241219
 
-    rem 检查系统是Windows
-    if /I "%OS_TYPE%" neq "Windows_NT" (
-        echo Unsupported OS!
-        exit /b
-    )
-
     rem 检查处理器架构
-    if /I "%ARCHITECTURE%"=="x86" (
+    if /I "%PROCESSOR_ARCHITECTURE%"=="x86" (
         set ARCH=i686-pc-windows-msvc
-    ) else if /I "%ARCHITECTURE%"=="AMD64" (
+    ) else if /I "%PROCESSOR_ARCHITECTURE%"=="AMD64" (
         set ARCH=x86_64-pc-windows-msvc
     ) else (
         echo Unsupported architecture!
