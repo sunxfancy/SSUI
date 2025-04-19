@@ -41,11 +41,18 @@ pub fn create_client_with_proxy() -> reqwest::Client {
     if let Some(proxy_url) = get_proxy() {
         info!("使用代理服务器: {}", proxy_url);
         
+        // 确保代理URL有正确的scheme
+        let proxy_url_with_scheme = if !proxy_url.contains("://") {
+            format!("http://{}", proxy_url)
+        } else {
+            proxy_url
+        };
+        
         // 根据代理URL的协议选择代理类型
-        if proxy_url.starts_with("http://") {
-            client_builder = client_builder.proxy(reqwest::Proxy::http(&proxy_url).unwrap());
-        } else if proxy_url.starts_with("https://") {
-            client_builder = client_builder.proxy(reqwest::Proxy::https(&proxy_url).unwrap());
+        if proxy_url_with_scheme.starts_with("http://") {
+            client_builder = client_builder.proxy(reqwest::Proxy::http(&proxy_url_with_scheme).unwrap());
+        } else if proxy_url_with_scheme.starts_with("https://") {
+            client_builder = client_builder.proxy(reqwest::Proxy::https(&proxy_url_with_scheme).unwrap());
         }
     }
     

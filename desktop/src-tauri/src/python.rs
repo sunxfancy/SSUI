@@ -127,22 +127,36 @@ lazy_static! {
 fn set_proxy_for_python(cmd: &mut Command, proxy_url: &str) {
     info!("为Python进程设置代理: {}", proxy_url);
     
-    // 设置HTTP和HTTPS代理环境变量
-    cmd.env("HTTP_PROXY", &proxy_url)
-        .env("HTTPS_PROXY", &proxy_url);
+    // 确保代理URL有正确的scheme
+    let proxy_url_with_scheme = if !proxy_url.contains("://") {
+        format!("http://{}", proxy_url)
+    } else {
+        proxy_url.to_string()
+    };
+    
+    // 根据代理URL的协议选择代理类型
+    if proxy_url_with_scheme.starts_with("http://") {
+        cmd.env("HTTP_PROXY", &proxy_url_with_scheme)
+            .env("HTTPS_PROXY", &proxy_url_with_scheme);
+    } else if proxy_url_with_scheme.starts_with("https://") {
+        cmd.env("HTTPS_PROXY", &proxy_url_with_scheme);
+    } 
     
     // 如果代理URL包含用户名和密码，则设置相应的环境变量
-    if let Some(auth_start) = proxy_url.find('@') {
-        if let Some(scheme_end) = proxy_url.find("://") {
-            let auth_part = &proxy_url[scheme_end + 3..auth_start];
+    if let Some(auth_start) = proxy_url_with_scheme.find('@') {
+        if let Some(scheme_end) = proxy_url_with_scheme.find("://") {
+            let auth_part = &proxy_url_with_scheme[scheme_end + 3..auth_start];
             if let Some(colon_pos) = auth_part.find(':') {
                 let username = &auth_part[..colon_pos];
                 let password = &auth_part[colon_pos + 1..];
                 
+                if proxy_url_with_scheme.starts_with("http://") {
                 cmd.env("HTTP_PROXY_USERNAME", username)
-                    .env("HTTP_PROXY_PASSWORD", password)
-                    .env("HTTPS_PROXY_USERNAME", username)
+                    .env("HTTP_PROXY_PASSWORD", password);
+                } else if proxy_url_with_scheme.starts_with("https://") {
+                    cmd.env("HTTPS_PROXY_USERNAME", username)
                     .env("HTTPS_PROXY_PASSWORD", password);
+                }
             }
         }
     }
