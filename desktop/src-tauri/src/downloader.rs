@@ -1,5 +1,56 @@
 use tauri_plugin_http::reqwest;
 use log::{info, error, warn, debug};
+use std::sync::Mutex;
+use lazy_static::lazy_static;
+
+// 全局代理URL
+lazy_static! {
+    static ref PROXY_URL: Mutex<Option<String>> = Mutex::new(None);
+}
+
+// 设置全局代理
+#[tauri::command(rename_all = "snake_case")]
+pub fn set_proxy(proxy_url: &str) -> Result<(), String> {
+    info!("设置代理服务器: {}", proxy_url);
+    
+    // 验证代理URL格式
+    if !proxy_url.starts_with("http://") && !proxy_url.starts_with("https://") {
+        let err_msg = format!("代理URL格式不正确，必须以http://或https://开头: {}", proxy_url);
+        error!("{}", err_msg);
+        return Err(err_msg);
+    }
+    
+    // 保存代理URL
+    let mut proxy = PROXY_URL.lock().unwrap();
+    *proxy = Some(proxy_url.to_string());
+    
+    info!("代理服务器设置成功");
+    Ok(())
+}
+
+// 获取当前代理设置
+pub fn get_proxy() -> Option<String> {
+    PROXY_URL.lock().unwrap().clone()
+}
+
+// 创建带代理的客户端
+pub fn create_client_with_proxy() -> reqwest::Client {
+    let mut client_builder = reqwest::Client::builder();
+    
+    // 如果有代理设置，则使用代理
+    if let Some(proxy_url) = get_proxy() {
+        info!("使用代理服务器: {}", proxy_url);
+        
+        // 根据代理URL的协议选择代理类型
+        if proxy_url.starts_with("http://") {
+            client_builder = client_builder.proxy(reqwest::Proxy::http(&proxy_url).unwrap());
+        } else if proxy_url.starts_with("https://") {
+            client_builder = client_builder.proxy(reqwest::Proxy::https(&proxy_url).unwrap());
+        }
+    }
+    
+    client_builder.build().unwrap()
+}
 
 #[tauri::command(rename_all = "snake_case")]
 pub async fn download_python(version: &str, release_date: &str, architecture: &str, path: &str) -> Result<String, String> {
@@ -9,7 +60,9 @@ pub async fn download_python(version: &str, release_date: &str, architecture: &s
     info!("开始下载Python: {}", url);
     debug!("下载参数: version={}, release_date={}, architecture={}, path={}", version, release_date, architecture, path);
     
-    let res = reqwest::get(url).await;
+    // 使用带代理的客户端
+    let client = create_client_with_proxy();
+    let res = client.get(url).send().await;
 
     if res.is_err() {
         let err_msg = format!("下载失败: {}", res.err().unwrap());

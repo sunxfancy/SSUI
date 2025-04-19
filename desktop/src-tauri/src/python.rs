@@ -10,6 +10,7 @@ use std::collections::HashMap;
 use log::{info, error, warn, debug};
 #[cfg(windows)]
 use std::os::windows::process::CommandExt; // 只在windows平台引入CommandExt
+use crate::downloader::get_proxy;
 
 pub struct BackgroundProcessesGuard {
     processes: Mutex<Vec<Child>>
@@ -123,14 +124,47 @@ lazy_static! {
     pub static ref PROCESS_MANAGER: ProcessManager = ProcessManager::new();
 }
 
+fn set_proxy_for_python(cmd: &mut Command, proxy_url: &str) {
+    info!("为Python进程设置代理: {}", proxy_url);
+    
+    // 设置HTTP和HTTPS代理环境变量
+    cmd.env("HTTP_PROXY", &proxy_url)
+        .env("HTTPS_PROXY", &proxy_url);
+    
+    // 如果代理URL包含用户名和密码，则设置相应的环境变量
+    if let Some(auth_start) = proxy_url.find('@') {
+        if let Some(scheme_end) = proxy_url.find("://") {
+            let auth_part = &proxy_url[scheme_end + 3..auth_start];
+            if let Some(colon_pos) = auth_part.find(':') {
+                let username = &auth_part[..colon_pos];
+                let password = &auth_part[colon_pos + 1..];
+                
+                cmd.env("HTTP_PROXY_USERNAME", username)
+                    .env("HTTP_PROXY_PASSWORD", password)
+                    .env("HTTPS_PROXY_USERNAME", username)
+                    .env("HTTPS_PROXY_PASSWORD", password);
+            }
+        }
+    }
+}
+
+// 用来运行pip，所以要设置代理
 #[tauri::command]
 pub async fn run_python(path: &str, cwd: &str, args: Vec<&str>) -> Result<String, String> {
     info!("运行Python脚本: {} 在目录: {}", path, cwd);
     debug!("Python参数: {:?}", args);
-    let output = Command::new(path)
-        .args(args.clone())
+    
+    let mut cmd = Command::new(path);
+    cmd.args(args.clone())
         .current_dir(cwd)
-        .output()
+        .env("PYTHONIOENCODING", "utf-8");
+    
+    // 如果有代理设置，则设置环境变量
+    if let Some(proxy_url) = get_proxy() {
+        set_proxy_for_python(&mut cmd, &proxy_url);
+    }
+    
+    let output = cmd.output()
         .expect(format!("failed to execute process, path: {}, cwd: {}, args: {:?}", path, cwd, args).as_str());
 
     let stdout = String::from_utf8(output.stdout).expect("failed to convert stdout to string");
@@ -335,6 +369,7 @@ async fn spawn_python_process(path: &str, cwd: &str, args: Vec<&str>) -> Result<
         .stdout(log_file)
         .stderr(error_log_file)
         .env("PYTHONIOENCODING", "utf-8");
+
 
     //在Windows上设置creation_flags 防治创建cmd窗口
     #[cfg(windows)]
