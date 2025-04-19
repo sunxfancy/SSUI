@@ -60,70 +60,84 @@ pub async fn download_python(version: &str, release_date: &str, architecture: &s
     info!("开始下载Python: {}", url);
     debug!("下载参数: version={}, release_date={}, architecture={}, path={}", version, release_date, architecture, path);
     
-    // 使用带代理的客户端
-    let client = create_client_with_proxy();
-    let res = client.get(url).send().await;
-
-    if res.is_err() {
-        let err_msg = format!("下载失败: {}", res.err().unwrap());
-        error!("{}", err_msg);
-        return Err(err_msg);
+    // 尝试下载并处理响应
+    async fn try_download(url: &str, use_proxy: bool) -> Result<reqwest::Response, String> {
+        let client = if use_proxy {
+            if let Some(proxy_url) = get_proxy() {
+                info!("使用代理下载: {}", proxy_url);
+                create_client_with_proxy()
+            } else {
+                return Err("未设置代理".to_string());
+            }
+        } else {
+            reqwest::Client::new()
+        };
+        
+        client.get(url).send().await.map_err(|e| format!("下载失败: {}", e))
     }
-
-    // 检查响应状态码
-    let status = res.as_ref().unwrap().status();
-    if !status.is_success() {
-        let err_msg = format!("下载失败,状态码: {}", status);
-        error!("{}", err_msg);
-        return Err(err_msg);
-    }
-
-    // 检查Content-Type头,确保是二进制文件
-    let content_type = res.as_ref()
-        .unwrap()
-        .headers()
-        .get("content-type")
-        .and_then(|h| h.to_str().ok())
-        .unwrap_or("");
     
-    debug!("响应Content-Type: {}", content_type);
-
-    if !content_type.contains("application/octet-stream") && 
-       !content_type.contains("application/x-gzip") {
-        let err_msg = format!("下载内容不是预期的文件类型: {}", content_type);
-        error!("{}", err_msg);
-        return Err(err_msg);
-    }
-
-    let res = res.unwrap();
-    let bytes = match res.bytes().await {
-        Ok(bytes) => {
-            info!("下载完成，文件大小: {} 字节", bytes.len());
-            bytes
-        },
-        Err(e) => {
-            let err_msg = format!("读取响应内容失败: {}", e);
-            error!("{}", err_msg);
-            return Err(err_msg);
+    // 处理响应
+    async fn process_response(response: reqwest::Response) -> Result<Vec<u8>, String> {
+        // 检查响应状态码
+        if !response.status().is_success() {
+            return Err(format!("下载失败,状态码: {}", response.status()));
         }
-    };
-
-    // 直接从内存中的bytes创建读取器
-    let cursor = std::io::Cursor::new(bytes);
-    let tar = flate2::read::GzDecoder::new(cursor);
+        
+        // 检查Content-Type头,确保是二进制文件
+        let content_type = response.headers()
+            .get("content-type")
+            .and_then(|h| h.to_str().ok())
+            .unwrap_or("");
+        
+        debug!("响应Content-Type: {}", content_type);
+        
+        if !content_type.contains("application/octet-stream") && 
+           !content_type.contains("application/x-gzip") {
+            return Err(format!("下载内容不是预期的文件类型: {}", content_type));
+        }
+        
+        // 读取响应内容
+        response.bytes().await
+            .map(|bytes| {
+                info!("下载完成，文件大小: {} 字节", bytes.len());
+                bytes.to_vec()
+            })
+            .map_err(|e| format!("读取响应内容失败: {}", e))
+    }
     
-    // 解压tar
-    info!("开始解压到: {}", path);
-    let mut archive = tar::Archive::new(tar);
-    match archive.unpack(path) {
-        Ok(_) => {
-            info!("解压完成");
-            Ok("success".to_string())
-        },
+    // 解压文件
+    fn extract_file(bytes: Vec<u8>, path: &str) -> Result<(), String> {
+        // 直接从内存中的bytes创建读取器
+        let cursor = std::io::Cursor::new(bytes);
+        let tar = flate2::read::GzDecoder::new(cursor);
+        
+        // 解压tar
+        info!("开始解压到: {}", path);
+        let mut archive = tar::Archive::new(tar);
+        archive.unpack(path)
+            .map_err(|e| format!("解压失败: {}", e))
+    }
+    
+    // 下载并处理流程
+    async fn download_and_process(url: &str, path: &str, use_proxy: bool) -> Result<String, String> {
+        let response = try_download(url, use_proxy).await?;
+        let bytes = process_response(response).await?;
+        extract_file(bytes, path)?;
+        info!("解压完成");
+        Ok("success".to_string())
+    }
+    
+    // 首先尝试不使用代理下载
+    match download_and_process(&url, path, false).await {
+        Ok(result) => Ok(result),
         Err(e) => {
-            let err_msg = format!("解压失败: {}", e);
-            error!("{}", err_msg);
-            Err(err_msg)
+            // 如果直接下载失败且设置了代理，则尝试使用代理重试
+            if get_proxy().is_some() {
+                info!("直接下载失败，尝试使用代理重试");
+                download_and_process(&url, path, true).await
+            } else {
+                Err(e)
+            }
         }
     }
 }

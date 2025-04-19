@@ -154,30 +154,52 @@ pub async fn run_python(path: &str, cwd: &str, args: Vec<&str>) -> Result<String
     info!("运行Python脚本: {} 在目录: {}", path, cwd);
     debug!("Python参数: {:?}", args);
     
-    let mut cmd = Command::new(path);
-    cmd.args(args.clone())
-        .current_dir(cwd)
-        .env("PYTHONIOENCODING", "utf-8");
+    // 创建基本命令
+    let mut create_cmd = |use_proxy: bool| -> Command {
+        let mut cmd = Command::new(path);
+        cmd.args(args.clone())
+            .current_dir(cwd)
+            .env("PYTHONIOENCODING", "utf-8");
+        
+        if use_proxy {
+            if let Some(proxy_url) = get_proxy() {
+                set_proxy_for_python(&mut cmd, &proxy_url);
+            }
+        }
+        cmd
+    };
     
-    // 如果有代理设置，则设置环境变量
-    if let Some(proxy_url) = get_proxy() {
-        set_proxy_for_python(&mut cmd, &proxy_url);
+    // 执行命令并处理结果
+    fn run_and_process(mut cmd: Command, use_proxy: bool) -> Result<String, String> {
+        let output = cmd.output()
+            .map_err(|e| format!("{}执行进程失败: {}", if use_proxy { "使用代理" } else { "" }, e))?;
+        
+        let stdout = String::from_utf8(output.stdout).expect("无法将stdout转换为字符串");
+        let stderr = String::from_utf8(output.stderr).expect("无法将stderr转换为字符串");
+        
+        if output.status.success() {
+            info!("{}Python脚本执行成功", if use_proxy { "使用代理后" } else { "" });
+            debug!("Python输出: {}", stdout);
+            Ok(stdout)
+        } else {
+            let err_msg = format!("{}Python脚本执行失败: {}", if use_proxy { "使用代理后" } else { "" }, stderr);
+            error!("{}", err_msg);
+            Err(stderr)
+        }
     }
     
-    let output = cmd.output()
-        .expect(format!("failed to execute process, path: {}, cwd: {}, args: {:?}", path, cwd, args).as_str());
-
-    let stdout = String::from_utf8(output.stdout).expect("failed to convert stdout to string");
-    let stderr = String::from_utf8(output.stderr).expect("failed to convert stderr to string");
-
-    if output.status.success() {
-        info!("Python脚本执行成功");
-        debug!("Python输出: {}", stdout);
-        Ok(stdout)
-    } else {
-        let err_msg = format!("Python脚本执行失败: {}", stderr);
-        error!("{}", err_msg);
-        Err(stderr)
+    // 首先尝试不使用代理运行
+    match run_and_process(create_cmd(false), false) {
+        Ok(result) => Ok(result),
+        Err(e) => {
+            // 如果执行失败且设置了代理，则尝试使用代理重试
+            if get_proxy().is_some() {
+                info!("Python脚本执行失败，尝试使用代理重试");
+                run_and_process(create_cmd(true), true)
+            } else {
+                Err(e)
+            }
+        }
     }
 }
 
