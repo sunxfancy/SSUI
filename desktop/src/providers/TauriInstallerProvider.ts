@@ -4,7 +4,7 @@ import { appDataDir, homeDir, join, resolveResource } from '@tauri-apps/api/path
 import { open } from '@tauri-apps/plugin-dialog';
 import { platform } from '@tauri-apps/plugin-os';
 import { IInstallerProvider, CommandInfo } from './IInstallerProvider';
-import { exists, writeTextFile } from '@tauri-apps/plugin-fs';
+import { exists, readDir, writeTextFile } from '@tauri-apps/plugin-fs';
 import { invoke } from '@tauri-apps/api/core';
 
 export class TauriInstallerProvider implements IInstallerProvider {
@@ -38,7 +38,7 @@ export class TauriInstallerProvider implements IInstallerProvider {
 
     async checkPythonInstalled(installDir: string): Promise<CommandInfo> {
         const currentPlatform = await this.detectPlatform();
-        const pythonPath = await join(installDir, currentPlatform === 'windows' ? 'python\\python.exe' : 'bin/python3');
+        const pythonPath = await join(installDir, currentPlatform === 'windows' ? '.venv\\python\\python.exe' : '.venv/bin/python3');
 
         try {
             // 检查Python可执行文件是否存在
@@ -90,7 +90,7 @@ export class TauriInstallerProvider implements IInstallerProvider {
                 version: '3.12.8',
                 release_date: '20241219',
                 architecture: architecture,
-                path: installDir
+                path: await join(installDir, '.venv')
             });
             console.log(output);
 
@@ -115,7 +115,7 @@ export class TauriInstallerProvider implements IInstallerProvider {
 
     async checkVirtualEnvExists(installDir: string): Promise<CommandInfo> {
         const currentPlatform = await this.detectPlatform();
-        const venvPath = `${installDir}/venv`;
+        const venvPath = `${installDir}/.venv`;
         const activatePath = currentPlatform === 'windows'
             ? `${venvPath}/Scripts/activate.bat`
             : `${venvPath}/bin/activate`;
@@ -143,14 +143,14 @@ export class TauriInstallerProvider implements IInstallerProvider {
 
     async createVirtualEnv(installDir: string): Promise<CommandInfo> {
         const currentPlatform = await this.detectPlatform();
-        const pythonPath = await join(installDir, currentPlatform === 'windows' ? 'python\\python.exe' : 'bin/python3');
+        const pythonPath = await join(installDir, currentPlatform === 'windows' ? '.venv\\python\\python.exe' : '.venv/bin/python3');
 
         try {
             const output = await invoke('run_python',
                 {
                     path: pythonPath,
                     cwd: installDir,
-                    args: ['-m', 'venv', await join(installDir, 'venv')]
+                    args: ['-m', 'venv', await join(installDir, '.venv')]
                 });
 
             return {
@@ -192,10 +192,10 @@ export class TauriInstallerProvider implements IInstallerProvider {
     async installPackages(installDir: string, lockFile: string): Promise<CommandInfo> {
         const currentPlatform = await this.detectPlatform();
         const pipPath = currentPlatform === 'windows'
-            ? `${installDir}/venv/Scripts/pip.exe`
-            : `${installDir}/venv/bin/pip`;
+            ? `${installDir}\\.venv\\Scripts\\pip.exe`
+            : `${installDir}/.venv/bin/pip`;
 
-        const completionMarker = await join(installDir,'venv', '.packages_installed');
+        const completionMarker = await join(installDir,'.venv', '.packages_installed');
 
         try {
 
@@ -240,6 +240,26 @@ export class TauriInstallerProvider implements IInstallerProvider {
         enableGPU?: boolean;
         enableAutoUpdate?: boolean;
     }): Promise<void> {
+
+        const tarPath = await resolveResource('resources/app.tar.gz');
+        const output = await invoke('unpack_app', {
+            tar_path: tarPath,
+            target_path: installConfig.path
+        });
+        console.log('解压完成: ' + output);
+
+        const extensionsPath = await resolveResource('resources/extensions');
+        const entries = await readDir(extensionsPath);
+        console.log(entries);
+        const extensionInstallPath = await join(installConfig.path, 'extensions');
+        for (const entry of entries) {
+            const output = await invoke('unpack_app', {
+                tar_path: await join(extensionsPath, entry.name),
+                target_path: extensionInstallPath
+            });
+            console.log('解压插件完成: ' + output);
+        }
+
         const store = await load('settings.json', { autoSave: false });
         await store.set('root', installConfig);
         await store.save();

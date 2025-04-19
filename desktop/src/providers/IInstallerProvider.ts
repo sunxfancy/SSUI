@@ -37,6 +37,8 @@ export interface IInstallerProvider {
   saveSettings(installConfig: {
     path: string;
     version: string;
+    host: string;
+    port: number;
     platform: string;
     enableGPU?: boolean;
     enableAutoUpdate?: boolean;

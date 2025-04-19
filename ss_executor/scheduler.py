@@ -1,13 +1,10 @@
 # scheduler.py
 import asyncio
-import os
-import sys
 from typing import Dict, List, Optional, Any, Union, Tuple
 from datetime import datetime
 from .model import KillMessage, Task, TaskStatus, ExecutorInfo, ExecutorRegister, RegisterResponse, UpdateStatus, TaskResult, ExeMessage
 import websockets
 import traceback
-import subprocess
 
 class TaskScheduler:
     """异步任务调度器，用于管理执行器连接和任务分配"""

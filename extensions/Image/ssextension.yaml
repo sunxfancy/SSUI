@@ -4,6 +4,8 @@ server:
   venv: shared
   dependencies:
     - numpy>=1.21.2
+  packages:
+    - ssui_image
   main: extension.py
 
 web_ui:

@@ -14,8 +14,7 @@ import {
 } from "@blueprintjs/core";
 import "@blueprintjs/core/lib/css/blueprint.css";
 import "@blueprintjs/icons/lib/css/blueprint-icons.css";
-import { IModelManagerProvider, ModelGroup, ModelItem } from '../providers/IModelManagerProvider';
-import { MockModelManagerProvider } from '../stories/MockModelManagerProvider';
+import { IModelManagerProvider, ModelGroup } from '../providers/IModelManagerProvider';
 import { ModelManagerProvider } from '../providers/ModelManagerProvider';
 
 interface ModelState {

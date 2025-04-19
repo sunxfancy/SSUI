@@ -83,8 +83,7 @@ function main() {
         console.log('正在将index URL信息添加到锁文件...');
         let lockContent = fs.readFileSync(lockFile, 'utf8');
         
-        // 添加注释和index URLs
-        lockContent += '\n\n# 以下是原始requirements文件中的index URL配置\n';
+        // 添加index URLs
         for (const url of indexUrls) {
           lockContent += `${url}\n`;
         }

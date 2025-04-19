@@ -1,12 +1,14 @@
 import { Model, ModelsProvider, WatchedDirectory } from "./IModelsProvider";
 import { open } from '@tauri-apps/plugin-dialog';
 import { Message } from "ssui_components";
+import GlobalStateManager from "../services/GlobalState";
 
 export class TauriModelsProvider implements ModelsProvider {
     private message: Message;
 
     constructor() {
-        this.message = new Message("localhost", 7420);
+        const rootState = GlobalStateManager.getInstance().getRootState();
+        this.message = new Message(rootState?.host || "localhost", rootState?.port || 7420);
     }
 
       /**
@@ -38,8 +40,8 @@ export class TauriModelsProvider implements ModelsProvider {
     await this.message.post("config/scan_models", {
       "scan_dir": directoryPath
     }, {
-      "find_model": (data: any) => {
-        console.log("find_model: ", data);
+      "model_found": (data: any) => {
+        console.log("model_found: ", data);
         // 将找到的模型添加到列表中
         if (data && data.path && data.name) {
           const model: Model = {
@@ -72,7 +74,8 @@ export class TauriModelsProvider implements ModelsProvider {
       "model_path": modelPath,
       "create_softlink": true
     });
-    return result.success && result.message === "Models installed";
+    let success = result.type && result.type === "success";
+    return success;
   }
   
   /**
@@ -97,7 +100,7 @@ export class TauriModelsProvider implements ModelsProvider {
    * @param directoryId 监听目录ID
    * @returns 是否移除成功
    */
-  removeWatchedDirectory(directoryId: string): Promise<boolean> {
+  removeWatchedDirectory(_: string): Promise<boolean> {
     return Promise.resolve(false);
   }
   
@@ -106,7 +109,7 @@ export class TauriModelsProvider implements ModelsProvider {
    * @param event 拖放事件
    * @returns 文件路径
    */
-  getDroppedFilePath(event: React.DragEvent): Promise<string> {
+  getDroppedFilePath(_: React.DragEvent): Promise<string> {
     return Promise.resolve('');
   }
 }

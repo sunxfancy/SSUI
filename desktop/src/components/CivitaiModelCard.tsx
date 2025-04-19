@@ -1,6 +1,5 @@
 import React from 'react';
 import { Card, Elevation, Button, Icon } from '@blueprintjs/core';
-import { Tooltip } from '@blueprintjs/core';
 import { CivitaiModel } from '../types/civitai';
 import './CivitaiModelCard.css';
 

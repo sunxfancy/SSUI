@@ -4,6 +4,7 @@ import CivitaiModels from './components/CivitaiModels';
 import LocalModels from './components/LocalModels';
 import HuggingfaceModels from './components/HuggingfaceModels';
 import { TauriModelsProvider } from './providers/TauriModelsProvider';
+import { ModelsProvider } from './providers/IModelsProvider';
 
 interface ModelAddingPageProps {
   // 可以在这里添加需要的属性
@@ -13,8 +14,6 @@ interface ModelAddingPageState {
   selectedTabId: string;
 }
 
-// 创建一个模拟的模型服务提供者实例
-const modelsProvider = new TauriModelsProvider();
 
 export class ModelAddingPage extends Component<ModelAddingPageProps, ModelAddingPageState> {
   constructor(props: ModelAddingPageProps) {
@@ -22,7 +21,10 @@ export class ModelAddingPage extends Component<ModelAddingPageProps, ModelAdding
     this.state = {
       selectedTabId: 'preset'
     };
+    // 创建一个模型服务提供者实例
+    this.modelsProvider = new TauriModelsProvider();
   }
+  modelsProvider: ModelsProvider;
 
   handleTabChange = (newTabId: string) => {
     this.setState({ selectedTabId: newTabId });
@@ -67,7 +69,7 @@ export class ModelAddingPage extends Component<ModelAddingPageProps, ModelAdding
     return (
       <Card elevation={Elevation.ZERO}>
         <LocalModels
-          modelsProvider={modelsProvider}
+          modelsProvider={this.modelsProvider}
           onModelAdd={(modelPath) => {
             console.log('添加模型:', modelPath);
             // 这里添加模型添加后的处理逻辑

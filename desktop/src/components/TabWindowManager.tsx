@@ -277,7 +277,7 @@ export class TabWindowManager extends Component<{}, State> {
   }
 
   public openFile(filePath: string, url: string, title?: string) {
-    console.log("openFile", filePath);
+    console.log("openFile", filePath, url, title);
 
     this.setState(produce(this.state, draft => {
       // Find if the file is already open

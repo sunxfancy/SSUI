@@ -33,6 +33,7 @@
     ],
     "resources": [
       "resources/dependencies/*",
+      "resources/extensions/*",
       "resources/app.tar.gz"
     ]
   }

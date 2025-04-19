@@ -1,11 +1,12 @@
-import React, { useEffect, useState } from "react";
+import React, { Component } from "react";
 import ReactDOM from "react-dom/client";
 import App from "./App";
 import Install from "./Install";
 import tray_init from "./tray.js";
-import { load } from '@tauri-apps/plugin-store';
-import { invoke } from '@tauri-apps/api/core';
 import { BlueprintProvider } from "@blueprintjs/core";
+import GlobalStateManager from "./services/GlobalState";
+import ExecutorService from "./services/Executor";
+import ServerService from "./services/Server";
 
 // 载入样式
 import "normalize.css";
@@ -15,46 +16,95 @@ import "./App.css";
 
 const production = import.meta.env.PROD;
 
-function Root() {
-  const [root, setRoot] = useState<{ path: string, version: string } | undefined>();
-  const [isLoading, setIsLoading] = useState(true);
+interface RootState {
+  root?: { path: string, version: string, host: string, port: number };
+  isLoading: boolean;
+}
 
-  useEffect(() => {
-    async function initRoot() {
-      try {
-        if (!production) {
-          const path: string = await invoke("get_dev_root");
-          setRoot({ path, version: 'dev' });
-        } else {
-          const store = await load('settings.json', { autoSave: true });
-          const rootData = await store.get<{ path: string, version: string }>('root');
-          setRoot(rootData);
-        }
-        
-        if (root?.path) {
-          console.log('root path:', root.path);
-          console.log('root version:', root.version);
-          tray_init();
-        }
-      } catch (error) {
-        console.error('初始化失败:', error);
-      } finally {
-        setIsLoading(false);
-      }
-    }
 
-    initRoot();
-  }, []);
+class Root extends Component<{}, RootState> {
+  private isInitialized: boolean = false;
 
-  if (isLoading) {
-    return <div>加载中...</div>;
+  constructor(props: {}) {
+    super(props);
+    this.state = {
+      root: undefined,
+      isLoading: true
+    };
   }
 
-  return (
-    <BlueprintProvider>
-      {root?.path ? <App /> : <Install />}
-    </BlueprintProvider>
-  );
+  async initRoot() {
+    // 如果已经初始化过，则直接返回
+    if (this.isInitialized) return;
+
+    try {
+      // 标记为已初始化
+      this.isInitialized = true;
+
+      // 初始化全局状态
+      await GlobalStateManager.getInstance().initialize();
+
+      // 从全局状态获取 root 信息
+      const rootState = GlobalStateManager.getInstance().getRootState();
+      this.setState({ root: rootState || undefined });
+
+      if (rootState?.path) {
+        console.log('root path:', rootState.path);
+        console.log('root version:', rootState.version);
+        tray_init();
+
+        // 自动启动服务
+        try {
+          if (!production) {
+            // 开发环境，需要先检查用户是否自己启动了执行器和服务器用来调试
+            
+            if (!rootState?.isServerRunning) {
+              // 启动服务器服务
+              const serverResult = await ServerService.getInstance().startServer();
+              console.log('服务器服务启动结果:', serverResult.message);
+
+              // 启动执行器服务
+              const executorResult = await ExecutorService.getInstance().startExecutor();
+              console.log('执行器服务启动结果:', executorResult.message);
+            }
+
+          } else {
+            // 启动服务器服务
+            const serverResult = await ServerService.getInstance().startServer();
+            console.log('服务器服务启动结果:', serverResult.message);
+
+            // 启动执行器服务
+            const executorResult = await ExecutorService.getInstance().startExecutor();
+            console.log('执行器服务启动结果:', executorResult.message);
+          }
+        } catch (error) {
+          console.error('启动服务时出错:', error);
+        }
+      }
+    } catch (error) {
+      console.error('初始化失败:', error);
+    } finally {
+      this.setState({ isLoading: false });
+    }
+  }
+
+  componentDidMount() {
+    this.initRoot();
+  }
+
+  render() {
+    const { root, isLoading } = this.state;
+
+    if (isLoading) {
+      return <div>加载中...</div>;
+    }
+
+    return (
+      <BlueprintProvider>
+        {root?.path ? <App /> : <Install />}
+      </BlueprintProvider>
+    );
+  }
 }
 
 ReactDOM.createRoot(document.getElementById("root") as HTMLElement).render(

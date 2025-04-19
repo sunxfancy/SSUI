@@ -1,6 +1,6 @@
 import { Component } from 'react';
 import { Button, Tree, TreeNodeInfo } from "@blueprintjs/core";
-import { TauriFilesystemProvider, IFilesystemProvider } from '../services/FilesystemProvider';
+import { TauriFilesystemProvider, IFilesystemProvider } from '../providers/FilesystemProvider';
 
 import "@blueprintjs/core/lib/css/blueprint.css";
 import "@blueprintjs/icons/lib/css/blueprint-icons.css";

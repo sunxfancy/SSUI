@@ -14,12 +14,16 @@ const packDirs = [
   'backend',
   'ssui',
   'ss_executor',
-  'server'
+  'server',
 ];
 
 // 要打包的JS输出目录（忽略gitignore规则）
 const packDirsJsOutput = [
   'frontend/functional_ui/dist'
+];
+
+const packFiles = [
+  'extensions/Readme.md'
 ];
 
 // 确保目标目录存在
@@ -99,6 +103,9 @@ function collectFilesToPack() {
     // 直接添加所有文件，不应用gitignore过滤
     filesToPack.push(...files);
   }
+
+  // 添加packFiles
+  filesToPack.push(...packFiles);
   
   return { rootDir, filesToPack };
 }

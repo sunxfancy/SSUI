@@ -1,64 +1,83 @@
+import GlobalStateManager from "../services/GlobalState";
 import { IModelManagerProvider, ModelGroup, ModelItem } from "./IModelManagerProvider";
 import { Message } from "ssui_components";
 
 export class ModelManagerProvider implements IModelManagerProvider {
     private message: Message;
     private modelGroups: ModelGroup[] = [];
+    private maxRetries: number = 10; // 最大重试次数
 
     constructor() {
-        this.message = new Message("localhost", 7420);
+        const rootState = GlobalStateManager.getInstance().getRootState();
+        this.message = new Message(rootState?.host || "localhost", rootState?.port || 7420);
     }
 
     /**
      * 获取所有模型组
      */
     async getModelGroups(): Promise<ModelGroup[]> {
-        try {
-            // 从服务器获取已安装的模型
-            const response = await this.message.get("api/available_models");
-            
-            if (response && Array.isArray(response)) {
-                // 按标签分组模型
-                const groupsMap = new Map<string, ModelGroup>();
+        let retryCount = 0;
+        
+        while (retryCount < this.maxRetries) {
+            try {
+                // 从服务器获取已安装的模型
+                const response = await this.message.get("api/available_models");
                 
-                // 处理每个模型
-                response.forEach((item: any) => {
-                    // 获取模型的主要标签（第一个标签）
-                    const mainTag = item.tags && item.tags.length > 0 ? item.tags[0] : "其他";
+                if (response && Array.isArray(response)) {
+                    // 按标签分组模型
+                    const groupsMap = new Map<string, ModelGroup>();
                     
-                    // 创建模型项
-                    const modelItem: ModelItem = {
-                        id: item.path, // 使用路径作为ID
-                        name: item.name,
-                        description: item.description || "无描述",
-                        tags: item.tags || []
-                    };
+                    // 处理每个模型
+                    response.forEach((item: any) => {
+                        // 获取模型的主要标签（第一个标签）
+                        const mainTag = item.tags && item.tags.length > 0 ? item.tags[0] : "其他";
+                        
+                        // 创建模型项
+                        const modelItem: ModelItem = {
+                            id: item.path, // 使用路径作为ID
+                            name: item.name,
+                            description: item.description || "无描述",
+                            tags: item.tags || []
+                        };
+                        
+                        // 检查是否已存在该标签的组
+                        if (!groupsMap.has(mainTag)) {
+                            // 创建新组
+                            groupsMap.set(mainTag, {
+                                id: mainTag,
+                                name: mainTag,
+                                models: [],
+                                isOpen: false
+                            });
+                        }
+                        
+                        // 将模型添加到对应组
+                        const group = groupsMap.get(mainTag)!;
+                        group.models.push(modelItem);
+                    });
                     
-                    // 检查是否已存在该标签的组
-                    if (!groupsMap.has(mainTag)) {
-                        // 创建新组
-                        groupsMap.set(mainTag, {
-                            id: mainTag,
-                            name: mainTag,
-                            models: [],
-                            isOpen: false
-                        });
-                    }
-                    
-                    // 将模型添加到对应组
-                    const group = groupsMap.get(mainTag)!;
-                    group.models.push(modelItem);
-                });
+                    // 转换为数组
+                    this.modelGroups = Array.from(groupsMap.values());
+                    return this.modelGroups; // 成功获取数据，直接返回
+                }
                 
-                // 转换为数组
-                this.modelGroups = Array.from(groupsMap.values());
+                // 如果响应不是数组，也视为失败
+                throw new Error("响应格式不正确");
+            } catch (error) {
+                console.error(`获取模型组失败 (尝试 ${retryCount + 1}/${this.maxRetries}):`, error);
+                retryCount++;
+                
+                if (retryCount < this.maxRetries) {
+                    console.log(`将在3秒后重试...`);
+                    await new Promise(resolve => setTimeout(resolve, 3000)); // 等待3秒后重试
+                } else {
+                    console.error("已达到最大重试次数，获取模型组失败");
+                    return []; // 达到最大重试次数，返回空数组
+                }
             }
-            
-            return this.modelGroups;
-        } catch (error) {
-            console.error("获取模型组失败:", error);
-            return [];
         }
+        
+        return []; // 默认返回空数组
     }
     
     /**

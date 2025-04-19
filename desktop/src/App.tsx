@@ -12,6 +12,7 @@ import { open } from '@tauri-apps/plugin-dialog';
 import NewWorkflow from './components/NewWorkflow.tsx';
 import { Extensions } from './components/Extensions.tsx';
 import { ModelManagerProvider } from './providers/ModelManagerProvider';
+import GlobalStateManager from './services/GlobalState.ts';
 
 class App extends Component {
   tabWindowManagerRef = React.createRef<TabWindowManager>();
@@ -46,7 +47,10 @@ class App extends Component {
   }
 
   onFileOpen = (filePath: string) => {
-    this.tabWindowManagerRef.current?.openFile(filePath, "http://localhost:7420/?path=" + filePath);
+    const rootState = GlobalStateManager.getInstance().getRootState();
+    const host = rootState?.host || 'localhost';
+    const port = rootState?.port || 7422;
+    this.tabWindowManagerRef.current?.openFile(filePath, `http://${host}:${port}/?path=${filePath}`);
   }
 
   addModel = () => {
