@@ -10,8 +10,10 @@ import {
   Icon
 } from '@blueprintjs/core';
 import { IconName } from '@blueprintjs/icons';
+import { ExtensionsProvider } from '../providers/ExtensionsProvider';
+import { IExtensionsProvider } from '../providers/IExtensionsProvider';
 
-interface ExtensionItem {
+export interface ExtensionItem {
   id: string;
   name: string;
   description: string;
@@ -21,9 +23,11 @@ interface ExtensionItem {
   tags: string[];
   installed?: boolean;
   featured?: boolean;
+  disabled?: boolean;
 }
 
 interface ExtensionsProps {
+  provider?: IExtensionsProvider;
   onOpenExtensionStore?: () => void;
 }
 
@@ -35,122 +39,125 @@ interface ExtensionsState {
 }
 
 export class Extensions extends Component<ExtensionsProps, ExtensionsState> {
+  private provider: IExtensionsProvider;
+
   constructor(props: ExtensionsProps) {
     super(props);
+    this.provider = props.provider || new ExtensionsProvider();
     this.state = {
       searchQuery: '',
       isSearching: false,
-      extensions: [
-        {
-          id: 'ext1',
-          name: '数据可视化',
-          description: '提供多种数据可视化图表和工具',
-          author: 'DataViz团队',
-          version: '1.2.0',
-          icon: 'chart',
-          tags: ['可视化', '图表'],
-          installed: true
-        },
-        {
-          id: 'ext2',
-          name: '高级统计分析',
-          description: '提供高级统计分析功能和算法',
-          author: 'Stats Pro',
-          version: '2.1.3',
-          icon: 'calculator',
-          tags: ['统计', '分析'],
-          installed: true
-        },
-        {
-          id: 'ext3',
-          name: '数据清洗工具',
-          description: '自动检测和修复数据问题',
-          author: 'CleanData',
-          version: '1.0.5',
-          icon: 'clean',
-          tags: ['数据处理', '清洗'],
-          installed: false,
-          featured: true
-        },
-        {
-          id: 'ext4',
-          name: '机器学习模型库',
-          description: '预训练模型和算法集合',
-          author: 'ML Community',
-          version: '3.2.1',
-          icon: 'learning',
-          tags: ['机器学习', 'AI'],
-          installed: false,
-          featured: true
-        },
-        {
-          id: 'ext5',
-          name: '数据库连接器',
-          description: '连接各种数据库的工具',
-          author: 'DB Connect',
-          version: '2.0.0',
-          icon: 'database',
-          tags: ['数据库', '连接器'],
-          installed: true
-        },
-        {
-          id: 'ext6',
-          name: '自然语言处理',
-          description: '文本分析和处理工具包',
-          author: 'NLP Team',
-          version: '1.5.2',
-          icon: 'document',
-          tags: ['NLP', '文本分析'],
-          installed: false,
-          featured: true
-        }
-      ]
+      extensions: []
     };
   }
 
-  handleSearchChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+  async componentDidMount() {
+    try {
+      const extensions = await this.provider.getExtensions();
+      this.setState({ extensions });
+    } catch (error) {
+      console.error("加载扩展数据失败:", error);
+    }
+  }
+
+  handleSearchChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const query = event.target.value;
     this.setState({
       searchQuery: query,
       isSearching: query.length > 0
     });
+
+    if (query.length > 0) {
+      try {
+        const searchResults = await this.provider.searchExtensions(query);
+        this.setState({ extensions: searchResults });
+      } catch (error) {
+        console.error("搜索扩展失败:", error);
+      }
+    } else {
+      try {
+        const allExtensions = await this.provider.getExtensions();
+        this.setState({ extensions: allExtensions });
+      } catch (error) {
+        console.error("加载扩展数据失败:", error);
+      }
+    }
   };
 
-  clearSearch = () => {
+  clearSearch = async () => {
     this.setState({
       searchQuery: '',
       isSearching: false
     });
+    try {
+      const extensions = await this.provider.getExtensions();
+      this.setState({ extensions });
+    } catch (error) {
+      console.error("加载扩展数据失败:", error);
+    }
   };
 
   openExtensionStore = () => {
-    // 打开扩展商城的逻辑
     this.props.onOpenExtensionStore?.();
   };
 
-  installExtension = (extensionId: string) => {
-    this.setState(prevState => ({
-      extensions: prevState.extensions.map(ext => 
-        ext.id === extensionId ? { ...ext, installed: true } : ext
-      )
-    }));
+  installExtension = async (extensionId: string) => {
+    try {
+      const success = await this.provider.installExtension(extensionId);
+      if (success) {
+        const extensions = await this.provider.getExtensions();
+        this.setState({ extensions });
+      }
+    } catch (error) {
+      console.error("安装扩展失败:", error);
+    }
   };
 
-  uninstallExtension = (extensionId: string) => {
-    this.setState(prevState => ({
-      extensions: prevState.extensions.map(ext => 
-        ext.id === extensionId ? { ...ext, installed: false } : ext
-      )
-    }));
+  uninstallExtension = async (extensionId: string) => {
+    try {
+      const success = await this.provider.uninstallExtension(extensionId);
+      if (success) {
+        const extensions = await this.provider.getExtensions();
+        this.setState({ extensions });
+      }
+    } catch (error) {
+      console.error("卸载扩展失败:", error);
+    }
+  };
+
+  disableExtension = async (extensionId: string) => {
+    try {
+      const success = await this.provider.disableExtension(extensionId);
+      if (success) {
+        const extensions = await this.provider.getExtensions();
+        this.setState({ extensions });
+      }
+    } catch (error) {
+      console.error("禁用扩展失败:", error);
+    }
+  };
+
+  enableExtension = async (extensionId: string) => {
+    try {
+      const success = await this.provider.enableExtension(extensionId);
+      if (success) {
+        const extensions = await this.provider.getExtensions();
+        this.setState({ extensions });
+      }
+    } catch (error) {
+      console.error("启用扩展失败:", error);
+    }
   };
 
   renderExtensionCard = (extension: ExtensionItem) => {
+    const isProduction = import.meta.env.PROD;
+    
     return (
       <Card 
         key={extension.id} 
         elevation={Elevation.ONE}
         style={{ 
-          margin: '10px 0', 
+          margin: '10px 5px', 
           display: 'flex', 
           flexDirection: 'column'
         }}
@@ -171,23 +178,47 @@ export class Extensions extends Component<ExtensionsProps, ExtensionsState> {
           <div style={{ flex: 1 }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <h3 style={{ margin: '0 0 5px 0' }}>{extension.name}</h3>
-              {extension.installed ? (
-                <Button 
-                  small 
-                  intent="danger" 
-                  onClick={() => this.uninstallExtension(extension.id)}
-                >
-                  卸载
-                </Button>
-              ) : (
-                <Button 
-                  small 
-                  intent="success" 
-                  onClick={() => this.installExtension(extension.id)}
-                >
-                  安装
-                </Button>
-              )}
+              <div style={{ display: 'flex', gap: '8px' }}>
+                {extension.installed && (
+                  <>
+                    {extension.disabled ? (
+                      <Button 
+                        small 
+                        intent="warning" 
+                        onClick={() => this.enableExtension(extension.id)}
+                      >
+                        启用
+                      </Button>
+                    ) : (
+                      <Button 
+                        small 
+                        intent="warning" 
+                        onClick={() => this.disableExtension(extension.id)}
+                      >
+                        禁用
+                      </Button>
+                    )}
+                    {isProduction && (
+                      <Button 
+                        small 
+                        intent="danger" 
+                        onClick={() => this.uninstallExtension(extension.id)}
+                      >
+                        卸载
+                      </Button>
+                    )}
+                  </>
+                )}
+                {!extension.installed && (
+                  <Button 
+                    small 
+                    intent="success" 
+                    onClick={() => this.installExtension(extension.id)}
+                  >
+                    安装
+                  </Button>
+                )}
+              </div>
             </div>
             <p style={{ margin: '0 0 8px 0', color: '#666' }}>{extension.description}</p>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -211,27 +242,22 @@ export class Extensions extends Component<ExtensionsProps, ExtensionsState> {
     
     const installedExtensions = extensions.filter(ext => ext.installed);
     const featuredExtensions = extensions.filter(ext => ext.featured);
-    const searchResults = extensions.filter(ext => 
-      ext.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
-      ext.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      ext.tags.some(tag => tag.toLowerCase().includes(searchQuery.toLowerCase()))
-    );
 
     return (
       <div style={{ padding: '15px', height: '100%', display: 'flex', flexDirection: 'column' }}>
         <div style={{ display: 'flex', marginBottom: '15px' }}>
-            <div style={{ flex: 1, marginRight: '10px' }}>
-          <InputGroup
-            leftIcon="search"
-            placeholder="搜索扩展..."
-            value={searchQuery}
-            onChange={this.handleSearchChange}
-            rightElement={
-              isSearching ? 
-                <Button icon="cross" minimal onClick={this.clearSearch} /> : 
-                undefined
-            }
-          />
+          <div style={{ flex: 1, marginRight: '10px' }}>
+            <InputGroup
+              leftIcon="search"
+              placeholder="搜索扩展..."
+              value={searchQuery}
+              onChange={this.handleSearchChange}
+              rightElement={
+                isSearching ? 
+                  <Button icon="cross" minimal onClick={this.clearSearch} /> : 
+                  undefined
+              }
+            />
           </div>
           <Button 
             icon="shop" 
@@ -245,8 +271,8 @@ export class Extensions extends Component<ExtensionsProps, ExtensionsState> {
         {isSearching ? (
           <div style={{ flex: 1, overflowY: 'auto' }}>
             <h3>搜索结果</h3>
-            {searchResults.length > 0 ? (
-              searchResults.map(this.renderExtensionCard)
+            {extensions.length > 0 ? (
+              extensions.map(this.renderExtensionCard)
             ) : (
               <div style={{ textAlign: 'center', padding: '20px', color: '#888' }}>
                 未找到匹配的扩展
@@ -254,33 +280,35 @@ export class Extensions extends Component<ExtensionsProps, ExtensionsState> {
             )}
           </div>
         ) : (
-          <Tabs id="extensions-tabs">
-            <Tab 
-              id="installed" 
-              title="已安装" 
-              panel={
-                <div style={{ overflowY: 'auto', padding: '10px 0' }}>
-                  {installedExtensions.length > 0 ? (
-                    installedExtensions.map(this.renderExtensionCard)
-                  ) : (
-                    <div style={{ textAlign: 'center', padding: '20px', color: '#888' }}>
-                      暂无已安装的扩展
-                    </div>
-                  )}
-                </div>
-              } 
-            />
-            <Tab 
-              id="featured" 
-              title="精选扩展" 
-              panel={
-                <div style={{ overflowY: 'auto', padding: '10px 0' }}>
-                  {featuredExtensions.map(this.renderExtensionCard)}
-                </div>
-              } 
-            />
-            <Tabs.Expander />
-          </Tabs>
+          <div style={{ height: 'calc(100vh - 100px)', display: 'flex', flexDirection: 'column' }}>
+            <Tabs id="extensions-tabs">
+              <Tab 
+                id="installed" 
+                title="已安装" 
+                panel={
+                  <div style={{ overflowY: 'auto', padding: '10px 0', height: 'calc(100vh - 150px)' }}>
+                    {installedExtensions.length > 0 ? (
+                      installedExtensions.map(this.renderExtensionCard)
+                    ) : (
+                      <div style={{ textAlign: 'center', padding: '20px', color: '#888' }}>
+                        暂无已安装的扩展
+                      </div>
+                    )}
+                  </div>
+                } 
+              />
+              <Tab 
+                id="featured" 
+                title="精选扩展" 
+                panel={
+                  <div style={{ overflowY: 'auto', padding: '10px 0', height: 'calc(100vh - 150px)' }}>
+                    {featuredExtensions.map(this.renderExtensionCard)}
+                  </div>
+                } 
+              />
+              <Tabs.Expander />
+            </Tabs>
+          </div>
         )}
       </div>
     );

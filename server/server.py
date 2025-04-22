@@ -175,11 +175,7 @@ async def file(path: str):
 
 @app.get("/api/extensions")
 async def extensions():
-    extension_dir = {}
-    for name, data in ExtensionManager.instance().extensions.items():
-        extension_dir[name] = "/extension/" + name + "/dist/" + data.web_ui.dist
-    return extension_dir
-
+    return ExtensionManager.instance().extensions
 
 @app.websocket("/ws")
 async def websocket_endpoint(websocket: WebSocket):
