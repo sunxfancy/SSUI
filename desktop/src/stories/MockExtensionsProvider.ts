@@ -1,7 +1,7 @@
 import { IExtensionsProvider } from '../providers/IExtensionsProvider';
 import { ExtensionItem } from '../components/Extensions';
 
-export class ExtensionsProvider implements IExtensionsProvider {
+export class MockExtensionsProvider implements IExtensionsProvider {
   private extensions: ExtensionItem[] = [
     {
       id: 'ext1',
@@ -97,5 +97,13 @@ export class ExtensionsProvider implements IExtensionsProvider {
       ext.description.toLowerCase().includes(lowerQuery) ||
       ext.tags.some((tag: string) => tag.toLowerCase().includes(lowerQuery))
     );
+  }
+
+  async disableExtension(extensionId: string): Promise<boolean> {
+    return true;
+  }
+
+  async enableExtension(extensionId: string): Promise<boolean> {
+    return true;
   }
 } 

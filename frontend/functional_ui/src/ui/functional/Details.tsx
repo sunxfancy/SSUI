@@ -1,7 +1,6 @@
 import React, { Component } from "react";
 import { Section, SectionCard } from "@blueprintjs/core";
-import '../../controlers/InternalControlers'; // Register controlers
-import { ControlerRef } from "../../controlers/ControlerRef";
+import { ControlerRef } from "ssui_components";
 
 type ScriptDetails = {
     [key: string]: {

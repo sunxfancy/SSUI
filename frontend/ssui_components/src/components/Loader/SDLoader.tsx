@@ -1,4 +1,3 @@
-import { IComponent } from '../IComponent';
 import React, { Component } from 'react';
 
 interface SDModel {
