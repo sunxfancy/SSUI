@@ -36,10 +36,12 @@ interface ExtensionsState {
   searchQuery: string;
   isSearching: boolean;
   extensions: ExtensionItem[];
+  retryCount: number;
 }
 
 export class Extensions extends Component<ExtensionsProps, ExtensionsState> {
   private provider: IExtensionsProvider;
+  private retryTimeout: NodeJS.Timeout | null = null;
 
   constructor(props: ExtensionsProps) {
     super(props);
@@ -47,18 +49,49 @@ export class Extensions extends Component<ExtensionsProps, ExtensionsState> {
     this.state = {
       searchQuery: '',
       isSearching: false,
-      extensions: []
+      extensions: [],
+      retryCount: 0
     };
   }
 
-  async componentDidMount() {
-    try {
-      const extensions = await this.provider.getExtensions();
-      this.setState({ extensions });
-    } catch (error) {
-      console.error("加载扩展数据失败:", error);
+  componentWillUnmount() {
+    // 清除重试定时器
+    if (this.retryTimeout) {
+      clearTimeout(this.retryTimeout);
+      this.retryTimeout = null;
     }
   }
+
+  async componentDidMount() {
+    await this.loadExtensions();
+  }
+
+  loadExtensions = async () => {
+    try {
+      const extensions = await this.provider.getExtensions();
+      this.setState({ 
+        extensions,
+        retryCount: 0 // 重置重试计数
+      });
+    } catch (error) {
+      console.error("加载扩展数据失败:", error);
+      
+      // 如果重试次数小于3次，则3秒后重试
+      if (this.state.retryCount < 3) {
+        this.setState(prevState => ({ retryCount: prevState.retryCount + 1 }));
+        
+        // 清除之前的定时器
+        if (this.retryTimeout) {
+          clearTimeout(this.retryTimeout);
+        }
+        
+        // 设置新的定时器
+        this.retryTimeout = setTimeout(() => {
+          this.loadExtensions();
+        }, 3000);
+      }
+    }
+  };
 
   handleSearchChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const query = event.target.value;
@@ -89,12 +122,7 @@ export class Extensions extends Component<ExtensionsProps, ExtensionsState> {
       searchQuery: '',
       isSearching: false
     });
-    try {
-      const extensions = await this.provider.getExtensions();
-      this.setState({ extensions });
-    } catch (error) {
-      console.error("加载扩展数据失败:", error);
-    }
+    await this.loadExtensions();
   };
 
   openExtensionStore = () => {
