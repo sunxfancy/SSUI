@@ -22,7 +22,7 @@ export class Topbar extends Component<TopbarProps> {
         const icons: IconName[] = ["git-repo", "package", "sort", "settings"];
 
         return (
-            <div style={{ display: "flex", flexDirection: "column", width: "100%" }}>
+            <div style={{ display: "flex", flexDirection: "column", width: "100%", height: "100%" }}>
                 <div style={{ display: "flex", alignItems: "center", justifyContent: "center", padding: "10px" }}>
                     <Tabs
                         id="topbar-tabs"
@@ -40,9 +40,10 @@ export class Topbar extends Component<TopbarProps> {
                         ))}
                     </Tabs>
                 </div>
-                <div>
+                <div style={{ flex: 1, minHeight: 50 }}>
                     {tabIds.map((id, index) => (
                         <TabPanel
+                            className="topbar-tab-panel"
                             key={id}
                             id={id}
                             selectedTabId={this.state.selectedTabId}

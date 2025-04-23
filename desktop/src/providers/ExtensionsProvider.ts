@@ -43,6 +43,22 @@ export class ExtensionsProvider implements IExtensionsProvider {
       return [];
     } catch (error) {
       console.error("获取扩展列表失败:", error);
+      console.log("3秒后重试获取扩展列表...");
+      
+      // 等待3秒后重试
+      await new Promise(resolve => setTimeout(resolve, 3000));
+      
+      try {
+        const retryResult = await this.message.get("api/extensions");
+        
+        if (retryResult && typeof retryResult === 'object') {
+          const extensionsData = retryResult as ExtensionsResponse;
+          return this.convertToExtensionItems(extensionsData);
+        }
+      } catch (retryError) {
+        console.error("重试获取扩展列表失败:", retryError);
+      }
+      
       return [];
     }
   }

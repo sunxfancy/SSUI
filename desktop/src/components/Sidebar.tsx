@@ -101,16 +101,18 @@ export class Sidebar extends Component<{
         const { fileTree } = this.state;
 
         return (
-            <div className="sidebar">
+            <div className="sidebar" style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
                 {currentWorkspace ? (
-                    <Tree
-                        contents={fileTree}
-                        onNodeExpand={this.handleNodeExpand}
-                        onNodeCollapse={this.handleNodeCollapse}
-                        onNodeClick={this.handleNodeClick}
-                    />
+                    <div style={{ flex: 1, overflowY: 'auto', minHeight: 0 }}>
+                        <Tree
+                            contents={fileTree}
+                            onNodeExpand={this.handleNodeExpand}
+                            onNodeCollapse={this.handleNodeCollapse}
+                            onNodeClick={this.handleNodeClick}
+                        />
+                    </div>
                 ) : (
-                    <div style={{ display: 'flex', flexDirection: 'column',  justifyContent: 'center', padding: '20px', height: '100%' }}>
+                    <div style={{ display: 'flex', flexDirection: 'column',  padding: '20px', height: '100%' }}>
                         <p>当前没有打开的目录, 您可以：</p>
                         <div style={{ display: 'flex', justifyContent: 'center', marginTop: '10px', marginBottom: '20px' }} >
                             <Button onClick={this.props.onOpenWorkspace} icon="folder-open" size="large" variant="solid">打开已有工作空间</Button>

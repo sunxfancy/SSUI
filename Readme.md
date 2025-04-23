@@ -82,3 +82,14 @@ Example URL:
 ```
 http://127.0.0.1:7420/?path=<example_path>/basic/workflow-sd1.py
 ```
+
+### Download the testing models
+
+To test the image generation, you need the following models, including:
+
+- SD1.5
+- SDXL
+- Flux
+
+You can download them from:
+https://huggingface.co/datasets/sunxfancy/TestSDModels/tree/main

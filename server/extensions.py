@@ -92,9 +92,11 @@ class ExtensionManager:
                 try:
                     spec = importlib.util.spec_from_file_location(name, script_path)
                     module = importlib.util.module_from_spec(spec)
-                    module.app = app
                     spec.loader.exec_module(module)
-                    self.modules[name] = module
+                    self.modules[name] = module  # 保存模块
+
+                    router = module.app
+                    app.include_router(router, prefix=f"/extension/{name}")  # 添加路由
                 except Exception as e:
                     print(e)
                     self.modules[name] = None
