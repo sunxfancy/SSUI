@@ -8,6 +8,14 @@
         "fastapi": "cd test && node ../../../dependencies/venv.cjs fastapi dev server.py",
         "test": "jest"
     },
+    "exports": {
+        ".": {
+            "import": "./dist/index.js",
+            "types": "./dist/index.d.ts"
+        }
+    },
+    "main": "./dist/index.js",
+    "types": "./dist/index.d.ts",
     "dependencies": {
         "@blueprintjs/core": "^5.16.2",
         "@blueprintjs/select": "^5.3.7",
