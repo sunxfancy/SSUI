@@ -2,12 +2,14 @@ import React from 'react';
 import { Dialog, Button, Checkbox, FormGroup, InputGroup, Intent, Classes, ProgressBar, Callout } from '@blueprintjs/core';
 import { IInstallerProvider } from './providers/IInstallerProvider';
 import { TauriInstallerProvider } from './providers/TauriInstallerProvider';
+import { invoke } from '@tauri-apps/api/core';
 
 interface InstallPageState {
   isOpen: boolean;
   installDir: string;
   enableGPU: boolean;
   enableAutoUpdate: boolean;
+  proxyServer: string;
   isInstalling: boolean;
   installProgress: number;
   predictProgress: number;
@@ -33,6 +35,7 @@ class InstallPage extends React.Component<InstallPageProps, InstallPageState> {
       installDir: '',
       enableGPU: true,
       enableAutoUpdate: true,
+      proxyServer: '',
       isInstalling: false,
       installProgress: 0,
       predictProgress: 0,
@@ -60,12 +63,17 @@ class InstallPage extends React.Component<InstallPageProps, InstallPageState> {
     this.setState({ enableAutoUpdate: event.target.checked });
   }
 
+  handleProxyServerChange(event: React.ChangeEvent<HTMLInputElement>) {
+    this.setState({ proxyServer: event.target.value });
+  }
+
   handleSubmit() {
-    const { installDir, enableGPU, enableAutoUpdate } = this.state;
+    const { installDir, enableGPU, enableAutoUpdate, proxyServer } = this.state;
 
     console.log('安装目录:', installDir);
     console.log('启用GPU:', enableGPU);
     console.log('启用自动更新:', enableAutoUpdate);
+    console.log('代理服务器:', proxyServer);
 
     // 开始安装过程
     this.setState({ isOpen: false, isInstalling: true, installProgress: 0, shellOutput: '' });
@@ -147,8 +155,30 @@ class InstallPage extends React.Component<InstallPageProps, InstallPageState> {
   }
 
   async installDependencies() {
-    const { currentPlatform, installDir, enableGPU, enableAutoUpdate } = this.state;
+    const { currentPlatform, installDir, enableGPU, enableAutoUpdate, proxyServer } = this.state;
     let lockFile = '';
+
+    // 如果设置了代理服务器，先调用setProxy命令
+    if (proxyServer && proxyServer.trim() !== '') {
+      this.setState(prev => ({
+        shellOutput: prev.shellOutput + `正在设置代理服务器: ${proxyServer}...\n`,
+        installProgress: 0,
+        predictProgress: 1
+      }));
+      
+      try {
+        await invoke('set_proxy', { proxyUrl: proxyServer });
+        this.setState(prev => ({
+          shellOutput: prev.shellOutput + '代理服务器设置成功\n',
+          installProgress: 1
+        }));
+      } catch (error) {
+        this.setState(prev => ({
+          shellOutput: prev.shellOutput + `设置代理服务器失败: ${error}\n`,
+          installProgress: 1
+        }));
+      }
+    }
 
     // 根据平台选择正确的lock文件
     if (currentPlatform === 'macos') {
@@ -312,7 +342,7 @@ class InstallPage extends React.Component<InstallPageProps, InstallPageState> {
   }
 
   render() {
-    const { isOpen, installDir, enableGPU, enableAutoUpdate, isInstalling, currentProgress, shellOutput } = this.state;
+    const { isOpen, installDir, enableGPU, enableAutoUpdate, proxyServer, isInstalling, currentProgress, shellOutput } = this.state;
 
     return (
       <div>
@@ -336,6 +366,16 @@ class InstallPage extends React.Component<InstallPageProps, InstallPageState> {
                 />}
               />
             </FormGroup >
+
+            <FormGroup label="Proxy Server" labelFor="proxy-server" fill={true}>
+              <InputGroup fill={true}
+                id="proxy-server"
+                type="text"
+                placeholder="可选代理服务器地址，当无法正常访问下载路径时会再次尝试使用代理。"
+                value={proxyServer}
+                onChange={this.handleProxyServerChange.bind(this)}
+              />
+            </FormGroup>
 
             <FormGroup>
               <Checkbox

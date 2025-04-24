@@ -9,7 +9,8 @@
     "frontend/ssui_components",
     "frontend/functional_ui",
     "ssui-vscode",
-    "extension_builder"
+    "extension_builder",
+    "extensions/Image"
   ],
   "scripts": {
     "dev:desktop_ui": "cd desktop && yarn dev",

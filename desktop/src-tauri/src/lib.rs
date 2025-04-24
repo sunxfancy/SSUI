@@ -1,5 +1,6 @@
 use downloader::download_python;
 use downloader::unpack_app;
+use downloader::set_proxy;
 use gpu_detector::detect_gpu;
 use python::run_python;
 use python::run_python_background;
@@ -50,7 +51,8 @@ pub fn run() {
             start_server,
             start_executor,
             get_server_status,
-            get_executor_status
+            get_executor_status,
+            set_proxy
         ])
         .setup(|app| {
             log::info!("应用程序设置完成");

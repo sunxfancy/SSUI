@@ -8,15 +8,16 @@
     "outDir": "dist",
     "esModuleInterop": true,
 
+    "moduleResolution": "bundler",
     "isolatedModules": true,
     "declaration": true,
     "jsx": "react-jsx",
 
     /* Linting */
     "strict": true,
-    "noUnusedLocals": true,
-    "noUnusedParameters": true,
+    "noUnusedLocals": false,
+    "noUnusedParameters": false,
     "noFallthroughCasesInSwitch": true
   },
-  "include": ["src/**/*.ts"]
+  "include": ["src/**/*.ts", "src/**/*.tsx"]
 }

@@ -2,7 +2,7 @@ import React, { Component } from 'react';
 import { Label, Button, Card, Elevation, Collapse } from "@blueprintjs/core";
 import { ItemPredicate, ItemRenderer, Select } from "@blueprintjs/select";
 import { MenuItem } from "@blueprintjs/core";
-import { ComponentTabRef } from "../../components/ComponentRef";
+import { ComponentTabRef } from "ssui_components";
 import { DetailsPanel } from "./Details";
 import { UIProvider } from '../UIProvider';
 import './FunctionalUI.css';

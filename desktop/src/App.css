@@ -24,3 +24,7 @@ html, body, #root {
 .bp5-tab-panel {
   margin-top: 0px !important;
 }
+
+.topbar-tab-panel {
+  height: 100%;
+}

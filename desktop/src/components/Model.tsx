@@ -166,7 +166,7 @@ export class ModelManager extends Component<ModelManagerProps, ModelState> {
     const { searchQuery, showButtonText, groups } = this.state;
     
     return (
-      <div ref={this.containerRef}>
+      <div ref={this.containerRef} style={{ height: "100%", display: "flex", flexDirection: "column" }}>
         <div style={{ display: "flex", alignItems: "center" }}>
           <div style={{ flex: 1, marginLeft: "5px" }}>
             <InputGroup
@@ -215,7 +215,7 @@ export class ModelManager extends Component<ModelManagerProps, ModelState> {
         </div>
         
         <div style={{ 
-          height: "calc(100vh - 120px)", 
+          flex: 1,
           overflowY: "auto",
           border: "1px solid #e1e8ed",
           borderRadius: "3px"

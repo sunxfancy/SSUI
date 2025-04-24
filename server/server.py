@@ -175,11 +175,7 @@ async def file(path: str):
 
 @app.get("/api/extensions")
 async def extensions():
-    extension_dir = {}
-    for name, data in ExtensionManager.instance().extensions.items():
-        extension_dir[name] = "/extension/" + name + "/dist/" + data.web_ui.dist
-    return extension_dir
-
+    return ExtensionManager.instance().extensions
 
 @app.websocket("/ws")
 async def websocket_endpoint(websocket: WebSocket):
@@ -196,12 +192,12 @@ async def websocket_endpoint(websocket: WebSocket):
 # 对于静态数据的请求，使用文件资源管理器
 settings = config_service.get_settings()
 if settings.host_web_ui:
-    @app.get("/", response_class=RedirectResponse)
+    @app.get("/functional_ui/", response_class=RedirectResponse)
     async def root(request: Request):
         query_string = request.url.query
-        redirect_url = "/index.html"
+        redirect_url = "/functional_ui/index.html"
         if query_string:
             redirect_url += f"?{query_string}"
         return RedirectResponse(url=redirect_url)
 
-    app.mount("/", StaticFiles(directory=settings.host_web_ui), name="static")
+    app.mount("/functional_ui/", StaticFiles(directory=settings.host_web_ui), name="static")

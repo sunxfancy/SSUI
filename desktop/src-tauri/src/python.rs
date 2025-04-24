@@ -10,6 +10,7 @@ use std::collections::HashMap;
 use log::{info, error, warn, debug};
 #[cfg(windows)]
 use std::os::windows::process::CommandExt; // 只在windows平台引入CommandExt
+use crate::downloader::get_proxy;
 
 pub struct BackgroundProcessesGuard {
     processes: Mutex<Vec<Child>>
@@ -123,27 +124,96 @@ lazy_static! {
     pub static ref PROCESS_MANAGER: ProcessManager = ProcessManager::new();
 }
 
+fn set_proxy_for_python(cmd: &mut Command, proxy_url: &str) {
+    info!("为Python进程设置代理: {}", proxy_url);
+    
+    // 确保代理URL有正确的scheme
+    let proxy_url_with_scheme = if !proxy_url.contains("://") {
+        format!("http://{}", proxy_url)
+    } else {
+        proxy_url.to_string()
+    };
+    
+    // 根据代理URL的协议选择代理类型
+    if proxy_url_with_scheme.starts_with("http://") {
+        cmd.env("HTTP_PROXY", &proxy_url_with_scheme)
+            .env("HTTPS_PROXY", &proxy_url_with_scheme);
+    } else if proxy_url_with_scheme.starts_with("https://") {
+        cmd.env("HTTPS_PROXY", &proxy_url_with_scheme);
+    } 
+    
+    // 如果代理URL包含用户名和密码，则设置相应的环境变量
+    if let Some(auth_start) = proxy_url_with_scheme.find('@') {
+        if let Some(scheme_end) = proxy_url_with_scheme.find("://") {
+            let auth_part = &proxy_url_with_scheme[scheme_end + 3..auth_start];
+            if let Some(colon_pos) = auth_part.find(':') {
+                let username = &auth_part[..colon_pos];
+                let password = &auth_part[colon_pos + 1..];
+                
+                if proxy_url_with_scheme.starts_with("http://") {
+                cmd.env("HTTP_PROXY_USERNAME", username)
+                    .env("HTTP_PROXY_PASSWORD", password);
+                } else if proxy_url_with_scheme.starts_with("https://") {
+                    cmd.env("HTTPS_PROXY_USERNAME", username)
+                    .env("HTTPS_PROXY_PASSWORD", password);
+                }
+            }
+        }
+    }
+}
+
+// 用来运行pip，所以要设置代理
 #[tauri::command]
 pub async fn run_python(path: &str, cwd: &str, args: Vec<&str>) -> Result<String, String> {
     info!("运行Python脚本: {} 在目录: {}", path, cwd);
     debug!("Python参数: {:?}", args);
-    let output = Command::new(path)
-        .args(args.clone())
-        .current_dir(cwd)
-        .output()
-        .expect(format!("failed to execute process, path: {}, cwd: {}, args: {:?}", path, cwd, args).as_str());
-
-    let stdout = String::from_utf8(output.stdout).expect("failed to convert stdout to string");
-    let stderr = String::from_utf8(output.stderr).expect("failed to convert stderr to string");
-
-    if output.status.success() {
-        info!("Python脚本执行成功");
-        debug!("Python输出: {}", stdout);
-        Ok(stdout)
-    } else {
-        let err_msg = format!("Python脚本执行失败: {}", stderr);
-        error!("{}", err_msg);
-        Err(stderr)
+    
+    // 创建基本命令
+    let mut create_cmd = |use_proxy: bool| -> Command {
+        let mut cmd = Command::new(path);
+        cmd.args(args.clone())
+            .current_dir(cwd)
+            .env("PYTHONIOENCODING", "utf-8");
+        
+        if use_proxy {
+            if let Some(proxy_url) = get_proxy() {
+                set_proxy_for_python(&mut cmd, &proxy_url);
+            }
+        }
+        cmd
+    };
+    
+    // 执行命令并处理结果
+    fn run_and_process(mut cmd: Command, use_proxy: bool) -> Result<String, String> {
+        let output = cmd.output()
+            .map_err(|e| format!("{}执行进程失败: {}", if use_proxy { "使用代理" } else { "" }, e))?;
+        
+        let stdout = String::from_utf8(output.stdout).expect("无法将stdout转换为字符串");
+        let stderr = String::from_utf8(output.stderr).expect("无法将stderr转换为字符串");
+        
+        if output.status.success() {
+            info!("{}Python脚本执行成功", if use_proxy { "使用代理后" } else { "" });
+            debug!("Python输出: {}", stdout);
+            Ok(stdout)
+        } else {
+            let err_msg = format!("{}Python脚本执行失败: {}", if use_proxy { "使用代理后" } else { "" }, stderr);
+            error!("{}", err_msg);
+            Err(stderr)
+        }
+    }
+    
+    // 首先尝试不使用代理运行
+    match run_and_process(create_cmd(false), false) {
+        Ok(result) => Ok(result),
+        Err(e) => {
+            // 如果执行失败且设置了代理，则尝试使用代理重试
+            if get_proxy().is_some() {
+                info!("Python脚本执行失败，尝试使用代理重试");
+                run_and_process(create_cmd(true), true)
+            } else {
+                Err(e)
+            }
+        }
     }
 }
 
@@ -335,6 +405,7 @@ async fn spawn_python_process(path: &str, cwd: &str, args: Vec<&str>) -> Result<
         .stdout(log_file)
         .stderr(error_log_file)
         .env("PYTHONIOENCODING", "utf-8");
+
 
     //在Windows上设置creation_flags 防治创建cmd窗口
     #[cfg(windows)]

@@ -1,6 +1,6 @@
 
 import './App.css';
-import './components/InternalComponents';
+import '../../ssui_components/src/components/InternalComponents';
 import { getUIProvider } from './ui/UIProvider';
 import { ExtensionLoader } from './extension/loader';
 

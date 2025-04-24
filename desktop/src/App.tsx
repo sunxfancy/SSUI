@@ -50,7 +50,7 @@ class App extends Component {
     const rootState = GlobalStateManager.getInstance().getRootState();
     const host = rootState?.host || 'localhost';
     const port = rootState?.port || 7422;
-    this.tabWindowManagerRef.current?.openFile(filePath, `http://${host}:${port}/?path=${filePath}`);
+    this.tabWindowManagerRef.current?.openFile(filePath, `http://${host}:${port}/functional_ui/?path=${filePath}`);
   }
 
   addModel = () => {

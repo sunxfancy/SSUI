@@ -17,6 +17,8 @@ class ConfigService:
         return Settings.model_validate_json(open(self.settings_path, "r").read())
     
     def save_settings(self) -> None:
+        if not os.path.exists(os.path.dirname(self.settings_path)):
+            os.makedirs(os.path.dirname(self.settings_path))
         with open(self.settings_path, "w") as f:
             json.dump(self.settings.model_dump(), f, indent=4, ensure_ascii=False)
     
