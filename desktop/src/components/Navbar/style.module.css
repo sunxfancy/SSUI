@@ -1,0 +1,47 @@
+.navbar {
+    width: 40px;
+    border-right: solid 1px #e4e4e4;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 4px 0;
+    flex-shrink: 0;
+
+    .nav {
+        width: 32px;
+        height: 32px;
+        margin-bottom: 6px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 8px;
+        cursor: pointer;
+        transition: background-color 0.3s ease;
+        position: relative;
+
+        &.active {
+            background-color: rgba(194, 194, 194, 0.6);
+        }
+
+        &:not(&.active):hover {
+            background-color: rgba(218, 218, 218, 0.6);
+        }
+
+        .queueSum {
+            width: 20px;
+            height: 20px;
+            color: #215db0;
+            font-weight: 900;
+            font-size: 14px;
+            position: absolute;
+            top: 0;
+            left: -2px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-shadow: 0 0 2px rgba(153, 168, 227, 0.73);
+        }
+    }
+
+}

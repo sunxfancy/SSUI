@@ -1,92 +1,123 @@
-import React, { Component } from 'react';
+import React, {memo, ReactElement, useRef, useState} from 'react';
 import { load } from '@tauri-apps/plugin-store';
-import Sidebar from './components/Sidebar.tsx';
+import {WorkSpace} from './components/WorkSpace'
 import TabWindowManager from './components/TabWindowManager';
 import { Allotment } from "allotment";
 import "allotment/dist/style.css";
 import { Topbar } from './components/Topbar';
-import { ModelManager } from './components/Model';
-import ModelAddingPage from './ModelAdding.tsx';
-import Queue from './components/Queue.tsx';
+import { ModelManager } from './components/ModelManager';
+import ModelAddingPage from './components/ModelAdding';
+import Queue from './components/Queue';
 import { open } from '@tauri-apps/plugin-dialog';
 import NewWorkflow from './components/NewWorkflow.tsx';
-import { Extensions } from './components/Extensions.tsx';
+import { Extensions } from './components/Extensions/index.tsx';
 import { ModelManagerProvider } from './providers/ModelManagerProvider';
 import GlobalStateManager from './services/GlobalState.ts';
+import {Navbar} from "./components/Navbar";
+import { TabPanel } from '@blueprintjs/core'
 
-class App extends Component {
-  tabWindowManagerRef = React.createRef<TabWindowManager>();
-  state = {
-    currentWorkspace: null,
-    isNewWorkflowDialogOpen: false,
-  };
+const App = () => {
+    const [ currentWorkspace, setCurrentWorkspace ] = useState('')
+    const [ isNewWorkflowDialogOpen, setIsNewWorkflowDialogOpen ] = useState(false)
+    const [ navIndex, setNavIndex ] = useState(0)
+    const tabWindowManagerRef = useRef<TabWindowManager>()
+    const modelManagerProvider = useRef(new ModelManagerProvider())
 
-  // 创建一个模型管理提供者实例
-  private modelManagerProvider = new ModelManagerProvider();
+    const onClick = async () => {
+        const store = await load('settings.json', { autoSave: false });
+        await store.set('root', undefined);
+        await store.save();
+    }
 
-  async onClick() {
-    const store = await load('settings.json', { autoSave: false });
-    await store.set('root', undefined);
-    await store.save();
-  }
+    const onOpenWorkspace = () => {
+        open({
+            directory: true,
+            multiple: false
+        }).then(async (result: string | null) => {
+            if (result) {
+                setCurrentWorkspace(result)
+            }
+        });
+    }
 
-  onOpenWorkspace = () => {
-    const options = {
-      directory: true,
-      multiple: false
-    };
-    open(options).then(async (result: string | null) => {
-      if (result) {
-        this.setState({ currentWorkspace: result });
-      }
-    });
-  }
+    const onSelectWorkflow = () => {
+        setIsNewWorkflowDialogOpen(true)
+    }
 
-  onSelectWorkflow = () => {
-    this.setState({ isNewWorkflowDialogOpen: true });
-  }
+    const onFileOpen = (filePath: string) => {
+        const rootState = GlobalStateManager.getInstance().getRootState();
+        const host = rootState?.host || 'localhost';
+        const port = rootState?.port || 7422;
+        tabWindowManagerRef.current?.openFile(filePath, `http://${host}:${port}/functional_ui/?path=${filePath}`);
+    }
 
-  onFileOpen = (filePath: string) => {
-    const rootState = GlobalStateManager.getInstance().getRootState();
-    const host = rootState?.host || 'localhost';
-    const port = rootState?.port || 7422;
-    this.tabWindowManagerRef.current?.openFile(filePath, `http://${host}:${port}/functional_ui/?path=${filePath}`);
-  }
+    const addModel = () => {
+        tabWindowManagerRef.current?.openReactComponent(<ModelAddingPage />, "添加模型");
+    }
 
-  addModel = () => {
-    this.tabWindowManagerRef.current?.openReactComponent(<ModelAddingPage />, "添加模型");
-  }
+    const openExtensionStore = () => {
+        tabWindowManagerRef.current?.openFile("#internal-extension-store", "https://sunxfancy.github.io/test_page/", "扩展商城");
+    }
 
-  openExtensionStore = () => {
-    this.tabWindowManagerRef.current?.openFile("#internal-extension-store", "https://sunxfancy.github.io/test_page/", "扩展商城");
-  }
+    const handleWorkflowSelect = (workflowIds: string[], targetPath: string) => {
+        // TODO：将workflowIds转换为文件然后写入到目标文件夹中
+        console.log(workflowIds);
+        setIsNewWorkflowDialogOpen(false)
+        setCurrentWorkspace(targetPath)
+    }
 
-  handleWorkflowSelect = (workflowIds: string[], targetPath: string) => {
-    // TODO：将workflowIds转换为文件然后写入到目标文件夹中
-    console.log(workflowIds);
-    this.setState({ isNewWorkflowDialogOpen: false, currentWorkspace: targetPath });
-  }
+    const GenerateNavContent = memo(() => {
+        switch (navIndex) {
+            case 0: return <WorkSpace currentWorkspace={currentWorkspace} onOpenWorkspace={onOpenWorkspace} onSelectWorkflow={onSelectWorkflow} onFileOpen={onFileOpen} />
+            case 1: return <ModelManager provider={modelManagerProvider} addModel={addModel} />
+            case 2: return <Queue />
+            case 3: return <Extensions onOpenExtensionStore={openExtensionStore} />
+        }
+    })
 
-  render() {
     return (
-      <div style={{ height: '100%' }}>
-        <Allotment>
-          <Allotment.Pane minSize={100} maxSize={500}>
-            <Topbar>
-              <Sidebar currentWorkspace={this.state.currentWorkspace} onOpenWorkspace={this.onOpenWorkspace} onSelectWorkflow={this.onSelectWorkflow} onFileOpen={this.onFileOpen} />
-              <ModelManager provider={this.modelManagerProvider} addModel={this.addModel} />
-              <Queue />
-              <Extensions onOpenExtensionStore={this.openExtensionStore} />
-            </Topbar>
-          </Allotment.Pane>
-          <Allotment.Pane>
-            <TabWindowManager ref={this.tabWindowManagerRef} />
-          </Allotment.Pane>
-        </Allotment>
-        <NewWorkflow isOpen={this.state.isNewWorkflowDialogOpen} onClose={() => this.setState({ isNewWorkflowDialogOpen: false })} onWorkflowSelect={this.handleWorkflowSelect} />
-      </div>
-    );
-  }
+        <div style={{ height: '100%' }}>
+            <Allotment>
+                <Allotment.Pane preferredSize={360} minSize={100} maxSize={500}>
+                    <div style={{ display: 'flex', height: '100%' }}>
+                        <Navbar navIndex={navIndex} updateNavIndex={setNavIndex} />
+                        {/*<GenerateNavContent></GenerateNavContent>*/}
+                        <div style={{ width: '100%' }}>
+                            <TabPanel
+                                id={0}
+                                selectedTabId={navIndex}
+                                parentId="navbar-tabs"
+                                panel={<WorkSpace currentWorkspace={currentWorkspace} onOpenWorkspace={onOpenWorkspace} onSelectWorkflow={onSelectWorkflow} onFileOpen={onFileOpen} />}
+                            />
+                            <TabPanel
+                                id={1}
+                                selectedTabId={navIndex}
+                                parentId="navbar-tabs"
+                                panel={<ModelManager provider={modelManagerProvider} addModel={addModel} />}
+                            />
+                            <TabPanel
+                                id={2}
+                                selectedTabId={navIndex}
+                                parentId="navbar-tabs"
+                                panel={<Queue />}
+                            />
+                            <TabPanel
+                                id={3}
+                                selectedTabId={navIndex}
+                                parentId="navbar-tabs"
+                                panel={<Extensions onOpenExtensionStore={openExtensionStore} />}
+                            />
+                        </div>
+
+                    </div>
+                </Allotment.Pane>
+                <Allotment.Pane>
+                    <TabWindowManager ref={tabWindowManagerRef} />
+                </Allotment.Pane>
+            </Allotment>
+            <NewWorkflow isOpen={isNewWorkflowDialogOpen} onClose={() => setIsNewWorkflowDialogOpen(false)} onWorkflowSelect={handleWorkflowSelect} />
+        </div>
+    )
 }
 
-export default App;
+export default App

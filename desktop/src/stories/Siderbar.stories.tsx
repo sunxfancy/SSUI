@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from '@storybook/react';
-import { Sidebar } from '../components/Sidebar';
+import { Sidebar } from '../components/WorkSpace';
 import { MockFilesystemProvider } from './MockFilesystemProvider';
 
 // 创建 Mock 文件系统提供程序的实例

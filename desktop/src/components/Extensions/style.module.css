@@ -1,0 +1,100 @@
+.extensions {
+    padding: 10px;
+
+    .title {
+        margin-bottom: 10px;
+        font-size: 16px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+
+        .titleText {
+            font-weight: bold;
+        }
+    }
+}
+
+.searchPart {
+    display: flex;
+    align-items: center;
+    margin-bottom: 10px;
+
+    .searchButton {
+        width: 120px;
+        margin-left: 10px;
+    }
+}
+
+.extensionsCard {
+    margin: 10px 5px;
+    display: flex;
+    flex-direction: column;
+    border: solid 1px #dcdcdc;
+    padding: 12px;
+    border-radius: 8px;
+
+    .main {
+        display: flex;
+        align-items: flex-start;
+
+        .iconPart {
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background-color: #f0f0f0;
+            border-radius: 4px;
+            margin: 0 16px 10px 0;
+            flex-shrink: 0;
+            box-shadow: 0 0 20px 2px rgba(0,0,0,0.11);
+        }
+
+        .textPart {
+            .name {
+                font-size: 15px;
+                font-weight: bold;
+                margin: 2px 0 4px;
+            }
+
+            .extraInfo {
+                display: flex;
+                align-items: center;
+
+                .item {
+                    display: flex;
+                    align-items: center;
+                    color: #a7a7a7;
+                    font-size: 11px;
+                    margin-right: 8px;
+
+                    .iconText {
+                        margin-left: 2px;
+                        color: #939393;
+                    }
+                }
+            }
+        }
+    }
+
+    .subContent {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-end;
+
+        .cardDesc {
+            margin-bottom: 12px;
+            color: #545454;
+            font-size: 14px;
+        }
+
+        .operate {
+            width: 46px;
+        }
+    }
+}
+
+.tabContent {
+    height: calc(100vh - 110px);
+    overflow: auto;
+}

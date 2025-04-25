@@ -28,3 +28,7 @@ html, body, #root {
 .topbar-tab-panel {
   height: 100%;
 }
+
+:focus {
+  outline: none!important;
+}

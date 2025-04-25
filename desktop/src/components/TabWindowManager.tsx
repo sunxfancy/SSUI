@@ -230,13 +230,13 @@ export class TabWindowManager extends Component<{}, State> {
           tabsNode.selected = tabsNode.tabs[index + 1];
         } else if (index > 0) {
           tabsNode.selected = tabsNode.tabs[index - 1];
-        } 
+        }
       }
 
       tabsNode.tabs = tabsNode.tabs.filter(t => t.id !== tab.id);
       if (onlyOneTabLeft && tabsNode.parent) {
         this.removePane(tabsNode);
-      } 
+      }
 
       // 如果全局最近选中的标签被删除，则选中刚刚选中的标签
       if (state.selectedTab?.id === tab.id) {
@@ -282,6 +282,7 @@ export class TabWindowManager extends Component<{}, State> {
     this.setState(produce(this.state, draft => {
       // Find if the file is already open
       let find_tab = draft.rootPane.find(t => t.id === filePath);
+      console.log(find_tab, filePath, draft.rootPane, '=====')
       if (find_tab) {
         this.handleTabActivate(find_tab.id);
         return;
