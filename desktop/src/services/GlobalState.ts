@@ -49,7 +49,7 @@ class GlobalStateManager {
         const isUIServerUsed = await checkServerStatus("localhost", 7420);
         const isServerRunning = await checkServerStatus("localhost", 7422);
         const path: string = await invoke("get_dev_root");
-        this.rootState = { path, version: 'dev', host: '127.0.0.1', port: isUIServerUsed ? 7420 : 7422, isUIServerUsed, isServerRunning };
+        this.rootState = { path, version: 'dev', host: 'localhost', port: isUIServerUsed ? 7420 : 7422, isUIServerUsed, isServerRunning };
       } else {
         const store = await load('settings.json', { autoSave: true });
         const rootData = await store.get<RootState>('root');

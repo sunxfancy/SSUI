@@ -72,15 +72,15 @@ Then start a executor for running the task:
 yarn dev:executor
 ```
 
-- Application server: http://127.0.0.1:7422/
-- API documentation server: http://127.0.0.1:7422/docs
-- Web UI dev server: http://127.0.0.1:7420/
+- Application server: http://localhost:7422/
+- API documentation server: http://localhost:7422/docs
+- Web UI dev server: http://localhost:7420/
 
 ### Run the example
 
 Example URL: 
 ```
-http://127.0.0.1:7420/?path=<example_path>/basic/workflow-sd1.py
+http://localhost:7420/?path=<example_path>/basic/workflow-sd1.py
 ```
 
 ### Download the testing models

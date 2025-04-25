@@ -13,7 +13,7 @@
 
 也可以手动启动独立的开发服务器：
 ```
-yarn dev:desktop_ui
+yarn dev:desktop
 yarn dev:functional_ui
 yarn dev:components
 yarn dev:server
@@ -35,9 +35,9 @@ yarn dev:server
 
 项目提供了多个构建命令：
 
-- `yarn dev:desktop_ui` - 启动桌面UI开发服务器
-- `yarn dev:desktop_sb` - 启动桌面Storyboard开发服务器
-- `yarn dev:desktop` - 启动Tauri桌面应用开发服务器
+- `yarn dev:desktop_ui` - 启动桌面UI开发服务器，仅用来开发UI
+- `yarn dev:desktop_sb` - 启动桌面Storyboard开发服务器，用来独立开发React组件
+- `yarn dev:desktop` - 启动Tauri桌面应用开发服务器，**最常用**
 - `yarn dev:server` - 启动FastAPI服务器（端口7422）
 - `yarn dev:functional_ui` - 启动功能UI开发服务器(端口7420)
 - `yarn dev:components` - 启动组件开发服务器
