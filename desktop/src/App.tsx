@@ -13,6 +13,7 @@ import NewWorkflow from './components/NewWorkflow.tsx';
 import { Extensions } from './components/Extensions.tsx';
 import { ModelManagerProvider } from './providers/ModelManagerProvider';
 import GlobalStateManager from './services/GlobalState.ts';
+import FileOpenerProvider from './providers/FileOpenerProvider.ts';
 
 class App extends Component {
   tabWindowManagerRef = React.createRef<TabWindowManager>();
@@ -46,11 +47,12 @@ class App extends Component {
     this.setState({ isNewWorkflowDialogOpen: true });
   }
 
-  onFileOpen = (filePath: string) => {
+  onFileOpen = async (filePath: string) => {
     const rootState = GlobalStateManager.getInstance().getRootState();
+    const defaultUrl = await FileOpenerProvider.constructDefaultUrl(filePath);
     const host = rootState?.host || 'localhost';
     const port = rootState?.port || 7422;
-    this.tabWindowManagerRef.current?.openFile(filePath, `http://${host}:${port}/functional_ui/?path=${filePath}`);
+    this.tabWindowManagerRef.current?.openFile(filePath, `http://${host}:${port}${defaultUrl}`);
   }
 
   addModel = () => {

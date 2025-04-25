@@ -10,5 +10,7 @@ server:
 
 web_ui:
   dist: dist/
-  main: main.js
+  mount: canvas/
+  file_opener:
+    - Canvas: /canvas/?path=(*.canvas)
   
