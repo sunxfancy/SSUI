@@ -210,6 +210,7 @@ if settings.host_web_ui:
         return RedirectResponse(url=redirect_url)
 
     app.mount("/functional_ui/", StaticFiles(directory=settings.host_web_ui), name="static")
+    print("mount functional_ui", settings.host_web_ui)
 
 FileOpenerManager.instance().register_opener("FunctionalUI", ".py", "/functional_ui/?path=")
 FileOpenerManager.instance().register_opener("ProjectSettings", "ssproject.yaml", "/functional_ui/?view=project_settings&path=")

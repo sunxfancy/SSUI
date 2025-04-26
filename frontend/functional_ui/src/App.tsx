@@ -6,7 +6,6 @@ import { getUIProvider } from './ui/UIProvider';
 function App() {
   function getView() {
     const params = new URLSearchParams(window.location.search);
-    console.log("getView", params);
     var path = '';
     if (params.has('path')) {
       path = params.get('path') ?? '';
@@ -18,6 +17,8 @@ function App() {
       const view = params.get('view') ?? '';
       provider = getUIProvider(view);
       console.log('View:', view, provider);
+    } else {
+      console.log('No view provided, using functional');
     }
     if (!provider) {
       provider = getUIProvider('functional');

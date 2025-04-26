@@ -329,6 +329,57 @@ pub async fn start_executor(path: &str, cwd: &str) -> Result<PythonCommand, Stri
     Ok(PythonCommand { pid })
 }
 
+// 重启服务器
+#[tauri::command]
+pub async fn restart_server(path: &str, cwd: &str) -> Result<PythonCommand, String> {
+    info!("重启服务器: {} 在目录: {}", path, cwd);
+    
+    // 先停止现有服务器进程
+    if PROCESS_MANAGER.is_process_running("server") {
+        info!("停止现有服务器进程");
+        PROCESS_MANAGER.kill_process("server");
+    }
+    
+    // 启动新的服务器进程
+    let args = vec!["-m", "server"];
+    let child = spawn_python_process(path, cwd, args).await?;
+    
+    // 记录服务器进程
+    let pid = child.id().to_string();
+    info!("服务器进程已重启，PID: {}", pid);
+    
+    // 将进程添加到进程管理器
+    PROCESS_MANAGER.add_process("server", child);
+    
+    Ok(PythonCommand { pid })
+}
+
+// 重启执行器
+#[tauri::command]
+pub async fn restart_executor(path: &str, cwd: &str) -> Result<PythonCommand, String> {
+    info!("重启执行器: {} 在目录: {}", path, cwd);
+    
+    // 先停止现有执行器进程
+    if PROCESS_MANAGER.is_process_running("executor") {
+        info!("停止现有执行器进程");
+        PROCESS_MANAGER.kill_process("executor");
+    }
+    
+    // 启动新的执行器进程
+    let args = vec!["-m", "ss_executor"];
+    let child = spawn_python_process(path, cwd, args).await?;
+    
+    // 记录执行器进程
+    let pid = child.id().to_string();
+    info!("执行器进程已重启，PID: {}", pid);
+    
+    // 将进程添加到进程管理器
+    PROCESS_MANAGER.add_process("executor", child);
+    
+    Ok(PythonCommand { pid })
+}
+
+
 // 查询服务器状态
 #[tauri::command]
 pub async fn get_server_status() -> Result<ProcessStatus, String> {

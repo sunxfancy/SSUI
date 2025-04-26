@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Card, Elevation, Button, Tag, Spinner, Icon } from '@blueprintjs/core';
+import { Card, Elevation, Button, Tag, Spinner, Icon, Dialog, Intent } from '@blueprintjs/core';
 import ExecutorService from '../services/Executor';
 import ServerService from '../services/Server';
 import { CommandInfo } from '../providers/IInstallerProvider';
@@ -30,6 +30,9 @@ const Queue: React.FC<QueueProps> = ({
   const [visibleItems, setVisibleItems] = useState<QueueItem[]>([]);
   const [executorStatus, setExecutorStatus] = useState<CommandInfo | null>(null);
   const [serverStatus, setServerStatus] = useState<CommandInfo | null>(null);
+  const [isRestartDialogOpen, setIsRestartDialogOpen] = useState(false);
+  const [restartType, setRestartType] = useState<'server' | 'executor' | null>(null);
+  const [isRestarting, setIsRestarting] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
   const itemHeight = 80; // 每个队列项的估计高度
   const bufferSize = 5; // 上下缓冲区的项目数量
@@ -122,18 +125,48 @@ const Queue: React.FC<QueueProps> = ({
   };
 
   // 获取服务状态图标
-  const getServiceStatusIcon = (status: CommandInfo | null) => {
+  const getServiceStatusIcon = (status: CommandInfo | null, type: 'server' | 'executor') => {
     if (!status) return <Icon icon="circle" intent="none" />;
     
     // 检查消息中是否包含"运行中"或"启动成功"
     const isRunning = status.message.includes('运行中') || status.message.includes('启动成功');
     
+    const handleRestartClick = () => {
+      setRestartType(type);
+      setIsRestartDialogOpen(true);
+    };
+
     if (isRunning) {
-      return <Icon icon="circle" intent="success" />;
+      return <Icon icon="circle" intent="success" onClick={handleRestartClick} style={{ cursor: 'pointer' }} />;
     } else if (status.message.includes('未在运行中')) {
       return <Icon icon="circle" intent="none" />;
     } else {
       return <Icon icon="circle" intent="danger" />;
+    }
+  };
+
+  // 重启服务
+  const handleRestartService = async () => {
+    if (!restartType) return;
+    
+    setIsRestarting(true);
+    try {
+      
+      // 根据类型调用相应的重启方法
+      if (restartType === 'server') {
+        const newStatus = await ServerService.getInstance().restartServer();
+        setServerStatus(newStatus);
+      } else {
+        const newStatus = await ExecutorService.getInstance().restartExecutor();
+        setExecutorStatus(newStatus);
+      }
+      
+      console.log(`重启${restartType === 'server' ? '服务器' : '执行器'}`);
+    } catch (error) {
+      console.error(`重启${restartType === 'server' ? '服务器' : '执行器'}时出错:`, error);
+    } finally {
+      setIsRestarting(false);
+      setIsRestartDialogOpen(false);
     }
   };
 
@@ -146,9 +179,9 @@ const Queue: React.FC<QueueProps> = ({
             <div>共 {items.length} 个任务</div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
               <span>执行器:</span>
-              {getServiceStatusIcon(executorStatus)}
+              {getServiceStatusIcon(executorStatus, 'executor')}
               <span style={{ marginLeft: '10px' }}>服务器:</span>
-              {getServiceStatusIcon(serverStatus)}
+              {getServiceStatusIcon(serverStatus, 'server')}
             </div>
           </div>
         </div>
@@ -163,6 +196,29 @@ const Queue: React.FC<QueueProps> = ({
           </div>
         </div>
       </div>
+      
+      {/* 重启服务确认对话框 */}
+      <Dialog
+        isOpen={isRestartDialogOpen}
+        onClose={() => setIsRestartDialogOpen(false)}
+        title={`重启${restartType === 'server' ? '服务器' : '执行器'}`}
+      >
+        <div style={{ padding: '20px' }}>
+          <p>确定要重启{restartType === 'server' ? '服务器' : '执行器'}吗？</p>
+          <p>重启过程中服务将暂时不可用。</p>
+        </div>
+        <div className="bp5-dialog-footer">
+          <Button onClick={() => setIsRestartDialogOpen(false)}>取消</Button>
+          <Button 
+            intent={Intent.WARNING} 
+            onClick={handleRestartService}
+            loading={isRestarting}
+            disabled={isRestarting}
+          >
+            确认重启
+          </Button>
+        </div>
+      </Dialog>
       
       <div 
         ref={containerRef}
