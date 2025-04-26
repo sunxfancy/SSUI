@@ -1,5 +1,6 @@
 import { Message } from "ssui_components";
 import GlobalStateManager from "../services/GlobalState";
+import { basename } from "@tauri-apps/api/path";
 
 // 定义API返回的数据类型
 type OpenerTemplate = [string, string, string]; // [名称, 前缀, 后缀]
@@ -76,11 +77,13 @@ export class FileOpenerProvider {
   /**
    * 获取指定文件扩展名的所有可用打开器
    */
-  public static async getOpenersForExtension(extension: string): Promise<Array<OpenerTemplate>> {
+  public static async getOpenersForExtension(filePath: string): Promise<Array<OpenerTemplate>> {
+    const extension = '.' + filePath.split('.').pop();
+    const name = await basename(filePath);
     const openersConfig = await this.getInstance().loadOpenersConfig();
     
     // 获取该扩展名的所有打开器模板
-    const templates = openersConfig[extension] || [];
+    const templates = openersConfig[extension] || openersConfig[name] || [];
     
     // 转换为前端需要的格式
     return templates;
@@ -90,8 +93,7 @@ export class FileOpenerProvider {
    * 使用指定的打开器构造打开文件的URL
    */
   public static async constructOpenUrl(openerName: string, filePath: string): Promise<string> {
-    const extension = filePath.split('.').pop() || '';
-    const openers = await this.getOpenersForExtension(extension);
+    const openers = await this.getOpenersForExtension(filePath);
     
     // 查找匹配的打开器
     const opener = openers.find(o => o[0] === openerName);
@@ -104,9 +106,11 @@ export class FileOpenerProvider {
   }
 
   public static async constructDefaultUrl(filePath: string): Promise<string> {
-    const extension = filePath.split('.').pop() || '';
-    const openers = await this.getOpenersForExtension(extension);
-    return openers[0][1] + filePath + openers[0][2];
+    const openers = await this.getOpenersForExtension(filePath);
+    if (openers && openers.length > 0) {
+      return openers[0][1] + filePath + openers[0][2];
+    }
+    throw new Error(`找不到默认打开器: ${filePath}`);
   }
 }
 

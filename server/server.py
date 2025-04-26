@@ -211,4 +211,7 @@ if settings.host_web_ui:
 
     app.mount("/functional_ui/", StaticFiles(directory=settings.host_web_ui), name="static")
 
-FileOpenerManager.instance().register_opener("FunctionalUI", "py", "/functional_ui/?path=")
+FileOpenerManager.instance().register_opener("FunctionalUI", ".py", "/functional_ui/?path=")
+FileOpenerManager.instance().register_opener("ProjectSettings", "ssproject.yaml", "/functional_ui/?view=project_settings&path=")
+FileOpenerManager.instance().register_opener("ImagePreview", ".png", "/functional_ui/?view=image_preview&path=")
+

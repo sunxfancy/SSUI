@@ -130,9 +130,7 @@ class ExtensionManager:
                     for opener_name, file_opener in dic.items():
                         pattern = parseFileOpener(file_opener)
                         if pattern:
-                            if pattern[1].startswith("*."):
-                                file_extension = pattern[1][2:]
-                            elif pattern[1].startswith("."):
+                            if pattern[1].startswith("*"):
                                 file_extension = pattern[1][1:]
                             else:
                                 file_extension = pattern[1]

@@ -1,12 +1,7 @@
-
 import './App.css';
 import '../../ssui_components/src/components/InternalComponents';
 import { getUIProvider } from './ui/UIProvider';
-import { ExtensionLoader } from './extension/loader';
 
-
-let loader = new ExtensionLoader();
-loader.loadExtensions();
 
 function App() {
   function getView() {
@@ -22,6 +17,7 @@ function App() {
     if (params.has('view')) {
       const view = params.get('view') ?? '';
       provider = getUIProvider(view);
+      console.log('View:', view, provider);
     }
     if (!provider) {
       provider = getUIProvider('functional');
