@@ -1,4 +1,5 @@
 @echo off
+@setlocal enabledelayedexpansion
 
 rem 创建.build文件夹并将Python放入其中
 if not exist ".venv" mkdir .venv
@@ -10,9 +11,9 @@ if not exist ".venv\python\python.exe" (
     set RELEASE_DATE=20241219
 
     rem 检查处理器架构
-    if /I "%PROCESSOR_ARCHITECTURE%"=="x86" (
+    if /I "!PROCESSOR_ARCHITECTURE!"=="x86" (
         set ARCH=i686-pc-windows-msvc
-    ) else if /I "%PROCESSOR_ARCHITECTURE%"=="AMD64" (
+    ) else if /I "!PROCESSOR_ARCHITECTURE!"=="AMD64" (
         set ARCH=x86_64-pc-windows-msvc
     ) else (
         echo Unsupported architecture!
@@ -20,11 +21,11 @@ if not exist ".venv\python\python.exe" (
     )
 
     rem 设置下载链接
-    set DOWNLOAD_URL=https://github.com/astral-sh/python-build-standalone/releases/download/%RELEASE_DATE%/cpython-%PYTHON_VERSION%+%RELEASE_DATE%-%ARCH%-install_only_stripped.tar.gz
+    set DOWNLOAD_URL=https://github.com/astral-sh/python-build-standalone/releases/download/!RELEASE_DATE!/cpython-!PYTHON_VERSION!+!RELEASE_DATE!-!ARCH!-install_only_stripped.tar.gz
 
     rem 下载并解压Python
-    echo "Downloading Python from %DOWNLOAD_URL%..."
-    curl -L %DOWNLOAD_URL% -o .venv\python.tar.gz
+    echo "Downloading Python from !DOWNLOAD_URL!..."
+    curl -L !DOWNLOAD_URL! -o .venv\python.tar.gz
 
     powershell -Command "cd .venv; tar -xvzf python.tar.gz"
     powershell -Command "Remove-Item -Path '.venv\python.tar.gz' -Force"
