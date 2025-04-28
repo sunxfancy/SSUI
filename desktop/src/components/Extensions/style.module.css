@@ -60,13 +60,13 @@
             .extraInfo {
                 display: flex;
                 align-items: center;
+                gap: 6px;
 
-                .item {
+                .iconWp {
                     display: flex;
                     align-items: center;
-                    color: #a7a7a7;
-                    font-size: 11px;
-                    margin-right: 8px;
+                    justify-content: center;
+                    height: 16px;
 
                     .iconText {
                         margin-left: 2px;

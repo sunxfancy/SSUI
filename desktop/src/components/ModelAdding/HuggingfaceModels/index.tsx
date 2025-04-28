@@ -1,16 +1,8 @@
-import React, { useState } from 'react';
-import {
-    Button,
-    FormGroup,
-    InputGroup,
-    Spinner,
-    Tabs,
-    Tab,
-    NonIdealState
-} from '@blueprintjs/core';
+import React, {useState} from 'react';
+import { Button, InputGroup, Spinner, Tabs, Tab, NonIdealState, Tag, Icon, CompoundTag } from '@blueprintjs/core';
 import axios from 'axios';
-import HuggingfaceModelCard from './HuggingfaceModelCard';
-import HuggingfaceLogo from './huggingface_logo.svg'
+import HuggingfaceLogo from './logo_huggingface.svg'
+import ModelLogo from './logo_model.svg'
 import styles from './style.module.css'
 
 interface HuggingfaceModel {
@@ -57,7 +49,8 @@ const HuggingfaceModels: React.FC<HuggingfaceModelsProps> = ({ onModelSelect }) 
                     search: inputValue,
                     limit: 50,
                     sort: 'downloads',
-                    direction: -1
+                    direction: -1,
+                    full: 'full'
                 }
             });
 
@@ -101,6 +94,16 @@ const HuggingfaceModels: React.FC<HuggingfaceModelsProps> = ({ onModelSelect }) 
     const handleSearchSubmit = (event: React.FormEvent) => {
         event.preventDefault();
         searchModels();
+    };
+
+    // 格式化下载数
+    const formatNumber = (num: number) => {
+        if (num >= 1000000) {
+            return (num / 1000000).toFixed(1) + 'M';
+        } else if (num >= 1000) {
+            return (num / 1000).toFixed(1) + 'K';
+        }
+        return num.toString();
     };
 
     // 根据pipeline_tag过滤模型
@@ -188,20 +191,52 @@ const HuggingfaceModels: React.FC<HuggingfaceModelsProps> = ({ onModelSelect }) 
                     description="请尝试其他搜索关键词或直接添加仓库ID"
                 />
             ) : (
-                <div style={{
-                    display: 'grid',
-                    gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))',
-                    gap: '20px',
-                    padding: '20px',
-                    maxHeight: 'calc(100vh - 220px)',
-                    overflow: 'auto'
-                }}>
+                <div className={styles.cardList} id="#huggingfaceCardList">
                     {filteredModels.map(model => (
-                        <HuggingfaceModelCard
-                            key={model.id}
-                            model={model}
-                            onModelSelect={onModelSelect}
-                        />
+                        <div className={styles.huggingFaceModelCard}>
+                            <div className={styles.topArea}>
+                                <div className={styles.name}>{model.id}</div>
+                                {
+                                    model.pipeline_tag &&
+                                    <span className={styles.pipelineTag}>
+                                        <img src={ModelLogo} />
+                                        {model.pipeline_tag}
+                                    </span>
+                                }
+                            </div>
+                            <div className={styles.midArea}>
+                                <div className={styles.tags}>
+                                    <CompoundTag minimal intent="primary" size="medium" leftContent={<div className={styles.iconWp}><Icon icon="person" size={10}/></div>}>{model.author}</CompoundTag>
+                                    {(model.tags || []).map((tag, index) => (
+                                        <Tag key={index} minimal>{tag}</Tag>
+                                    ))}
+                                </div>
+                            </div>
+
+                            <div className={styles.bottomArea}>
+                                <div className={styles.data}>
+                                    <span title="下载次数">
+                                        <Icon icon="download" size={14} color="rgb(93, 191, 93)" style={{ marginRight: '3px' }} />
+                                        {formatNumber(model.downloads || 0)}
+                                    </span>
+                                    <span title="点赞数">
+                                        <Icon icon="heart" size={14} color="rgb(255, 102, 102)" style={{ marginRight: '3px' }} />
+                                        {formatNumber(model.likes || 0)}
+                                    </span>
+                                </div>
+                                <Button
+                                    text="下载"
+                                    intent="primary"
+                                    variant="outlined"
+                                    icon="download"
+                                    onClick={() => {
+                                        if (onModelSelect) {
+                                            onModelSelect(model);
+                                        }
+                                    }}
+                                />
+                            </div>
+                        </div>
                     ))}
                 </div>
             )}

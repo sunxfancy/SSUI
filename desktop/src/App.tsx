@@ -1,10 +1,9 @@
-import React, {memo, ReactElement, useRef, useState} from 'react';
+import React, {useRef, useState} from 'react';
 import { load } from '@tauri-apps/plugin-store';
 import {WorkSpace} from './components/WorkSpace'
 import TabWindowManager from './components/TabWindowManager';
 import { Allotment } from "allotment";
 import "allotment/dist/style.css";
-import { Topbar } from './components/Topbar';
 import { ModelManager } from './components/ModelManager';
 import ModelAddingPage from './components/ModelAdding';
 import Queue from './components/Queue';
@@ -65,15 +64,6 @@ const App = () => {
         setIsNewWorkflowDialogOpen(false)
         setCurrentWorkspace(targetPath)
     }
-
-    const GenerateNavContent = memo(() => {
-        switch (navIndex) {
-            case 0: return <WorkSpace currentWorkspace={currentWorkspace} onOpenWorkspace={onOpenWorkspace} onSelectWorkflow={onSelectWorkflow} onFileOpen={onFileOpen} />
-            case 1: return <ModelManager provider={modelManagerProvider} addModel={addModel} />
-            case 2: return <Queue />
-            case 3: return <Extensions onOpenExtensionStore={openExtensionStore} />
-        }
-    })
 
     return (
         <div style={{ height: '100%' }}>

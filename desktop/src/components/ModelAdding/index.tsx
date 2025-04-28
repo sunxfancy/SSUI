@@ -5,6 +5,7 @@ import LocalModels from './LocalModels';
 import HuggingfaceModels from './HuggingfaceModels';
 import { TauriModelsProvider } from '../../providers/TauriModelsProvider';
 import { ModelsProvider } from '../../providers/IModelsProvider';
+import styles from './style.module.css';
 
 interface ModelAddingPageProps {
     // 可以在这里添加需要的属性
@@ -13,7 +14,6 @@ interface ModelAddingPageProps {
 interface ModelAddingPageState {
     selectedTabId: string;
 }
-
 
 export class ModelAddingPage extends Component<ModelAddingPageProps, ModelAddingPageState> {
     constructor(props: ModelAddingPageProps) {
@@ -81,7 +81,7 @@ export class ModelAddingPage extends Component<ModelAddingPageProps, ModelAdding
 
     render() {
         return (
-            <div style={{ padding: ' 0px 20px 0px 20px ', height: '100%', overflow: 'auto' }}>
+            <div className={styles.ModelAdding}>
                 <Tabs
                     id="ModelAddingTabs"
                     selectedTabId={this.state.selectedTabId}

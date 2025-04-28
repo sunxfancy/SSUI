@@ -1,14 +1,6 @@
 import React, {useEffect, useRef, useState} from "react";
 import styles from './style.module.css'
-import {
-    Button,
-    Icon,
-    InputGroup,
-    Tabs,
-    Tab,
-    Tag,
-    Switch
-} from "@blueprintjs/core";
+import { Button, Icon, InputGroup, Tabs, Tab, Tag, Switch, CompoundTag } from "@blueprintjs/core";
 import { IExtensionsProvider } from '../../providers/IExtensionsProvider';
 import { ExtensionsProvider } from '../../providers/ExtensionsProvider';
 import {ExtensionItem} from "./old.tsx";
@@ -113,14 +105,20 @@ export const Extensions = (props) => {
                     <div className={styles.textPart}>
                         <div className={styles.name}>{extension.name}</div>
                         <div className={styles.extraInfo}>
-                            <div className={styles.item}>
-                                <Icon icon="person" size={10}></Icon>
-                                <div className={styles.iconText}>{extension.author}</div>
-                            </div>
-                            <div className={styles.item}>
-                                <Icon icon="git-branch" size={10}></Icon>
-                                <div className={styles.iconText}>v{extension.version}</div>
-                            </div>
+                            <CompoundTag
+                                minimal
+                                intent="primary"
+                                leftContent={<div className={styles.iconWp}><Icon icon="person" size={10}></Icon></div>}
+                            >
+                                <div style={{ fontSize: '10px' }}>{extension.author}</div>
+                            </CompoundTag>
+                            <CompoundTag
+                                minimal
+                                intent="success"
+                                leftContent={<div className={styles.iconWp}><Icon icon="git-branch" size={10}></Icon></div>}
+                            >
+                                <div style={{ fontSize: '10px' }}>{extension.version}</div>
+                            </CompoundTag>
                         </div>
                     </div>
                 </div>
