@@ -92,3 +92,5 @@ def search_project_root(path):
         if os.path.exists(os.path.join(path, "ssproject.yaml")):
             return path
         path = os.path.dirname(path)
+        if path == os.path.dirname(path):
+            return None

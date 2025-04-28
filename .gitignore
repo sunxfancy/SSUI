@@ -1,6 +1,7 @@
 .venv/
 .build/
 data/
+input/
 output/
 __pycache__/
 node_modules/

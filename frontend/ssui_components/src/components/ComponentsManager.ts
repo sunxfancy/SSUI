@@ -6,7 +6,7 @@ export interface ComponentRegister {
     type: string;
     port: string;
     component: any;
-    createComponent(ref: React.RefObject<IComponent>): JSX.Element;
+    createComponent(ref: React.RefObject<IComponent>, root_path: string, script_path?: string): JSX.Element;
 }
 
 let components: { [key: string]: ComponentRegister } = {};
@@ -14,9 +14,9 @@ let components: { [key: string]: ComponentRegister } = {};
 export function registerComponent(component: ComponentRegister) {
     components[component.name] = component;
     if (!component.createComponent)
-        component.createComponent = (ref: React.RefObject<IComponent>) => {
+        component.createComponent = (ref: React.RefObject<IComponent>, root_path: string, script_path?: string) => {
             console.log('Creating component', component.name, ref);
-            return React.createElement(component.component, {ref: ref});
+            return React.createElement(component.component, {ref: ref, root_path: root_path, script_path: script_path});
         }
 }
 

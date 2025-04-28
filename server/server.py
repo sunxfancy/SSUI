@@ -1,36 +1,22 @@
-import datetime
-import threading
-from typing import Optional, Dict, Any
+from typing import Dict, Any
 import uuid
-import aioshutil
-import time
-from fastapi import Body, FastAPI, Request, WebSocket
+from fastapi import Body, FastAPI, Request, WebSocket, UploadFile, File
 from fastapi.responses import FileResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
-import torch
-import torch.torch_version
 import sys
 import os
 import json
-import signal
-from backend.model_manager.config import ModelType
-from backend.model_manager.probe import ModelProbe
 from server.opener_service import FileOpenerManager
-from ss_executor.model import Task
 from ss_executor.scheduler import TaskScheduler
-from ssui.base import Image
-from pydantic_settings import BaseSettings
 from contextlib import asynccontextmanager
-import asyncio
-from .resource_manager import ModelInfoCache
 
 sys.path.append(os.path.join(os.path.dirname(__file__), ".."))
-from ss_executor import SSLoader, search_project_root
+from ss_executor import search_project_root
 from .extensions import ExtensionManager
 
-from server.models import Settings, ModelInfo, ScanModelsRequest
+from server.models import ModelInfo, ScanModelsRequest
 from server.config_service import ConfigService
 from server.model_service import ModelService
 from server.script_service import ScriptService
@@ -140,7 +126,10 @@ async def device():
 
 @app.get("/api/script")
 async def script(script_path: str):
-    return script_service.get_script_functions(script_path)
+    result = {}
+    result["functions"] = script_service.get_script_functions(script_path)
+    result["root_path"] = search_project_root(script_path)
+    return result
 
 
 @app.get("/api/model")
@@ -168,6 +157,51 @@ async def prepare(script_path: str, callable: str):
 async def execute(script_path: str, callable: str, params: Dict[str, Any], details: Dict[str, Any]):
     return await script_service.execute_script(script_path, callable, params, details)
 
+@app.get("/file/root_path")
+async def root_path(script_path: str):
+    return search_project_root(script_path)
+
+@app.get("/files/{file_type}")
+async def files(file_type: str, script_path: str):
+    ext_name_map = {
+        "image": ("png", "jpg", "jpeg", "bmp"),
+        "video": ("mp4", "avi", "mov", "mkv"),
+        "audio": ("mp3", "wav", "m4a", "ogg"),
+        "3dmodel": ("obj", "fbx", "glb", "gltf")
+    }
+
+    project_root = search_project_root(script_path)
+    if project_root is None:
+        return {"error": "Project root not found"}
+
+    # TODO: 也许对于日后大目录来说，需要考虑性能问题，但我决定遇到了再说
+    result_files = []
+    for root, dirs, filenames in os.walk(project_root):
+        for filename in filenames:
+            if filename.endswith(ext_name_map[file_type]):
+                result_files.append(os.path.join(root, filename))
+    return result_files
+
+@app.post("/files/upload")
+async def upload_file(script_path: str, file: UploadFile = File(...)):
+    project_root = search_project_root(script_path)
+    if project_root is None:
+        return {"error": "Project root not found"}
+    
+    # 创建input文件夹
+    input_dir = os.path.join(project_root, "input")
+    if not os.path.exists(input_dir):
+        os.makedirs(input_dir)
+    
+    # 保存上传的文件
+    file_path = os.path.join(input_dir, file.filename)
+    try:
+        contents = await file.read()
+        with open(file_path, "wb") as f:
+            f.write(contents)
+        return {"success": True, "path": file_path}
+    except Exception as e:
+        return {"error": str(e)}
 
 @app.get("/file")
 async def file(path: str):

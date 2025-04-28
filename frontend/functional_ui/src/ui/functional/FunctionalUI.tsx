@@ -24,8 +24,12 @@ interface Params {
     }
 }
 
-interface ScriptMeta {
+interface FunctionMeta {
     [key: string]: Params
+}
+interface ScriptMeta {
+    root_path: string;
+    functions: FunctionMeta;
 }
 
 interface FunctionalUIProps {
@@ -33,22 +37,24 @@ interface FunctionalUIProps {
 }
 
 interface FunctionalUIState {
-    scriptMeta: ScriptMeta | null;
+    functions: FunctionMeta | null;
     loading: boolean;
     error: Error | null;
     selectedFunc: Callable | undefined;
     isOpen: boolean;
+    root_path: string;
 }
 
 export class FunctionalUI extends Component<FunctionalUIProps, FunctionalUIState> {
     constructor(props: FunctionalUIProps) {
         super(props);
         this.state = {
-            scriptMeta: null,
+            functions: null,
             loading: true,
             error: null,
             selectedFunc: undefined,
-            isOpen: false
+            isOpen: false,
+            root_path: '',
         };
     }
 
@@ -72,10 +78,12 @@ export class FunctionalUI extends Component<FunctionalUIProps, FunctionalUIState
 
             const data = await response.json() as ScriptMeta;
             this.setState({
-                scriptMeta: data,
+                functions: data.functions,
                 loading: false,
-                error: null
+                error: null,
+                root_path: data.root_path
             });
+            console.log(this.state);
         } catch (error) {
             this.setState({
                 loading: false,
@@ -103,13 +111,13 @@ export class FunctionalUI extends Component<FunctionalUIProps, FunctionalUIState
     }
 
     handleRun = (): void => {
-        const { scriptMeta, selectedFunc, isOpen } = this.state;
+        const { functions, selectedFunc, isOpen } = this.state;
         const { path } = this.props;
 
-        if (!scriptMeta) return;
+        if (!functions) return;
 
-        const selected = selectedFunc?.name ?? Object.keys(scriptMeta)[0];
-        const meta = scriptMeta[selected];
+        const selected = selectedFunc?.name ?? Object.keys(functions)[0];
+        const meta = functions[selected];
 
         // 收集输入参数
         const params: { [key: string]: any } = {};
@@ -147,7 +155,7 @@ export class FunctionalUI extends Component<FunctionalUIProps, FunctionalUIState
         });
     }
 
-    renderSelect = (meta: ScriptMeta): JSX.Element => {
+    renderSelect = (meta: FunctionMeta): JSX.Element => {
         const { selectedFunc } = this.state;
         const first = Object.keys(meta)[0];
         const keys = Object.keys(meta).map((key, idx) => ({ name: key, rank: idx + 1 } as Callable));
@@ -202,14 +210,14 @@ export class FunctionalUI extends Component<FunctionalUIProps, FunctionalUIState
             <div>
                 {Object.entries(meta.params).map(([key, value]) => (
                     <Card key={key} elevation={Elevation.TWO} className="functional-ui-card">
-                        <Label className="bp5-label">
-                            {key}
-                            <ComponentTabRef
-                                type={value}
-                                port='input'
-                                ref={this.getRef(key, this.refInputs)}
-                            />
-                        </Label>
+                        <ComponentTabRef
+                            name={key}
+                            root_path={this.state.root_path}
+                            script_path={this.props.path}
+                            type={value}
+                            port='input'
+                            ref={this.getRef(key, this.refInputs)}
+                        />
                     </Card>
                 ))}
             </div>
@@ -223,6 +231,9 @@ export class FunctionalUI extends Component<FunctionalUIProps, FunctionalUIState
                 {Object.entries(meta.returns).map(([key, value]) => (
                     <Card key={key} elevation={Elevation.TWO} className="functional-ui-card">
                         <ComponentTabRef
+                            name={'output_' + key}
+                            root_path={this.state.root_path}
+                            script_path={this.props.path}
                             type={value}
                             port='output'
                             ref={this.getRef(key, this.refOutputs)}
@@ -233,7 +244,7 @@ export class FunctionalUI extends Component<FunctionalUIProps, FunctionalUIState
         );
     }
 
-    renderContent = (meta: ScriptMeta): JSX.Element => {
+    renderContent = (meta: FunctionMeta): JSX.Element => {
         const { selectedFunc, isOpen } = this.state;
         const { path } = this.props;
 
@@ -267,7 +278,7 @@ export class FunctionalUI extends Component<FunctionalUIProps, FunctionalUIState
 
     render(): JSX.Element {
         const { path } = this.props;
-        const { scriptMeta, loading, error } = this.state;
+        const { functions, loading, error } = this.state;
 
         return (
             <div className='functional-ui-root'>
@@ -278,8 +289,8 @@ export class FunctionalUI extends Component<FunctionalUIProps, FunctionalUIState
                     <p>Loading...</p>
                 ) : error ? (
                     <p>Error: {error.message}</p>
-                ) : scriptMeta ? (
-                    this.renderContent(scriptMeta)
+                ) : functions ? (
+                    this.renderContent(functions)
                 ) : null}
             </div>
         );
