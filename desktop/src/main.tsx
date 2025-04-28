@@ -43,7 +43,6 @@ class Root extends Component<{}, RootState> {
 
       // 初始化全局状态
       await GlobalStateManager.getInstance().initialize();
-
       // 从全局状态获取 root 信息
       const rootState = GlobalStateManager.getInstance().getRootState();
       this.setState({ root: rootState || undefined });
@@ -57,7 +56,7 @@ class Root extends Component<{}, RootState> {
         try {
           if (!production) {
             // 开发环境，需要先检查用户是否自己启动了执行器和服务器用来调试
-            
+
             if (!rootState?.isServerRunning) {
               // 启动服务器服务
               const serverResult = await ServerService.getInstance().startServer();
