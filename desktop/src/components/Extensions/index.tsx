@@ -1,14 +1,33 @@
 import React, {useEffect, useRef, useState} from "react";
 import styles from './style.module.css'
-import { Button, Icon, InputGroup, Tabs, Tab, Tag, Switch, CompoundTag } from "@blueprintjs/core";
+import { Button, Icon, InputGroup, Tabs, Tab, Tag, Switch, CompoundTag, IconName } from "@blueprintjs/core";
 import { IExtensionsProvider } from '../../providers/IExtensionsProvider';
 import { ExtensionsProvider } from '../../providers/ExtensionsProvider';
-import {ExtensionItem} from "./old.tsx";
 
-export const Extensions = (props) => {
+
+export interface ExtensionItem {
+    id: string;
+    name: string;
+    description: string;
+    version: string;
+    author: string;
+    icon: IconName;
+    tags: string[];
+    installed: boolean;
+    disabled: boolean;
+    featured: boolean;
+}
+
+
+interface ExtensionsProps {
+    provider: IExtensionsProvider;
+    onOpenExtensionStore: () => void;
+}
+
+export const Extensions = (props: ExtensionsProps) => {
 
     const [ searchQuery, setSearchQuery ] = useState('')
-    const [ extensions, setExtensions ] = useState([])
+    const [ extensions, setExtensions ] = useState<ExtensionItem[]>([])
     const [ retryCount, setRetryCount ] = useState(0)
 
     const provider = useRef<IExtensionsProvider>(props.provider || new ExtensionsProvider())

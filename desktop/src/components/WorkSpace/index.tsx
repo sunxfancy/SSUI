@@ -8,9 +8,17 @@ import "@blueprintjs/core/lib/css/blueprint.css";
 import "@blueprintjs/icons/lib/css/blueprint-icons.css";
 import PropTypes from "prop-types";
 
-export const WorkSpace = (props) => {
+interface WorkSpaceProps {
+    currentWorkspace: string;
+    onOpenWorkspace: () => void;
+    onSelectWorkflow: () => void;
+    onFileOpen: (path: string) => void;
+    filesystemProvider: IFilesystemProvider;
+}
+
+export const WorkSpace = (props: WorkSpaceProps) => {
     const { currentWorkspace, onOpenWorkspace, onSelectWorkflow, onFileOpen } = props
-    const [ fileTree, setFileTree ] = useState([])
+    const [ fileTree, setFileTree ] = useState<TreeNodeInfo[]>([])
     const filesystemProvider = useRef<IFilesystemProvider>(props.filesystemProvider || new TauriFilesystemProvider())
 
     useEffect(() => {
@@ -28,7 +36,7 @@ export const WorkSpace = (props) => {
                         icon: "folder-close",
                         childNodes: childNodes.map(c => ({
                             ...c,
-                            icon: <div className={styles.treeIcon}>{GetIcon(c.id)}</div>
+                            icon: <div className={styles.treeIcon}>{GetIcon(c.id as string)}</div>
                         }))
                     }
                 ])
