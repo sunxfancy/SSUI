@@ -21,7 +21,7 @@ if [ ! -f ".venv/python/bin/python3" ]; then
         elif [ "$ARCHITECTURE" = "arm64" ]; then
             ARCH="aarch64-apple-darwin"
         else
-            echo "不支持的架构: $ARCHITECTURE"
+            echo "Unsupported architecture: $ARCHITECTURE"
             exit 1
         fi
     elif [ "$OS_TYPE" = "Linux" ]; then
@@ -31,20 +31,28 @@ if [ ! -f ".venv/python/bin/python3" ]; then
         elif [ "$ARCHITECTURE" = "aarch64" ]; then
             ARCH="aarch64-unknown-linux-gnu"
         else
-            echo "不支持的架构: $ARCHITECTURE"
+            echo "Unsupported architecture: $ARCHITECTURE"
             exit 1
         fi
     else
-        echo "不支持的操作系统: $OS_TYPE"
+        echo "Unsupported operating system: $OS_TYPE"
         exit 1
     fi
+    https://github.com/astral-sh/python-build-standalone/releases/download/20241219/cpython-3.12.8+20241219-${ARCH}-install_only_stripped.tar.gz
     
     # 设置下载链接
     DOWNLOAD_URL="https://github.com/astral-sh/python-build-standalone/releases/download/${RELEASE_DATE}/cpython-${PYTHON_VERSION}+${RELEASE_DATE}-${ARCH}-install_only_stripped.tar.gz"
-    
+    CHINA_MIRROR="https://gitee.com/Swordtooth/ssui_assets/releases/download/v0.0.2/cpython-${PYTHON_VERSION}%${RELEASE_DATE}-${ARCH}-install_only_stripped.tar.gz"
+
     # 下载并解压Python
-    echo "正在从 ${DOWNLOAD_URL} 下载Python..."
-    curl -L "${DOWNLOAD_URL}" -o .venv/python.tar.gz
+    echo "Downloading Python from ${DOWNLOAD_URL}..."
+    if ! curl -L "${DOWNLOAD_URL}" -o .venv/python.tar.gz; then
+        echo "Failed to download from primary source, trying Chinese mirror..."
+        if ! curl -L "${CHINA_MIRROR}" -o .venv/python.tar.gz; then
+            echo "Failed to download from Chinese mirror as well, please check your network connection or download Python manually."
+            exit 1
+        fi
+    fi
     
     # 解压文件
     tar -xzf .venv/python.tar.gz -C .venv
@@ -54,14 +62,14 @@ fi
 # 检查虚拟环境是否已经存在
 if [ ! -f ".venv/bin/python" ]; then
     # 创建虚拟环境
-    echo "正在创建虚拟环境..."
+    echo "Creating virtual environment..."
     .venv/python/bin/python3 -m venv .venv
 fi
 
 # 检查并安装uv工具
 if [ ! -f ".venv/bin/uv" ]; then
-    echo "正在安装uv工具..."
+    echo "Installing uv tool..."
     .venv/bin/python -m pip install uv
 fi
 
-echo "安装完成！" 
+echo "Installation completed!" 

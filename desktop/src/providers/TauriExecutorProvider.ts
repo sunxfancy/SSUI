@@ -135,4 +135,48 @@ export class TauriExecutorProvider implements IExecutorProvider {
       };
     }
   }
+  
+  /**
+   * 重启执行器
+   */
+  async restartExecutor(): Promise<CommandInfo> {
+    try {
+      const rootPath = GlobalStateManager.getInstance().getRootPath();
+      if (!rootPath) {
+        return {
+          success: false,
+          message: '未找到安装路径，请先完成安装'
+        };
+      }
+
+      const currentPlatform = await platform();
+      const pythonPath = await join(rootPath, currentPlatform === 'windows' ? '.venv\\Scripts\\python.exe' : '.venv/bin/python');
+
+      // 调用重启服务
+      const result: any = await invoke('restart_executor', {
+        path: pythonPath,
+        cwd: rootPath,
+      });
+
+      // 假设返回的结果中包含进程 ID
+      if (result && result.pid) {
+        this.processId = result.pid;
+        this.isRunning = true;
+        return {
+          success: true,
+          message: `执行器重启成功，进程 ID: ${this.processId}`
+        };
+      } else {
+        return {
+          success: false,
+          message: '重启执行器失败，未获取到进程 ID'
+        };
+      }
+    } catch (error) {
+      return {
+        success: false,
+        message: `重启执行器时出错: ${error}`
+      };
+    }
+  }
 } 

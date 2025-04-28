@@ -17,6 +17,7 @@ import json
 import signal
 from backend.model_manager.config import ModelType
 from backend.model_manager.probe import ModelProbe
+from server.opener_service import FileOpenerManager
 from ss_executor.model import Task
 from ss_executor.scheduler import TaskScheduler
 from ssui.base import Image
@@ -118,6 +119,14 @@ async def install_model(
         
     return result
 
+@app.get("/config/opener/{file_extension}")
+async def opener(file_extension: str):
+    return FileOpenerManager.instance().get_opener(file_extension)
+
+@app.get("/config/opener")
+async def opener():
+    return FileOpenerManager.instance().get_all_openers()
+
 
 @app.get("/api/version")
 async def version():
@@ -201,3 +210,9 @@ if settings.host_web_ui:
         return RedirectResponse(url=redirect_url)
 
     app.mount("/functional_ui/", StaticFiles(directory=settings.host_web_ui), name="static")
+    print("mount functional_ui", settings.host_web_ui)
+
+FileOpenerManager.instance().register_opener("FunctionalUI", ".py", "/functional_ui/?path=")
+FileOpenerManager.instance().register_opener("ProjectSettings", "ssproject.yaml", "/functional_ui/?view=project_settings&path=")
+FileOpenerManager.instance().register_opener("ImagePreview", ".png", "/functional_ui/?view=image_preview&path=")
+

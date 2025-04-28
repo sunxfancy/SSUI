@@ -135,4 +135,48 @@ export class TauriServerProvider implements IServerProvider {
       };
     }
   }
+  
+  /**
+   * 重启服务器
+   */
+  async restartServer(): Promise<CommandInfo> {
+    try {
+      const rootPath = GlobalStateManager.getInstance().getRootPath();
+      if (!rootPath) {
+        return {
+          success: false,
+          message: '未找到安装路径，请先完成安装'
+        };
+      }
+
+      const currentPlatform = await platform();
+      const pythonPath = await join(rootPath, currentPlatform === 'windows' ? '.venv\\Scripts\\python.exe' : '.venv/bin/python');
+
+      // 调用重启服务
+      const result: any = await invoke('restart_server', {
+        path: pythonPath,
+        cwd: rootPath,
+      });
+
+      // 假设返回的结果中包含进程 ID
+      if (result && result.pid) {
+        this.processId = result.pid;
+        this.isRunning = true;
+        return {
+          success: true,
+          message: `服务器重启成功，进程 ID: ${this.processId}`
+        };
+      } else {
+        return {
+          success: false,
+          message: '重启服务器失败，未获取到进程 ID'
+        };
+      }
+    } catch (error) {
+      return {
+        success: false,
+        message: `重启服务器时出错: ${error}`
+      };
+    }
+  }
 } 

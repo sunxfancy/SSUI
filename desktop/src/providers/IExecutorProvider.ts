@@ -9,4 +9,7 @@ export interface IExecutorProvider {
   
   // 获取执行器状态
   getExecutorStatus(): Promise<CommandInfo>;
+  
+  // 重启执行器
+  restartExecutor(): Promise<CommandInfo>;
 } 

@@ -64,6 +64,9 @@ pub async fn download_python(version: &str, release_date: &str, architecture: &s
     let url = format!(
         "https://github.com/astral-sh/python-build-standalone/releases/download/{release_date}/cpython-{version}+{release_date}-{architecture}-install_only_stripped.tar.gz"
     );
+    let china_mirror = format!(
+        "https://gitee.com/Swordtooth/ssui_assets/releases/download/v0.0.2/cpython-{version}%{release_date}-{architecture}-install_only_stripped.tar.gz"
+    );
     info!("开始下载Python: {}", url);
     debug!("下载参数: version={}, release_date={}, architecture={}, path={}", version, release_date, architecture, path);
     
@@ -143,7 +146,8 @@ pub async fn download_python(version: &str, release_date: &str, architecture: &s
                 info!("直接下载失败，尝试使用代理重试");
                 download_and_process(&url, path, true).await
             } else {
-                Err(e)
+                info!("直接下载失败，尝试使用中国镜像源");
+                download_and_process(&china_mirror, path, false).await
             }
         }
     }

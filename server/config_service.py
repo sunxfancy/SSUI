@@ -1,7 +1,8 @@
 import os
 import json
-from typing import Dict, Any, List
+from typing import Dict, Any, List, Tuple
 from server.models import Settings, ModelInfo
+from server.opener_service import FileOpenerManager
 
 class ConfigService:
     def __init__(self, settings_path: str):

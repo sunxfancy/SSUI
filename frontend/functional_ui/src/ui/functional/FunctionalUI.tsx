@@ -4,7 +4,7 @@ import { ItemPredicate, ItemRenderer, Select } from "@blueprintjs/select";
 import { MenuItem } from "@blueprintjs/core";
 import { ComponentTabRef } from "ssui_components";
 import { DetailsPanel } from "./Details";
-import { UIProvider } from '../UIProvider';
+import { registerUIProvider, UIProvider } from '../UIProvider';
 import './FunctionalUI.css';
 import "normalize.css";
 import "@blueprintjs/core/lib/css/blueprint.css";
@@ -295,3 +295,5 @@ export class FunctionalUIProvider implements UIProvider {
         return <FunctionalUI path={path} />;
     }
 }
+
+export default FunctionalUI;

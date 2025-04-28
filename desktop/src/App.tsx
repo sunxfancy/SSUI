@@ -9,11 +9,12 @@ import ModelAddingPage from './components/ModelAdding';
 import Queue from './components/Queue';
 import { open } from '@tauri-apps/plugin-dialog';
 import NewWorkflow from './components/NewWorkflow.tsx';
-import { Extensions } from './components/Extensions/index.tsx';
+import { Extensions } from './components/Extensions';
 import { ModelManagerProvider } from './providers/ModelManagerProvider';
 import GlobalStateManager from './services/GlobalState.ts';
 import {Navbar} from "./components/Navbar";
 import { TabPanel } from '@blueprintjs/core'
+import FileOpenerProvider from './providers/FileOpenerProvider.ts';
 
 const App = () => {
     const [ currentWorkspace, setCurrentWorkspace ] = useState('')
@@ -43,11 +44,12 @@ const App = () => {
         setIsNewWorkflowDialogOpen(true)
     }
 
-    const onFileOpen = (filePath: string) => {
+    const onFileOpen = async (filePath: string) => {
         const rootState = GlobalStateManager.getInstance().getRootState();
+        const defaultUrl = await FileOpenerProvider.constructDefaultUrl(filePath);
         const host = rootState?.host || 'localhost';
         const port = rootState?.port || 7422;
-        tabWindowManagerRef.current?.openFile(filePath, `http://${host}:${port}/functional_ui/?path=${filePath}`);
+        tabWindowManagerRef.current?.openFile(filePath, `http://${host}:${port}${defaultUrl}`);
     }
 
     const addModel = () => {
