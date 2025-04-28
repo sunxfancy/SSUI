@@ -13,11 +13,11 @@ interface WorkSpaceProps {
     onOpenWorkspace: () => void;
     onSelectWorkflow: () => void;
     onFileOpen: (path: string) => void;
-    filesystemProvider: IFilesystemProvider;
+    filesystemProvider?: IFilesystemProvider;
 }
 
 export const WorkSpace = (props: WorkSpaceProps) => {
-    const { currentWorkspace, onOpenWorkspace, onSelectWorkflow, onFileOpen } = props
+    const { currentWorkspace, onOpenWorkspace, onSelectWorkflow } = props
     const [ fileTree, setFileTree ] = useState<TreeNodeInfo[]>([])
     const filesystemProvider = useRef<IFilesystemProvider>(props.filesystemProvider || new TauriFilesystemProvider())
 

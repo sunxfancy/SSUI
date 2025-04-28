@@ -1,7 +1,6 @@
 import {Icon, IconName} from "@blueprintjs/core";
 import styles from './style.module.css'
 import PropTypes from "prop-types";
-import {update} from "tar";
 
 export const Navbar = (props: {navIndex:number, updateNavIndex: (index: number) => void}) => {
     const { navIndex, updateNavIndex } = props

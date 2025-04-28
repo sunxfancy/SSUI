@@ -116,7 +116,7 @@ export class ExtensionsProvider implements IExtensionsProvider {
     }
   }
 
-  async searchExtensions(query: string): Promise<ExtensionItem[]> {
+  async searchExtensions(_query: string): Promise<ExtensionItem[]> {
       return [];
   }
 

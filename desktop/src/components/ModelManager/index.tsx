@@ -1,4 +1,4 @@
-import React, {Component, useEffect, useRef, useState} from 'react';
+import React, {useEffect, useRef, useState} from 'react';
 import {
     Button,
     Card,
@@ -18,7 +18,7 @@ import { IModelManagerProvider, ModelGroup } from '../../providers/IModelManager
 import { ModelManagerProvider } from '../../providers/ModelManagerProvider';
 import styles from './style.module.css'
 
-interface ModelState {
+export interface ModelState {
     groups: ModelGroup[];
     searchQuery: string;
     selectedTags: string[];

@@ -8,7 +8,7 @@ interface CivitaiModelsProps {
     onModelSelect?: (model: CivitaiModel) => void;
 }
 
-const CivitaiModels: React.FC<CivitaiModelsProps> = ({ onModelSelect }) => {
+export const CivitaiModels: React.FC<CivitaiModelsProps> = () => {
     const [models, setModels] = useState<CivitaiModel[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);

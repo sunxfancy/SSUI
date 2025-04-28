@@ -1,5 +1,4 @@
-import React, {useRef, useState} from 'react';
-import { load } from '@tauri-apps/plugin-store';
+import {useRef, useState} from 'react';
 import {WorkSpace} from './components/WorkSpace'
 import TabWindowManager from './components/TabWindowManager';
 import { Allotment } from "allotment";
@@ -15,19 +14,16 @@ import GlobalStateManager from './services/GlobalState.ts';
 import {Navbar} from "./components/Navbar";
 import { TabPanel } from '@blueprintjs/core'
 import FileOpenerProvider from './providers/FileOpenerProvider.ts';
+import { ExtensionsProvider } from './providers/ExtensionsProvider.ts';
 
 const App = () => {
     const [ currentWorkspace, setCurrentWorkspace ] = useState('')
     const [ isNewWorkflowDialogOpen, setIsNewWorkflowDialogOpen ] = useState(false)
     const [ navIndex, setNavIndex ] = useState(0)
-    const tabWindowManagerRef = useRef<TabWindowManager>()
-    const modelManagerProvider = useRef(new ModelManagerProvider())
+    const tabWindowManagerRef = useRef<TabWindowManager>(null)
+    const modelManagerProvider = useRef<ModelManagerProvider>(new ModelManagerProvider())
+    const extensionsProviderRef = useRef<ExtensionsProvider>(new ExtensionsProvider())
 
-    const onClick = async () => {
-        const store = await load('settings.json', { autoSave: false });
-        await store.set('root', undefined);
-        await store.save();
-    }
 
     const onOpenWorkspace = () => {
         open({
@@ -85,7 +81,7 @@ const App = () => {
                                 id={1}
                                 selectedTabId={navIndex}
                                 parentId="navbar-tabs"
-                                panel={<ModelManager provider={modelManagerProvider} addModel={addModel} />}
+                                panel={<ModelManager provider={modelManagerProvider.current} addModel={addModel} />}
                             />
                             <TabPanel
                                 id={2}
@@ -97,7 +93,7 @@ const App = () => {
                                 id={3}
                                 selectedTabId={navIndex}
                                 parentId="navbar-tabs"
-                                panel={<Extensions onOpenExtensionStore={openExtensionStore} />}
+                                panel={<Extensions provider={extensionsProviderRef.current} onOpenExtensionStore={openExtensionStore} />}
                             />
                         </div>
 
