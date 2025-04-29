@@ -61,22 +61,39 @@ yarn
 
 ### Run Development Server
 
+To quickly start the development, you can run desktop project as the entry point:
+```bash
+yarn dev:desktop
+```
+
+Or start additional hot reload servers for Functional UI development:
+```bash
+yarn dev:desktop
+yarn dev:functional_ui
+```
+
+Or you can start the server, executor, functional ui and desktop all manually, which can give you more flexibility, and clear messages:
+
 ```bash
 yarn dev:server
+yarn dev:executor
 yarn dev:functional_ui
 yarn dev:desktop
 ```
 
-Then start a executor for running the task:
-```bash
-yarn dev:executor
-```
-
 - Application server: http://localhost:7422/
 - API documentation server: http://localhost:7422/docs
-- Web UI dev server: http://localhost:7420/
+- Functional UI dev server: http://localhost:7420/
 
-### Run the example
+### Run the example without the desktop project
+
+If you are working on the functional ui, you can run it directly from the web browser:
+
+```bash
+yarn dev:server
+yarn dev:executor
+yarn dev:functional_ui
+```
 
 Example URL: 
 ```
