@@ -10,7 +10,7 @@ import PropTypes from "prop-types";
 
 export const WorkSpace = (props) => {
     const { currentWorkspace, onOpenWorkspace, onSelectWorkflow, onFileOpen } = props
-    const [ fileTree, setFileTree ] = useState([])
+    const [ fileTree, setFileTree ] = useState<TreeNodeInfo[]>([])
     const filesystemProvider = useRef<IFilesystemProvider>(props.filesystemProvider || new TauriFilesystemProvider())
 
     useEffect(() => {
