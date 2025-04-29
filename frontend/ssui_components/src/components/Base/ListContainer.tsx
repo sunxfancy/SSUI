@@ -3,8 +3,15 @@ import { IComponent } from '../IComponent';
 import { getComponentsByType, PythonType } from '../ComponentsManager';
 import { ReactNode } from 'react';
 
-export class ListContainer extends IComponent<{ port: string, root_path: string, script_path: string, type_args: PythonType[] }, { items: any[] }> {
-    constructor(props: { port: string, root_path: string, script_path: string, type_args: PythonType[] }) {
+interface ListContainerProps {
+    port: string;
+    root_path: string;
+    script_path: string;
+    type_args: PythonType[];
+}
+
+export class ListContainer extends IComponent<ListContainerProps, { items: any[] }> {
+    constructor(props: ListContainerProps) {
         super(props);
 
         this.state = {
