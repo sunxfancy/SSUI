@@ -6,6 +6,7 @@ import yaml
 from ss_executor.loader import SSLoader, SSProject, search_project_root
 from ss_executor.model import Task
 from ss_executor.scheduler import TaskScheduler
+from tests.utils import should_run_slow_tests
 
 class TestSSLoader(unittest.TestCase):
     def setUp(self):
@@ -22,7 +23,7 @@ class TestSSLoader(unittest.TestCase):
         self.loader.Show()  # 不应抛出异常
 
     def test_load_and_execute(self):
-        path = os.path.join(os.path.dirname(__file__), '..', 'examples', 'basic', 'workflow.py')
+        path = os.path.join(os.path.dirname(__file__), '..', 'examples', 'basic', 'workflow-sd1.py')
         self.loader.load(path)
         self.loader.Execute()
         self.loader.GetConfig('txt2img')
@@ -81,7 +82,7 @@ class TestScheduler(unittest.TestCase):
         self.assertEqual(task2.script, "test.py")
         self.assertEqual(task2.callable, "test")
 
-    
+    @unittest.skipIf(not should_run_slow_tests(), "Skipping slow test")
     def test_scheduler_async(self):
         scheduler = TaskScheduler()
         async def run_scheduler():

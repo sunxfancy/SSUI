@@ -19,11 +19,14 @@ jobs:
           - os: windows-latest
             artifacts: |
               desktop/src-tauri/target/release/bundle/msi/ssui_${{ github.ref }}_x64_en-US.msi
+              desktop/src-tauri/target/debug/bundle/msi/ssui_${{ github.ref }}_x64_en-US.msi
               desktop/src-tauri/target/release/bundle/nsis/ssui_${{ github.ref }}_x64_setup.exe
+              desktop/src-tauri/target/debug/bundle/nsis/ssui_${{ github.ref }}_x64_setup.exe
 
           - os: macOS-latest
             artifacts: |
               desktop/src-tauri/target/release/bundle/dmg/ssui_${{ github.ref }}_x64_en-US.dmg
+              desktop/src-tauri/target/debug/bundle/dmg/ssui_${{ github.ref }}_x64_en-US.dmg
 
     steps:
       - uses: actions/checkout@v4
