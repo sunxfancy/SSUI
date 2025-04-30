@@ -63,7 +63,7 @@ pub fn run() {
             restart_executor,
             set_proxy
         ])
-        .setup(|app| {
+        .setup(|_app: &mut tauri::App| {
             log::info!("应用程序设置完成");
             Ok(())
         })
