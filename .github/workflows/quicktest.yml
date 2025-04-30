@@ -1,0 +1,63 @@
+name: Quick Test
+
+on:
+  push:
+    branches: [ "main", "dev" ]
+  pull_request:
+    branches: [ "main", "dev" ]
+
+env:
+  SSUI_CI_SKIP_INSTALL: 1
+
+jobs:
+  build:
+    name: Build on ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [windows-latest, macOS-latest]
+
+    steps:
+      - uses: actions/checkout@v4
+          
+      - name: Set Node.js 22.x
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: 'yarn'
+
+      - name: Install dependencies
+        run: yarn install --frozen-lockfile 
+
+      - name: Setup Python
+        id: setup-uv
+        uses: astral-sh/setup-uv@v6
+        with:
+          version: "0.6.11"
+          enable-cache: true
+          python-version: 3.12.8
+          activate-environment: true
+
+      - name: Do something if the cache was restored
+        if: steps.setup-uv.outputs.cache-hit == 'true'
+        run: echo "Cache was restored"
+
+      - name: Install requirements
+        if: steps.setup-uv.outputs.cache-hit == 'false'
+        run: yarn requirements && uv pip install -r .venv/requirements.txt
+
+      - name: Setup Rust
+        uses: actions-rust-lang/setup-rust-toolchain@v1
+
+      
+      - name: Build Components
+        run: yarn build:components
+
+      - name: Build Functional UI
+        run: yarn build:functional_ui
+
+      - name: Build Desktop
+        run: yarn build:desktop
+
+      - name: Run Tests
+        run: yarn test

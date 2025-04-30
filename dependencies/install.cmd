@@ -49,5 +49,5 @@ if not exist ".venv\Scripts\python.exe" (
 
 if not exist ".venv\Scripts\uv.exe" (
     echo "Install uv tool..."
-    .venv\python\python.exe -m pip install uv
+    .venv\python\python.exe -m pip install uv==0.6.11
 )
