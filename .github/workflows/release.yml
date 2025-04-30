@@ -56,7 +56,8 @@ jobs:
 
       - name: Setup Rust
         uses: actions-rust-lang/setup-rust-toolchain@v1
-
+        with:
+          rustflags: ""
 
       - name: Build ssext tools
         run: yarn build:extension_builder && cd extension_builder && npm link
