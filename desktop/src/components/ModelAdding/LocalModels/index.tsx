@@ -19,37 +19,35 @@ const LocalModels: React.FC<LocalModelsProps> = (props) => {
 
     const scannedModels = useRef<Model[]>([])
 
-    // 扫描选中的目录
-    const handleScanDirectory = async () => {
-        setIsScanning(true)
-        scannedModels.current = [] //清空之前的扫描结果
-        // installedModels: new Set<string>() // 清空已安装模型状态
-
-        try {
-            // 使用回调函数实时更新扫描到的模型
-            const models = await modelsProvider.scanDirectory(
-                selectedDirectory,
-                (model: Model) => {
-                    // 每当找到一个模型，就更新状态
-                    scannedModels.current.push(model)
-                }
-            );
-
-            console.log("扫描完成，共找到模型: ", models.length);
-            setIsScanning(false)
-        } catch (error) {
-            console.error("扫描目录失败:", error);
-            setIsScanning(false)
-        }
-    }
-
     const selectDirectory = async () => {
         try {
             const selectedDir = await modelsProvider.selectDirectory();
             console.log('选择目录:', selectedDir)
             if (selectedDir) {
                 setSelectedDirectory(selectedDir)
-                handleScanDirectory()
+
+                // 扫描选中的目录
+                setIsScanning(true)
+                scannedModels.current = [] //清空之前的扫描结果
+                // installedModels: new Set<string>() // 清空已安装模型状态
+
+                try {
+                    // 使用回调函数实时更新扫描到的模型
+                    const models = await modelsProvider.scanDirectory(
+                        selectedDir,
+                        (model: Model) => {
+                            console.log(model)
+                            // 每当找到一个模型，就更新状态
+                            scannedModels.current.push(model)
+                        }
+                    );
+
+                    console.log("扫描完成，共找到模型: ", models.length);
+                    setIsScanning(false)
+                } catch (error) {
+                    console.error("扫描目录失败:", error);
+                    setIsScanning(false)
+                }
             }
         } catch (error) {
             console.error("选择目录失败:", error);
