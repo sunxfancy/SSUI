@@ -1,12 +1,13 @@
 import os
+import re
 import sys
 from types import ModuleType
 import yaml
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
-from typing import Optional
-
+from typing import Dict, Optional
+from .opener_service import FileOpenerManager
 class ExtensionServerConfig(BaseModel):
     venv: str = Field(default="shared", description="The virtual environment to use for the extension")
     dependencies: list[str] = Field(default=[], description="The dependencies to install for the extension")
@@ -14,6 +15,8 @@ class ExtensionServerConfig(BaseModel):
 
 class ExtensionWebUIConfig(BaseModel):
     dist: str = Field(default="dist", description="The dist directory for the extension")
+    mount: str = Field(default="", description="The mount directory for the dist path")
+    file_opener: Optional[list[Dict[str, str]]] = Field(default=None, description="The file openers to extend")
 
 class Extension(BaseModel):
     name: str = Field(description="The name of the extension")
@@ -74,6 +77,7 @@ class ExtensionManager:
             if os.path.exists(yaml_path):
                 self.loadExtension(yaml_path, dir)
                         
+        self.loadFileOpener()
         self.loadPythonScripts(app)
         self.setFileAPIforExtension(app)
                     
@@ -104,7 +108,36 @@ class ExtensionManager:
     def setFileAPIforExtension(self, app: FastAPI):
         for name, extension in self.extensions.items():
             if extension.web_ui and extension.web_ui.dist:
+                mount = extension.web_ui.mount
                 dist_path = os.path.normpath(os.path.join(extension.path, extension.web_ui.dist))
                 if os.path.exists(dist_path):
                     print(f"Setting static files for {name} at {dist_path}")
-                    app.mount(f"/extension/{name}/dist", StaticFiles(directory=dist_path), name=name)
+                    app.mount(f"/extension/{name}/{mount}", StaticFiles(directory=dist_path), name=name)
+
+    def loadFileOpener(self):
+        def parseFileOpener(file_opener: str):
+            match = re.match(r"^([^()]+)\((.*?)\)([^()]*)$", file_opener)
+            if match:
+                url_path = match.group(1)
+                pattern = match.group(2)
+                url_rest = match.group(3)
+                return url_path, pattern, url_rest
+            return None
+
+        for name, extension in self.extensions.items():
+            if extension.web_ui and extension.web_ui.file_opener:
+                for dic in extension.web_ui.file_opener:
+                    for opener_name, file_opener in dic.items():
+                        pattern = parseFileOpener(file_opener)
+                        if pattern:
+                            if pattern[1].startswith("*"):
+                                file_extension = pattern[1][1:]
+                            else:
+                                file_extension = pattern[1]
+                            FileOpenerManager.instance().register_opener(
+                                opener_name,
+                                file_extension,
+                                f'/extension/{name}'+pattern[0],
+                                pattern[2]
+                            )
+                        

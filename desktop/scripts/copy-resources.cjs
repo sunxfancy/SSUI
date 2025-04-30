@@ -161,6 +161,12 @@ async function main() {
   } else {
     console.warn(`警告: 源文件不存在 - ${macosLockSource}`);
   }
+
+  // touch 一个文件
+  const touchFile = path.join(resourcesDir, 'extensions', 'Readme.md');
+  // 确保目录存在
+  fs.mkdirSync(path.dirname(touchFile), { recursive: true });
+  fs.writeFileSync(touchFile, 'Prebuilt extensions included in the app.');
   
   console.log('资源文件复制完成!');
 

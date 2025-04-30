@@ -43,6 +43,13 @@ class ServerService {
   public async getServerStatus(): Promise<CommandInfo> {
     return await this.serverProvider.getServerStatus();
   }
+
+  /**
+   * 重启服务器
+   */
+  public async restartServer(): Promise<CommandInfo> {
+    return await this.serverProvider.restartServer();
+  }
 }
 
 export default ServerService;

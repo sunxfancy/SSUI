@@ -6,7 +6,7 @@ const host = process.env.TAURI_DEV_HOST;
 
 // https://vitejs.dev/config/
 export default defineConfig(async () => ({
-  base: "/extension/image/canvas/",
+  base: "/extension/ImageExtension/canvas/",
   plugins: [react()],
 
   // Vite options tailored for Tauri development and only applied in `tauri dev` or `tauri build`
@@ -31,23 +31,23 @@ export default defineConfig(async () => ({
     },
     proxy: {
       '/api': {
-        target: 'http://127.0.0.1:7422',
+        target: 'http://localhost:7422',
         changeOrigin: true,
       },
       '/config': {
-        target: 'http://127.0.0.1:7422',
+        target: 'http://localhost:7422',
         changeOrigin: true,
       },
       '/file': {
-        target: 'http://127.0.0.1:7422',
+        target: 'http://localhost:7422',
         changeOrigin: true,
       },
       '/extension': {
-        target: 'http://127.0.0.1:7422',
+        target: 'http://localhost:7422',
         changeOrigin: true,
       },
       "/ws": {
-        target: 'ws://127.0.0.1:7422',
+        target: 'ws://localhost:7422',
         changeOrigin: true,
         ws: true,
       }

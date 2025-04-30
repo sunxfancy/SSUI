@@ -9,4 +9,7 @@ export interface IServerProvider {
   
   // 获取服务器状态
   getServerStatus(): Promise<CommandInfo>;
+  
+  // 重启服务器
+  restartServer(): Promise<CommandInfo>;
 } 

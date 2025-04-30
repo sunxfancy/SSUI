@@ -1,0 +1,16 @@
+.toggleButton {
+    border-radius: 8px;
+    border: solid 2px #d0d0d0;
+    width: 36px;
+    height: 36px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    cursor: pointer;
+    transition: all .3s ease;
+
+    &:hover {
+        border: 2px solid #8f8f8f;
+        background-color: #eeeeee;
+    }
+}

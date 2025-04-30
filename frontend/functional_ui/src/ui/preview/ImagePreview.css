@@ -1,0 +1,30 @@
+.image-preview {
+    padding: 20px;
+    max-width: 1200px;
+    margin: 0 auto;
+}
+
+.image-preview-card {
+    margin-top: 20px;
+    padding: 20px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 300px;
+}
+
+.preview-image {
+    max-width: 100%;
+    max-height: 80vh;
+    object-fit: contain;
+}
+
+.loading, .error {
+    font-size: 18px;
+    color: #5c7080;
+    text-align: center;
+}
+
+.error {
+    color: #c23030;
+} 

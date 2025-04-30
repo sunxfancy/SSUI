@@ -1,17 +1,11 @@
-
 import './App.css';
 import '../../ssui_components/src/components/InternalComponents';
 import { getUIProvider } from './ui/UIProvider';
-import { ExtensionLoader } from './extension/loader';
 
-
-let loader = new ExtensionLoader();
-loader.loadExtensions();
 
 function App() {
   function getView() {
     const params = new URLSearchParams(window.location.search);
-    console.log("getView", params);
     var path = '';
     if (params.has('path')) {
       path = params.get('path') ?? '';
@@ -22,6 +16,9 @@ function App() {
     if (params.has('view')) {
       const view = params.get('view') ?? '';
       provider = getUIProvider(view);
+      console.log('View:', view, provider);
+    } else {
+      console.log('No view provided, using functional');
     }
     if (!provider) {
       provider = getUIProvider('functional');

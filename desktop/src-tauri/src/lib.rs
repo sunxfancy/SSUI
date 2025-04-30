@@ -1,17 +1,24 @@
-use downloader::download_python;
-use downloader::unpack_app;
-use downloader::set_proxy;
+use downloader::{
+    download_python,
+    unpack_app,
+    set_proxy
+};
 use gpu_detector::detect_gpu;
-use python::run_python;
-use python::run_python_background;
-use python::get_dev_root;
-use python::start_server;
-use python::start_executor;
-use python::get_server_status;
-use python::get_executor_status;
-use python::PROCESSES_GUARD;
-use python::PROCESS_MANAGER;
+use python::{
+    run_python,
+    run_python_background,
+    get_dev_root,
+    start_server,
+    start_executor,
+    restart_server,
+    restart_executor,
+    get_server_status,
+    get_executor_status,
+    PROCESSES_GUARD,
+    PROCESS_MANAGER
+};
 use std::env;
+
 mod gpu_detector;
 mod downloader;
 mod python;
@@ -52,9 +59,11 @@ pub fn run() {
             start_executor,
             get_server_status,
             get_executor_status,
+            restart_server,
+            restart_executor,
             set_proxy
         ])
-        .setup(|app| {
+        .setup(|_app: &mut tauri::App| {
             log::info!("应用程序设置完成");
             Ok(())
         })

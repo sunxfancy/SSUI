@@ -13,7 +13,6 @@ html, body, #root {
 
   color: #0f0f0f;
   background-color: #f6f6f6;
-
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
@@ -27,4 +26,12 @@ html, body, #root {
 
 .topbar-tab-panel {
   height: 100%;
+}
+
+:focus {
+  outline: none!important;
+}
+
+iframe {
+  border: none;
 }

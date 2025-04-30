@@ -13,10 +13,9 @@
     "extensions/Image"
   ],
   "scripts": {
-    "dev:desktop_ui": "cd desktop && yarn dev",
     "dev:desktop_sb": "cd desktop && yarn storyboard",
-    "dev:desktop": "cd desktop && yarn tauri dev",
-    "dev:server": "yarn build:functional_ui && node dependencies/venv.cjs python -m server --dev",
+    "dev:desktop": "yarn build:components && yarn build:functional_ui && cd desktop && yarn tauri dev",
+    "dev:server": "yarn build:components && yarn build:functional_ui && node dependencies/venv.cjs python -m server --dev",
     "dev:server:no_build": "node dependencies/venv.cjs python -m server --dev",
     "dev:executor": "node dependencies/venv.cjs python -m ss_executor",
     "dev:functional_ui": "cd frontend/functional_ui && yarn dev",
@@ -41,7 +40,7 @@
     "install-requirements": "node dependencies/venv.cjs uv pip install -r .venv/requirements.txt",
     "update-lock": "node dependencies/update_lock.cjs",
     "update-lock:no-upgrade": "node dependencies/update_lock.cjs --no-upgrade",
-    "postinstall": "node dependencies/install.cjs && yarn requirements && yarn install-requirements"
+    "postinstall": "node dependencies/install.cjs"
   },
   "devDependencies": {
     "concurrently": "^9.1.2",

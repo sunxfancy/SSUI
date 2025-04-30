@@ -6,7 +6,7 @@ interface SDModel {
     description?: string;
     tags?: string[];
 }
-function getModelLoader(type: 'sd-1' | 'sdxl') {
+function getModelLoader(type: 'sd-1' | 'sdxl', secondary_tag?: string) {
     return class SDModelLoader extends Component {
         state = {
             filePath: '',
@@ -31,9 +31,15 @@ function getModelLoader(type: 'sd-1' | 'sdxl') {
                 const allModels = await modelsResponse.json();
 
                 // 筛选出SD1可用的模型（标签中包含sd1的模型）
-                const sd1Models = allModels.filter((model: any) =>
+                let sd1Models = allModels.filter((model: any) =>
                     model.base_model.includes(`${type}`)
                 );
+
+                if (secondary_tag) {
+                    sd1Models = sd1Models.filter((model: any) =>
+                        model.tags.includes(secondary_tag)
+                    );
+                }
 
                 this.setState({
                     models: sd1Models,
@@ -204,4 +210,6 @@ import { registerComponent, ComponentRegister } from '../ComponentsManager';
     { 'name': 'SD1ModelLoader', 'type': 'ssui_image.SD1.SD1Model', 'port': 'input', 'component': getModelLoader("sd-1"), } as ComponentRegister,
     { 'name': 'SDXLModelLoader', 'type': 'ssui_image.SDXL.SDXLModel', 'port': 'input', 'component': getModelLoader("sdxl"), } as ComponentRegister,
     { 'name': 'FluxModelLoader', 'type': 'ssui_image.Flux.FluxModel', 'port': 'input', 'component': FluxModelLoader, } as ComponentRegister,
+    { 'name': 'SD1LoraLoader', 'type': 'ssui_image.SD1.SD1Lora', 'port': 'input', 'component': getModelLoader("sd-1", "lora"), } as ComponentRegister,
+    { 'name': 'SDXLLoraLoader', 'type': 'ssui_image.SDXL.SDXLLora', 'port': 'input', 'component': getModelLoader("sdxl", "lora"), } as ComponentRegister,
 ].forEach(registerComponent);

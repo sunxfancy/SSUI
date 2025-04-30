@@ -43,6 +43,13 @@ class ExecutorService {
   public async getExecutorStatus(): Promise<CommandInfo> {
     return await this.executorProvider.getExecutorStatus();
   }
+  
+  /**
+   * 重启执行器
+   */
+  public async restartExecutor(): Promise<CommandInfo> {
+    return await this.executorProvider.restartExecutor();
+  }
 }
 
 export default ExecutorService;

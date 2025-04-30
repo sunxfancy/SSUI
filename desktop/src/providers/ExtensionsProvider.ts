@@ -28,29 +28,30 @@ export class ExtensionsProvider implements IExtensionsProvider {
 
   constructor() {
     const rootState = GlobalStateManager.getInstance().getRootState();
+    console.log(rootState, '====')
     this.message = new Message(rootState?.host || "localhost", rootState?.port || 7420);
   }
 
   async getExtensions(): Promise<ExtensionItem[]> {
     try {
       const result = await this.message.get("api/extensions");
-      
+
       if (result && typeof result === 'object') {
         const extensionsData = result as ExtensionsResponse;
         return this.convertToExtensionItems(extensionsData);
       }
-      
+
       return [];
     } catch (error) {
       console.error("获取扩展列表失败:", error);
       console.log("3秒后重试获取扩展列表...");
-      
+
       // 等待3秒后重试
       await new Promise(resolve => setTimeout(resolve, 3000));
-      
+
       try {
         const retryResult = await this.message.get("api/extensions");
-        
+
         if (retryResult && typeof retryResult === 'object') {
           const extensionsData = retryResult as ExtensionsResponse;
           return this.convertToExtensionItems(extensionsData);
@@ -58,7 +59,7 @@ export class ExtensionsProvider implements IExtensionsProvider {
       } catch (retryError) {
         console.error("重试获取扩展列表失败:", retryError);
       }
-      
+
       return [];
     }
   }
@@ -68,7 +69,7 @@ export class ExtensionsProvider implements IExtensionsProvider {
       const result = await this.message.post("api/extensions/install", {
         extension_id: extensionId
       });
-      
+
       return result && result.type === "success";
     } catch (error) {
       console.error("安装扩展失败:", error);
@@ -81,7 +82,7 @@ export class ExtensionsProvider implements IExtensionsProvider {
       const result = await this.message.post("api/extensions/uninstall", {
         extension_id: extensionId
       });
-      
+
       return result && result.type === "success";
     } catch (error) {
       console.error("卸载扩展失败:", error);
@@ -94,7 +95,7 @@ export class ExtensionsProvider implements IExtensionsProvider {
       const result = await this.message.post("api/extensions/disable", {
         extension_id: extensionId
       });
-      
+
       return result && result.type === "success";
     } catch (error) {
       console.error("禁用扩展失败:", error);
@@ -107,7 +108,7 @@ export class ExtensionsProvider implements IExtensionsProvider {
       const result = await this.message.post("api/extensions/enable", {
         extension_id: extensionId
       });
-      
+
       return result && result.type === "success";
     } catch (error) {
       console.error("启用扩展失败:", error);
@@ -115,7 +116,7 @@ export class ExtensionsProvider implements IExtensionsProvider {
     }
   }
 
-  async searchExtensions(query: string): Promise<ExtensionItem[]> {
+  async searchExtensions(_query: string): Promise<ExtensionItem[]> {
       return [];
   }
 
@@ -148,7 +149,7 @@ export class ExtensionsProvider implements IExtensionsProvider {
       "Video": "video",
       "Voice": "microphone"
     };
-    
+
     return iconMap[id] || "extension";
   }
 
@@ -164,7 +165,7 @@ export class ExtensionsProvider implements IExtensionsProvider {
       "Video": ["视频", "媒体"],
       "Voice": ["语音", "声音"]
     };
-    
+
     return tagMap[id] || [];
   }
 

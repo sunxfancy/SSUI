@@ -10,6 +10,7 @@ from tests.mocks import (
     MockTaskScheduler,
 )
 
+@unittest.skipIf(not should_run_slow_tests(), "Skipping slow test")
 class TestServer(unittest.TestCase):
     def setUp(self):
         # 创建mock对象

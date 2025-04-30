@@ -8,42 +8,46 @@
 
 在项目根目录下，执行 `yarn` 会安装所有js依赖，下载一个python环境，在.venv目录创建开发虚拟环境，并安装所有python依赖。
 
-开发时，执行 `yarn dev` 会启动所有开发服务器，并自动打开项目，并监听文件变化。
-注意：现在yarn dev 稍微有点难用，server进行热更新时，会自动终结掉所有其他进程，导致刷新出问题
+可以直接启动desktop项目进行开发：
+```
+yarn dev:desktop
+```
 
 也可以手动启动独立的开发服务器：
 ```
-yarn dev:desktop_ui
+yarn dev:desktop
 yarn dev:functional_ui
 yarn dev:components
 yarn dev:server
+yarn dev:executor
 ```
-需要同时开启这4个进行项目集成开发，基本能满足所有项目代码热更新的需求。但如果你只需要单独测试某个部分，也可以只启动对应的服务器。
+需要同时开启这5个进行项目集成开发，基本能满足所有项目代码热更新的需求。但如果你只需要单独测试某个部分，也可以只启动对应的服务器。
+
+注：dev:server和dev:executor并不是开发服务器，不会热更新，但可以方便观察其运行状态和输出，也可以选择查看项目目录下的log文件夹。另外如果手动启动dev:server则也必须手动启动dev:executor。
+
 
 ## 构建目标
 
-我们主要有6个构建目标：
-- desktop 桌面端主项目  依赖 functional_ui, ssui_components, server
+我们主要有6个主要构建目标：
+- desktop 桌面端主项目  依赖 functional_ui, ssui_components, server, extension_builder
 - functional_ui 基础UI界面  依赖 ssui_components
 - ssui_components 基础组件
 - server 服务器端 依赖 functional_ui
 - ssui-vscode 插件 依赖 server, ssui_components
 - extension_builder 扩展构建工具
 
-
 ## 构建命令
 
 项目提供了多个构建命令：
 
-- `yarn dev:desktop_ui` - 启动桌面UI开发服务器
-- `yarn dev:desktop_sb` - 启动桌面Storyboard开发服务器
-- `yarn dev:desktop` - 启动Tauri桌面应用开发服务器
+- `yarn dev:desktop_sb` - 启动桌面Storyboard开发服务器，用来独立开发React组件
+- `yarn dev:desktop` - 启动Tauri桌面应用开发服务器，**最常用**，如果当前系统没有占用7422端口，则会自动启动server和executor
 - `yarn dev:server` - 启动FastAPI服务器（端口7422）
-- `yarn dev:functional_ui` - 启动功能UI开发服务器(端口7420)
-- `yarn dev:components` - 启动组件开发服务器
+- `yarn dev:executor` - 启动SSExecutor用来执行任务，运行模型
+- `yarn dev:functional_ui` - 启动功能UI开发服务器(端口7420)，desktop项目启动时，如果发现7420端口被占用，则会自动用开发用端口7420代替7422
+- `yarn dev:components` - 启动组件开发服务器，自动watch组件代码变化
 
 构建命令：
-- `yarn build:desktop_ui` - 构建桌面UI
 - `yarn build:desktop` - 构建Tauri桌面应用
 - `yarn build:components` - 构建组件
 - `yarn build:functional_ui` - 构建功能UI

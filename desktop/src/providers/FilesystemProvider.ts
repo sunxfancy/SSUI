@@ -27,7 +27,7 @@ export class TauriFilesystemProvider implements IFilesystemProvider {
         try {
             console.log('fetchFileTree', directory);
             const files = await readDir(directory);
-            
+
             // 过滤掉被忽略的文件和目录
             const filteredFiles = files.filter(file => {
                 return !this.ignoredPaths.some(ignorePath => {
@@ -43,7 +43,7 @@ export class TauriFilesystemProvider implements IFilesystemProvider {
                 id: file.name,
                 label: file.name,
                 isFile: !file.isDirectory,
-                nodeData: { 
+                nodeData: {
                     path: await join(directory, file.name),
                     parent: parent
                 },
@@ -60,10 +60,10 @@ export class TauriFilesystemProvider implements IFilesystemProvider {
         let currentNode: TreeNodeInfo | null = node;
         while (currentNode) {
             path.unshift(currentNode.id as string);
-            currentNode = (currentNode.nodeData as any).parent as TreeNodeInfo | null;
+            currentNode = (currentNode.nodeData as any)?.parent as TreeNodeInfo | null;
         }
         return path;
     }
 }
 
-export default TauriFilesystemProvider; 
+export default TauriFilesystemProvider;

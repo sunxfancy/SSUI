@@ -1,6 +1,8 @@
 Stable Scripts UI
 ====================
 
+![quicktest](https://github.com/sunxfancy/SSUI/actions/workflows/quicktest.yml/badge.svg)
+
 Stable Scripts UI is a web-based user interface for `Stable Scripts` - a kind of python scripts can easily reproduce the same results by other users.
 
 
@@ -61,26 +63,43 @@ yarn
 
 ### Run Development Server
 
+To quickly start the development, you can run desktop project as the entry point:
+```bash
+yarn dev:desktop
+```
+
+Or start additional hot reload servers for Functional UI development:
+```bash
+yarn dev:desktop
+yarn dev:functional_ui
+```
+
+Or you can start the server, executor, functional ui and desktop all manually, which can give you more flexibility, and clear messages:
+
 ```bash
 yarn dev:server
+yarn dev:executor
 yarn dev:functional_ui
 yarn dev:desktop
 ```
 
-Then start a executor for running the task:
+- Application server: http://localhost:7422/
+- API documentation server: http://localhost:7422/docs
+- Functional UI dev server: http://localhost:7420/
+
+### Run the example without the desktop project
+
+If you are working on the functional ui, you can run it directly from the web browser:
+
 ```bash
+yarn dev:server
 yarn dev:executor
+yarn dev:functional_ui
 ```
-
-- Application server: http://127.0.0.1:7422/
-- API documentation server: http://127.0.0.1:7422/docs
-- Web UI dev server: http://127.0.0.1:7420/
-
-### Run the example
 
 Example URL: 
 ```
-http://127.0.0.1:7420/?path=<example_path>/basic/workflow-sd1.py
+http://localhost:7420/?path=<example_path>/basic/workflow-sd1.py
 ```
 
 ### Download the testing models

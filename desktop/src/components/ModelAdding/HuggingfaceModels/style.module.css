@@ -1,0 +1,113 @@
+.huggingFace {
+
+    .form {
+        margin-bottom: 20px;
+
+        .searchArea {
+            display: flex;
+            align-items: center;
+            width: 100%;
+            gap: 6px;
+
+            .searchInput {
+                flex: 1;
+                margin-right: 10px;
+            }
+
+            .logo {
+                width: 40px;
+                height: 40px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+
+                & > img {
+                    width: 32px;
+                    height: 32px;
+                }
+            }
+        }
+
+        .tip {
+            margin-top: 8px;
+            color: #666;
+        }
+    }
+}
+
+.cardList {
+    overflow: auto;
+    max-height: calc(100vh - 220px);
+    margin-top: 20px;
+    padding: 0 10px 0 0;
+
+    .huggingFaceModelCard {
+        width: 100%;
+        position: relative;
+        overflow: hidden;
+        border-radius: 8px;
+        display: inline-block;
+        border: solid 1px #e8e8ec;
+        margin-bottom: 12px;
+
+        .topArea {
+            display: flex;
+            align-items: center;
+            background-color: #f1f1f1;
+            border-bottom: solid 1px #f3f4f6;
+            padding: 6px 10px;
+
+            .name {
+                font-weight: bold;
+                margin-right: 12px;
+            }
+
+            .pipelineTag {
+                border: solid 1px #e2e2e5;
+                border-radius: 12px;
+                padding: 2px 6px;
+                font-size: 12px;
+                display: flex;
+                align-items: center;
+                color: rgb(92, 97, 105);
+                flex-shrink: 0;
+
+                & > img {
+                    margin-right: 4px;
+                    color: rgb(153, 161, 175);
+                }
+            }
+        }
+
+        .midArea {
+            padding: 10px;
+
+            .tags {
+                display: flex;
+                flex-wrap: wrap;
+                gap: 5px;
+            }
+
+            .iconWp {
+                display: flex;
+                align-items: center;
+                height: 16px;
+            }
+        }
+
+        .bottomArea {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 10px 10px;
+
+            .data {
+                display: flex;
+                align-items: center;
+                gap: 12px;
+                font-size: 12px;
+                color: #666666;
+            }
+        }
+    }
+}

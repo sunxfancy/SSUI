@@ -1,5 +1,5 @@
 use std::collections::HashMap;
-use log::{info, error, warn, debug};
+use log::{info, debug};
 
 #[cfg(target_os = "windows")]
 use wmi::{COMLibrary, WMIConnection};

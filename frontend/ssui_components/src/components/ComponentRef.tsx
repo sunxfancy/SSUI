@@ -1,11 +1,20 @@
 
 import { IComponent } from "./IComponent";
-import { getComponent, getComponentsByType } from "./ComponentsManager";
+import { getComponent, getComponentsByType, parsePythonTyping, PythonType } from "./ComponentsManager";
 import React from 'react';
-import { Tabs, Tab } from "@blueprintjs/core";
+import { Tabs, Tab, TabsExpander, Label } from "@blueprintjs/core";
 
-export class ComponentRef extends IComponent<{ name: string }> {
-    constructor(props: { name: string }) {
+export interface ComponentRefProps {
+    name: string;
+    type: string;
+    port: string;
+    root_path: string;
+    script_path?: string;
+    type_args?: PythonType[];
+}
+
+export class ComponentRef extends IComponent<ComponentRefProps> {
+    constructor(props: ComponentRefProps) {
         super(props);
         this.ref = React.createRef<IComponent>();
     }
@@ -14,7 +23,7 @@ export class ComponentRef extends IComponent<{ name: string }> {
 
     render() {
         let c = getComponent(this.props.name);
-        return c ? c.createComponent(this.ref) :
+        return c ? c.createComponent(this.ref, this.props) :
             <div>Component {this.props.name} not found</div>;
     }
 
@@ -27,26 +36,34 @@ export class ComponentRef extends IComponent<{ name: string }> {
     }
 }
 
-export class ComponentTabRef extends IComponent<{ type: string, port: string }> {
-    constructor(props: { type: string, port: string}) {
+export class ComponentTabRef extends IComponent<ComponentRefProps> {
+    constructor(props: ComponentRefProps) {
         super(props);
-        let components = getComponentsByType(this.props.type);
+        this.parsed_type = parsePythonTyping(this.props.type);
+        console.log(this.parsed_type);
+        let components = getComponentsByType(this.parsed_type.type);
+        console.log(components);
         for (let c of components) {
             this.ref_array[c.name] = React.createRef<ComponentRef>();
         }
     }
-
+    private parsed_type: PythonType;
     private tabs_ref: React.RefObject<Tabs> = React.createRef<Tabs>();
     private ref_array: { [key: string]: React.RefObject<ComponentRef> } = {};
 
     render() {
-        let components = getComponentsByType(this.props.type);
-
+        let components = getComponentsByType(this.parsed_type.type);
         return <Tabs ref={this.tabs_ref}>
+            <Label>
+                {this.props.name}
+            </Label>
+            <TabsExpander />
             {components.filter(c => c.port == this.props.port)
-                .map(c => 
-                <Tab key={c.name} id={c.name} title={c.name} 
-                    panel={<ComponentRef name={c.name} ref={this.ref_array[c.name]} />} />)}
+                .map(c =>
+                    <Tab key={c.name} id={c.name} title={c.name}
+                        panel={<ComponentRef 
+                            name={c.name} type={c.type} ref={this.ref_array[c.name]} port={this.props.port}
+                            root_path={this.props.root_path} script_path={this.props.script_path} type_args={this.parsed_type.args} />} />)}
         </Tabs>
     }
 

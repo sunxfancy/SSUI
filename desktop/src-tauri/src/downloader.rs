@@ -1,5 +1,5 @@
 use tauri_plugin_http::reqwest;
-use log::{info, error, warn, debug};
+use log::{info, error, debug};
 use std::sync::Mutex;
 use lazy_static::lazy_static;
 
@@ -63,6 +63,9 @@ pub fn create_client_with_proxy() -> reqwest::Client {
 pub async fn download_python(version: &str, release_date: &str, architecture: &str, path: &str) -> Result<String, String> {
     let url = format!(
         "https://github.com/astral-sh/python-build-standalone/releases/download/{release_date}/cpython-{version}+{release_date}-{architecture}-install_only_stripped.tar.gz"
+    );
+    let china_mirror = format!(
+        "https://gitee.com/Swordtooth/ssui_assets/releases/download/v0.0.2/cpython-{version}%{release_date}-{architecture}-install_only_stripped.tar.gz"
     );
     info!("开始下载Python: {}", url);
     debug!("下载参数: version={}, release_date={}, architecture={}, path={}", version, release_date, architecture, path);
@@ -137,13 +140,14 @@ pub async fn download_python(version: &str, release_date: &str, architecture: &s
     // 首先尝试不使用代理下载
     match download_and_process(&url, path, false).await {
         Ok(result) => Ok(result),
-        Err(e) => {
+        Err(_e) => {
             // 如果直接下载失败且设置了代理，则尝试使用代理重试
             if get_proxy().is_some() {
                 info!("直接下载失败，尝试使用代理重试");
                 download_and_process(&url, path, true).await
             } else {
-                Err(e)
+                info!("直接下载失败，尝试使用中国镜像源");
+                download_and_process(&china_mirror, path, false).await
             }
         }
     }

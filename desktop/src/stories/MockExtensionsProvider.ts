@@ -11,6 +11,8 @@ export class MockExtensionsProvider implements IExtensionsProvider {
       version: '1.2.0',
       icon: 'chart',
       tags: ['可视化', '图表'],
+      disabled: false,
+      featured: true,         
       installed: true
     },
     {
@@ -21,6 +23,8 @@ export class MockExtensionsProvider implements IExtensionsProvider {
       version: '2.1.3',
       icon: 'calculator',
       tags: ['统计', '分析'],
+      disabled: false,
+      featured: true,
       installed: true
     },
     {
@@ -31,8 +35,9 @@ export class MockExtensionsProvider implements IExtensionsProvider {
       version: '1.0.5',
       icon: 'clean',
       tags: ['数据处理', '清洗'],
-      installed: false,
-      featured: true
+      disabled: false,
+      featured: true,
+      installed: false
     },
     {
       id: 'ext4',
@@ -42,8 +47,9 @@ export class MockExtensionsProvider implements IExtensionsProvider {
       version: '3.2.1',
       icon: 'learning',
       tags: ['机器学习', 'AI'],
-      installed: false,
-      featured: true
+      disabled: false,
+      featured: true,
+      installed: false
     },
     {
       id: 'ext5',
@@ -53,6 +59,8 @@ export class MockExtensionsProvider implements IExtensionsProvider {
       version: '2.0.0',
       icon: 'database',
       tags: ['数据库', '连接器'],
+      disabled: false,
+      featured: true,
       installed: true
     },
     {
@@ -63,8 +71,9 @@ export class MockExtensionsProvider implements IExtensionsProvider {
       version: '1.5.2',
       icon: 'document',
       tags: ['NLP', '文本分析'],
-      installed: false,
-      featured: true
+      disabled: false,
+      featured: true,
+      installed: false
     }
   ];
 
@@ -99,11 +108,11 @@ export class MockExtensionsProvider implements IExtensionsProvider {
     );
   }
 
-  async disableExtension(extensionId: string): Promise<boolean> {
+  async disableExtension(_extensionId: string): Promise<boolean> {
     return true;
   }
 
-  async enableExtension(extensionId: string): Promise<boolean> {
+  async enableExtension(_extensionId: string): Promise<boolean> {
     return true;
   }
 } 

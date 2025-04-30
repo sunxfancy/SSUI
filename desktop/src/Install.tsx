@@ -98,9 +98,9 @@ class InstallPage extends React.Component<InstallPageProps, InstallPageState> {
     if (this._progressInterval) {
       clearInterval(this._progressInterval);
     }
-    
+
     // 初始化进度值
-    this.setState({ 
+    this.setState({
       currentProgress: 0,
       installProgress: 0,
       predictProgress: 10 // 初始预估进度设为10%
@@ -112,7 +112,7 @@ class InstallPage extends React.Component<InstallPageProps, InstallPageState> {
     // 创建定时器，每100ms更新一次进度
     this._progressInterval = setInterval(() => {
       const { installProgress, predictProgress } = this.state;
-      
+
       if (internalProgress >= installProgress) {
         // 向预估进度移动，速度为2%/s，即每100ms增加0.2%
         if (internalProgress < predictProgress) {
@@ -129,15 +129,15 @@ class InstallPage extends React.Component<InstallPageProps, InstallPageState> {
         // 追赶真实进度，速度为4%/s，即每100ms增加0.4%
         internalProgress += 0.4;
       }
-      
+
       // 只有当进度值达到新的整数时才更新状态
       const currentFloor = Math.floor(this.state.currentProgress);
       const newFloor = Math.floor(internalProgress);
-      
+
       if (newFloor > currentFloor) {
         this.setState({ currentProgress: newFloor });
       }
-      
+
       // 如果安装完成，清除定时器
       if (installProgress >= 100 && internalProgress >= 100) {
         clearInterval(this._progressInterval);
@@ -165,7 +165,7 @@ class InstallPage extends React.Component<InstallPageProps, InstallPageState> {
         installProgress: 0,
         predictProgress: 1
       }));
-      
+
       try {
         await invoke('set_proxy', { proxyUrl: proxyServer });
         this.setState(prev => ({
@@ -200,7 +200,7 @@ class InstallPage extends React.Component<InstallPageProps, InstallPageState> {
         installProgress: 1,
         predictProgress: 2
       }));
-      
+
       let pythonResult = await this.provider.checkPythonInstalled(installDir);
       this.setState(prev => ({
         shellOutput: prev.shellOutput + pythonResult.message + '\n',
@@ -213,13 +213,13 @@ class InstallPage extends React.Component<InstallPageProps, InstallPageState> {
           shellOutput: prev.shellOutput + '正在下载Python3.12到目录' + installDir + '...\n',
           predictProgress: 10
         }));
-        
+
         const downloadResult = await this.provider.downloadPython(installDir);
         this.setState(prev => ({
           shellOutput: prev.shellOutput + downloadResult.message + '\n',
           installProgress: 10
         }));
-        
+
         if (!downloadResult.success) {
           this.setState(prev => ({
             shellOutput: prev.shellOutput + '下载Python失败，安装中止。\n',
@@ -235,7 +235,7 @@ class InstallPage extends React.Component<InstallPageProps, InstallPageState> {
         installProgress: 11,
         predictProgress: 15
       }));
-      
+
       const venvResult = await this.provider.checkVirtualEnvExists(installDir);
       this.setState(prev => ({
         shellOutput: prev.shellOutput + venvResult.message + '\n',
@@ -248,13 +248,13 @@ class InstallPage extends React.Component<InstallPageProps, InstallPageState> {
           shellOutput: prev.shellOutput + '正在创建Python虚拟环境...\n',
           installProgress: 13,
         }));
-        
+
         const createVenvResult = await this.provider.createVirtualEnv(installDir);
         this.setState(prev => ({
           shellOutput: prev.shellOutput + createVenvResult.message + '\n',
           installProgress: 15,
         }));
-        
+
         if (!createVenvResult.success) {
           this.setState(prev => ({
             shellOutput: prev.shellOutput + '创建虚拟环境失败，安装中止。\n',
@@ -270,7 +270,7 @@ class InstallPage extends React.Component<InstallPageProps, InstallPageState> {
         installProgress: 16,
         predictProgress: 20
       }));
-      
+
       const packagesResult = await this.provider.checkPackagesInstalled(installDir);
       this.setState(prev => ({
         shellOutput: prev.shellOutput + packagesResult.message + '\n',
@@ -283,13 +283,13 @@ class InstallPage extends React.Component<InstallPageProps, InstallPageState> {
           shellOutput: prev.shellOutput + '正在安装依赖包...\n',
           predictProgress: 95
         }));
-        
+
         const installResult = await this.provider.installPackages(installDir, lockFile);
         this.setState(prev => ({
           shellOutput: prev.shellOutput + installResult.message + '\n',
           installProgress: 95
         }));
-        
+
         if (!installResult.success) {
           this.setState(prev => ({
             shellOutput: prev.shellOutput + '安装依赖包失败，安装中止。\n',
@@ -304,24 +304,24 @@ class InstallPage extends React.Component<InstallPageProps, InstallPageState> {
         installProgress: 95,
         predictProgress: 100
       }));
-      
+
       await this.provider.saveSettings({
         path: installDir,
         version: '0.1.0',
-        host: '127.0.0.1',
+        host: 'localhost',
         port: 7422,
         platform: currentPlatform,
         enableGPU,
         enableAutoUpdate
       });
-      
+
       this.setState(prev => ({
         shellOutput: prev.shellOutput + '安装成功完成！即将重启应用...\n',
         installProgress: 100,
         predictProgress: 100,
         isInstalling: false
       }));
-      
+
       // 延迟一小段时间后重启应用
       setTimeout(async () => {
         await this.provider.relaunchApp();
