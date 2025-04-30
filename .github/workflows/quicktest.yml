@@ -34,16 +34,11 @@ jobs:
         uses: astral-sh/setup-uv@v6
         with:
           version: "0.6.11"
-          enable-cache: true
+          enable-cache: false
           python-version: 3.12.8
           activate-environment: true
 
-      - name: Do something if the cache was restored
-        if: steps.setup-uv.outputs.cache-hit == 'true'
-        run: echo "Cache was restored"
-
       - name: Install requirements
-        if: steps.setup-uv.outputs.cache-hit == 'false'
         run: yarn requirements && uv pip install -r .venv/requirements.txt
 
       - name: Setup Rust
