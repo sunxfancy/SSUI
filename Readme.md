@@ -1,6 +1,8 @@
 Stable Scripts UI
 ====================
 
+![quicktest](https://github.com/sunxfancy/SSUI/actions/workflows/quicktest.yml/badge.svg)
+
 Stable Scripts UI is a web-based user interface for `Stable Scripts` - a kind of python scripts can easily reproduce the same results by other users.
 
 
