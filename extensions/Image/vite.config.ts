@@ -42,10 +42,6 @@ export default defineConfig(async () => ({
         target: 'http://localhost:7422',
         changeOrigin: true,
       },
-      '/extension': {
-        target: 'http://localhost:7422',
-        changeOrigin: true,
-      },
       "/ws": {
         target: 'ws://localhost:7422',
         changeOrigin: true,
