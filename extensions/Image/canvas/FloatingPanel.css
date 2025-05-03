@@ -7,7 +7,7 @@
     border-radius: 8px;
     padding: 12px;
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
-    width: 550px;
+    width: 850px;
     z-index: 1000;
 }
 
@@ -79,6 +79,9 @@
     border: 1px solid #ccc;
     border-radius: 4px;
     overflow: hidden;
+    width: 60%;
+    max-height: 500px;
+    overflow-y: auto;
 }
 
 .input-header {
@@ -128,6 +131,20 @@
     margin-bottom: 8px;
     font-size: 14px;
     font-weight: 500;
+
+}
+
+.details-section {
+    width: 40%;
+    margin-top: 10px;
+    max-height: 500px;
+    overflow-y: auto;
+}
+
+.input-details-container {
+    display: flex;
+    flex-direction: row;
+    gap: 10px;
 }
 
 .generate-button {

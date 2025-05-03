@@ -2,6 +2,7 @@ import React from 'react';
 import { Card, Elevation, HTMLSelect, Button, Icon } from "@blueprintjs/core";
 import { ComponentTabRef, Message } from "ssui_components";
 import './FloatingPanel.css';
+import { DetailsPanel } from './Details';
 
 // 定义脚本选项接口
 interface ScriptOption {
@@ -21,7 +22,7 @@ interface Callable {
     name: string;
 }
 
-interface Params {
+export interface Params {
     params: {
         [key: string]: string;
     },
@@ -39,6 +40,15 @@ interface ScriptMeta {
     functions: FunctionMeta;
 }
 
+interface ScriptDetails {
+    [key: string]: {
+        [key: string]: {
+            controler: string;
+            args: any;
+            default: any;
+        };
+    };
+}
 
 interface FloatingPanelState {
     functions: FunctionMeta | null;
@@ -71,10 +81,9 @@ export class FloatingPanel extends React.Component<FloatingPanelProps, FloatingP
             scripts: [],
             isInputsCollapsed: false
         };
-        this.message = new Message();
     }
-    private message: Message;
-
+    private message: Message = new Message();
+    private refPositive: React.RefObject<HTMLInputElement> = React.createRef<HTMLInputElement>();
 
     refInputs: Map<string, React.RefObject<ComponentTabRef>> = new Map();
 
@@ -148,7 +157,7 @@ export class FloatingPanel extends React.Component<FloatingPanelProps, FloatingP
         return <div>
             {Object.entries(meta.params).map(([key, value]) => {
                 if (key !== 'positive') {
-                    return <Card key={key} elevation={Elevation.TWO} className="input-card" style={{ display: this.state.isInputsCollapsed ? 'none' : 'block' }}>
+                    return <Card key={key} elevation={Elevation.TWO} className="input-card">
                         <ComponentTabRef
                             name={key}
                             root_path={this.state.root_path}
@@ -163,8 +172,35 @@ export class FloatingPanel extends React.Component<FloatingPanelProps, FloatingP
         </div>
     };
 
+    renderDetails = (details: ScriptDetails): JSX.Element => {
+        return <div>
+           
+        </div>
+    }
+
     getScriptName(script: string): string {
         return script.split(/[/\\]/).pop() ?? '';
+    }
+
+    handleRun = () => {
+        const { functions, selectedFunc } = this.state;
+
+        if (!functions) return;
+
+        const selected = selectedFunc?.name ?? Object.keys(functions)[0];
+        const meta = functions[selected];
+
+        // 收集输入参数
+        let params: { [key: string]: any } = {};
+        for (const [key, value] of Object.entries(meta.params)) {
+            params[key] = this.refInputs.get(key)?.current?.onExecute();
+        }
+
+        // 添加positive
+        params['positive'] = this.refPositive.current?.value ?? '';
+
+        console.log('params', params);
+
     }
 
     render(): JSX.Element {
@@ -224,24 +260,33 @@ export class FloatingPanel extends React.Component<FloatingPanelProps, FloatingP
                                     type="text"
                                     placeholder="输入提示词..."
                                     className="prompt-input-field"
+                                    ref={this.refPositive}
                                 />
                                 <Button
                                     className="generate-button"
                                     intent="primary"
                                     icon={<Icon icon="play" />}
                                     variant='minimal'
+                                    onClick={() => this.handleRun()}
                                 />
                             </div>
                         </div>
                     </div>
 
                     {selectedFunction && functions && (
-                        <div className="input-section">
-                            {this.renderInputs(functions[selectedFunction])}
-                        </div>
-                    )}
+                        <div className='input-details-container' style={{ display: this.state.isInputsCollapsed ? 'none' : 'flex' }}>
+                            <div className="input-section">
+                                {this.renderInputs(functions[selectedFunction])}
+                            </div>
+                            <div className="details-section">
+                                <DetailsPanel
+                                    path={this.state.selectedScript ?? ''}
+                                    selected={selectedFunction}
+                                />
+                            </div>
+                        </div>)}
                 </div>
             </div>
         );
     }
-} 
+}
