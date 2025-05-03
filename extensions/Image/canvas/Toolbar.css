@@ -1,0 +1,40 @@
+.toolbar {
+    position: fixed;
+    top: 10px;
+    left: 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    background: rgba(255, 255, 255, 0.9);
+    padding: 6px;
+    border-radius: 12px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    backdrop-filter: blur(8px);
+    z-index: 1000;
+}
+
+.tool-button {
+    width: 30px;
+    height: 30px;
+    border: none;
+    background: transparent;
+    border-radius: 8px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+}
+
+.tool-button:hover {
+    background: rgba(0, 0, 0, 0.05);
+}
+
+.tool-button:active {
+    background: rgba(0, 0, 0, 0.1);
+}
+
+.tool-icon {
+    font-size: 20px;
+    line-height: 1;
+} 

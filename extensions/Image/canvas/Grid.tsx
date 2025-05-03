@@ -79,14 +79,6 @@ export class Grid extends React.Component<GridProps> {
                     strokeWidth={2}
                     fill="rgba(255, 0, 0, 0.1)"
                 />
-                {/* 视口中心点 */}
-                <Rect
-                    x={x + (width / scale) / 2 - 5}
-                    y={y + (height / scale) / 2 - 5}
-                    width={10}
-                    height={10}
-                    fill="#ff0000"
-                />
             </Group>
         );
     }

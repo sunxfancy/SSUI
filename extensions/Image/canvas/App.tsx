@@ -4,6 +4,9 @@ import { AIDrawingService, MockAIDrawingService } from './AIDrawingService';
 import { Viewport, ViewportState } from './Viewport';
 import { Grid } from './Grid';
 import { WorldPosition } from './WorldPosition';
+import { FloatingPanel } from './FloatingPanel';
+import { SidePanel } from './SidePanel';
+import Toolbar from './Toolbar';
 
 const BLOCK_SIZE = 512;
 const GRID_SIZE = 64;
@@ -19,16 +22,23 @@ interface AIDrawingCanvasState {
         width: number;
         height: number;
     };
+    layers: {
+        id: string;
+        name: string;
+        visible: boolean;
+        locked: boolean;
+        opacity: number;
+    }[];
 }
 
-class AIDrawingCanvas extends React.Component<{}, AIDrawingCanvasState> {
+class AIDrawingCanvas extends React.Component<{path: string}, AIDrawingCanvasState> {
     private drawingService: AIDrawingService;
     private stageRef: React.RefObject<any>;
     private viewport: Viewport;
     private worldPosition: WorldPosition;
     private containerRef: React.RefObject<HTMLDivElement>;
 
-    constructor(props: {}) {
+    constructor(props: {path: string}) {
         super(props);
         this.state = {
             targetPosition: { x: 0, y: 0 },
@@ -36,7 +46,23 @@ class AIDrawingCanvas extends React.Component<{}, AIDrawingCanvasState> {
             containerSize: {
                 width: window.innerWidth,
                 height: window.innerHeight
-            }
+            },
+            layers: [
+                {
+                    id: 'layer1',
+                    name: '背景层',
+                    visible: true,
+                    locked: false,
+                    opacity: 1
+                },
+                {
+                    id: 'layer2',
+                    name: '目标层',
+                    visible: true,
+                    locked: false,
+                    opacity: 1
+                }
+            ]
         };
         this.drawingService = new MockAIDrawingService();
         this.stageRef = React.createRef();
@@ -136,8 +162,21 @@ class AIDrawingCanvas extends React.Component<{}, AIDrawingCanvasState> {
         this.forceUpdate();
     };
 
+    handleLayerChange = (layerId: string, changes: any) => {
+        this.setState(prevState => ({
+            layers: prevState.layers.map(layer => 
+                layer.id === layerId ? { ...layer, ...changes } : layer
+            )
+        }));
+    };
+
+    handleToolSelect = (tool: string) => {
+        console.log('Selected tool:', tool);
+        // 这里可以添加工具选择的处理逻辑
+    };
+
     render() {
-        const { targetPosition, isDragging, containerSize } = this.state;
+        const { targetPosition, isDragging, containerSize, layers } = this.state;
         const viewport = this.viewport.getState();
         const worldPos = this.worldPosition.getPosition();
 
@@ -156,6 +195,7 @@ class AIDrawingCanvas extends React.Component<{}, AIDrawingCanvasState> {
                     cursor: this.viewport.isDraggingViewport() ? 'grabbing' : 'grab'
                 }}
             >
+                <Toolbar onToolSelect={this.handleToolSelect} />
                 <Stage
                     ref={this.stageRef}
                     width={containerSize.width}
@@ -189,6 +229,15 @@ class AIDrawingCanvas extends React.Component<{}, AIDrawingCanvasState> {
                         />
                     </Layer>
                 </Stage>
+
+                {/* 添加悬浮面板 */}
+                <FloatingPanel path={this.props.path}/>
+
+                {/* 添加侧边面板 */}
+                <SidePanel 
+                    layers={layers}
+                    onLayerChange={this.handleLayerChange}
+                />
             </div>
         );
     }

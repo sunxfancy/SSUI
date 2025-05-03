@@ -1,0 +1,130 @@
+.floating-panel {
+    position: fixed;
+    bottom: 20px;
+    left: 20px;
+    background-color: #f5f8fa;
+    border-right: 1px solid #e1e8ed;
+    border-radius: 8px;
+    padding: 12px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+    width: 500px;
+    z-index: 1000;
+    color: white;
+}
+
+.panel-content {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.top-row {
+    display: flex;
+    gap: 10px;
+    align-items: flex-start;
+}
+
+.cascade-selectors {
+    display: flex;
+    gap: 10px;
+    flex: 1;
+}
+
+.script-selector,
+.function-selector {
+    flex: 1;
+    min-width: 120px;
+}
+
+.prompt-input {
+    flex: 1;
+}
+
+.prompt-input-group {
+    display: flex;
+    gap: 8px;
+}
+
+.prompt-input-field {
+    flex: 1;
+    height: 32px;
+    padding: 0 8px;
+    border: 1px solid rgba(45, 45, 45, 0.745);
+    border-radius: 4px;
+    font-size: 14px;
+    background: rgba(255, 255, 255, 0.1);
+    color: rgb(83, 83, 83);
+}
+
+.prompt-input-field::placeholder {
+    color: rgba(51, 51, 51, 0.5);
+}
+
+.prompt-input-field:focus {
+    outline: none;
+    border-color: #137cbd;
+    box-shadow: 0 0 0 1px #137cbd;
+}
+
+.prompt-textarea {
+    width: 100%;
+    min-height: 80px;
+    padding: 8px;
+    border: 2px solid #5c5c5c;
+    border-radius: 4px;
+    resize: vertical;
+}
+
+.input-section {
+    margin-top: 20px;
+}
+
+.input-card {
+    background: rgba(255, 255, 255, 0.1);
+    margin-bottom: 10px;
+    padding: 8px;
+    border-radius: 4px;
+}
+
+.script-selector .bp3-button,
+.function-selector .bp3-button {
+    width: 100%;
+    background: rgba(255, 255, 255, 0.1);
+    color: white;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    justify-content: space-between;
+}
+
+.script-selector .bp3-button:hover,
+.function-selector .bp3-button:hover {
+    background: rgba(255, 255, 255, 0.2);
+}
+
+.script-selector .bp3-button:disabled,
+.function-selector .bp3-button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.input-section h3 {
+    color: white;
+    margin-bottom: 8px;
+    font-size: 14px;
+    font-weight: 500;
+}
+
+.input-card:last-child {
+    margin-bottom: 0;
+}
+
+.generate-button {
+    min-width: 32px;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.generate-button .bp3-icon {
+    margin: 0;
+} 
