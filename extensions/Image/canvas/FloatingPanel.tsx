@@ -1,6 +1,6 @@
 import React from 'react';
 import { Card, Elevation, HTMLSelect, Button, Icon } from "@blueprintjs/core";
-import { ComponentTabRef } from "ssui_components";
+import { ComponentTabRef, Message } from "ssui_components";
 import './FloatingPanel.css';
 
 // 定义脚本选项接口
@@ -15,27 +15,6 @@ interface FunctionOption {
     value: string;
     label: string;
 }
-
-// 模拟数据
-const mockScripts: ScriptOption[] = [
-    {
-        value: 'script1',
-        label: '图像处理脚本',
-        functions: [
-            { value: 'resize', label: '调整大小' },
-            { value: 'crop', label: '裁剪' },
-            { value: 'filter', label: '滤镜' }
-        ]
-    },
-    {
-        value: 'script2',
-        label: '文本处理脚本',
-        functions: [
-            { value: 'ocr', label: '文字识别' },
-            { value: 'translate', label: '翻译' }
-        ]
-    }
-];
 
 interface Callable {
     rank: number;
@@ -69,10 +48,13 @@ interface FloatingPanelState {
     root_path: string;
     selectedScript: string | null;
     selectedFunction: string | null;
+    scripts: string[];
+    isInputsCollapsed: boolean;
 }
 
 interface FloatingPanelProps {
     path: string;
+    onSelectScript: (script: string) => void;
 }
 
 export class FloatingPanel extends React.Component<FloatingPanelProps, FloatingPanelState> {
@@ -85,20 +67,37 @@ export class FloatingPanel extends React.Component<FloatingPanelProps, FloatingP
             selectedFunc: undefined,
             root_path: '',
             selectedScript: null,
-            selectedFunction: null
+            selectedFunction: null,
+            scripts: [],
+            isInputsCollapsed: false
         };
+        this.message = new Message();
     }
+    private message: Message;
+
 
     refInputs: Map<string, React.RefObject<ComponentTabRef>> = new Map();
 
     componentDidMount() {
-        this.queryScriptMeta();
+        this.query_scripts();
     }
 
-    async queryScriptMeta(): Promise<void> {
+    private query_scripts = async () => {
+        const scripts = await this.message.get('files/script?' +
+            new URLSearchParams({ script_path: this.props.path }));
+
+        if (scripts.length > 0) {
+            this.setState({
+                scripts: scripts,
+                loading: false
+            });
+        }
+    }
+
+    async queryScriptMeta(selectedScript: string): Promise<void> {
         try {
             const response = await fetch('/api/script?' + new URLSearchParams({
-                script_path: this.state.selectedScript?? ''
+                script_path: selectedScript
             }));
 
             if (!response.ok) {
@@ -108,13 +107,11 @@ export class FloatingPanel extends React.Component<FloatingPanelProps, FloatingP
             const data = await response.json() as ScriptMeta;
             this.setState({
                 functions: data.functions,
-                loading: false,
                 error: null,
                 root_path: data.root_path
             });
         } catch (error) {
             this.setState({
-                loading: false,
                 error: error instanceof Error ? error : new Error('Unknown error')
             });
         }
@@ -135,33 +132,39 @@ export class FloatingPanel extends React.Component<FloatingPanelProps, FloatingP
     }
 
     handleScriptChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
-        this.setState({ 
+        this.setState({
             selectedScript: event.target.value,
             selectedFunction: null // 重置函数选择
         });
+        this.queryScriptMeta(event.target.value);
     }
 
     handleFunctionChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
         this.setState({ selectedFunction: event.target.value });
+        this.props.onSelectScript(this.state.selectedFunction ?? '');
     }
 
     renderInputs = (meta: Params): JSX.Element => {
-        return (
-            <div>
-                {Object.entries(meta.params).map(([key, value]) => (
-                    <Card key={key} elevation={Elevation.TWO} className="input-card">
+        return <div>
+            {Object.entries(meta.params).map(([key, value]) => {
+                if (key !== 'positive') {
+                    return <Card key={key} elevation={Elevation.TWO} className="input-card" style={{ display: this.state.isInputsCollapsed ? 'none' : 'block' }}>
                         <ComponentTabRef
                             name={key}
                             root_path={this.state.root_path}
-                            script_path={this.state.selectedScript?? ''}
+                            script_path={this.state.selectedScript ?? ''}
                             type={value}
                             port='input'
                             ref={this.getRef(key)}
                         />
                     </Card>
-                ))}
-            </div>
-        );
+                }
+            })}
+        </div>
+    };
+
+    getScriptName(script: string): string {
+        return script.split(/[/\\]/).pop() ?? '';
     }
 
     render(): JSX.Element {
@@ -175,23 +178,28 @@ export class FloatingPanel extends React.Component<FloatingPanelProps, FloatingP
             return <div className="floating-panel">Error: {error.message}</div>;
         }
 
-        const selectedScriptData = mockScripts.find(script => script.value === selectedScript);
-        const availableFunctions = selectedScriptData?.functions || [];
+        const availableFunctions = this.state.functions ? Object.keys(this.state.functions) : [];
 
         return (
             <div className="floating-panel">
                 <div className="panel-content">
                     <div className="top-row">
                         <div className="cascade-selectors">
+                            <Button
+                                variant='minimal'
+                                icon={this.state.isInputsCollapsed ? "chevron-right" : "chevron-down"}
+                                onClick={() => this.setState({ isInputsCollapsed: !this.state.isInputsCollapsed })}
+                                className="collapse-button"
+                            />
                             <HTMLSelect
                                 value={selectedScript || ''}
                                 onChange={this.handleScriptChange}
                                 className="script-selector"
                             >
                                 <option value="">选择脚本</option>
-                                {mockScripts.map(script => (
-                                    <option key={script.value} value={script.value}>
-                                        {script.label}
+                                {this.state.scripts.map(script => (
+                                    <option key={script} value={script}>
+                                        {this.getScriptName(script)}
                                     </option>
                                 ))}
                             </HTMLSelect>
@@ -204,8 +212,8 @@ export class FloatingPanel extends React.Component<FloatingPanelProps, FloatingP
                             >
                                 <option value="">选择函数</option>
                                 {availableFunctions.map(func => (
-                                    <option key={func.value} value={func.value}>
-                                        {func.label}
+                                    <option key={func} value={func}>
+                                        {func}
                                     </option>
                                 ))}
                             </HTMLSelect>
@@ -217,11 +225,11 @@ export class FloatingPanel extends React.Component<FloatingPanelProps, FloatingP
                                     placeholder="输入提示词..."
                                     className="prompt-input-field"
                                 />
-                                <Button 
+                                <Button
                                     className="generate-button"
                                     intent="primary"
                                     icon={<Icon icon="play" />}
-                                    minimal
+                                    variant='minimal'
                                 />
                             </div>
                         </div>
@@ -229,7 +237,6 @@ export class FloatingPanel extends React.Component<FloatingPanelProps, FloatingP
 
                     {selectedFunction && functions && (
                         <div className="input-section">
-                            <h3>输入参数</h3>
                             {this.renderInputs(functions[selectedFunction])}
                         </div>
                     )}

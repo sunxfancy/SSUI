@@ -7,6 +7,7 @@ import { WorldPosition } from './WorldPosition';
 import { FloatingPanel } from './FloatingPanel';
 import { SidePanel } from './SidePanel';
 import Toolbar from './Toolbar';
+import {Message} from 'ssui_components';
 
 const BLOCK_SIZE = 512;
 const GRID_SIZE = 64;
@@ -175,6 +176,11 @@ class AIDrawingCanvas extends React.Component<{path: string}, AIDrawingCanvasSta
         // 这里可以添加工具选择的处理逻辑
     };
 
+    handleSelectScript = (script: string) => {
+        console.log('Selected script:', script);
+        // 这里可以添加脚本选择的处理逻辑
+    };
+
     render() {
         const { targetPosition, isDragging, containerSize, layers } = this.state;
         const viewport = this.viewport.getState();
@@ -231,7 +237,7 @@ class AIDrawingCanvas extends React.Component<{path: string}, AIDrawingCanvasSta
                 </Stage>
 
                 {/* 添加悬浮面板 */}
-                <FloatingPanel path={this.props.path}/>
+                <FloatingPanel path={this.props.path} onSelectScript={this.handleSelectScript}/>
 
                 {/* 添加侧边面板 */}
                 <SidePanel 

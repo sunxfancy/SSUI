@@ -7,15 +7,13 @@
     border-radius: 8px;
     padding: 12px;
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
-    width: 500px;
+    width: 550px;
     z-index: 1000;
-    color: white;
 }
 
 .panel-content {
     display: flex;
     flex-direction: column;
-    gap: 20px;
 }
 
 .top-row {
@@ -28,6 +26,7 @@
     display: flex;
     gap: 10px;
     flex: 1;
+    align-items: center;
 }
 
 .script-selector,
@@ -76,21 +75,40 @@
 }
 
 .input-section {
-    margin-top: 20px;
+    margin-top: 10px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    overflow: hidden;
+}
+
+.input-header {
+    padding: 8px;
+    background-color: #f5f5f5;
+    border-bottom: 1px solid #ccc;
+}
+
+.input-header .bp3-button {
+    width: 100%;
+    text-align: left;
+    justify-content: space-between;
+}
+
+.input-content {
+    padding: 10px;
 }
 
 .input-card {
-    background: rgba(255, 255, 255, 0.1);
-    margin-bottom: 10px;
-    padding: 8px;
-    border-radius: 4px;
+    margin-bottom: 8px;
+}
+
+.input-card:last-child {
+    margin-bottom: 0;
 }
 
 .script-selector .bp3-button,
 .function-selector .bp3-button {
     width: 100%;
     background: rgba(255, 255, 255, 0.1);
-    color: white;
     border: 1px solid rgba(255, 255, 255, 0.2);
     justify-content: space-between;
 }
@@ -107,14 +125,9 @@
 }
 
 .input-section h3 {
-    color: white;
     margin-bottom: 8px;
     font-size: 14px;
     font-weight: 500;
-}
-
-.input-card:last-child {
-    margin-bottom: 0;
 }
 
 .generate-button {
@@ -126,5 +139,15 @@
 }
 
 .generate-button .bp3-icon {
+    margin: 0;
+}
+
+.collapse-button {
+    padding: 0 4px;
+    min-width: 24px;
+    height: 24px;
+}
+
+.collapse-button .bp3-icon {
     margin: 0;
 } 

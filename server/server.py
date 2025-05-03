@@ -167,7 +167,8 @@ async def files(file_type: str, script_path: str):
         "image": ("png", "jpg", "jpeg", "bmp"),
         "video": ("mp4", "avi", "mov", "mkv"),
         "audio": ("mp3", "wav", "m4a", "ogg"),
-        "3dmodel": ("obj", "fbx", "glb", "gltf")
+        "3dmodel": ("obj", "fbx", "glb", "gltf"),
+        "script": ("py")
     }
 
     project_root = search_project_root(script_path)
