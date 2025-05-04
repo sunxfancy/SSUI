@@ -1,5 +1,5 @@
 import React from 'react';
-import { Stage, Layer, Rect, Group } from 'react-konva';
+import { Stage, Layer, Rect, Group, Circle } from 'react-konva';
 import { AIDrawingService, MockAIDrawingService } from './AIDrawingService';
 import { Viewport, ViewportState } from './Viewport';
 import { Grid } from './Grid';
@@ -13,6 +13,12 @@ const BLOCK_SIZE = 512;
 const GRID_SIZE = 64;
 const TARGET_SIZE = 512;
 
+interface DrawableObject {
+    type: string;
+    x: number;
+    y: number;
+    obj: React.ReactNode;
+}
 interface AIDrawingCanvasState {
     targetPosition: {
         x: number;
@@ -29,7 +35,15 @@ interface AIDrawingCanvasState {
         visible: boolean;
         locked: boolean;
         opacity: number;
+        objects: DrawableObject[];
     }[];
+    activeLayer: string;
+    selectedTool: string;
+    brushSize: number;
+    brushPosition: {
+        x: number;
+        y: number;
+    } | null;
 }
 
 class AIDrawingCanvas extends React.Component<{path: string}, AIDrawingCanvasState> {
@@ -51,19 +65,17 @@ class AIDrawingCanvas extends React.Component<{path: string}, AIDrawingCanvasSta
             layers: [
                 {
                     id: 'layer1',
-                    name: '背景层',
+                    name: '层1',
                     visible: true,
                     locked: false,
-                    opacity: 1
-                },
-                {
-                    id: 'layer2',
-                    name: '目标层',
-                    visible: true,
-                    locked: false,
-                    opacity: 1
+                    opacity: 1,
+                    objects: []
                 }
-            ]
+            ],
+            activeLayer: 'layer1',
+            selectedTool: 'move',
+            brushSize: 20,
+            brushPosition: null
         };
         this.drawingService = new MockAIDrawingService();
         this.stageRef = React.createRef();
@@ -109,10 +121,17 @@ class AIDrawingCanvas extends React.Component<{path: string}, AIDrawingCanvasSta
     };
 
     handleDragStart = () => {
+        if (this.state.selectedTool != 'move') {
+            return;
+        }
         this.setState({ isDragging: true });
     };
 
     handleDragEnd = (e: any) => {
+        if (this.state.selectedTool != 'move') {
+            return;
+        }
+
         this.setState({ isDragging: false });
         
         const currentX = e.target.x();
@@ -174,15 +193,41 @@ class AIDrawingCanvas extends React.Component<{path: string}, AIDrawingCanvasSta
     handleToolSelect = (tool: string) => {
         console.log('Selected tool:', tool);
         // 这里可以添加工具选择的处理逻辑
+        this.setState({
+            selectedTool: tool
+        });
     };
 
     handleSelectScript = (script: string) => {
         console.log('Selected script:', script);
-        // 这里可以添加脚本选择的处理逻辑
+        // 这里可以添加脚本选择的处理逻辑、
+
+    };
+
+    handlePointerDown = (e: any) => {
+    };
+
+    handlePointerMove = (e: any) => {
+        if (this.state.selectedTool === 'brush' || this.state.selectedTool === 'eraser') {
+            const stage = this.stageRef.current;
+            const pointer = stage.getPointerPosition();
+            if (pointer) {
+                this.setState({
+                    brushPosition: {
+                        x: pointer.x,
+                        y: pointer.y
+                    }
+                });
+            }
+        }
+    };  
+
+    handlePointerUp = (e: any) => {
+        this.setState({ brushPosition: null });
     };
 
     render() {
-        const { targetPosition, isDragging, containerSize, layers } = this.state;
+        const { targetPosition, isDragging, containerSize, layers, brushPosition, brushSize } = this.state;
         const viewport = this.viewport.getState();
         const worldPos = this.worldPosition.getPosition();
 
@@ -200,6 +245,9 @@ class AIDrawingCanvas extends React.Component<{path: string}, AIDrawingCanvasSta
                     left: 0,
                     cursor: this.viewport.isDraggingViewport() ? 'grabbing' : 'grab'
                 }}
+                onPointerDown={this.handlePointerDown}
+                onPointerMove={this.handlePointerMove}
+                onPointerUp={this.handlePointerUp}
             >
                 <Toolbar onToolSelect={this.handleToolSelect} />
                 <Stage
@@ -217,22 +265,49 @@ class AIDrawingCanvas extends React.Component<{path: string}, AIDrawingCanvasSta
                     x={worldPos.x}
                     y={worldPos.y}
                 >
+                    {this.state.layers.map((layer) => (
+                        <Layer key={layer.id} opacity={layer.opacity}>
+                            {layer.visible && (
+                                layer.objects.map((object) => {
+                                    return object.obj;
+                                })
+                            )}
+                        </Layer>
+                    ))}
+                    
+
                     <Layer>
                         {/* 渲染网格 */}
                         <Grid viewport={viewport} />
                         
-                        <Rect
-                            x={targetPosition.x}
-                            y={targetPosition.y}
-                            width={TARGET_SIZE}
-                            height={TARGET_SIZE}
-                            fill={isDragging ? 'rgba(0, 0, 255, 0.2)' : 'rgba(0, 0, 255, 0.1)'}
-                            stroke="blue"
-                            strokeWidth={2}
-                            draggable
-                            onDragStart={this.handleDragStart}
-                            onDragEnd={this.handleDragEnd}
-                        />
+                        {this.state.selectedTool === 'move' && (
+                            <Rect
+                                x={targetPosition.x}
+                                y={targetPosition.y}
+                                width={TARGET_SIZE}
+                                height={TARGET_SIZE}
+                                fill={isDragging ? 'rgba(0, 0, 255, 0.2)' : 'rgba(0, 0, 255, 0.1)'}
+                                stroke="blue"
+                                strokeWidth={2}
+                                draggable
+                                onDragStart={this.handleDragStart}
+                                onDragEnd={this.handleDragEnd}
+                            />
+                        )}
+
+                        {/* 渲染画笔大小指示器 */}
+                        {brushPosition && (this.state.selectedTool === 'brush' || this.state.selectedTool === 'eraser') && (
+                            <Group>
+                                <Circle
+                                    x={brushPosition.x-worldPos.x}
+                                    y={brushPosition.y-worldPos.y}
+                                    radius={brushSize / 2}
+                                    stroke="black"
+                                    strokeWidth={1}
+                                    fill="rgba(0, 0, 0, 0.1)"
+                                />
+                            </Group>
+                        )}
                     </Layer>
                 </Stage>
 

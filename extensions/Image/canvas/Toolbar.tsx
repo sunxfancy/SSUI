@@ -7,11 +7,9 @@ interface ToolbarProps {
 
 const Toolbar: React.FC<ToolbarProps> = ({ onToolSelect }) => {
     const tools = [
-        { id: 'select', icon: '🖱️', label: '选择' },
         { id: 'move', icon: '✋', label: '移动' },
         { id: 'brush', icon: '🖌️', label: '画笔' },
-        { id: 'eraser', icon: '🧹', label: '橡皮擦' },
-        { id: 'text', icon: '📝', label: '文字' },
+        { id: 'eraser', icon: '🫓', label: '橡皮擦' },
         { id: 'shape', icon: '⬜', label: '形状' },
     ];
 
