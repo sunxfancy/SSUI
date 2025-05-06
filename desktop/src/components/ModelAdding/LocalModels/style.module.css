@@ -71,3 +71,17 @@
         justify-content: center;
     }
 }
+
+.singleWatch {
+    display: flex;
+    align-items: center;
+    font-size: 12px;
+    position: relative;
+    padding-right: 120px;
+    height: 22px;
+
+    .removeButton {
+        position: absolute;
+        right: 0;
+    }
+}

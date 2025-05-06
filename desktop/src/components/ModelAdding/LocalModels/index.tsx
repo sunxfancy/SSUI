@@ -1,6 +1,6 @@
 import React, { useRef, useState } from 'react';
-import { Button, Divider, NonIdealState, Tag, Intent, Callout, ProgressBar } from '@blueprintjs/core';
-import { Model, ModelsProvider } from '../../../providers/IModelsProvider';
+import { Button, Divider, NonIdealState, Tag, Intent, Callout, ProgressBar, OverlayToaster, type Toaster } from '@blueprintjs/core';
+import {Model, ModelsProvider, WatchedDirectory} from '../../../providers/IModelsProvider';
 import styles from './style.module.css'
 
 interface LocalModelsProps {
@@ -12,12 +12,13 @@ const LocalModels: React.FC<LocalModelsProps> = (props) => {
     const { modelsProvider, onModelAdd } = props
 
     const [ selectedDirectory, setSelectedDirectory ] = useState<string>('')
-    const [ watchedDirectories, setWatchedDirectories ] = useState<string>('')
+    const [ watchedDirectories, setWatchedDirectories ] = useState<WatchedDirectory[]>([])
     const [ isScanning, setIsScanning ] = useState<boolean>(false)
     const [ installingModels, setInstallingModels ] = useState<Set<string>>()
     const [ installedModels, setInstalledModels ] = useState<Set<string>>()
 
     const scannedModels = useRef<Model[]>([])
+    const toaster = useRef<Toaster>()
 
     const selectDirectory = async () => {
         try {
@@ -36,21 +37,33 @@ const LocalModels: React.FC<LocalModelsProps> = (props) => {
                     const models = await modelsProvider.scanDirectory(
                         selectedDir,
                         (model: Model) => {
-                            console.log(model)
                             // 每当找到一个模型，就更新状态
                             scannedModels.current.push(model)
                         }
                     );
 
-                    console.log("扫描完成，共找到模型: ", models.length);
+                    toaster.current?.show({
+                        icon: 'tick',
+                        intent: 'success',
+                        message: `扫描完成，共找到模型: ${models.length}`
+                    })
                     setIsScanning(false)
                 } catch (error) {
-                    console.error("扫描目录失败:", error);
+                    toaster.current?.show({
+                        icon: 'warning-sign',
+                        intent: 'danger',
+                        message: '扫描目录失败'
+                    })
+                    console.log(error)
                     setIsScanning(false)
                 }
             }
         } catch (error) {
-            console.error("选择目录失败:", error);
+            toaster.current?.show({
+                icon: 'warning-sign',
+                intent: 'danger',
+                message: `选择目录失败: ${error}`
+            })
         }
     }
 
@@ -73,19 +86,21 @@ const LocalModels: React.FC<LocalModelsProps> = (props) => {
             // 更新模型状态
             const newingSet = new Set(installingModels)
             newingSet.delete(model.id)
+            setInstallingModels(newingSet)
 
             const newedSet = new Set(installedModels)
-            setInstallingModels(newSet)
             if (success) {
                 newedSet.add(model.id);
+                setInstalledModels(newedSet)
                 onModelAdd?.(model.path);
-            } else {
-                const newSet = new Set(installingModels)
-                newSet.delete(model.id)
-                setInstallingModels(newSet)
             }
         } catch (error) {
             console.error("添加模型失败:", error);
+            toaster.current?.show({
+                icon: 'warning-sign',
+                intent: 'danger',
+                message: `添加模型失败: ${error}`
+            })
             // 安装失败，从安装中状态移除
             const newSet = new Set(installingModels)
             newSet.delete(model.id)
@@ -96,19 +111,37 @@ const LocalModels: React.FC<LocalModelsProps> = (props) => {
     // 添加监听目录
     const handleAddWatchedDirectory = async () => {
         try {
-            // TODO 支持单个就行了吧？而且这里应该弹个选择框
-            const newWatchedDir = await modelsProvider.selectDirectory();
-            // const newWatchedDir = await modelsProvider.addWatchedDirectory(selectedDirectory);
-            setWatchedDirectories(newWatchedDir)
+            const selectedDirectory = await modelsProvider.selectDirectory()
+            console.log(selectedDirectory)
+            const newWatchedDir = await modelsProvider.addWatchedDirectory(selectedDirectory);
+            console.log(newWatchedDir)
+
+            setWatchedDirectories([...watchedDirectories, newWatchedDir])
         } catch (error) {
-            console.error("添加监听目录失败:", error);
+            toaster.current?.show({
+                icon: 'warning-sign',
+                intent: 'danger',
+                message: `添加监听目录失败: ${error}`
+            })
         }
     }
 
-    const cancelWatch = () => {
-        setWatchedDirectories('')
+    const cancelWatch = (id: string) => {
+        toaster.current?.show({
+            icon: 'warning-sign',
+            intent: 'danger',
+            message: '添加监听目录是假的，所以这里位置对不上'
+        })
+        const newArr = watchedDirectories.slice()
+        const index = newArr.findIndex(n => n.id === id)
+        if (index > -1) {
+            newArr.splice(index, 1)
+        }
+        setWatchedDirectories(newArr)
     }
 
+    // @ts-ignore
+    // @ts-ignore
     return (
         <div className={styles.localModel}>
             <div className={styles.scan}>
@@ -188,19 +221,26 @@ const LocalModels: React.FC<LocalModelsProps> = (props) => {
                 </div>
                 <div className={styles.observerContent}>
                     {
-                        watchedDirectories
+                        watchedDirectories.length > 0
                             ?
                             <NonIdealState
                                 icon="eye-open"
                                 title="正在监听..."
-                                description={watchedDirectories}
-                                action={<Button icon="cross" variant="outlined" intent="danger" onClick={cancelWatch}>取消监听</Button>}
+                                description={watchedDirectories.map(w => (
+                                    <div className={styles.singleWatch}>
+                                        <div>{w.path}</div>
+                                        <Button className={styles.removeButton} variant="minimal" intent="danger" size="small" onClick={() => cancelWatch(w.id)}>取消监听</Button>
+                                    </div>
+                                ))}
+                                action={<Button intent="primary" onClick={handleAddWatchedDirectory}>继续添加</Button>}
                             />
                           :
                             <Button intent="primary" size="large" onClick={handleAddWatchedDirectory}>添加监听目录</Button>
                     }
                 </div>
             </div>
+            {/*@ts-ignore*/}
+            <OverlayToaster ref={toaster}/>
         </div>
     )
 }
