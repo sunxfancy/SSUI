@@ -10,7 +10,7 @@ const Toolbar: React.FC<ToolbarProps> = ({ onToolSelect }) => {
         { id: 'move', icon: '✋', label: '移动' },
         { id: 'brush', icon: '🖌️', label: '画笔' },
         { id: 'eraser', icon: '🫓', label: '橡皮擦' },
-        { id: 'shape', icon: '⬜', label: '形状' },
+        { id: 'shape', icon: '⬜', label: '选区' },
     ];
 
     return (

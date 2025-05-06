@@ -1,15 +1,13 @@
 import React from 'react';
 import { Stage, Layer, Rect, Group, Circle } from 'react-konva';
-import { AIDrawingService, MockAIDrawingService } from './AIDrawingService';
-import { Viewport, ViewportState } from './Viewport';
+import { AIDrawingService, SSUIAIDrawingService } from './AIDrawingService';
+import { Viewport } from './Viewport';
 import { Grid } from './Grid';
 import { WorldPosition } from './WorldPosition';
 import { FloatingPanel } from './FloatingPanel';
 import { SidePanel } from './SidePanel';
 import Toolbar from './Toolbar';
-import {Message} from 'ssui_components';
 
-const BLOCK_SIZE = 512;
 const GRID_SIZE = 64;
 const TARGET_SIZE = 512;
 
@@ -77,7 +75,7 @@ class AIDrawingCanvas extends React.Component<{path: string}, AIDrawingCanvasSta
             brushSize: 20,
             brushPosition: null
         };
-        this.drawingService = new MockAIDrawingService();
+        this.drawingService = new SSUIAIDrawingService();
         this.stageRef = React.createRef();
         this.containerRef = React.createRef();
         this.viewport = new Viewport({
@@ -91,7 +89,6 @@ class AIDrawingCanvas extends React.Component<{path: string}, AIDrawingCanvasSta
     }
 
     componentDidMount() {
-        this.drawingService.initialize();
         this.updateContainerSize();
         window.addEventListener('resize', this.updateContainerSize);
     }
