@@ -1,5 +1,5 @@
 use tauri_plugin_http::reqwest;
-use log::{info, error, warn, debug};
+use log::{info, error, debug};
 use std::sync::Mutex;
 use lazy_static::lazy_static;
 
@@ -140,7 +140,7 @@ pub async fn download_python(version: &str, release_date: &str, architecture: &s
     // 首先尝试不使用代理下载
     match download_and_process(&url, path, false).await {
         Ok(result) => Ok(result),
-        Err(e) => {
+        Err(_e) => {
             // 如果直接下载失败且设置了代理，则尝试使用代理重试
             if get_proxy().is_some() {
                 info!("直接下载失败，尝试使用代理重试");

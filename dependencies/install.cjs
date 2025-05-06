@@ -9,6 +9,12 @@ const { existsSync } = require('fs');
  * 根据当前平台执行相应的安装脚本
  */
 function runInstallScript() {
+  // 检查是否设置了跳过安装的环境变量
+  if (process.env.SSUI_CI_SKIP_INSTALL === '1') {
+    console.log('检测到 SSUI_CI_SKIP_INSTALL=1，跳过安装过程');
+    process.exit(0);
+  }
+
   try {
     // 获取当前工作目录
     const rootDir = process.cwd();
@@ -37,6 +43,9 @@ function runInstallScript() {
       execSync(`chmod +x "${scriptPath}"`, { stdio: 'inherit' });
       execSync(scriptPath, { stdio: 'inherit' });
     }
+
+    execSync('yarn requirements', { stdio: 'inherit' });
+    execSync('yarn install-requirements', { stdio: 'inherit' });
     
     console.log('安装脚本执行完成');
   } catch (error) {

@@ -1,4 +1,4 @@
-import React, {Component, useEffect, useRef, useState} from 'react';
+import React, {useEffect, useRef, useState} from 'react';
 import {
     Button,
     Card,
@@ -18,7 +18,7 @@ import { IModelManagerProvider, ModelGroup } from '../../providers/IModelManager
 import { ModelManagerProvider } from '../../providers/ModelManagerProvider';
 import styles from './style.module.css'
 
-interface ModelState {
+export interface ModelState {
     groups: ModelGroup[];
     searchQuery: string;
     selectedTags: string[];
@@ -31,17 +31,17 @@ interface ModelManagerProps {
     addModel?: () => void;
 }
 
-export const ModelManager = (props) => {
+export const ModelManager = (props: ModelManagerProps) => {
 
-    const [ groups, setGroups ] = useState([])
+    const [ groups, setGroups ] = useState<ModelGroup[]>([])
     const [ searchQuery, setSearchQuery ] = useState('')
-    const [ selectedTags, setSelectedTags ] = useState([])
-    const [ availableTags, setAvailableTags ] = useState([])
+    const [ selectedTags, setSelectedTags ] = useState<string[]>([])
+    const [ availableTags, setAvailableTags ] = useState<string[]>([])
     const [ showButtonText, setShowButtonText ] = useState(true)
 
     const provider = useRef(props.provider || new ModelManagerProvider())
     const resizeObserver = useRef<ResizeObserver|null>(null)
-    const containerRef = useRef()
+    const containerRef = useRef<HTMLDivElement>(null)
 
     useEffect(() => {
         const init = async () => {

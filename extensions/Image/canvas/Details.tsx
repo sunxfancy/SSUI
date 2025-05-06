@@ -1,7 +1,6 @@
 import React, { Component } from "react";
 import { Section, SectionCard } from "@blueprintjs/core";
 import { ControlerRef } from "ssui_components";
-import './Details.css';
 
 interface ScriptDetails {
     [key: string]: {
@@ -145,16 +144,6 @@ export class DetailsPanel extends Component<DetailsProps, DetailsState> {
         ));
     }
 
-    renderContent = (details: ScriptDetails): React.ReactNode => {
-        return (
-            <div className="details-container">
-                <h3>Details</h3>
-                <div className="details-scrollable">
-                    {this.renderControllers(details)}
-                </div>
-            </div>
-        );
-    }
 
     render(): React.ReactNode {
         const { loading, error, details } = this.state;
@@ -167,6 +156,6 @@ export class DetailsPanel extends Component<DetailsProps, DetailsState> {
             return <p>Error: {error.message}</p>;
         }
 
-        return this.renderContent(details || {});
+        return this.renderControllers(details || {});
     }
 }

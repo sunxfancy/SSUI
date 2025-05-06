@@ -1,0 +1,78 @@
+
+name: Release
+
+on:
+  push:
+    tags: 
+      - "*.*.*"
+
+env:
+  SSUI_CI_SKIP_INSTALL: 1
+
+jobs:
+  release:
+    name: Build on ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        include:
+          - os: windows-latest
+            artifacts: |
+              desktop/src-tauri/target/release/bundle/msi/*.msi
+              desktop/src-tauri/target/debug/bundle/msi/*.msi
+              desktop/src-tauri/target/release/bundle/nsis/*.exe
+              desktop/src-tauri/target/debug/bundle/nsis/*.exe
+
+          - os: macOS-latest
+            artifacts: |
+              desktop/src-tauri/target/release/bundle/dmg/*.dmg
+              desktop/src-tauri/target/debug/bundle/dmg/*.dmg
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set Node.js 22.x
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: 'yarn'
+
+      - name: Install dependencies
+        run: yarn install --frozen-lockfile 
+
+      - name: Setup Python
+        id: setup-uv
+        uses: astral-sh/setup-uv@v6
+        with:
+          version: "0.6.11"
+          enable-cache: false
+          python-version: 3.12.8
+          activate-environment: true
+
+      - name: Install requirements
+        run: yarn requirements && uv pip install -r .venv/requirements.txt
+
+      - name: Setup Rust
+        uses: actions-rust-lang/setup-rust-toolchain@v1
+        with:
+          rustflags: ""
+
+      - name: Build ssext tools
+        run: yarn build:extension_builder && cd extension_builder && npm link
+
+      - name: Pack extensions
+        run: yarn ext:package
+
+      - name: Pack desktop
+        run: yarn package
+
+      - name: Pack debug desktop
+        run: yarn package:debug
+
+      - name: Upload release assets
+        uses: "marvinpinto/action-automatic-releases@latest"
+        with:
+          repo_token: "${{ secrets.GITHUB_TOKEN }}"
+          prerelease: false
+          automatic_release_tag: "latest"
+          files: ${{ matrix.artifacts }}

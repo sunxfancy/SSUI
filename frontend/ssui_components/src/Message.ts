@@ -11,11 +11,13 @@ export class Message {
     } = {};
 
     constructor(
-        host: string,
-        port: number,
+        host?: string,
+        port?: number,
     ) {
-        this.host = host;
-        this.port = port;
+        // 从当前页面URL获取host和port
+        const url = new URL(window.location.href);
+        this.host = host || url.hostname || 'localhost';
+        this.port = port || (url.port ? parseInt(url.port) : 7422);
     }
 
     async connect(): Promise<string | undefined> {

@@ -20,6 +20,7 @@
     "dev:executor": "node dependencies/venv.cjs python -m ss_executor",
     "dev:functional_ui": "cd frontend/functional_ui && yarn dev",
     "dev:components": "cd frontend/ssui_components && yarn dev",
+    "dev:canvas": "cd extensions/Image && yarn dev",
     "build:desktop_ui": "cd desktop && yarn build",
     "build:desktop": "cd desktop && yarn tauri build",
     "build:desktop:debug": "cd desktop && yarn tauri build --debug",
@@ -40,7 +41,7 @@
     "install-requirements": "node dependencies/venv.cjs uv pip install -r .venv/requirements.txt",
     "update-lock": "node dependencies/update_lock.cjs",
     "update-lock:no-upgrade": "node dependencies/update_lock.cjs --no-upgrade",
-    "postinstall": "node dependencies/install.cjs && yarn requirements && yarn install-requirements"
+    "postinstall": "node dependencies/install.cjs"
   },
   "devDependencies": {
     "concurrently": "^9.1.2",

@@ -1,6 +1,5 @@
 use std::process::Command;
 use std::fs::File;
-use std::io::Write;
 use std::time::{SystemTime, UNIX_EPOCH};
 use serde::Serialize;
 use std::sync::Mutex;
@@ -56,11 +55,6 @@ impl ProcessManager {
     pub fn add_process(&self, process_type: &str, child: Child) {
         debug!("添加进程: {}", process_type);
         self.processes.lock().unwrap().insert(process_type.to_string(), child);
-    }
-
-    pub fn get_process(&self, process_type: &str) -> Option<Child> {
-        debug!("获取进程: {}", process_type);
-        self.processes.lock().unwrap().remove(process_type)
     }
 
     pub fn is_process_running(&self, process_type: &str) -> bool {
@@ -169,7 +163,7 @@ pub async fn run_python(path: &str, cwd: &str, args: Vec<&str>) -> Result<String
     debug!("Python参数: {:?}", args);
     
     // 创建基本命令
-    let mut create_cmd = |use_proxy: bool| -> Command {
+    let create_cmd = |use_proxy: bool| -> Command {
         let mut cmd = Command::new(path);
         cmd.args(args.clone())
             .current_dir(cwd)

@@ -1,6 +1,8 @@
 import unittest
 from pathlib import Path
 
+from tests.utils import should_run_slow_tests
+
 def generate_image(model_path: Path, positive: str, negative: str):
     from ssui_image.api.model import (
         ModelLoaderService,
@@ -112,7 +114,7 @@ def generate_flux_image(
     image = flux_decode_latents(vae, result_latents)
     image.save("result3.png")
 
-
+@unittest.skipIf(not should_run_slow_tests(), "Skipping slow test")
 class TestBackend(unittest.TestCase):
     def test_backend(self):
         generate_image(

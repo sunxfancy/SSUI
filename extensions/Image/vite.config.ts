@@ -42,7 +42,11 @@ export default defineConfig(async () => ({
         target: 'http://localhost:7422',
         changeOrigin: true,
       },
-      '/extension': {
+      '/files': {
+        target: 'http://localhost:7422',
+        changeOrigin: true,
+      },
+      '/functional_ui': {
         target: 'http://localhost:7422',
         changeOrigin: true,
       },
