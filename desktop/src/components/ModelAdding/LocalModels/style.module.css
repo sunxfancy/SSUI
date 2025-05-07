@@ -1,0 +1,89 @@
+.localModel {
+    display: flex;
+
+    .scan {
+        flex: 1;
+    }
+
+    .divider {
+        margin: 0 20px;
+    }
+
+    .observer {
+        width: 360px;
+    }
+
+    .title {
+        font-size: 16px;
+        font-weight: bold;
+        margin-bottom: 20px;
+
+        .subtitle {
+            font-size: 12px;
+            color: #4d4d4d;
+            font-weight: normal;
+            margin-top: 4px;
+        }
+    }
+
+    .choose {
+        display: flex;
+        align-items: center;
+
+        .chooseButton {
+            flex-shrink: 0;
+            margin-right: 10px;
+        }
+    }
+
+    .empty {
+        height: 200px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .modelList {
+        margin-top: 10px;
+        height: calc(100vh - 250px);
+        overflow: auto;
+
+        .modelCard {
+            margin: 10px 0 6px;
+            padding: 8px 12px;
+            border: solid 1px #e5e5e5;
+            border-radius: 4px;
+
+            .name {
+                font-size: 14px;
+                font-weight: bold;
+            }
+            .path {
+                font-size: 12px;
+                color: #555555;
+                margin: 4px 0 6px;
+            }
+        }
+    }
+
+    .observerContent {
+        height: 240px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+}
+
+.singleWatch {
+    display: flex;
+    align-items: center;
+    font-size: 12px;
+    position: relative;
+    padding-right: 120px;
+    height: 22px;
+
+    .removeButton {
+        position: absolute;
+        right: 0;
+    }
+}

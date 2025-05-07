@@ -1,7 +1,7 @@
 import { Component } from 'react';
 import { Tabs, Tab, Card, Elevation } from '@blueprintjs/core';
 import CivitaiModels from './CivitaiModels';
-import LocalModels from './LocalModels';
+import LocalModels from './LocalModels/index.tsx';
 import HuggingfaceModels from './HuggingfaceModels';
 import { TauriModelsProvider } from '../../providers/TauriModelsProvider';
 import { ModelsProvider } from '../../providers/IModelsProvider';
