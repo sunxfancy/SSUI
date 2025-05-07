@@ -37,6 +37,13 @@ const LocalModels: React.FC<LocalModelsProps> = (props) => {
                     const models = await modelsProvider.scanDirectory(
                         selectedDir,
                         (model: Model) => {
+                            if (model.installed) {
+                                console.log("model installed: ", model)
+                                setInstalledModels(oldModels => 
+                                    new Set(oldModels ? [...oldModels, model.id] : [model.id])
+                                )
+                            }
+
                             // 每当找到一个模型，就更新状态
                             setScannedModels(oldModels => produce(oldModels, models => {
                                 models?.push(model)

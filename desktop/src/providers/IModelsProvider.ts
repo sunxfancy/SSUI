@@ -7,6 +7,7 @@ export interface Model {
   path: string;
   type: string;
   size: string;
+  installed: boolean;
 }
 
 /**

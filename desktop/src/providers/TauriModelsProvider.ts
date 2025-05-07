@@ -49,7 +49,8 @@ export class TauriModelsProvider implements ModelsProvider {
             name: data.name,
             path: data.path,
             type: data.type || "未知类型",
-            size: data.size || "未知大小"
+            size: data.size || "未知大小",
+            installed: data.installed || false
           };
           models.push(model);
 

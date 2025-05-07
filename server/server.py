@@ -1,9 +1,13 @@
+import asyncio
 from typing import Dict, Any
 import uuid
-from fastapi import Body, FastAPI, Request, WebSocket, UploadFile, File
+from fastapi import Body, FastAPI, Request, Response, WebSocket, UploadFile, File
 from fastapi.responses import FileResponse, RedirectResponse
+from fastapi.encoders import jsonable_encoder
+from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
+from starlette.background import BackgroundTask
 from pydantic import BaseModel, Field
 import sys
 import os
@@ -65,7 +69,6 @@ app.add_middleware(
 async def config(config: Dict[str, Any]):
     return config_service.update_config(config)
 
-
 class ScanModelsRequest(BaseModel):
     scan_dir: str = Field(description="The directory to scan for models")
 
@@ -78,19 +81,18 @@ async def scan_models(client_id: str, request: ScanModelsRequest):
         return {"error": "Scan directory not found"}
     request_uuid = str(uuid.uuid4())
     
-    message = await model_service.scan_models(
+    return JSONResponse(content=jsonable_encoder({
+        "type": "start",
+        "request_uuid": request_uuid,
+        "callbacks": ["model_found"],
+    }), background=BackgroundTask(model_service.scan_models, 
         scan_dir=scan_dir,
         client_id=client_id,
         request_uuid=request_uuid,
         callback=websocket_service.send_callback,
-        finish_callback=websocket_service.send_finish
+        finish_callback=websocket_service.send_finish)
     )
-    return {
-        "type": "start",
-        "request_uuid": request_uuid,
-        "callbacks": ["model_found"],
-        **message
-    }
+
 
 # API Use: /desktop/src/providers/TauriModelsProvider.ts
 @app.post("/config/install_model")
