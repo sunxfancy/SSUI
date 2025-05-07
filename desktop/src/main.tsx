@@ -7,6 +7,7 @@ import { BlueprintProvider } from "@blueprintjs/core";
 import GlobalStateManager from "./services/GlobalState";
 import ExecutorService from "./services/Executor";
 import ServerService from "./services/Server";
+import { enableMapSet } from 'immer'
 
 // 载入样式
 import "normalize.css";
@@ -46,6 +47,8 @@ class Root extends Component<{}, RootState> {
       // 从全局状态获取 root 信息
       const rootState = GlobalStateManager.getInstance().getRootState();
       this.setState({ root: rootState || undefined });
+
+      enableMapSet()
 
       if (rootState?.path) {
         console.log('root path:', rootState.path);

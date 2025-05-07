@@ -1,6 +1,7 @@
 import React, { useRef, useState } from 'react';
 import { Button, Divider, NonIdealState, Tag, Intent, Callout, ProgressBar, OverlayToaster, type Toaster } from '@blueprintjs/core';
 import {Model, ModelsProvider, WatchedDirectory} from '../../../providers/IModelsProvider';
+import { produce } from 'immer'
 import styles from './style.module.css'
 
 interface LocalModelsProps {
@@ -14,22 +15,21 @@ const LocalModels: React.FC<LocalModelsProps> = (props) => {
     const [ selectedDirectory, setSelectedDirectory ] = useState<string>('')
     const [ watchedDirectories, setWatchedDirectories ] = useState<WatchedDirectory[]>([])
     const [ isScanning, setIsScanning ] = useState<boolean>(false)
-    const [ installingModels, setInstallingModels ] = useState<Set<string>>()
-    const [ installedModels, setInstalledModels ] = useState<Set<string>>()
+    const [ installingModels, setInstallingModels ] = useState<Set<string>>(new Set())
+    const [ installedModels, setInstalledModels ] = useState<Set<string>>(new Set())
+    const [ scannedModels, setScannedModels ] = useState<Model[]>([])
 
-    const scannedModels = useRef<Model[]>([])
     const toaster = useRef<Toaster>()
 
     const selectDirectory = async () => {
         try {
             const selectedDir = await modelsProvider.selectDirectory();
-            console.log('选择目录:', selectedDir)
             if (selectedDir) {
                 setSelectedDirectory(selectedDir)
 
                 // 扫描选中的目录
                 setIsScanning(true)
-                scannedModels.current = [] //清空之前的扫描结果
+                setScannedModels([]) //清空之前的扫描结果
                 // installedModels: new Set<string>() // 清空已安装模型状态
 
                 try {
@@ -38,7 +38,9 @@ const LocalModels: React.FC<LocalModelsProps> = (props) => {
                         selectedDir,
                         (model: Model) => {
                             // 每当找到一个模型，就更新状态
-                            scannedModels.current.push(model)
+                            setScannedModels(oldModels => produce(oldModels, models => {
+                                models?.push(model)
+                            }))
                         }
                     );
 
@@ -75,23 +77,23 @@ const LocalModels: React.FC<LocalModelsProps> = (props) => {
         }
 
         // 标记模型为正在安装
-        const newSet = new Set(installingModels)
-        newSet.add(model.id)
-        setInstallingModels(newSet)
+        setInstallingModels(produce(installingModels, models => {
+            models?.add(model.id)
+        }))
 
         try {
             const success = await modelsProvider.addModel(model.path);
-            console.log({success})
 
             // 更新模型状态
-            const newingSet = new Set(installingModels)
-            newingSet.delete(model.id)
-            setInstallingModels(newingSet)
+            setInstallingModels((oldModels) => produce(oldModels, models => {
+                models?.delete(model.id)
+                return models
+            }))
 
-            const newedSet = new Set(installedModels)
             if (success) {
-                newedSet.add(model.id);
-                setInstalledModels(newedSet)
+                setInstalledModels((oldModels) => produce(oldModels, models => (
+                    new Set(models ? [...models, model.id] : [model.id])
+                )))
                 onModelAdd?.(model.path);
             }
         } catch (error) {
@@ -112,9 +114,7 @@ const LocalModels: React.FC<LocalModelsProps> = (props) => {
     const handleAddWatchedDirectory = async () => {
         try {
             const selectedDirectory = await modelsProvider.selectDirectory()
-            console.log(selectedDirectory)
             const newWatchedDir = await modelsProvider.addWatchedDirectory(selectedDirectory);
-            console.log(newWatchedDir)
 
             setWatchedDirectories([...watchedDirectories, newWatchedDir])
         } catch (error) {
@@ -140,8 +140,6 @@ const LocalModels: React.FC<LocalModelsProps> = (props) => {
         setWatchedDirectories(newArr)
     }
 
-    // @ts-ignore
-    // @ts-ignore
     return (
         <div className={styles.localModel}>
             <div className={styles.scan}>
@@ -171,7 +169,7 @@ const LocalModels: React.FC<LocalModelsProps> = (props) => {
                         <ProgressBar animate intent="primary" />
                     }
                     {
-                        selectedDirectory && !isScanning && scannedModels.current.length < 1 &&
+                        selectedDirectory && !isScanning && scannedModels.length < 1 &&
                         <div className={styles.empty}>
                             <NonIdealState
                                 icon="error"
@@ -180,35 +178,37 @@ const LocalModels: React.FC<LocalModelsProps> = (props) => {
                             />
                         </div>
                     }
-                    {scannedModels.current.map(model => {
-                        const isInstalling = installingModels?.has(model.id);
-                        const isInstalled = installedModels?.has(model.id);
+                    {
+                        scannedModels.map(model => {
+                            const isInstalling = installingModels?.has(model.id);
+                            const isInstalled = installedModels?.has(model.id);
 
-                        return (
-                            <div className={styles.modelCard} key={model.id} style={{
-                                backgroundColor: isInstalled ? '#f0f8f0' : undefined
-                            }}>
-                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                    <div>
-                                        <div className={styles.name}>{model.name}</div>
-                                        <div className={styles.path}>{model.path}</div>
+                            return (
+                                <div className={styles.modelCard} key={model.id} style={{
+                                    backgroundColor: isInstalled ? '#f0f8f0' : undefined
+                                }}>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                                         <div>
-                                            <Tag intent="primary" minimal style={{ marginRight: 5 }}>{model.type}</Tag>
-                                            <Tag intent="success" minimal>{model.size}</Tag>
-                                            {isInstalled && (
-                                                <Tag intent="success" style={{ marginLeft: 5 }}>已安装</Tag>
-                                            )}
+                                            <div className={styles.name}>{model.name}</div>
+                                            <div className={styles.path}>{model.path}</div>
+                                            <div>
+                                                <Tag intent="primary" minimal style={{ marginRight: 5 }}>{model.type}</Tag>
+                                                <Tag intent="success" minimal>{model.size}</Tag>
+                                                {isInstalled && (
+                                                    <Tag intent="success" style={{ marginLeft: 5 }}>已安装</Tag>
+                                                )}
+                                            </div>
                                         </div>
+                                        {
+                                            isInstalled
+                                                ? <Button icon="tick" intent={Intent.SUCCESS} disabled>已安装</Button>
+                                                : <Button icon="plus" intent={Intent.SUCCESS} loading={isInstalling} onClick={() => handleAddModel(model)}>添加</Button>
+                                        }
                                     </div>
-                                    {
-                                        isInstalled
-                                            ? <Button icon="tick" intent={Intent.SUCCESS} disabled>已安装</Button>
-                                            : <Button icon="plus" intent={Intent.SUCCESS} loading={isInstalling} onClick={() => handleAddModel(model)}>添加</Button>
-                                    }
                                 </div>
-                            </div>
-                        );
-                    })}
+                            );
+                        })
+                    }
                 </div>
             </div>
 

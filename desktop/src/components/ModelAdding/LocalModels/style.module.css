@@ -44,10 +44,12 @@
     }
 
     .modelList {
-        margin-top: 20px;
+        margin-top: 10px;
+        height: calc(100vh - 250px);
+        overflow: auto;
 
         .modelCard {
-            margin-bottom: 6px;
+            margin: 10px 0 6px;
             padding: 8px 12px;
             border: solid 1px #e5e5e5;
             border-radius: 4px;
