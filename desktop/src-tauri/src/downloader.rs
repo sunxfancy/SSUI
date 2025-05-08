@@ -1,12 +1,8 @@
 use tauri_plugin_http::reqwest;
 use log::{info, error, debug};
 use std::sync::Mutex;
-use lazy_static::lazy_static;
 
-// 全局代理URL
-lazy_static! {
-    static ref PROXY_URL: Mutex<Option<String>> = Mutex::new(None);
-}
+static PROXY_URL: Mutex<Option<String>> = Mutex::new(None);
 
 // 设置全局代理
 #[tauri::command(rename_all = "snake_case")]

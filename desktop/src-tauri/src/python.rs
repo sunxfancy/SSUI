@@ -1,9 +1,9 @@
+use std::cell::{LazyCell, RefCell};
 use std::process::Command;
 use std::fs::File;
 use std::time::{SystemTime, UNIX_EPOCH};
 use serde::Serialize;
 use std::sync::Mutex;
-use lazy_static::lazy_static;
 use std::process::Child;
 use std::collections::HashMap;
 use log::{info, error, warn, debug};
@@ -16,7 +16,7 @@ pub struct BackgroundProcessesGuard {
 }
 
 impl BackgroundProcessesGuard {
-    pub fn new() -> Self {
+    pub const fn new() -> Self {
         Self {
             processes: Mutex::new(Vec::new())
         }
@@ -42,23 +42,24 @@ impl BackgroundProcessesGuard {
 
 // 存储特定类型进程的Child对象
 pub struct ProcessManager {
-    processes: Mutex<HashMap<String, Child>>
+    processes: Mutex<LazyCell<RefCell<HashMap<String, Child>>>>
 }
 
 impl ProcessManager {
-    pub fn new() -> Self {
+    pub const fn new() -> Self {
         Self {
-            processes: Mutex::new(HashMap::new())
+            processes: Mutex::new(LazyCell::new(|| RefCell::new(HashMap::new())))
         }
     }
 
     pub fn add_process(&self, process_type: &str, child: Child) {
         debug!("添加进程: {}", process_type);
-        self.processes.lock().unwrap().insert(process_type.to_string(), child);
+        self.processes.lock().unwrap().borrow_mut().insert(process_type.to_string(), child);
     }
 
     pub fn is_process_running(&self, process_type: &str) -> bool {
-        let mut processes = self.processes.lock().unwrap();
+        let binding = self.processes.lock().unwrap();
+        let mut processes = binding.borrow_mut();
         if let Some(child) = processes.get_mut(process_type) {
             // 尝试等待进程，但不阻塞
             match child.try_wait() {
@@ -85,7 +86,8 @@ impl ProcessManager {
     }
 
     pub fn kill_process(&self, process_type: &str) -> bool {
-        let mut processes = self.processes.lock().unwrap();
+        let binding = self.processes.lock().unwrap();
+        let mut processes = binding.borrow_mut();
         if let Some(child) = processes.get_mut(process_type) {
             if let Err(e) = child.kill() {
                 eprintln!("无法终止进程 {}: {}", process_type, e);
@@ -100,7 +102,8 @@ impl ProcessManager {
 
     pub fn kill_all_processes(&self) {
         info!("开始关闭所有特定类型进程");
-        let mut processes = self.processes.lock().unwrap();
+        let binding = self.processes.lock().unwrap();
+        let mut processes = binding.borrow_mut();
         for (process_type, child) in processes.iter_mut() {
             if let Err(e) = child.kill() {
                 error!("无法终止进程 {}: {}", process_type, e);
@@ -113,10 +116,8 @@ impl ProcessManager {
     }
 }
 
-lazy_static! {
-    pub static ref PROCESSES_GUARD: BackgroundProcessesGuard = BackgroundProcessesGuard::new();
-    pub static ref PROCESS_MANAGER: ProcessManager = ProcessManager::new();
-}
+pub static PROCESSES_GUARD: BackgroundProcessesGuard = BackgroundProcessesGuard::new();
+pub static PROCESS_MANAGER: ProcessManager = ProcessManager::new();
 
 fn set_proxy_for_python(cmd: &mut Command, proxy_url: &str) {
     info!("为Python进程设置代理: {}", proxy_url);
@@ -412,8 +413,7 @@ pub async fn get_executor_status() -> Result<ProcessStatus, String> {
 impl ProcessManager {
     pub fn get_process_pid(&self, process_type: &str) -> Option<String> {
         debug!("获取进程 {} 的PID", process_type);
-        let processes = self.processes.lock().unwrap();
-        processes.get(process_type).map(|child| child.id().to_string())
+        self.processes.lock().unwrap().borrow().get(process_type).map(|child| child.id().to_string())
     }
 }
 
