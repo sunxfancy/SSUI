@@ -87,6 +87,7 @@ export class Message {
         this.active_requests--;
         if (this.active_requests === 0 && this.ws) {
             this.ws.close();
+            this.ws = undefined;
         }
     }
 

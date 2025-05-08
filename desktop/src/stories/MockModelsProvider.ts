@@ -22,21 +22,24 @@ export class MockModelsProvider implements ModelsProvider {
             name: 'GPT-2', 
             path: `${directoryPath}/gpt2`, 
             type: 'LLM', 
-            size: '548 MB' 
+            size: '548 MB',
+            installed: false
           },
           { 
             id: '2', 
             name: 'StableDiffusion v1.5', 
             path: `${directoryPath}/sd_v1_5`, 
             type: 'Diffusion', 
-            size: '4.27 GB' 
+            size: '4.27 GB',
+            installed: false
           },
           { 
             id: '3', 
             name: 'BERT', 
             path: `${directoryPath}/bert`, 
             type: 'Encoder', 
-            size: '420 MB' 
+            size: '420 MB',
+            installed: false
           }
         ];
         
