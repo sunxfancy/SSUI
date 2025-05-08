@@ -34,13 +34,11 @@ tauri-plugin-os = "2"
 flate2 = "1.1.0"
 tar = "0.4.44"
 tokio = { version = "1.0", features = ["full", "test-util"] }
-lazy_static = "1.4.0"
 log = "0.4"
 env_logger = "0.10"
 
 [target.'cfg(any(target_os = "windows"))'.dependencies]
-wmi = "0.15.2"
-winreg = "0.55.0"
+windows = { version = "0.60.0", features = ["Win32_Graphics_Dxgi", "Win32_Graphics_Direct3D", "Win32_Graphics_Direct3D12"] }
 
 [target.'cfg(not(any(target_os = "android", target_os = "ios")))'.dependencies]
 tauri-plugin-updater = "2"
