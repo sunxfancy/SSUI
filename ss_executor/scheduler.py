@@ -141,6 +141,10 @@ class TaskScheduler:
         """运行任务"""
         self.add_task(task)
         task = await self.wait_until_finished(task.task_id)
+        if task.status == TaskStatus.FAILED:
+            return {"error": task.error}
+        if task.status == TaskStatus.CANCELLED:
+            return {"cancelled": True}
         return task.result
 
     def get_task(self, task_id: str) -> Optional[Task]:
