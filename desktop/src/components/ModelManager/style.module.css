@@ -13,4 +13,94 @@
             font-weight: bold;
         }
     }
+
+    .input {
+        display: flex;
+        align-items: center;
+        margin-bottom: 8px;
+
+        .addButton {
+            flex-shrink: 0;
+            margin-left: 4px;
+        }
+    }
+
+    .filter {
+        display: flex;
+        align-items: center;
+        justify-content: flex-end;
+        gap: 4px;
+    }
+
+    .modelList {
+        flex: 1;
+        overflow: auto;
+
+        .model {
+            .modelName {
+                display: flex;
+                align-items: center;
+                font-weight: bold;
+                font-size: 15px;
+                margin: 10px 0;
+                padding-left: 2px;
+
+                .modelSum {
+                    width: 20px;
+                    height: 20px;
+                    font-size: 12px;
+                    background-color: rgba(45,114,210,.1);
+                    color: #215db0;
+                    display: inline-flex;
+                    align-items: center;
+                    justify-content: center;
+                    margin-left: 8px;
+                }
+            }
+
+            .models {
+                border-radius: 8px;
+                overflow: hidden;
+
+                .singleModel {
+                    background-color: white;
+                    border-bottom: solid 1px #e8e8e8;
+                    padding: 8px;
+                    position: relative;
+
+                    &:nth-last-of-type(1) {
+                        border-bottom: none;
+                    }
+
+                    .name {
+                        font-size: 13px;
+                        font-weight: bold;
+                    }
+
+                    .tagWp {
+                        display: flex;
+                        align-items: center;
+                        margin: 4px 0;
+                    }
+
+                    .desc {
+                        font-size: 11px;
+                    }
+
+                    .deleteBtn {
+                        position: absolute;
+                        bottom: 4px;
+                        right: 4px;
+                    }
+                }
+            }
+        }
+    }
+}
+
+.compoundLeft {
+    display: flex;
+    align-items: center;
+    justify-content:  center;
+    height: 16px;
 }
