@@ -13,4 +13,116 @@
             font-weight: bold;
         }
     }
+
+    .input {
+        display: flex;
+        align-items: center;
+        margin-bottom: 8px;
+
+        .addButton {
+            flex-shrink: 0;
+            margin-left: 4px;
+        }
+    }
+
+    .filter {
+        display: flex;
+        align-items: center;
+        justify-content: flex-end;
+        gap: 4px;
+    }
+
+    .modelList {
+        height: calc(100vh - 120px);
+        overflow: auto;
+        border-radius: 8px;
+        padding-right: 4px;
+        margin-top: 10px;
+
+        .model {
+            .modelName {
+                position: sticky;
+                top: 0;
+                z-index: 3;
+                background-color: #f6f6f6;
+                display: flex;
+                align-items: center;
+                font-weight: bold;
+                font-size: 15px;
+                border-bottom: solid 1px rgb(227,227,227);
+
+                .modelNameInner {
+                    background-color: #eee;
+                    width: 100%;
+                    display: flex;
+                    align-items: center;
+                    border-radius: 8px 8px 0 0;
+                    padding: 8px 0 8px 8px;
+                }
+
+                .modelSum {
+                    width: 20px;
+                    height: 20px;
+                    font-size: 12px;
+                    background-color: rgba(45, 114, 210, 0.15);
+                    color: #0f5ec2;
+                    display: inline-flex;
+                    align-items: center;
+                    justify-content: center;
+                    margin-left: 8px;
+                }
+            }
+
+            .models {
+                border-radius: 0 0 8px 8px;
+                overflow: hidden;
+                margin-bottom: 10px;
+
+                .singleModel {
+                    background-color: white;
+                    border-bottom: solid 1px #e8e8e8;
+                    padding: 8px;
+                    position: relative;
+
+                    &:nth-last-of-type(1) {
+                        border-bottom: none;
+                    }
+
+                    .name {
+                        font-size: 13px;
+                        font-weight: bold;
+                    }
+
+                    .tagWp {
+                        display: flex;
+                        align-items: center;
+                        margin: 4px 0;
+                    }
+
+                    .desc {
+                        font-size: 11px;
+                    }
+
+                    .deleteBtn {
+                        position: absolute;
+                        bottom: 4px;
+                        right: 4px;
+                    }
+                }
+            }
+        }
+    }
+}
+
+.compoundLeft {
+    display: flex;
+    align-items: center;
+    justify-content:  center;
+    height: 16px;
+}
+
+.empty {
+    height: 300px;
+    display: flex;
+    align-items: center;
 }
