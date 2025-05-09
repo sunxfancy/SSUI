@@ -1,8 +1,9 @@
+use tauri::{AppHandle, Emitter};
 use tauri_plugin_http::reqwest;
-use log::{info, error, debug, warn};
-use std::{fs, sync::Mutex};
-use std::sync::Arc;
-use std::collections::HashSet;
+use log::{info, error, debug};
+use std::sync::Mutex;
+use std::sync::{Arc, RwLock, LazyLock};
+use std::collections::{HashMap, HashSet};
 use std::path::Path;
 use std::fs::{File, OpenOptions};
 use std::io::{Read, Write};
@@ -11,8 +12,6 @@ use tokio::io::AsyncWriteExt;
 use reqwest::header::RANGE;
 use serde::{Serialize, Deserialize};
 use sha2::{Sha256, Digest};
-use env_logger::Builder;
-use log::LevelFilter;
 use tokio::sync::Semaphore;
 
 static PROXY_URL: Mutex<Option<String>> = Mutex::new(None);
@@ -440,7 +439,7 @@ impl ChunkedDownloader {
         };
 
         let total_chunks = ((total_size + self.chunk_size - 1) / self.chunk_size) as usize;
-        let mut progress = self.load_progress().await;
+        let progress = self.load_progress().await;
 
         // 创建信号量来控制并发
         let semaphore = Arc::new(Semaphore::new(self.max_concurrent));
@@ -515,6 +514,212 @@ impl ChunkedDownloader {
 
         Ok(())
     }
+}
+
+#[derive(Serialize, Deserialize, Default, Clone)]
+pub struct DownloadTask {
+    url: String,
+    output_path: String,
+    sha256: String,
+    progress: u32,
+    total_blocks: u32,
+    status: TaskStatus,
+}
+
+#[derive(Serialize, Deserialize, Default, Clone, PartialEq)]
+pub enum TaskStatus {
+    #[default]
+    Pending,
+    Downloading,
+    Paused,
+    Completed,
+    Failed,
+    Cancelled,
+}
+
+struct DownloadTaskManager {
+    tasks: HashMap<String, DownloadTask>,
+    downloaders: HashMap<String, Arc<RwLock<Option<ChunkedDownloader>>>>,
+}
+
+impl DownloadTaskManager {
+    fn new() -> Self {
+        Self {
+            tasks: HashMap::new(),
+            downloaders: HashMap::new(),
+        }
+    }
+
+    fn add_task(&mut self, url: &str, output_path: &str, sha256: &str) {
+        self.tasks.insert(url.to_string(), DownloadTask {
+            url: url.to_string(),
+            output_path: output_path.to_string(),
+            sha256: sha256.to_string(),
+            progress: 0,
+            total_blocks: 0,
+            status: TaskStatus::Pending,
+        });
+    }
+
+    fn get_task(&self, url: &str) -> Option<&DownloadTask> {
+        self.tasks.get(url)
+    }
+
+    fn update_task_status(&mut self, url: &str, status: TaskStatus) {
+        if let Some(task) = self.tasks.get_mut(url) {
+            task.status = status;
+        }
+    }
+
+    fn update_task_progress(&mut self, url: &str, progress: u32, total_blocks: u32) {
+        if let Some(task) = self.tasks.get_mut(url) {
+            task.progress = progress;
+            task.total_blocks = total_blocks;
+        }
+    }
+}
+
+// 全局任务管理器
+static TASK_MANAGER: LazyLock<RwLock<DownloadTaskManager>> = LazyLock::new(|| RwLock::new(DownloadTaskManager::new()));
+
+#[tauri::command(rename_all = "snake_case")]
+pub async fn create_download_task(app: AppHandle, url: &str, output_path: &str, sha256: &str) -> Result<(), String> {
+    let mut manager = TASK_MANAGER.write().unwrap();
+    
+    // 检查任务是否已存在
+    if manager.get_task(url).is_some() {
+        return Err("任务已存在".to_string());
+    }
+
+    // 创建下载器
+    let downloader = ChunkedDownloader::new(url, output_path, 1024 * 1024)
+        .with_retry_times(3)
+        .with_max_concurrent(4)
+        .with_progress_callback({
+            let app = app.clone();
+            let url = url.to_string();
+            move |completed, total| {
+                if let Ok(mut manager) = TASK_MANAGER.write() {
+                    manager.update_task_progress(&url, completed as u32, total as u32);
+                }
+                
+                // 发送进度更新事件
+                let _ = app.emit("download-progress", serde_json::json!({
+                    "url": url,
+                    "progress": completed,
+                    "total": total
+                }));
+            }
+        });
+
+    // 添加任务
+    manager.add_task(url, output_path, sha256);
+    manager.downloaders.insert(url.to_string(), Arc::new(RwLock::new(Some(downloader))));
+    manager.update_task_status(url, TaskStatus::Pending);
+
+    // 启动下载
+    let downloader = manager.downloaders.get(url).unwrap().clone();
+    let url = url.to_string();
+    let app = app.clone();
+    
+    tokio::spawn(async move {
+        // 在异步任务中获取下载器
+        let downloader = {
+            let mut guard = downloader.write().unwrap();
+            guard.take()
+        };
+
+        if let Some(downloader) = downloader {
+            if let Ok(mut manager) = TASK_MANAGER.write() {
+                manager.update_task_status(&url, TaskStatus::Downloading);
+            }
+            
+            match downloader.download().await {
+                Ok(_) => {
+                    if let Ok(mut manager) = TASK_MANAGER.write() {
+                        manager.update_task_status(&url, TaskStatus::Completed);
+                    }
+                    let _ = app.emit("download-completed", url);
+                },
+                Err(e) => {
+                    if let Ok(mut manager) = TASK_MANAGER.write() {
+                        manager.update_task_status(&url, TaskStatus::Failed);
+                    }
+                    let _ = app.emit("download-failed", serde_json::json!({
+                        "url": url,
+                        "error": e.to_string()
+                    }));
+                }
+            }
+        }
+    });
+
+    Ok(())
+}
+
+#[tauri::command(rename_all = "snake_case")]
+pub async fn pause_download_task(app: AppHandle, url: &str) -> Result<(), String> {
+    let mut manager = TASK_MANAGER.write().unwrap();
+    
+    if let Some(task) = manager.get_task(url) {
+        if task.status == TaskStatus::Downloading {
+            manager.update_task_status(url, TaskStatus::Paused);
+            let _ = app.emit("download-paused", url);
+            Ok(())
+        } else {
+            Err("任务不在下载状态".to_string())
+        }
+    } else {
+        Err("任务不存在".to_string())
+    }
+}
+
+#[tauri::command(rename_all = "snake_case")]
+pub async fn resume_download_task(app: AppHandle, url: &str) -> Result<(), String> {
+    let mut manager = TASK_MANAGER.write().unwrap();
+    
+    if let Some(task) = manager.get_task(url) {
+        if task.status == TaskStatus::Paused {
+            manager.update_task_status(url, TaskStatus::Downloading);
+            let _ = app.emit("download-resumed", url);
+            Ok(())
+        } else {
+            Err("任务不在暂停状态".to_string())
+        }
+    } else {
+        Err("任务不存在".to_string())
+    }
+}
+
+#[tauri::command(rename_all = "snake_case")]
+pub async fn cancel_download_task(app: AppHandle, url: &str) -> Result<(), String> {
+    let mut manager = TASK_MANAGER.write().unwrap();
+    
+    if let Some(task) = manager.get_task(url) {
+        if task.status == TaskStatus::Downloading || task.status == TaskStatus::Paused {
+            manager.update_task_status(url, TaskStatus::Cancelled);
+            let _ = app.emit("download-cancelled", url);
+            Ok(())
+        } else {
+            Err("任务不在可取消状态".to_string())
+        }
+    } else {
+        Err("任务不存在".to_string())
+    }
+}
+
+#[tauri::command(rename_all = "snake_case")]
+pub async fn get_download_task_list() -> Result<Vec<DownloadTask>, String> {
+    let manager = TASK_MANAGER.read().unwrap();
+    Ok(manager.tasks.values().cloned().collect())
+}
+
+#[tauri::command(rename_all = "snake_case")]
+pub async fn get_download_task_progress(url: &str) -> Result<DownloadTask, String> {
+    let manager = TASK_MANAGER.read().unwrap();
+    manager.get_task(url)
+        .cloned()
+        .ok_or_else(|| "任务不存在".to_string())
 }
 
 #[cfg(test)]
