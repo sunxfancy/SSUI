@@ -1,7 +1,13 @@
 use downloader::{
     download_python,
     unpack_app,
-    set_proxy
+    set_proxy,
+    create_download_task,
+    pause_download_task,
+    resume_download_task,
+    cancel_download_task,
+    get_download_task_list,
+    get_download_task_progress
 };
 use gpu_detector::detect_gpu;
 use python::{
@@ -61,7 +67,14 @@ pub fn run() {
             get_executor_status,
             restart_server,
             restart_executor,
-            set_proxy
+            set_proxy,
+
+            create_download_task,
+            pause_download_task,
+            resume_download_task,
+            cancel_download_task,
+            get_download_task_list,
+            get_download_task_progress
         ])
         .setup(|_app: &mut tauri::App| {
             log::info!("应用程序设置完成");
