@@ -36,6 +36,7 @@ tar = "0.4.44"
 tokio = { version = "1.0", features = ["full", "test-util"] }
 log = "0.4"
 env_logger = "0.10"
+sha2 = "0.10"
 
 [target.'cfg(any(target_os = "windows"))'.dependencies]
 windows = { version = "0.60.0", features = ["Win32_Graphics_Dxgi", "Win32_Graphics_Direct3D", "Win32_Graphics_Direct3D12"] }

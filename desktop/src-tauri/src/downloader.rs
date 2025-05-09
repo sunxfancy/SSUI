@@ -1,6 +1,19 @@
 use tauri_plugin_http::reqwest;
-use log::{info, error, debug};
-use std::sync::Mutex;
+use log::{info, error, debug, warn};
+use std::{fs, sync::Mutex};
+use std::sync::Arc;
+use std::collections::HashSet;
+use std::path::Path;
+use std::fs::{File, OpenOptions};
+use std::io::{Read, Write};
+use tokio::fs as tokio_fs;
+use tokio::io::AsyncWriteExt;
+use reqwest::header::RANGE;
+use serde::{Serialize, Deserialize};
+use sha2::{Sha256, Digest};
+use env_logger::Builder;
+use log::LevelFilter;
+use tokio::sync::Semaphore;
 
 static PROXY_URL: Mutex<Option<String>> = Mutex::new(None);
 
@@ -178,14 +191,387 @@ pub async fn unpack_app(tar_path: &str, target_path: &str) -> Result<String, Str
     }
 }
 
+#[derive(Serialize, Deserialize, Default)]
+struct Progress {
+    completed: HashSet<usize>,
+}
+
+pub struct ChunkedDownloader {
+    url: String,
+    output: String,
+    chunk_size: u64,
+    progress_file: String,
+    retry_times: usize,
+    progress_callback: Option<Arc<dyn Fn(usize, usize) + Send + Sync>>,
+    max_concurrent: usize,
+}
+
+impl ChunkedDownloader {
+    pub fn new(url: &str, output: &str, chunk_size: u64) -> Self {
+        Self {
+            url: url.to_string(),
+            output: output.to_string(),
+            chunk_size,
+            progress_file: format!("{}.progress.json", output),
+            retry_times: 3,
+            progress_callback: None,
+            max_concurrent: 4, // 默认最大并发数为4
+        }
+    }
+
+    pub fn with_retry_times(mut self, retry: usize) -> Self {
+        self.retry_times = retry;
+        self
+    }
+
+    pub fn with_max_concurrent(mut self, max: usize) -> Self {
+        self.max_concurrent = max;
+        self
+    }
+
+    pub fn with_progress_callback<F>(mut self, callback: F) -> Self
+    where
+        F: Fn(usize, usize) + Send + Sync + 'static,
+    {
+        self.progress_callback = Some(Arc::new(callback));
+        self
+    }
+
+    async fn get_file_size(&self) -> Option<u64> {
+        let client = reqwest::Client::new();
+            
+        match client.get(&self.url).send().await {
+            Ok(resp) => {
+                let size = resp.content_length();
+                
+                // 如果没有获取到文件大小，尝试从Content-Length头获取
+                if size.is_none() {
+                    if let Some(length) = resp.headers().get("content-length") {
+                        if let Ok(length_str) = length.to_str() {
+                            if let Ok(length_num) = length_str.parse::<u64>() {
+                                println!("从Content-Length头获取到文件大小: {} 字节", length_num);
+                                return Some(length_num);
+                            }
+                        }
+                    }
+                }
+                
+                size
+            },
+            Err(e) => {
+                println!("获取文件大小失败: {}", e);
+                None
+            }
+        }
+    }
+
+    async fn load_progress(&self) -> Progress {
+        if let Ok(bytes) = tokio_fs::read(&self.progress_file).await {
+            serde_json::from_slice(&bytes).unwrap_or_default()
+        } else {
+            Progress::default()
+        }
+    }
+
+    async fn save_progress(&self, progress: &Progress) {
+        if let Ok(json) = serde_json::to_vec(progress) {
+            let _ = tokio_fs::write(&self.progress_file, json).await;
+        }
+    }
+
+    async fn download_chunk(&self, index: usize, start: u64, end: u64) -> Result<(), Box<dyn std::error::Error>> {
+        let part_file = format!("{}.part{}", &self.output, index);
+        
+        if Path::new(&part_file).exists() {
+            return Ok(());
+        }
+
+        let client = reqwest::Client::new();
+        let range_header = format!("bytes={}-{}", start, end);
+        
+        let mut resp = match client.get(&self.url)
+            .header(RANGE, range_header)
+            .send()
+            .await {
+                Ok(resp) => {
+                    resp.error_for_status()?
+                },
+                Err(e) => {
+                    return Err(e.into());
+                }
+            };
+        
+        let mut file = match tokio_fs::File::create(&part_file).await {
+            Ok(file) => file,
+            Err(e) => {
+                error!("创建文件失败: {}", e);
+                return Err(e.into());
+            }
+        };
+
+        let mut downloaded = 0;
+        while let Some(chunk) = resp.chunk().await? {
+            match file.write_all(&chunk).await {
+                Ok(_) => {
+                    downloaded += chunk.len();
+                    debug!("块 {} 已下载: {} 字节", index, downloaded);
+                },
+                Err(e) => {
+                    error!("写入文件失败: {}", e);
+                    return Err(e.into());
+                }
+            }
+        }
+
+        match file.flush().await {
+            Ok(_) => info!("块 {} 写入完成", index),
+            Err(e) => {
+                error!("刷新文件失败: {}", e);
+                return Err(e.into());
+            }
+        }
+
+        match file.sync_all().await {
+            Ok(_) => info!("块 {} 同步到磁盘完成", index),
+            Err(e) => {
+                error!("同步文件失败: {}", e);
+                return Err(e.into());
+            }
+        }
+
+        // 验证下载的块大小
+        if let Ok(metadata) = tokio_fs::metadata(&part_file).await {
+            info!("块 {} 大小: {} 字节", index, metadata.len());
+            if metadata.len() == 0 {
+                error!("块 {} 下载为空", index);
+                return Err("下载的块为空".into());
+            }
+        }
+
+        Ok(())
+    }
+
+    async fn retry_download_chunk(&self, index: usize, start: u64, end: u64) -> bool {
+        for attempt in 1..=self.retry_times {
+            match self.download_chunk(index, start, end).await {
+                Ok(_) => return true,
+                Err(e) => {
+                    eprintln!("Chunk {} attempt {}/{} failed: {}", index, attempt, self.retry_times, e);
+                }
+            }
+        }
+        false
+    }
+
+    async fn merge_chunks(&self, total_chunks: usize) -> std::io::Result<()> {
+        info!("开始合并文件块...");
+        let mut output_file = OpenOptions::new()
+            .create(true)
+            .write(true)
+            .truncate(true)
+            .open(&self.output)?;
+
+        for i in 0..total_chunks {
+            let part_file = format!("{}.part{}", &self.output, i);
+            info!("合并块 {}: {}", i, part_file);
+            
+            if !Path::new(&part_file).exists() {
+                error!("块文件不存在: {}", part_file);
+                return Err(std::io::Error::new(
+                    std::io::ErrorKind::NotFound,
+                    format!("Chunk file not found: {}", part_file)
+                ));
+            }
+
+            let mut part = File::open(&part_file)?;
+            let mut buf = Vec::new();
+            part.read_to_end(&mut buf)?;
+            
+            if buf.is_empty() {
+                error!("块 {} 是空的！", i);
+                return Err(std::io::Error::new(
+                    std::io::ErrorKind::InvalidData,
+                    format!("Chunk {} is empty", i)
+                ));
+            }
+            
+            info!("写入块 {}: {} 字节", i, buf.len());
+            output_file.write_all(&buf)?;
+            output_file.flush()?;
+            
+            // 删除临时文件
+            let _ = std::fs::remove_file(&part_file);
+            info!("块 {} 合并完成", i);
+        }
+
+        // 确保文件被正确写入
+        output_file.flush()?;
+        output_file.sync_all()?;
+
+        // 删除进度记录
+        let _ = std::fs::remove_file(&self.progress_file);
+
+        info!("文件合并完成");
+        Ok(())
+    }
+
+    // 计算文件的SHA256哈希值
+    async fn calculate_sha256(&self, file_path: &str) -> Result<String, Box<dyn std::error::Error>> {
+        let mut file = File::open(file_path)?;
+        let mut hasher = Sha256::new();
+        let mut buffer = [0; 8192];
+        
+        loop {
+            let bytes_read = file.read(&mut buffer)?;
+            if bytes_read == 0 {
+                break;
+            }
+            hasher.update(&buffer[..bytes_read]);
+        }
+        
+        let hash = hasher.finalize();
+        Ok(format!("{:X}", hash))
+    }
+
+    pub async fn download(&self) -> Result<(), Box<dyn std::error::Error>> {
+        let total_size = match self.get_file_size().await {
+            Some(size) => size,
+            None => return Err("无法获取文件大小".into()),
+        };
+
+        let total_chunks = ((total_size + self.chunk_size - 1) / self.chunk_size) as usize;
+        let mut progress = self.load_progress().await;
+
+        // 创建信号量来控制并发
+        let semaphore = Arc::new(Semaphore::new(self.max_concurrent));
+        let mut tasks = vec![];
+
+        for i in 0..total_chunks {
+            if progress.completed.contains(&i) {
+                continue;
+            }
+
+            let start = i as u64 * self.chunk_size;
+            let end = ((i + 1) as u64 * self.chunk_size - 1).min(total_size - 1);
+            
+            let url = self.url.clone();
+            let output = self.output.clone();
+            let progress_file = self.progress_file.clone();
+            let retry_times = self.retry_times;
+            let progress_callback = self.progress_callback.clone();
+            let chunk_size = self.chunk_size;
+            let sem = semaphore.clone();
+
+            let fut = async move {
+                // 获取信号量许可
+                let _permit = sem.acquire().await.unwrap();
+                
+                let downloader = ChunkedDownloader {
+                    url,
+                    output,
+                    chunk_size,
+                    progress_file,
+                    retry_times,
+                    progress_callback,
+                    max_concurrent: 1, // 子下载器不需要并发
+                };
+
+                let success = downloader.retry_download_chunk(i, start, end).await;
+                if success {
+                    let mut updated_progress = downloader.load_progress().await;
+                    updated_progress.completed.insert(i);
+                    downloader.save_progress(&updated_progress).await;
+
+                    if let Some(callback) = &downloader.progress_callback {
+                        callback(updated_progress.completed.len(), total_chunks);
+                    }
+                }
+            };
+
+            tasks.push(tokio::spawn(fut));
+        }
+
+        // 等待所有任务完成
+        for task in tasks {
+            let _ = task.await;
+        }
+
+        // 检查是否所有块都完成
+        let final_progress = self.load_progress().await;
+        if final_progress.completed.len() == total_chunks {
+            self.merge_chunks(total_chunks).await?;
+            
+            // 验证文件大小
+            let file_size = tokio_fs::metadata(&self.output).await?.len();
+            if file_size != total_size {
+                return Err("文件大小不匹配".into());
+            }
+            
+            // 计算并验证SHA256
+            let _hash = self.calculate_sha256(&self.output).await?;
+        } else {
+            return Err("下载未完成".into());
+        }
+
+        Ok(())
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::time::Instant;
 
     #[tokio::test]
     async fn test_download_python() {
         let result = download_python("3.12.8", "20241219", "x86_64-pc-windows-msvc", "C:\\Users\\sunxf\\AppData\\Roaming\\com.ssui.app").await;
         assert!(result.is_ok());
+    }
+
+    #[tokio::test]
+    async fn test_download_model() {
+        let url = "https://civitai.com/api/download/models/11964?type=Model&format=SafeTensor&size=full&fp=fp16";
+        let output = "test_model.safetensors";
+        
+        let downloader = ChunkedDownloader::new(
+            url,
+            output,
+            1024 * 1024  // 1MB chunks
+        )
+        .with_retry_times(3)
+        .with_max_concurrent(4)  // 设置最大并发数为4
+        .with_progress_callback(|completed, total| {
+            println!("下载进度: {}/{} ({}%)", 
+                completed, 
+                total, 
+                (completed as f64 / total as f64 * 100.0) as u32
+            );
+        });
+
+        let start = Instant::now();
+        
+        match downloader.download().await {
+            Ok(_) => {
+                let duration = start.elapsed();
+                println!("下载完成！用时: {:.2}秒", duration.as_secs_f64());
+                
+                // 验证文件是否存在
+                assert!(Path::new(output).exists(), "下载的文件不存在");
+                
+                // 验证文件大小
+                let file_size = tokio_fs::metadata(output).await.unwrap().len();
+                println!("文件大小: {} 字节", file_size);
+                assert!(file_size > 0, "文件大小为0");
+                
+                // 清理测试文件
+                let _ = std::fs::remove_file(output);
+                let _ = std::fs::remove_file(format!("{}.progress.json", output));
+            },
+            Err(e) => {
+                println!("下载失败: {}", e);
+                panic!("下载失败: {}", e);
+            }
+        }
     }
 }
 
