@@ -20,8 +20,7 @@ use python::{
     restart_executor,
     get_server_status,
     get_executor_status,
-    PROCESSES_GUARD,
-    PROCESS_MANAGER
+    GLOBAL_PROCESS_STATE,
 };
 use std::env;
 
@@ -88,9 +87,9 @@ pub fn run() {
             tauri::RunEvent::Exit => {
                 log::info!("应用程序退出，清理资源");
                 // 关闭所有后台进程
-                PROCESSES_GUARD.kill_all_processes();
+                GLOBAL_PROCESS_STATE.processes_guard().kill_all_processes();
                 // 关闭特定类型进程
-                PROCESS_MANAGER.kill_all_processes();
+                GLOBAL_PROCESS_STATE.process_manager().kill_all_processes();
             }
             _ => {}
         }
