@@ -122,8 +122,10 @@ export class FunctionalUI extends Component<FunctionalUIProps, FunctionalUIState
         // 收集输入参数
         const params: { [key: string]: any } = {};
         for (const [key, value] of Object.entries(meta.params)) {
+            console.log(this.refInputs.get(key)?.current);
             params[key] = this.refInputs.get(key)?.current?.onExecute();
         }
+        console.log('params', params);
 
         // 收集Details的数据
         const details = this.details.current?.onExecute();
@@ -269,7 +271,7 @@ export class FunctionalUI extends Component<FunctionalUIProps, FunctionalUIState
                 <Button intent="primary" onClick={this.toggleDetails}>
                     {isOpen ? "Hide Details" : "Show Details"}
                 </Button>
-                <Collapse isOpen={isOpen}>
+                <Collapse isOpen={isOpen} keepChildrenMounted={true}>
                     <DetailsPanel path={path} selected={selected} ref={this.details} />
                 </Collapse>
             </div>

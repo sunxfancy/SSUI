@@ -4,6 +4,9 @@ export class Message {
     ws?: WebSocket;
     active_requests: number = 0;
     uuid?: string;
+    message_cache: {
+        [key: string]: any[]; // request_uuid -> messages[]
+    } = {};
     listening_callbacks: {
         [key: string]: { // request uuid
             [key: string]: (data: any) => void; // callback name
@@ -37,7 +40,7 @@ export class Message {
             };
 
             ws.onmessage = (event: MessageEvent) => {
-                console.log("onMessage: ", event.data);
+                console.log("onMessage: ", event.data, this.listening_callbacks);
                 const data = JSON.parse(event.data);
                 if (data.type === 'uuid') {
                     console.log("uuid received: ", data.uuid);
@@ -45,19 +48,29 @@ export class Message {
                     resolve(this.uuid);
                 }
         
-                if (data.type === 'callback') {
+                if (data.type === 'callback' || data.type === 'finish') {
                     const request_uuid = data.request_uuid;
-                    for (const key in this.listening_callbacks[request_uuid]) {
-                        if (key in data) {
-                            this.listening_callbacks[request_uuid][key](data[key]);
+                    if (!this.listening_callbacks[request_uuid]) {
+                        // 如果回调还没有注册，将消息存入缓存
+                        if (!this.message_cache[request_uuid]) {
+                            this.message_cache[request_uuid] = [];
+                        }
+                        this.message_cache[request_uuid].push(data);
+                        return;
+                    }
+
+                    if (data.type === 'callback') {
+                        for (const key in this.listening_callbacks[request_uuid]) {
+                            if (key in data) {
+                                this.listening_callbacks[request_uuid][key](data[key]);
+                            }
                         }
                     }
-                }
-        
-                if (data.type === 'finish') {
-                    const request_uuid = data.request_uuid;
-                    this.listening_callbacks[request_uuid]['finish'](data);
-                    delete this.listening_callbacks[request_uuid];
+            
+                    if (data.type === 'finish') {
+                        this.listening_callbacks[request_uuid]['finish'](data);
+                        delete this.listening_callbacks[request_uuid];
+                    }
                 }
             }
 
@@ -74,6 +87,7 @@ export class Message {
         this.active_requests--;
         if (this.active_requests === 0 && this.ws) {
             this.ws.close();
+            this.ws = undefined;
         }
     }
 
@@ -124,6 +138,26 @@ export class Message {
                 this.listening_callbacks[result.request_uuid][key] = callbacks[key];
             }
             this.listening_callbacks[result.request_uuid]['finish'] = finish_callback;
+
+            // 处理缓存的消息
+            if (this.message_cache[result.request_uuid]) {
+                const cached_messages = this.message_cache[result.request_uuid];
+                delete this.message_cache[result.request_uuid];
+                
+                // 按顺序处理缓存的消息
+                for (const cached_data of cached_messages) {
+                    if (cached_data.type === 'callback') {
+                        for (const key in this.listening_callbacks[result.request_uuid]) {
+                            if (key in cached_data) {
+                                this.listening_callbacks[result.request_uuid][key](cached_data[key]);
+                            }
+                        }
+                    } else if (cached_data.type === 'finish') {
+                        this.listening_callbacks[result.request_uuid]['finish'](cached_data);
+                        delete this.listening_callbacks[result.request_uuid];
+                    }
+                }
+            }
         });
     }
 

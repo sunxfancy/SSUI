@@ -17,7 +17,8 @@ export function registerComponent(component: ComponentRegister) {
     if (!component.createComponent)
         component.createComponent = (ref: React.RefObject<IComponent>, params: ComponentRefProps) => {
             console.log('Creating component', component.name, ref);
-            return React.createElement(component.component, params);
+            let params_with_ref = { ...params, ref: ref };
+            return React.createElement(component.component, params_with_ref);
         }
 }
 

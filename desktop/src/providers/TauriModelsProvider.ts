@@ -27,7 +27,7 @@ export class TauriModelsProvider implements ModelsProvider {
       throw error;
     }
   }
-  
+
   /**
    * 扫描指定目录中的模型
    * @param directoryPath 目录路径
@@ -36,7 +36,7 @@ export class TauriModelsProvider implements ModelsProvider {
    */
   async scanDirectory(directoryPath: string, onModelFound?: (model: Model) => void): Promise<Model[]> {
     const models: Model[] = [];
-    
+
     await this.message.post("config/scan_models", {
       "scan_dir": directoryPath
     }, {
@@ -49,10 +49,11 @@ export class TauriModelsProvider implements ModelsProvider {
             name: data.name,
             path: data.path,
             type: data.type || "未知类型",
-            size: data.size || "未知大小"
+            size: data.size || "未知大小",
+            installed: data.installed || false
           };
           models.push(model);
-          
+
           // 如果提供了回调函数，则调用它
           if (onModelFound) {
             onModelFound(model);
@@ -60,10 +61,10 @@ export class TauriModelsProvider implements ModelsProvider {
         }
       },
     });
-    
+
     return models;
   }
-  
+
   /**
    * 添加模型到系统
    * @param modelPath 模型路径
@@ -77,7 +78,7 @@ export class TauriModelsProvider implements ModelsProvider {
     let success = result.type && result.type === "success";
     return success;
   }
-  
+
   /**
    * 获取所有监听目录
    * @returns 监听目录列表
@@ -85,7 +86,7 @@ export class TauriModelsProvider implements ModelsProvider {
   getWatchedDirectories(): Promise<WatchedDirectory[]> {
     return Promise.resolve([]);
   }
-  
+
   /**
    * 添加监听目录
    * @param directoryPath 目录路径
@@ -94,7 +95,7 @@ export class TauriModelsProvider implements ModelsProvider {
   addWatchedDirectory(directoryPath: string): Promise<WatchedDirectory> {
     return Promise.resolve({ id: '', path: directoryPath });
   }
-  
+
   /**
    * 移除监听目录
    * @param directoryId 监听目录ID
@@ -103,7 +104,7 @@ export class TauriModelsProvider implements ModelsProvider {
   removeWatchedDirectory(_: string): Promise<boolean> {
     return Promise.resolve(false);
   }
-  
+
   /**
    * 获取拖放的文件路径
    * @param event 拖放事件

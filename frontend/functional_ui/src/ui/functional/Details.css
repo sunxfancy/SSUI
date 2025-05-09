@@ -1,0 +1,31 @@
+.details-container {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    max-height: 600px;
+}
+
+.details-scrollable {
+    flex: 1;
+    overflow-y: auto;
+    padding-right: 10px;
+}
+
+/* 自定义滚动条样式 */
+.details-scrollable::-webkit-scrollbar {
+    width: 8px;
+}
+
+.details-scrollable::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 4px;
+}
+
+.details-scrollable::-webkit-scrollbar-thumb {
+    background: #888;
+    border-radius: 4px;
+}
+
+.details-scrollable::-webkit-scrollbar-thumb:hover {
+    background: #555;
+} 

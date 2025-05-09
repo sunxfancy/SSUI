@@ -49,23 +49,15 @@ class ModelService:
                     for dirpath, dirnames, filenames in os.walk(scan_dir):
                         # 首先检查当前目录是否是一个模型
                         try:
-                            model_config = ModelInfoCache.get(dirpath)
-                            if model_config:
-                                # 检查目录是否已经安装
-                                if dirpath in installed_paths:
-                                    print(f"跳过已安装的模型目录: {dirpath}")
-                                    dirnames.clear()
-                                    continue
-                                    
+                            if dirpath in installed_paths or ModelInfoCache.get(dirpath):
                                 # 如果当前目录是一个模型，则跳过扫描其子目录
-                                scaned_models.append({"path": dirpath, "name": os.path.basename(dirpath)})
                                 callback_data = {
-                                    'model_found': {
-                                        'path': dirpath,
-                                        'name': os.path.basename(dirpath)
-                                    }
+                                    'path': dirpath,
+                                    'name': os.path.basename(dirpath),
+                                    'installed': dirpath in installed_paths
                                 }
-                                loop.call_soon_threadsafe(callback, client_id, request_uuid, callback_data)
+                                scaned_models.append(callback_data)
+                                loop.call_soon_threadsafe(callback, client_id, request_uuid, {'model_found': callback_data})
                                 # 清空dirnames列表，这样os.walk就不会继续扫描子目录
                                 dirnames.clear()
                                 continue
@@ -80,21 +72,16 @@ class ModelService:
                                 or filename.endswith(".ckpt")
                             ):
                                 model_path = os.path.join(dirpath, filename)
-                                # 检查模型是否已经安装
-                                if model_path in installed_paths:
-                                    print(f"跳过已安装的模型: {model_path}")
-                                    continue
-                                    
                                 try:
-                                    model_config = ModelInfoCache.get(model_path)
-                                    scaned_models.append({"path": model_path, "name": filename})
+                                    if not model_path in installed_paths:
+                                        ModelInfoCache.get(model_path)
                                     callback_data = {
-                                        'model_found': {
-                                            'path': model_path,
-                                            'name': filename
-                                        }
+                                        'path': model_path,
+                                        'name': filename,
+                                        'installed': model_path in installed_paths
                                     }
-                                    loop.call_soon_threadsafe(callback, client_id, request_uuid, callback_data)
+                                    scaned_models.append(callback_data)
+                                    loop.call_soon_threadsafe(callback, client_id, request_uuid, {'model_found': callback_data})
                                 except Exception as e:
                                     continue
                 

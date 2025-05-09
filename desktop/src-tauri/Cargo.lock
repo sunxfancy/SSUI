@@ -935,7 +935,7 @@ dependencies = [
  "rustc_version",
  "toml",
  "vswhom",
- "winreg 0.52.0",
+ "winreg",
 ]
 
 [[package]]
@@ -3878,10 +3878,10 @@ version = "0.1.0"
 dependencies = [
  "env_logger",
  "flate2",
- "lazy_static",
  "log",
  "serde",
  "serde_json",
+ "sha2",
  "tar",
  "tauri",
  "tauri-build",
@@ -3898,8 +3898,7 @@ dependencies = [
  "tauri-plugin-websocket",
  "tauri-plugin-window-state",
  "tokio",
- "winreg 0.55.0",
- "wmi",
+ "windows",
 ]
 
 [[package]]
@@ -5822,37 +5821,12 @@ dependencies = [
 ]
 
 [[package]]
-name = "winreg"
-version = "0.55.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "cb5a765337c50e9ec252c2069be9bf91c7df47afb103b642ba3a53bf8101be97"
-dependencies = [
- "cfg-if",
- "windows-sys 0.59.0",
-]
-
-[[package]]
 name = "wit-bindgen-rt"
 version = "0.39.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "6f42320e61fe2cfd34354ecb597f86f413484a798ba44a8ca1165c58d42da6c1"
 dependencies = [
  "bitflags 2.9.0",
-]
-
-[[package]]
-name = "wmi"
-version = "0.15.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2f902b4592b911109e7352bcfec7b754b07ec71e514d7dfa280eaef924c1cb08"
-dependencies = [
- "chrono",
- "futures",
- "log",
- "serde",
- "thiserror 2.0.12",
- "windows",
- "windows-core 0.60.1",
 ]
 
 [[package]]
