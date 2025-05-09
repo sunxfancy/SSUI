@@ -3,7 +3,6 @@ import {Spinner, Tabs, Tab, Icon, Button} from '@blueprintjs/core';
 import axios from 'axios';
 import { CivitaiModel } from '../../../types/civitai';
 import styles from './style.module.css';
-import {produce} from "immer";
 
 interface CivitaiModelsProps {
     onModelSelect?: (model: CivitaiModel) => void;
@@ -14,17 +13,12 @@ export const CivitaiModels: React.FC<CivitaiModelsProps> = () => {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [selectedType, setSelectedType] = useState<string>('all');
-    const [ page, setPage ] = useState(1)
-    const [ nextCursor, setNextCursor ] = useState('')
 
     useEffect(() => {
         fetchModels();
     }, []);
 
-    const fetchModels = async (toPage = 1) => {
-        if (toPage) {
-            setPage(toPage)
-        }
+    const fetchModels = async () => {
         try {
             setLoading(true);
             const response = await axios.get('https://civitai.com/api/v1/models', {
@@ -50,13 +44,6 @@ export const CivitaiModels: React.FC<CivitaiModelsProps> = () => {
 
     const modelTypes = ['all', ...new Set(models.map(model => model.type))];
 
-    const handleScroll = (e) => {
-        // const { scrollTop, scrollHeight, clientHeight } = e.target
-        // if (scrollTop + clientHeight >= scrollHeight - 200 && !loading) {
-        //     fetchModels(page + 1)
-        // }
-    }
-
     const changeTab = (newTabId: string) => {
         setSelectedType(newTabId);
     }
@@ -69,7 +56,7 @@ export const CivitaiModels: React.FC<CivitaiModelsProps> = () => {
                 ))}
             </Tabs>
 
-            <div className={styles.cardList} onScroll={handleScroll}>
+            <div className={styles.cardList}>
                 {filteredModels.map(model => (
                     <div className={styles.civitaiModelCard} key={model.id}>
                         <div className={styles.cardType}>{model.type}</div>

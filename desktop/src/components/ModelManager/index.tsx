@@ -1,5 +1,5 @@
 import React, {useEffect, useRef, useState} from 'react';
-import {Button, InputGroup, Menu, MenuItem, Popover, Position, Tag, CompoundTag} from "@blueprintjs/core";
+import { Button, InputGroup, Menu, MenuItem, Popover, Position, Tag, CompoundTag, NonIdealState } from "@blueprintjs/core";
 import { Select } from '@blueprintjs/select'
 import "@blueprintjs/core/lib/css/blueprint.css";
 import "@blueprintjs/icons/lib/css/blueprint-icons.css";
@@ -166,13 +166,14 @@ export const ModelManager = (props: ModelManagerProps) => {
                 </Popover>
             </div>
 
-
             <div className={styles.modelList}>
                 {groups.map((group, index) => (
                     <div className={styles.model} key={group.id}>
                         <div className={styles.modelName}>
-                            <div>{group.name}</div>
-                            <span className={styles.modelSum}>{group.models.length}</span>
+                            <div className={styles.modelNameInner}>
+                                <div>{group.name}</div>
+                                <span className={styles.modelSum}>{group.models.length}</span>
+                            </div>
                         </div>
 
                         <div className={styles.models}>
@@ -225,8 +226,8 @@ export const ModelManager = (props: ModelManagerProps) => {
                 ))}
 
                 {groups.length === 0 && (
-                    <div style={{ textAlign: "center", padding: "20px" }}>
-                        <p>没有找到匹配的模型</p>
+                    <div className={styles.empty}>
+                        <NonIdealState icon="error" title="没有找到匹配的模型" action={<Button icon="plus" intent="success" onClick={() => props.addModel?.()}>添加模型</Button>} />
                     </div>
                 )}
             </div>

@@ -33,24 +33,39 @@
     }
 
     .modelList {
-        flex: 1;
+        height: calc(100vh - 120px);
         overflow: auto;
+        border-radius: 8px;
+        padding-right: 4px;
+        margin-top: 10px;
 
         .model {
             .modelName {
+                position: sticky;
+                top: 0;
+                z-index: 3;
+                background-color: #f6f6f6;
                 display: flex;
                 align-items: center;
                 font-weight: bold;
                 font-size: 15px;
-                margin: 10px 0;
-                padding-left: 2px;
+                border-bottom: solid 1px rgb(227,227,227);
+
+                .modelNameInner {
+                    background-color: #eee;
+                    width: 100%;
+                    display: flex;
+                    align-items: center;
+                    border-radius: 8px 8px 0 0;
+                    padding: 8px 0 8px 8px;
+                }
 
                 .modelSum {
                     width: 20px;
                     height: 20px;
                     font-size: 12px;
-                    background-color: rgba(45,114,210,.1);
-                    color: #215db0;
+                    background-color: rgba(45, 114, 210, 0.15);
+                    color: #0f5ec2;
                     display: inline-flex;
                     align-items: center;
                     justify-content: center;
@@ -59,8 +74,9 @@
             }
 
             .models {
-                border-radius: 8px;
+                border-radius: 0 0 8px 8px;
                 overflow: hidden;
+                margin-bottom: 10px;
 
                 .singleModel {
                     background-color: white;
@@ -103,4 +119,10 @@
     align-items: center;
     justify-content:  center;
     height: 16px;
+}
+
+.empty {
+    height: 300px;
+    display: flex;
+    align-items: center;
 }
