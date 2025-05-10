@@ -1,37 +1,29 @@
-export interface WorldPositionState {
-    x: number;
-    y: number;
-}
+import { produce, immerable } from "immer";
 
 export class WorldPosition {
-    private state: WorldPositionState;
+    [immerable] = true;
+    public x: number;
+    public y: number;
 
-    constructor(initialState: WorldPositionState = { x: 0, y: 0 }) {
-        this.state = initialState;
-    }
-
-    getState(): WorldPositionState {
-        return { ...this.state };
+    constructor(x: number, y: number) {
+        this.x = x;
+        this.y = y;
     }
 
     // 移动世界位置
     move(dx: number, dy: number) {
-        this.state = {
-            x: this.state.x + dx,
-            y: this.state.y + dy
-        };
+        return produce(this, draft => {
+            draft.x = draft.x + dx;
+            draft.y = draft.y + dy;
+        });
     }
 
     // 设置世界位置
     setPosition(x: number, y: number) {
-        this.state = {
-            x,
-            y
-        };
+        return produce(this, draft => {
+            draft.x = x;
+            draft.y = y;
+        });
     }
 
-    // 获取世界位置
-    getPosition(): WorldPositionState {
-        return { ...this.state };
-    }
 } 

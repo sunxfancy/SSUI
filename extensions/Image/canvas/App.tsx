@@ -23,10 +23,6 @@ interface AIDrawingCanvasState {
         y: number;
     };
     isDragging: boolean;
-    containerSize: {
-        width: number;
-        height: number;
-    };
     layers: {
         id: string;
         name: string;
@@ -42,13 +38,13 @@ interface AIDrawingCanvasState {
         x: number;
         y: number;
     } | null;
+    worldPosition: WorldPosition;
+    viewport: Viewport;
 }
 
 class AIDrawingCanvas extends React.Component<{path: string}, AIDrawingCanvasState> {
     private drawingService: AIDrawingService;
     private stageRef: React.RefObject<any>;
-    private viewport: Viewport;
-    private worldPosition: WorldPosition;
     private containerRef: React.RefObject<HTMLDivElement>;
 
     constructor(props: {path: string}) {
@@ -56,10 +52,6 @@ class AIDrawingCanvas extends React.Component<{path: string}, AIDrawingCanvasSta
         this.state = {
             targetPosition: { x: 0, y: 0 },
             isDragging: false,
-            containerSize: {
-                width: window.innerWidth,
-                height: window.innerHeight
-            },
             layers: [
                 {
                     id: 'layer1',
@@ -73,19 +65,13 @@ class AIDrawingCanvas extends React.Component<{path: string}, AIDrawingCanvasSta
             activeLayer: 'layer1',
             selectedTool: 'move',
             brushSize: 20,
-            brushPosition: null
+            brushPosition: null,
+            worldPosition: new WorldPosition(0, 0),
+            viewport: new Viewport(window.innerWidth, window.innerHeight)
         };
         this.drawingService = new SSUIAIDrawingService();
         this.stageRef = React.createRef();
         this.containerRef = React.createRef();
-        this.viewport = new Viewport({
-            x: 0,
-            y: 0,
-            width: window.innerWidth,
-            height: window.innerHeight,
-            scale: 1
-        });
-        this.worldPosition = new WorldPosition();
     }
 
     componentDidMount() {
@@ -100,15 +86,9 @@ class AIDrawingCanvas extends React.Component<{path: string}, AIDrawingCanvasSta
     private updateContainerSize = () => {
         if (this.containerRef.current) {
             const { width, height } = this.containerRef.current.getBoundingClientRect();
-            this.setState({
-                containerSize: { width, height }
-            });
-            this.viewport = new Viewport({
-                ...this.viewport.getState(),
-                width,
-                height
-            });
-            this.forceUpdate();
+            this.setState(prevState => ({
+                viewport: prevState.viewport.setSize(width, height)
+            }));
         }
     };
 
@@ -129,8 +109,6 @@ class AIDrawingCanvas extends React.Component<{path: string}, AIDrawingCanvasSta
             return;
         }
 
-        this.setState({ isDragging: false });
-        
         const currentX = e.target.x();
         const currentY = e.target.y();
         
@@ -138,6 +116,7 @@ class AIDrawingCanvas extends React.Component<{path: string}, AIDrawingCanvasSta
         const newY = this.snapToGrid(currentY);
         
         this.setState({
+            isDragging: false,
             targetPosition: { x: newX, y: newY }
         });
         
@@ -151,23 +130,31 @@ class AIDrawingCanvas extends React.Component<{path: string}, AIDrawingCanvasSta
             e.evt.preventDefault();
             const stage = this.stageRef.current;
             const pointer = stage.getPointerPosition();
-            this.viewport.startDragging(pointer);
+            this.setState(prevState => ({
+                viewport: prevState.viewport.startDragging(pointer)
+            }));
         }
     };
 
     handleViewportDragMove = (e: any) => {
         const stage = this.stageRef.current;
         const pointer = stage.getPointerPosition();
-        if (this.viewport.handleDrag(pointer)) {
-            // 更新世界位置
-            const viewportState = this.viewport.getState();
-            this.worldPosition.setPosition(-viewportState.x, -viewportState.y);
-            this.forceUpdate();
+        if (this.state.viewport.isDraggingViewport()) {
+            const newViewport = this.state.viewport.handleDrag(pointer);
+            this.setState(prevState => ({
+                viewport: newViewport,
+                worldPosition: prevState.worldPosition.setPosition(
+                    -newViewport.position.x / newViewport.scale,
+                    -newViewport.position.y / newViewport.scale
+                )
+            }));
         }
     };
 
     handleViewportDragEnd = () => {
-        this.viewport.stopDragging();
+        this.setState(prevState => ({
+            viewport: prevState.viewport.stopDragging()
+        }));
     };
 
     // 处理鼠标滚轮缩放
@@ -175,8 +162,9 @@ class AIDrawingCanvas extends React.Component<{path: string}, AIDrawingCanvasSta
         e.evt.preventDefault();
         const stage = this.stageRef.current;
         const pointer = stage.getPointerPosition();
-        this.viewport.handleZoom(e.evt.deltaY, pointer);
-        this.forceUpdate();
+        this.setState(prevState => ({
+            viewport: prevState.viewport.handleZoom(e.evt.deltaY, pointer)
+        }));
     };
 
     handleLayerChange = (layerId: string, changes: any) => {
@@ -224,10 +212,9 @@ class AIDrawingCanvas extends React.Component<{path: string}, AIDrawingCanvasSta
     };
 
     render() {
-        const { targetPosition, isDragging, containerSize, layers, brushPosition, brushSize } = this.state;
-        const viewport = this.viewport.getState();
-        const worldPos = this.worldPosition.getPosition();
-
+        const { targetPosition, isDragging, layers, brushPosition, brushSize } = this.state;
+        const viewport = this.state.viewport;
+        const worldPos = this.state.worldPosition;
         return (
             <div 
                 ref={this.containerRef}
@@ -240,7 +227,7 @@ class AIDrawingCanvas extends React.Component<{path: string}, AIDrawingCanvasSta
                     position: 'fixed',
                     top: 0,
                     left: 0,
-                    cursor: this.viewport.isDraggingViewport() ? 'grabbing' : 'grab'
+                    cursor: viewport.isDraggingViewport() ? 'grabbing' : 'grab'
                 }}
                 onPointerDown={this.handlePointerDown}
                 onPointerMove={this.handlePointerMove}
@@ -249,9 +236,9 @@ class AIDrawingCanvas extends React.Component<{path: string}, AIDrawingCanvasSta
                 <Toolbar onToolSelect={this.handleToolSelect} />
                 <Stage
                     ref={this.stageRef}
-                    width={containerSize.width}
-                    height={containerSize.height}
-                    draggable={this.viewport.isDraggingViewport()}
+                    width={viewport.size.width}
+                    height={viewport.size.height}
+                    draggable={viewport.isDraggingViewport()}
                     onMouseDown={this.handleViewportDragStart}
                     onMouseMove={this.handleViewportDragMove}
                     onMouseUp={this.handleViewportDragEnd}
