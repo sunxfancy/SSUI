@@ -32,21 +32,29 @@
     }
 }
 
-.tree {
-    font-size: 13px;
-    margin-left: -6px;
-}
+.treeWp {
+    overflow: auto;
+    width: 100%;
+    height: calc(100vh - 50px);
 
-.treeIcon {
-    width: 20px;
-    height: 20px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    margin-right: 4px;
+    .tree {
+        font-size: 13px;
+        margin-left: -6px;
 
-    svg {
-        width: 18px;
-        height: 18px;
+    }
+
+    .treeIcon {
+        width: 20px;
+        height: 20px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-right: 4px;
+
+        svg {
+            width: 18px;
+            height: 18px;
+        }
     }
 }
+

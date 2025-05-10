@@ -66,11 +66,11 @@ const App = () => {
     return (
         <div style={{ height: '100%' }}>
             <Allotment>
-                <Allotment.Pane preferredSize={360} minSize={100} maxSize={500}>
+                <Allotment.Pane preferredSize={360} minSize={360} maxSize={500}>
                     <div style={{ display: 'flex', height: '100%' }}>
                         <Navbar navIndex={navIndex} updateNavIndex={setNavIndex} />
                         {/*<GenerateNavContent></GenerateNavContent>*/}
-                        <div style={{ width: '100%' }}>
+                        <div style={{ width: '100%', overflow: 'hidden' }}>
                             <TabPanel
                                 id={0}
                                 selectedTabId={navIndex}
