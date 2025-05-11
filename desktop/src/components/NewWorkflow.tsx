@@ -1,7 +1,7 @@
 import React from 'react';
 import { Dialog, Tabs, Tab, Button, Icon, Tooltip, InputGroup, IconName } from '@blueprintjs/core';
 import { open } from '@tauri-apps/plugin-dialog';
-import { readTextFile } from '@tauri-apps/plugin-fs';
+import { readTextFile, copyFile } from '@tauri-apps/plugin-fs';
 import { resolveResource } from '@tauri-apps/api/path';
 
 import '@blueprintjs/core/lib/css/blueprint.css';
@@ -84,9 +84,27 @@ export class NewWorkflow extends React.Component<NewWorkflowProps, NewWorkflowSt
     }
   };
 
-  handleConfirm = () => {
+  handleConfirm = async () => {
     const { selectedWorkflows, targetPath } = this.state;
     if (selectedWorkflows.length > 0 && targetPath) {
+
+      const basicFiles = [
+        'example.canvas',
+        'ssproject.yaml', 
+        'workflow-flux.py',
+        'workflow-sd1.py',
+        'workflow-sdxl.py'
+      ];
+      
+      const currentDir = await resolveResource('.');
+      const projectRoot = currentDir.split('/desktop')[0]; 
+      const sourceDir = `${projectRoot}/examples/basic`;
+      
+      for (const file of basicFiles) {
+        const sourcePath = `${sourceDir}/${file}`;
+        const destPath = `${targetPath}/${file}`;
+        await copyFile(sourcePath, destPath);
+      }
       this.props.onWorkflowSelect(selectedWorkflows, targetPath);
       this.props.onClose();
     }
