@@ -21,21 +21,15 @@ Stable Scripts UI 是一个基于网页的用户界面，用于 `Stable Scripts`
 - **可定制**：您可以自定义脚本、类型，并通过插件扩展支持的模型、面板、加载器、UI框架等。
 
 
-## 类型
+## 如何编写Stable Scripts？
 
-- DiffusionModel
-  - SD1
-  - SDXL
-    - Pony
-    - Illustrious
-  - Flux
-- Clip
-- VAE
-- Latent
-- Image
-- Mask
-- ControlNet
-- Conditioning
+详细请参考[Stable Scripts](doc/StableScripts.md)文档。
+
+目前支持的模型有：
+- SD1
+- SDXL
+- Flux
+
 
 
 ## 设置开发环境
