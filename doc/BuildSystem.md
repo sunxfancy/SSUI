@@ -29,12 +29,12 @@ yarn dev:executor
 ## 构建目标
 
 我们主要有6个主要构建目标：
-- desktop 桌面端主项目  依赖 functional_ui, ssui_components, server, extension_builder
-- functional_ui 基础UI界面  依赖 ssui_components
-- ssui_components 基础组件
-- server 服务器端 依赖 functional_ui
-- ssui-vscode 插件 依赖 server, ssui_components
-- extension_builder 扩展构建工具
+- `desktop` 桌面端主项目  依赖 `functional_ui`, `ssui_components`, `server`, `extension_builder`
+- `functional_ui` 基础UI界面  依赖 `ssui_components`
+- `ssui_components` 基础组件
+- `server` 服务器端 依赖 `functional_ui`
+- `ssui-vscode` 插件 依赖 `server`, `ssui_components`
+- `extension_builder` 扩展构建工具
 
 ## 构建命令
 

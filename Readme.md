@@ -21,21 +21,14 @@ Comparing to other stable diffusion UI, SSUI has 5 major pros:
 - **Customizable**: You can customize the scripts, types, models, panels, loaders, ui framework and more.
 
 
-## Types
+## How to write Stable Scripts?
 
-- DiffusionModel
-  - SD1
-  - SDXL
-    - Pony
-    - Illustrious
-  - Flux
-- Clip
-- VAE
-- Latent
-- Image
-- Mask
-- ControlNet
-- Conditioning
+Please refer to [Stable Scripts](doc/StableScripts.en.md) document for details.
+
+Currently supported models:
+- SD1
+- SDXL
+- Flux
 
 
 ## Setup Development Environment

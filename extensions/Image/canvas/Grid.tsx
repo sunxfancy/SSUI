@@ -1,9 +1,9 @@
 import React from 'react';
 import { Line, Group, Rect } from 'react-konva';
-import { ViewportState } from './Viewport';
+import { Viewport } from './Viewport';
 
 interface GridProps {
-    viewport: ViewportState;
+    viewport: Viewport;
 }
 
 const SMALL_GRID_SIZE = 64;
@@ -13,13 +13,13 @@ export class Grid extends React.Component<GridProps> {
     // 计算网格线的范围
     private calculateGridRange(gridSize: number) {
         const { viewport } = this.props;
-        const { x, y, width, height, scale } = viewport;
+        const { position, size, scale } = viewport;
 
         // 计算视口范围
-        const viewLeft = x;
-        const viewTop = y;
-        const viewRight = x + width / scale;
-        const viewBottom = y + height / scale;
+        const viewLeft = position.x;
+        const viewTop = position.y;
+        const viewRight = position.x + size.width / scale;
+        const viewBottom = position.y + size.height / scale;
 
         // 计算网格线的起始和结束位置
         const startX = Math.floor(viewLeft / gridSize) * gridSize;
@@ -65,16 +65,16 @@ export class Grid extends React.Component<GridProps> {
     // 生成视口指示器
     private generateViewportIndicator() {
         const { viewport } = this.props;
-        const { x, y, width, height, scale } = viewport;
+        const { position, size, scale } = viewport;
 
         return (
             <Group>
                 {/* 视口边界 */}
                 <Rect
-                    x={x}
-                    y={y}
-                    width={width / scale}
-                    height={height / scale}
+                    x={position.x}
+                    y={position.y}
+                    width={size.width / scale}
+                    height={size.height / scale}
                     stroke="#ff0000"
                     strokeWidth={2}
                     fill="rgba(255, 0, 0, 0.1)"

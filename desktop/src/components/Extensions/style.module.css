@@ -19,6 +19,10 @@
     align-items: center;
     margin-bottom: 10px;
 
+    & > div {
+        flex: 1;
+    }
+
     .searchButton {
         width: 120px;
         margin-left: 10px;

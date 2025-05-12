@@ -1,5 +1,5 @@
 import React from 'react';
-import { Stage, Layer, Rect, Group, Circle } from 'react-konva';
+import { Stage, Layer, Rect, Group, Circle, Image } from 'react-konva';
 import { AIDrawingService, SSUIAIDrawingService } from './AIDrawingService';
 import { Viewport } from './Viewport';
 import { Grid } from './Grid';
@@ -7,6 +7,7 @@ import { WorldPosition } from './WorldPosition';
 import { FloatingPanel } from './FloatingPanel';
 import { SidePanel } from './SidePanel';
 import Toolbar from './Toolbar';
+import { produce } from 'immer';
 
 const GRID_SIZE = 64;
 const TARGET_SIZE = 512;
@@ -23,10 +24,6 @@ interface AIDrawingCanvasState {
         y: number;
     };
     isDragging: boolean;
-    containerSize: {
-        width: number;
-        height: number;
-    };
     layers: {
         id: string;
         name: string;
@@ -42,13 +39,13 @@ interface AIDrawingCanvasState {
         x: number;
         y: number;
     } | null;
+    worldPosition: WorldPosition;
+    viewport: Viewport;
 }
 
 class AIDrawingCanvas extends React.Component<{path: string}, AIDrawingCanvasState> {
     private drawingService: AIDrawingService;
     private stageRef: React.RefObject<any>;
-    private viewport: Viewport;
-    private worldPosition: WorldPosition;
     private containerRef: React.RefObject<HTMLDivElement>;
 
     constructor(props: {path: string}) {
@@ -56,10 +53,6 @@ class AIDrawingCanvas extends React.Component<{path: string}, AIDrawingCanvasSta
         this.state = {
             targetPosition: { x: 0, y: 0 },
             isDragging: false,
-            containerSize: {
-                width: window.innerWidth,
-                height: window.innerHeight
-            },
             layers: [
                 {
                     id: 'layer1',
@@ -73,19 +66,13 @@ class AIDrawingCanvas extends React.Component<{path: string}, AIDrawingCanvasSta
             activeLayer: 'layer1',
             selectedTool: 'move',
             brushSize: 20,
-            brushPosition: null
+            brushPosition: null,
+            worldPosition: new WorldPosition(0, 0),
+            viewport: new Viewport(window.innerWidth, window.innerHeight)
         };
         this.drawingService = new SSUIAIDrawingService();
         this.stageRef = React.createRef();
         this.containerRef = React.createRef();
-        this.viewport = new Viewport({
-            x: 0,
-            y: 0,
-            width: window.innerWidth,
-            height: window.innerHeight,
-            scale: 1
-        });
-        this.worldPosition = new WorldPosition();
     }
 
     componentDidMount() {
@@ -100,15 +87,9 @@ class AIDrawingCanvas extends React.Component<{path: string}, AIDrawingCanvasSta
     private updateContainerSize = () => {
         if (this.containerRef.current) {
             const { width, height } = this.containerRef.current.getBoundingClientRect();
-            this.setState({
-                containerSize: { width, height }
-            });
-            this.viewport = new Viewport({
-                ...this.viewport.getState(),
-                width,
-                height
-            });
-            this.forceUpdate();
+            this.setState(prevState => ({
+                viewport: prevState.viewport.setSize(width, height)
+            }));
         }
     };
 
@@ -129,8 +110,6 @@ class AIDrawingCanvas extends React.Component<{path: string}, AIDrawingCanvasSta
             return;
         }
 
-        this.setState({ isDragging: false });
-        
         const currentX = e.target.x();
         const currentY = e.target.y();
         
@@ -138,6 +117,7 @@ class AIDrawingCanvas extends React.Component<{path: string}, AIDrawingCanvasSta
         const newY = this.snapToGrid(currentY);
         
         this.setState({
+            isDragging: false,
             targetPosition: { x: newX, y: newY }
         });
         
@@ -151,23 +131,31 @@ class AIDrawingCanvas extends React.Component<{path: string}, AIDrawingCanvasSta
             e.evt.preventDefault();
             const stage = this.stageRef.current;
             const pointer = stage.getPointerPosition();
-            this.viewport.startDragging(pointer);
+            this.setState(prevState => ({
+                viewport: prevState.viewport.startDragging(pointer)
+            }));
         }
     };
 
     handleViewportDragMove = (e: any) => {
         const stage = this.stageRef.current;
         const pointer = stage.getPointerPosition();
-        if (this.viewport.handleDrag(pointer)) {
-            // 更新世界位置
-            const viewportState = this.viewport.getState();
-            this.worldPosition.setPosition(-viewportState.x, -viewportState.y);
-            this.forceUpdate();
+        if (this.state.viewport.isDraggingViewport()) {
+            const newViewport = this.state.viewport.handleDrag(pointer);
+            this.setState(prevState => ({
+                viewport: newViewport,
+                worldPosition: prevState.worldPosition.setPosition(
+                    -newViewport.position.x / newViewport.scale,
+                    -newViewport.position.y / newViewport.scale
+                )
+            }));
         }
     };
 
     handleViewportDragEnd = () => {
-        this.viewport.stopDragging();
+        this.setState(prevState => ({
+            viewport: prevState.viewport.stopDragging()
+        }));
     };
 
     // 处理鼠标滚轮缩放
@@ -175,8 +163,9 @@ class AIDrawingCanvas extends React.Component<{path: string}, AIDrawingCanvasSta
         e.evt.preventDefault();
         const stage = this.stageRef.current;
         const pointer = stage.getPointerPosition();
-        this.viewport.handleZoom(e.evt.deltaY, pointer);
-        this.forceUpdate();
+        this.setState(prevState => ({
+            viewport: prevState.viewport.handleZoom(e.evt.deltaY, pointer)
+        }));
     };
 
     handleLayerChange = (layerId: string, changes: any) => {
@@ -223,11 +212,52 @@ class AIDrawingCanvas extends React.Component<{path: string}, AIDrawingCanvasSta
         this.setState({ brushPosition: null });
     };
 
-    render() {
-        const { targetPosition, isDragging, containerSize, layers, brushPosition, brushSize } = this.state;
-        const viewport = this.viewport.getState();
-        const worldPos = this.worldPosition.getPosition();
+    handleImageGenerated = async (imageUrl: string) => {
+        try {
+            console.log('开始加载图片:', imageUrl);
+            const img = new window.Image();
+            
+            // 添加图片加载事件监听
+            img.onload = () => console.log('图片加载成功');
+            img.onerror = (e) => console.error('图片加载失败:', e);
+            
+            // 设置跨域属性
+            img.crossOrigin = 'anonymous';
+            
+            img.src = imageUrl;
+            
+            // 等待图片加载完成
+            await new Promise((resolve, reject) => {
+                img.onload = resolve;
+                img.onerror = reject;
+            });
+            
+            console.log('开始创建 ImageBitmap');
+            const image = await createImageBitmap(img);
+            console.log('ImageBitmap 创建成功');
+            
+            this.setState(state => produce(state, draft => {
+                const layer = draft.layers.find(layer => layer.id === draft.activeLayer);
+                if (layer) {
+                    console.log('添加图片', this.state.targetPosition.x, this.state.targetPosition.y);
+                    layer.objects.push({
+                        type: 'image',
+                        x: this.state.targetPosition.x,
+                        y: this.state.targetPosition.y,
+                        obj: <Image image={image} x={this.state.targetPosition.x} y={this.state.targetPosition.y} />
+                    });
+                }
+            }));
+        } catch (error) {
+            console.error('图片处理失败:', error);
+            // 这里可以添加用户提示
+        }
+    };
 
+    render() {
+        const { targetPosition, isDragging, layers, brushPosition, brushSize } = this.state;
+        const viewport = this.state.viewport;
+        const worldPos = this.state.worldPosition;
         return (
             <div 
                 ref={this.containerRef}
@@ -240,7 +270,7 @@ class AIDrawingCanvas extends React.Component<{path: string}, AIDrawingCanvasSta
                     position: 'fixed',
                     top: 0,
                     left: 0,
-                    cursor: this.viewport.isDraggingViewport() ? 'grabbing' : 'grab'
+                    cursor: viewport.isDraggingViewport() ? 'grabbing' : 'grab'
                 }}
                 onPointerDown={this.handlePointerDown}
                 onPointerMove={this.handlePointerMove}
@@ -249,9 +279,9 @@ class AIDrawingCanvas extends React.Component<{path: string}, AIDrawingCanvasSta
                 <Toolbar onToolSelect={this.handleToolSelect} />
                 <Stage
                     ref={this.stageRef}
-                    width={containerSize.width}
-                    height={containerSize.height}
-                    draggable={this.viewport.isDraggingViewport()}
+                    width={viewport.size.width}
+                    height={viewport.size.height}
+                    draggable={viewport.isDraggingViewport()}
                     onMouseDown={this.handleViewportDragStart}
                     onMouseMove={this.handleViewportDragMove}
                     onMouseUp={this.handleViewportDragEnd}
@@ -309,7 +339,9 @@ class AIDrawingCanvas extends React.Component<{path: string}, AIDrawingCanvasSta
                 </Stage>
 
                 {/* 添加悬浮面板 */}
-                <FloatingPanel path={this.props.path} onSelectScript={this.handleSelectScript}/>
+                <FloatingPanel path={this.props.path} aiDrawingService={this.drawingService} 
+                onSelectScript={this.handleSelectScript}
+                onImageGenerated={this.handleImageGenerated}/>
 
                 {/* 添加侧边面板 */}
                 <SidePanel 
