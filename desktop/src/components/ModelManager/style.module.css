@@ -19,6 +19,10 @@
         align-items: center;
         margin-bottom: 8px;
 
+        & > div {
+            flex: 1;
+        }
+
         .addButton {
             flex-shrink: 0;
             margin-left: 4px;

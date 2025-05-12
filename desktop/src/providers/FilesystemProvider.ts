@@ -3,8 +3,14 @@ import { readDir } from '@tauri-apps/plugin-fs';
 import { join } from '@tauri-apps/api/path';
 
 export interface IFilesystemProvider {
-    fetchFileTree(directory: string, parent: TreeNodeInfo | null): Promise<TreeNodeInfo[]>;
+    fetchFileTree(directory: string, parent: ExtendTreeNodeInfo | null): Promise<ExtendTreeNodeInfo[]>;
     getPathToRoot(node: TreeNodeInfo): string[];
+}
+
+export interface ExtendTreeNodeInfo extends TreeNodeInfo {
+    isFile: boolean
+    nodeData: TreeNodeInfo['nodeData'] & { path: string },
+    childNodes?: Array<ExtendTreeNodeInfo>
 }
 
 export class TauriFilesystemProvider implements IFilesystemProvider {
@@ -23,7 +29,7 @@ export class TauriFilesystemProvider implements IFilesystemProvider {
         '.venv'
     ];
 
-    async fetchFileTree(directory: string, parent: TreeNodeInfo | null = null): Promise<TreeNodeInfo[]> {
+    async fetchFileTree(directory: string, parent: TreeNodeInfo | null = null): Promise<ExtendTreeNodeInfo[]> {
         try {
             console.log('fetchFileTree', directory);
             const files = await readDir(directory);
