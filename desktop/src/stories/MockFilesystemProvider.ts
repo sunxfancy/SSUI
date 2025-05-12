@@ -1,8 +1,8 @@
 import { TreeNodeInfo } from "@blueprintjs/core";
-import { IFilesystemProvider } from "../providers/FilesystemProvider";
+import { IFilesystemProvider, ExtendTreeNodeInfo } from "../providers/FilesystemProvider";
 
 export class MockFilesystemProvider implements IFilesystemProvider {
-    private mockFileSystem: Map<string, TreeNodeInfo[]> = new Map();
+    private mockFileSystem: Map<string, ExtendTreeNodeInfo[]> = new Map();
 
     constructor() {
         // 初始化模拟文件系统结构
@@ -125,7 +125,7 @@ export class MockFilesystemProvider implements IFilesystemProvider {
         console.log(this.mockFileSystem);
     }
 
-    public async fetchFileTree(directory: string, parent: TreeNodeInfo | null = null): Promise<TreeNodeInfo[]> {
+    public async fetchFileTree(directory: string, parent: ExtendTreeNodeInfo | null = null): Promise<ExtendTreeNodeInfo[]> {
         console.log('fetchFileTree', directory, parent);
         // 模拟异步行为
         return new Promise((resolve) => {
@@ -148,4 +148,4 @@ export class MockFilesystemProvider implements IFilesystemProvider {
     }
 }
 
-export default MockFilesystemProvider; 
+export default MockFilesystemProvider;
