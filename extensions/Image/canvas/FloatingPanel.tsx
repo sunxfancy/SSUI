@@ -3,6 +3,7 @@ import { Card, Elevation, HTMLSelect, Button, Icon } from "@blueprintjs/core";
 import { ComponentTabRef, Message } from "ssui_components";
 import './FloatingPanel.css';
 import { DetailsPanel } from './Details';
+import { AIDrawingService } from './AIDrawingService';
 
 // 定义脚本选项接口
 interface ScriptOption {
@@ -64,7 +65,9 @@ interface FloatingPanelState {
 
 interface FloatingPanelProps {
     path: string;
+    aiDrawingService: AIDrawingService;
     onSelectScript: (script: string) => void;
+    onImageGenerated?: (imageUrl: string) => void;
 }
 
 export class FloatingPanel extends React.Component<FloatingPanelProps, FloatingPanelState> {
@@ -84,7 +87,7 @@ export class FloatingPanel extends React.Component<FloatingPanelProps, FloatingP
     }
     private message: Message = new Message();
     private refPositive: React.RefObject<HTMLInputElement> = React.createRef<HTMLInputElement>();
-
+    private refDetails: React.RefObject<DetailsPanel> = React.createRef<DetailsPanel>();
     refInputs: Map<string, React.RefObject<ComponentTabRef>> = new Map();
 
     componentDidMount() {
@@ -182,8 +185,8 @@ export class FloatingPanel extends React.Component<FloatingPanelProps, FloatingP
         return script.split(/[/\\]/).pop() ?? '';
     }
 
-    handleRun = () => {
-        const { functions, selectedFunc } = this.state;
+    handleRun = async () => {
+        const { selectedScript, functions, selectedFunc } = this.state;
 
         if (!functions) return;
 
@@ -197,10 +200,26 @@ export class FloatingPanel extends React.Component<FloatingPanelProps, FloatingP
         }
 
         // 添加positive
-        params['positive'] = this.refPositive.current?.value ?? '';
+        params['positive'] = {
+            'function': 'ssui.base.Prompt.create',
+            'params': {'text': this.refPositive.current?.value ?? ''}
+        }
 
         console.log('params', params);
 
+        let details = undefined;
+        if (this.refDetails.current) {
+            details = this.refDetails.current.onExecute();
+        }
+
+        try {
+            const imageUrl = await this.props.aiDrawingService.generateImageUrl(selectedScript ?? '', selected, params, details);
+            if (this.props.onImageGenerated) {
+                this.props.onImageGenerated(imageUrl);
+            }
+        } catch (error) {
+            console.log(error);
+        }
     }
 
     render(): JSX.Element {
@@ -282,6 +301,7 @@ export class FloatingPanel extends React.Component<FloatingPanelProps, FloatingP
                                 <DetailsPanel
                                     path={this.state.selectedScript ?? ''}
                                     selected={selectedFunction}
+                                    ref={this.refDetails}
                                 />
                             </div>
                         </div>)}

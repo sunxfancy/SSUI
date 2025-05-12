@@ -1,5 +1,5 @@
 import React from 'react';
-import { Stage, Layer, Rect, Group, Circle } from 'react-konva';
+import { Stage, Layer, Rect, Group, Circle, Image } from 'react-konva';
 import { AIDrawingService, SSUIAIDrawingService } from './AIDrawingService';
 import { Viewport } from './Viewport';
 import { Grid } from './Grid';
@@ -7,6 +7,7 @@ import { WorldPosition } from './WorldPosition';
 import { FloatingPanel } from './FloatingPanel';
 import { SidePanel } from './SidePanel';
 import Toolbar from './Toolbar';
+import { produce } from 'immer';
 
 const GRID_SIZE = 64;
 const TARGET_SIZE = 512;
@@ -211,6 +212,48 @@ class AIDrawingCanvas extends React.Component<{path: string}, AIDrawingCanvasSta
         this.setState({ brushPosition: null });
     };
 
+    handleImageGenerated = async (imageUrl: string) => {
+        try {
+            console.log('开始加载图片:', imageUrl);
+            const img = new window.Image();
+            
+            // 添加图片加载事件监听
+            img.onload = () => console.log('图片加载成功');
+            img.onerror = (e) => console.error('图片加载失败:', e);
+            
+            // 设置跨域属性
+            img.crossOrigin = 'anonymous';
+            
+            img.src = imageUrl;
+            
+            // 等待图片加载完成
+            await new Promise((resolve, reject) => {
+                img.onload = resolve;
+                img.onerror = reject;
+            });
+            
+            console.log('开始创建 ImageBitmap');
+            const image = await createImageBitmap(img);
+            console.log('ImageBitmap 创建成功');
+            
+            this.setState(state => produce(state, draft => {
+                const layer = draft.layers.find(layer => layer.id === draft.activeLayer);
+                if (layer) {
+                    console.log('添加图片', this.state.targetPosition.x, this.state.targetPosition.y);
+                    layer.objects.push({
+                        type: 'image',
+                        x: this.state.targetPosition.x,
+                        y: this.state.targetPosition.y,
+                        obj: <Image image={image} x={this.state.targetPosition.x} y={this.state.targetPosition.y} />
+                    });
+                }
+            }));
+        } catch (error) {
+            console.error('图片处理失败:', error);
+            // 这里可以添加用户提示
+        }
+    };
+
     render() {
         const { targetPosition, isDragging, layers, brushPosition, brushSize } = this.state;
         const viewport = this.state.viewport;
@@ -296,7 +339,9 @@ class AIDrawingCanvas extends React.Component<{path: string}, AIDrawingCanvasSta
                 </Stage>
 
                 {/* 添加悬浮面板 */}
-                <FloatingPanel path={this.props.path} onSelectScript={this.handleSelectScript}/>
+                <FloatingPanel path={this.props.path} aiDrawingService={this.drawingService} 
+                onSelectScript={this.handleSelectScript}
+                onImageGenerated={this.handleImageGenerated}/>
 
                 {/* 添加侧边面板 */}
                 <SidePanel 
