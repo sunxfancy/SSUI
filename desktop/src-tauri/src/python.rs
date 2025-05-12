@@ -302,15 +302,12 @@ pub async fn run_python_background(
 #[tauri::command]
 pub async fn start_server(path: &str, cwd: &str) -> Result<PythonCommand, String> {
     info!("启动服务器: {} 在目录: {}", path, cwd);
+    let mut process_manager = GLOBAL_PROCESS_STATE.process_manager();
     // 检查服务器是否已经运行
-    if GLOBAL_PROCESS_STATE
-        .process_manager()
-        .is_process_running("server")
-    {
+    if process_manager.is_process_running("server") {
         warn!("服务器已经在运行中");
         // 获取进程ID
-        let pid = GLOBAL_PROCESS_STATE
-            .process_manager()
+        let pid = process_manager
             .get_process_pid("server")
             .ok_or_else(|| "无法获取服务器进程ID".to_string())?;
         return Ok(PythonCommand { pid });
@@ -318,16 +315,14 @@ pub async fn start_server(path: &str, cwd: &str) -> Result<PythonCommand, String
 
     // 启动服务器
     let args = vec!["-m", "server"];
-    let child = spawn_python_process(path, cwd, args).await?;
+    let child = spawn_python_process(path, cwd, args)?;
 
     // 记录服务器进程
     let pid = child.id().to_string();
     info!("服务器进程已启动，PID: {}", pid);
 
     // 将进程添加到进程管理器
-    GLOBAL_PROCESS_STATE
-        .process_manager()
-        .add_process("server", child);
+    process_manager.add_process("server", child);
 
     Ok(PythonCommand { pid })
 }
@@ -337,15 +332,12 @@ pub async fn start_server(path: &str, cwd: &str) -> Result<PythonCommand, String
 pub async fn start_executor(path: &str, cwd: &str) -> Result<PythonCommand, String> {
     info!("启动执行器: {} 在目录: {}", path, cwd);
 
+    let mut process_manager = GLOBAL_PROCESS_STATE.process_manager();
     // 检查执行器是否已经在运行
-    if GLOBAL_PROCESS_STATE
-        .process_manager()
-        .is_process_running("executor")
-    {
+    if process_manager.is_process_running("executor") {
         warn!("执行器已经在运行中");
         // 获取进程ID
-        let pid = GLOBAL_PROCESS_STATE
-            .process_manager()
+        let pid = process_manager
             .get_process_pid("executor")
             .ok_or_else(|| "无法获取执行器进程ID".to_string())?;
         return Ok(PythonCommand { pid });
@@ -353,16 +345,14 @@ pub async fn start_executor(path: &str, cwd: &str) -> Result<PythonCommand, Stri
 
     // 启动执行器
     let args = vec!["-m", "ss_executor"];
-    let child = spawn_python_process(path, cwd, args).await?;
+    let child = spawn_python_process(path, cwd, args)?;
 
     // 记录执行器进程
     let pid = child.id().to_string();
     info!("执行器进程已启动，PID: {}", pid);
 
     // 将进程添加到进程管理器
-    GLOBAL_PROCESS_STATE
-        .process_manager()
-        .add_process("executor", child);
+    process_manager.add_process("executor", child);
 
     Ok(PythonCommand { pid })
 }
@@ -372,29 +362,23 @@ pub async fn start_executor(path: &str, cwd: &str) -> Result<PythonCommand, Stri
 pub async fn restart_server(path: &str, cwd: &str) -> Result<PythonCommand, String> {
     info!("重启服务器: {} 在目录: {}", path, cwd);
 
+    let mut process_manager = GLOBAL_PROCESS_STATE.process_manager();
     // 先停止现有服务器进程
-    if GLOBAL_PROCESS_STATE
-        .process_manager()
-        .is_process_running("server")
-    {
+    if process_manager.is_process_running("server") {
         info!("停止现有服务器进程");
-        GLOBAL_PROCESS_STATE
-            .process_manager()
-            .kill_process("server");
+        process_manager.kill_process("server");
     }
 
     // 启动新的服务器进程
     let args = vec!["-m", "server"];
-    let child = spawn_python_process(path, cwd, args).await?;
+    let child = spawn_python_process(path, cwd, args)?;
 
     // 记录服务器进程
     let pid = child.id().to_string();
     info!("服务器进程已重启，PID: {}", pid);
 
     // 将进程添加到进程管理器
-    GLOBAL_PROCESS_STATE
-        .process_manager()
-        .add_process("server", child);
+    process_manager.add_process("server", child);
 
     Ok(PythonCommand { pid })
 }
@@ -404,29 +388,23 @@ pub async fn restart_server(path: &str, cwd: &str) -> Result<PythonCommand, Stri
 pub async fn restart_executor(path: &str, cwd: &str) -> Result<PythonCommand, String> {
     info!("重启执行器: {} 在目录: {}", path, cwd);
 
+    let mut process_manager = GLOBAL_PROCESS_STATE.process_manager();
     // 先停止现有执行器进程
-    if GLOBAL_PROCESS_STATE
-        .process_manager()
-        .is_process_running("executor")
-    {
+    if process_manager.is_process_running("executor") {
         info!("停止现有执行器进程");
-        GLOBAL_PROCESS_STATE
-            .process_manager()
-            .kill_process("executor");
+        process_manager.kill_process("executor");
     }
 
     // 启动新的执行器进程
     let args = vec!["-m", "ss_executor"];
-    let child = spawn_python_process(path, cwd, args).await?;
+    let child = spawn_python_process(path, cwd, args)?;
 
     // 记录执行器进程
     let pid = child.id().to_string();
     info!("执行器进程已重启，PID: {}", pid);
 
     // 将进程添加到进程管理器
-    GLOBAL_PROCESS_STATE
-        .process_manager()
-        .add_process("executor", child);
+    process_manager.add_process("executor", child);
 
     Ok(PythonCommand { pid })
 }
@@ -435,13 +413,11 @@ pub async fn restart_executor(path: &str, cwd: &str) -> Result<PythonCommand, St
 #[tauri::command]
 pub async fn get_server_status() -> Result<ProcessStatus, String> {
     debug!("获取服务器状态");
-    let is_running = GLOBAL_PROCESS_STATE
-        .process_manager()
-        .is_process_running("server");
+    let mut process_manager = GLOBAL_PROCESS_STATE.process_manager();
+
+    let is_running = process_manager.is_process_running("server");
     let pid = if is_running {
-        GLOBAL_PROCESS_STATE
-            .process_manager()
-            .get_process_pid("server")
+        process_manager.get_process_pid("server")
     } else {
         None
     };
@@ -453,13 +429,10 @@ pub async fn get_server_status() -> Result<ProcessStatus, String> {
 #[tauri::command]
 pub async fn get_executor_status() -> Result<ProcessStatus, String> {
     debug!("获取执行器状态");
-    let is_running = GLOBAL_PROCESS_STATE
-        .process_manager()
-        .is_process_running("executor");
+    let mut process_manager = GLOBAL_PROCESS_STATE.process_manager();
+    let is_running = process_manager.is_process_running("executor");
     let pid = if is_running {
-        GLOBAL_PROCESS_STATE
-            .process_manager()
-            .get_process_pid("executor")
+        process_manager.get_process_pid("executor")
     } else {
         None
     };
@@ -478,7 +451,7 @@ impl ProcessManager {
 }
 
 // 启动Python进程并返回Child对象
-async fn spawn_python_process(path: &str, cwd: &str, args: Vec<&str>) -> Result<Child, String> {
+fn spawn_python_process(path: &str, cwd: &str, args: Vec<&str>) -> Result<Child, String> {
     // 从参数中提取一个标识符，用于日志文件名
     let args_identifier = if !args.is_empty() {
         // 使用第二个参数作为标识符的一部分
