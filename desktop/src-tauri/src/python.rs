@@ -302,18 +302,17 @@ pub async fn run_python_background(
 #[tauri::command]
 pub async fn start_server(path: &str, cwd: &str) -> Result<PythonCommand, String> {
     info!("启动服务器: {} 在目录: {}", path, cwd);
-    // 检查服务器是否已经运行
-    if GLOBAL_PROCESS_STATE
-        .process_manager()
-        .is_process_running("server")
     {
-        warn!("服务器已经在运行中");
-        // 获取进程ID
-        let pid = GLOBAL_PROCESS_STATE
-            .process_manager()
-            .get_process_pid("server")
-            .ok_or_else(|| "无法获取服务器进程ID".to_string())?;
-        return Ok(PythonCommand { pid });
+        let mut process_manager = GLOBAL_PROCESS_STATE.process_manager();
+        // 检查服务器是否已经运行
+        if process_manager.is_process_running("server") {
+            warn!("服务器已经在运行中");
+            // 获取进程ID
+            let pid = process_manager
+                .get_process_pid("server")
+                .ok_or_else(|| "无法获取服务器进程ID".to_string())?;
+            return Ok(PythonCommand { pid });
+        }
     }
 
     // 启动服务器
@@ -337,18 +336,17 @@ pub async fn start_server(path: &str, cwd: &str) -> Result<PythonCommand, String
 pub async fn start_executor(path: &str, cwd: &str) -> Result<PythonCommand, String> {
     info!("启动执行器: {} 在目录: {}", path, cwd);
 
-    // 检查执行器是否已经在运行
-    if GLOBAL_PROCESS_STATE
-        .process_manager()
-        .is_process_running("executor")
     {
-        warn!("执行器已经在运行中");
-        // 获取进程ID
-        let pid = GLOBAL_PROCESS_STATE
-            .process_manager()
-            .get_process_pid("executor")
-            .ok_or_else(|| "无法获取执行器进程ID".to_string())?;
-        return Ok(PythonCommand { pid });
+        let mut process_manager = GLOBAL_PROCESS_STATE.process_manager();
+        // 检查执行器是否已经在运行
+        if process_manager.is_process_running("executor") {
+            warn!("执行器已经在运行中");
+            // 获取进程ID
+            let pid = process_manager
+                .get_process_pid("executor")
+                .ok_or_else(|| "无法获取执行器进程ID".to_string())?;
+            return Ok(PythonCommand { pid });
+        }
     }
 
     // 启动执行器
@@ -372,15 +370,13 @@ pub async fn start_executor(path: &str, cwd: &str) -> Result<PythonCommand, Stri
 pub async fn restart_server(path: &str, cwd: &str) -> Result<PythonCommand, String> {
     info!("重启服务器: {} 在目录: {}", path, cwd);
 
-    // 先停止现有服务器进程
-    if GLOBAL_PROCESS_STATE
-        .process_manager()
-        .is_process_running("server")
     {
-        info!("停止现有服务器进程");
-        GLOBAL_PROCESS_STATE
-            .process_manager()
-            .kill_process("server");
+        let mut process_manager = GLOBAL_PROCESS_STATE.process_manager();
+        // 先停止现有服务器进程
+        if process_manager.is_process_running("server") {
+            info!("停止现有服务器进程");
+            process_manager.kill_process("server");
+        }
     }
 
     // 启动新的服务器进程
@@ -404,15 +400,13 @@ pub async fn restart_server(path: &str, cwd: &str) -> Result<PythonCommand, Stri
 pub async fn restart_executor(path: &str, cwd: &str) -> Result<PythonCommand, String> {
     info!("重启执行器: {} 在目录: {}", path, cwd);
 
-    // 先停止现有执行器进程
-    if GLOBAL_PROCESS_STATE
-        .process_manager()
-        .is_process_running("executor")
     {
-        info!("停止现有执行器进程");
-        GLOBAL_PROCESS_STATE
-            .process_manager()
-            .kill_process("executor");
+        let mut process_manager = GLOBAL_PROCESS_STATE.process_manager();
+        // 先停止现有执行器进程
+        if process_manager.is_process_running("executor") {
+            info!("停止现有执行器进程");
+            process_manager.kill_process("executor");
+        }
     }
 
     // 启动新的执行器进程
@@ -435,13 +429,11 @@ pub async fn restart_executor(path: &str, cwd: &str) -> Result<PythonCommand, St
 #[tauri::command]
 pub async fn get_server_status() -> Result<ProcessStatus, String> {
     debug!("获取服务器状态");
-    let is_running = GLOBAL_PROCESS_STATE
-        .process_manager()
-        .is_process_running("server");
+    let mut process_manager = GLOBAL_PROCESS_STATE.process_manager();
+
+    let is_running = process_manager.is_process_running("server");
     let pid = if is_running {
-        GLOBAL_PROCESS_STATE
-            .process_manager()
-            .get_process_pid("server")
+        process_manager.get_process_pid("server")
     } else {
         None
     };
@@ -453,13 +445,10 @@ pub async fn get_server_status() -> Result<ProcessStatus, String> {
 #[tauri::command]
 pub async fn get_executor_status() -> Result<ProcessStatus, String> {
     debug!("获取执行器状态");
-    let is_running = GLOBAL_PROCESS_STATE
-        .process_manager()
-        .is_process_running("executor");
+    let mut process_manager = GLOBAL_PROCESS_STATE.process_manager();
+    let is_running = process_manager.is_process_running("executor");
     let pid = if is_running {
-        GLOBAL_PROCESS_STATE
-            .process_manager()
-            .get_process_pid("executor")
+        process_manager.get_process_pid("executor")
     } else {
         None
     };
