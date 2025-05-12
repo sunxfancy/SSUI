@@ -10,7 +10,7 @@ import ServerService from "./services/Server";
 import { enableMapSet } from 'immer'
 
 // 载入 i18n
-import './i18n';
+import './i18n/i18n.js';
 
 // 载入样式
 import "normalize.css";

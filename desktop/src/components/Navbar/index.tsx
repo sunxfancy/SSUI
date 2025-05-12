@@ -1,6 +1,7 @@
 import {Icon, IconName} from "@blueprintjs/core";
 import styles from './style.module.css'
 import PropTypes from "prop-types";
+import ChangeLng from "../ChangeLng";
 
 export const Navbar = (props: {navIndex:number, updateNavIndex: (index: number) => void}) => {
     const { navIndex, updateNavIndex } = props
@@ -27,6 +28,7 @@ export const Navbar = (props: {navIndex:number, updateNavIndex: (index: number) 
                     )
                 })
             }
+            <ChangeLng />
         </div>
     )
 }
