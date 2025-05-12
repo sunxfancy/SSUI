@@ -9,6 +9,9 @@ import ExecutorService from "./services/Executor";
 import ServerService from "./services/Server";
 import { enableMapSet } from 'immer'
 
+// 载入 i18n
+import './i18n';
+
 // 载入样式
 import "normalize.css";
 import "@blueprintjs/core/lib/css/blueprint.css";
