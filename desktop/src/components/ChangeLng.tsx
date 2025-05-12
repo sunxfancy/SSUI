@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React from 'react';
 import i18n from '../i18n/i18n';
 import { Select } from '@blueprintjs/select';
 import { MenuItem, Icon } from '@blueprintjs/core';
@@ -21,15 +21,8 @@ const items: LanguageItem[] = [
 
 const ChangeLng = () => {
 
-  const [_, setUpdate] = useState(0); // 添加状态用于强制更新
-
   const handleItemSelect = (item: LanguageItem) => {
     console.log('Selected item:', item, 'i18n => ', i18n);
-    // i18n.changeLanguage(item.key).then(() => {
-    //   localStorage.setItem('locale', item.key);
-    //   console.log('Language changed to:', item.key, i18n.language)
-    //   setUpdate(prev => prev + 1); // 强制重新渲染
-    // });
     i18n.changeLanguage(item.key);
     localStorage.setItem('locale', item.key);
   };
