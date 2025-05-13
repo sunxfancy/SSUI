@@ -3,5 +3,8 @@
     "sfpw": "Start from preset workflow",
     "nodyc": "No opened directory, you can:",
     "ocapw": "Or, choose a preset workflow:",
-    "wsp": "Workspace"
+    "wsp": "Workspace",
+    "dmg": "Download",
+    "preset": "Preset model groups",
+    "local": "Local models"
 }
