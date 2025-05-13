@@ -35,7 +35,9 @@
     "resources": [
       "resources/dependencies/*",
       "resources/extensions/*",
-      "resources/app.tar.gz"
+      "resources/app.tar.gz",
+      "workflow/data.json",
+      "workflow/txt2img/basic/*"
     ]
   }
 }
