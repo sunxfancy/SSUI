@@ -6,6 +6,7 @@ import HuggingfaceModels from './HuggingfaceModels';
 import { TauriModelsProvider } from '../../providers/TauriModelsProvider';
 import { ModelsProvider } from '../../providers/IModelsProvider';
 import styles from './style.module.css';
+import PresetModels from './PresetModels/index.tsx';
 
 interface ModelAddingPageProps {
     // 可以在这里添加需要的属性
@@ -34,7 +35,9 @@ export class ModelAddingPage extends Component<ModelAddingPageProps, ModelAdding
         return (
             <Card elevation={Elevation.ZERO}>
                 {/* 预设模型组内容将在这里实现 */}
-                <div>预设模型组内容</div>
+                <PresetModels onModelSelect={(preset) => {
+                    console.log('Selected model:', preset);
+                }} />
             </Card>
         );
     }
