@@ -16,7 +16,7 @@ function createPreviewPanel(
     title: string | undefined,
   ) {
     const previewTitle = title || `Preview: '${uri ? Utils.basename(uri) : "Unnamed"}'`;
-	const URL = "http://localhost:7420/functional_ui/?path="+ uri?.fsPath;
+	const URL = "http://localhost:7422/functional_ui/?path="+ uri?.fsPath;
 	console.log("url: ", URL);
     const webViewPanel = vscode.window.createWebviewPanel("ssui-functional-ui", previewTitle, displayColumn, {
       enableFindWidget: false,

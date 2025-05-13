@@ -3,7 +3,7 @@ import {Button, Tree, Icon, Popover, Menu, MenuItem} from "@blueprintjs/core";
 import { TauriFilesystemProvider, IFilesystemProvider, ExtendTreeNodeInfo } from '../../providers/FilesystemProvider';
 import styles from './style.module.css'
 import {TreeIcon} from "./TreeIcon.tsx";
-import { Trans } from 'react-i18next';
+import { useTranslation } from 'react-i18next';
 
 import "@blueprintjs/core/lib/css/blueprint.css";
 import "@blueprintjs/icons/lib/css/blueprint-icons.css";
@@ -21,6 +21,7 @@ export const WorkSpace = (props: WorkSpaceProps) => {
     const { currentWorkspace, onOpenWorkspace, onSelectWorkflow } = props
     const [ fileTree, setFileTree ] = useState<ExtendTreeNodeInfo>()
     const filesystemProvider = useRef<IFilesystemProvider>(props.filesystemProvider || new TauriFilesystemProvider())
+    const { t }= useTranslation();
 
     useEffect(() => {
         const fn = async () => {
@@ -102,13 +103,13 @@ export const WorkSpace = (props: WorkSpaceProps) => {
     return (
         <div className={styles.workspace}>
             <div className={styles.title}>
-                <span className={styles.titleText}><Trans>工作空间</Trans></span>
+                <span className={styles.titleText}>{t('wsp')}</span>
                 <span>
                     <Popover
                         content={
                             <Menu key="menu">
-                                <MenuItem icon="folder-open" text={<Trans>打开新的已有工作空间</Trans>} onClick={onOpenWorkspace} />
-                                <MenuItem icon="generate" text={<Trans>从预制工作流开始</Trans>} onClick={onSelectWorkflow} />
+                                <MenuItem icon="folder-open" text={t('onw')} onClick={onOpenWorkspace} />
+                                <MenuItem icon="generate" text={t('sfpw')} onClick={onSelectWorkflow} />
                             </Menu>
                         }
                         position="bottom-right"
@@ -136,13 +137,13 @@ export const WorkSpace = (props: WorkSpaceProps) => {
                 </div>
             ) : (
                 <div style={{ display: 'flex', flexDirection: 'column',  padding: '20px', height: '100%' }}>
-                    <p><Trans>当前没有打开的目录, 您可以：</Trans></p>
+                    <p>{t('nodyc')}</p>
                     <div style={{ display: 'flex', justifyContent: 'center', marginTop: '10px', marginBottom: '20px' }} >
-                        <Button onClick={onOpenWorkspace} icon="folder-open" size="large" variant="solid"><Trans>打开已有工作空间</Trans></Button>
+                        <Button onClick={onOpenWorkspace} icon="folder-open" size="large" variant="solid">{t('onw')}</Button>
                     </div>
-                    <p><Trans>或者，选择我们准备的预制工作流：</Trans></p>
+                    <p>{t('ocapw')}</p>
                     <div style={{ display: 'flex', justifyContent: 'center', marginTop: '10px', marginBottom: '10px' }} >
-                        <Button onClick={onSelectWorkflow} icon="generate" size="large" variant="solid"><Trans>从预制工作流开始</Trans></Button>
+                        <Button onClick={onSelectWorkflow} icon="generate" size="large" variant="solid">{t('sfpw')}</Button>
                     </div>
                 </div>
             )}

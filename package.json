@@ -13,7 +13,7 @@
     "extensions/Image"
   ],
   "scripts": {
-    "dev:desktop_sb": "cd desktop && yarn storyboard",
+    "dev:desktop_sb": "cd desktop && yarn storybook",
     "dev:desktop": "yarn build:components && yarn build:functional_ui && cd desktop && yarn tauri dev",
     "dev:server": "yarn build:components && yarn build:functional_ui && node dependencies/venv.cjs python -m server --dev",
     "dev:server:no_build": "node dependencies/venv.cjs python -m server --dev",
@@ -21,6 +21,7 @@
     "dev:functional_ui": "cd frontend/functional_ui && yarn dev",
     "dev:components": "cd frontend/ssui_components && yarn dev",
     "dev:canvas": "cd extensions/Image && yarn dev",
+    "dev:vscode": "cd ssui-vscode && yarn watch",
     "build:desktop_ui": "cd desktop && yarn build",
     "build:desktop": "cd desktop && yarn tauri build",
     "build:desktop:debug": "cd desktop && yarn tauri build --debug",
@@ -28,6 +29,7 @@
     "build:functional_ui": "cd frontend/functional_ui && yarn build",
     "build:example": "cd extensions/example && yarn build",
     "build:extension_builder": "cd extension_builder && yarn build",
+    "build:vscode": "cd ssui-vscode && yarn compile",
     "ext:package": "concurrently \"yarn ext:package_Image\" \"yarn ext:package_Video\" \"yarn ext:package_Audio\"",
     "ext:package_Image": "cd extensions/Image && ssext package -o ../../desktop/src-tauri/resources/extensions/",
     "ext:package_Video": "cd extensions/Video && ssext package -o ../../desktop/src-tauri/resources/extensions/",
@@ -36,6 +38,7 @@
     "test_on": "node dependencies/venv.cjs python tests/run_tests.py --test",
     "package": "yarn build:components && yarn build:functional_ui && yarn build:desktop",
     "package:debug": "yarn build:components && yarn build:functional_ui && yarn build:desktop:debug",
+    "package:vscode": "cd ssui-vscode && yarn package",
     "check_deps": "yarn --version && rustc --version && cargo --version",
     "requirements": "node dependencies/combine_requirements.cjs",
     "install-requirements": "node dependencies/venv.cjs uv pip install -r .venv/requirements.txt",
