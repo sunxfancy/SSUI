@@ -1,5 +1,5 @@
 import React, { Component } from 'react';
-import { Tabs, Tab, TabId, Button } from "@blueprintjs/core";
+import { Tabs, Tab, TabId, Button, TabPanel } from "@blueprintjs/core";
 import { Allotment } from "allotment";
 import "allotment/dist/style.css";
 
@@ -342,7 +342,7 @@ export class TabWindowManager extends Component<{}, State> {
 
   draggingTab?: TabData;
 
-  renderTabs(tabs: TabsNode, pane: PaneNode) {
+  renderTabs(tabs: TabsNode) {
     if (tabs.isEmpty()) {
       return [<NoTabs key="no-tabs" />];
     }
@@ -350,7 +350,6 @@ export class TabWindowManager extends Component<{}, State> {
       key={tab.id}
       id={tab.id}
       title={<TabTitle title={tab.title} onClose={() => this.handleTabClose(tab)} />}
-      panel={tab.content}
       onClickCapture={() => {
         this.handleTabActivate(tab.id);
       }}
@@ -376,24 +375,62 @@ export class TabWindowManager extends Component<{}, State> {
       onDragEnd={(e) => {
         if (this.draggingTab) {
           const position = this.determineDropPosition(e);
-          this.handleTabDragEnd(this.draggingTab, pane.id, position);
+          this.handleTabDragEnd(this.draggingTab, tabs.id, position);
         }
       }}
     />));
   }
 
+  renderTabPanels(tabs: TabsNode, parentId: string) {
+    return tabs.tabs.map(tab => (<TabPanel 
+      className='tab-panel'
+      parentId={parentId}
+      key={tab.id} id={tab.id} selectedTabId={tabs.selected?.id} panel={tab.content} />));
+  }
+
   renderPane(pane: PaneNode) {
     if (pane.isTabs()) {
-      return <Tabs
-        id={`Tabs-${pane.id}`}
-        className='tabs-container'
-        onChange={(newTabId: TabId, prevTabId?: TabId) => {
-          if (newTabId != prevTabId) {this.handleTabActivate(newTabId)}
-        }}
-        selectedTabId={(pane as TabsNode).selected?.id}
-      >
-        {this.renderTabs(pane as TabsNode, pane)}
-      </Tabs>
+      return <div className='tabs-container'>
+        <Tabs
+          id={`Tabs-${pane.id}`}
+          className='tabs-header'
+          onChange={(newTabId: TabId, prevTabId?: TabId) => {
+            if (newTabId != prevTabId) {this.handleTabActivate(newTabId)}
+          }}
+          selectedTabId={(pane as TabsNode).selected?.id}
+        >
+          {this.renderTabs(pane as TabsNode)}
+        </Tabs>
+        <div className='tab-panels-container'  
+          onDragOver={(e) => {
+            console.log("onDragOver", e);
+            e.preventDefault();
+            const target = e.currentTarget as HTMLElement;
+            const rect = target.getBoundingClientRect();
+            let visualRect = {
+              left: rect.left,
+              top: rect.top,
+              width: rect.width,
+              height: rect.height
+            }
+            this.setState({
+              visualRect: visualRect
+            });
+          }}
+          onDragEnter={(e) => {
+            e.preventDefault();
+          }}
+          onDrop={(e) => {
+            e.preventDefault();
+            if (this.draggingTab) {
+              const position = this.determineDropPosition(e);
+              this.handleTabDragEnd(this.draggingTab, (pane as TabsNode).id, position);
+            }
+          }}
+        >
+          {this.renderTabPanels(pane as TabsNode, `Tabs-${pane.id}`)}
+        </div>
+      </div>
     } else {
       return <Allotment className='allotment-container' key={pane.id} vertical={(pane as ContainerNode).vertical} minSize={150}>
         {(pane as ContainerNode).children && (pane as ContainerNode).children.map(childPane => this.renderPane(childPane))}
