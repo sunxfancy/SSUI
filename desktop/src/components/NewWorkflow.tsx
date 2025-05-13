@@ -88,19 +88,18 @@ export class NewWorkflow extends React.Component<NewWorkflowProps, NewWorkflowSt
     const { selectedWorkflows, targetPath } = this.state;
     if (selectedWorkflows.length > 0 && targetPath) {
 
-      const basicFiles = [
-        'example.canvas',
-        'ssproject.yaml', 
-        'workflow-flux.py',
-        'workflow-sd1.py',
-        'workflow-sdxl.py'
-      ];
+      const resoucePath = await resolveResource('workflow/data.json');
+      const jsonObj = JSON.parse(await readTextFile(resoucePath));
+
+      const allWorkflows = [...jsonObj.officialWorkflows, ...jsonObj.communityWorkflows];
+      const matchedWorkflows = selectedWorkflows.map(path => 
+        allWorkflows.find(workflow => workflow.id === path)
+      ).filter(Boolean);
+      const allFileLists = matchedWorkflows.map(workflow => workflow.fileList || []).flat();
       
-      const currentDir = await resolveResource('.');
-      const projectRoot = currentDir.split('/desktop')[0]; 
-      const sourceDir = `${projectRoot}/examples/basic`;
+      const sourceDir = await resolveResource('workflow/txt2img/basic');
       
-      for (const file of basicFiles) {
+      for (const file of allFileLists) {
         const sourcePath = `${sourceDir}/${file}`;
         const destPath = `${targetPath}/${file}`;
         await copyFile(sourcePath, destPath);
