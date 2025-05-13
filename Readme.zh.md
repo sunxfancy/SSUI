@@ -106,3 +106,12 @@ http://localhost:7420/?path=<example_path>/basic/workflow-sd1.py
 
 您可以从以下地址下载：
 https://huggingface.co/datasets/sunxfancy/TestSDModels/tree/main 
+
+
+### 使用 Git Hooks 检查代码
+
+我们推荐使用 [pre-commit](https://git-scm.com/book/ms/v2/Customizing-Git-Git-Hooks) 在提交前检查代码。
+
+```bash
+git config --local core.hooksPath .githooks/
+```
