@@ -16,7 +16,7 @@ interface ModelAddingPageProps {
 const ModelAddingPage: React.FC<ModelAddingPageProps> = () => {
     const [selectedTabId, setSelectedTabId] = useState('preset');
     const { t } = useTranslation();
-    const modelsProvider = new TauriModelsProvider();
+    const modelsProvider: ModelsProvider = new TauriModelsProvider();
 
     const handleTabChange = (newTabId: string) => {
         setSelectedTabId(newTabId);
