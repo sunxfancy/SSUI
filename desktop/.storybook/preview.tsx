@@ -1,5 +1,10 @@
 import React from 'react';
 import i18n from '../src/i18n/i18n';
+// 载入样式
+import "normalize.css";
+import "@blueprintjs/core/lib/css/blueprint.css";
+import "@blueprintjs/icons/lib/css/blueprint-icons.css";
+import "../src/App.css";
 
 export const globalTypes = {
   locale: {
