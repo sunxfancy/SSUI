@@ -1,6 +1,8 @@
 import React from 'react';
 import { Dialog, Tabs, Tab, Button, Icon, Tooltip, InputGroup, IconName } from '@blueprintjs/core';
 import { open } from '@tauri-apps/plugin-dialog';
+import { readTextFile, copyFile } from '@tauri-apps/plugin-fs';
+import { resolveResource } from '@tauri-apps/api/path';
 
 import '@blueprintjs/core/lib/css/blueprint.css';
 import '@blueprintjs/icons/lib/css/blueprint-icons.css';
@@ -22,41 +24,39 @@ interface NewWorkflowState {
   selectedWorkflows: string[];
   targetPath: string;
   activeTab: string;
+  communityWorkflows: WorkflowItem[];
+  officialWorkflows: WorkflowItem[];
 }
 
 export class NewWorkflow extends React.Component<NewWorkflowProps, NewWorkflowState> {
-  // 官方工作流示例数据
-  officialWorkflows: WorkflowItem[] = [
-    { id: 'of1', title: '数据分析流程', description: '用于数据清洗、转换和分析的标准工作流', icon: 'chart' },
-    { id: 'of2', title: '机器学习训练', description: '包含数据预处理、模型训练和评估的完整流程', icon: 'learning' },
-    { id: 'of3', title: '自然语言处理', description: '文本分析和处理的标准工作流', icon: 'document' },
-    { id: 'of4', title: '图像处理', description: '图像识别和处理的工作流', icon: 'media' },
-    { id: 'of5', title: '数据可视化', description: '创建交互式数据可视化的工作流', icon: 'graph' },
-    { id: 'of6', title: '自动化报告', description: '自动生成数据分析报告的工作流', icon: 'clipboard' },
-    { id: 'of7', title: '预测分析', description: '使用历史数据进行预测的工作流', icon: 'timeline-line-chart' },
-    { id: 'of8', title: '数据集成', description: '整合多源数据的工作流', icon: 'database' },
-  ];
-
-  // 社区工作流示例数据
-  communityWorkflows: WorkflowItem[] = [
-    { id: 'cm1', title: '社交媒体分析', description: '分析社交媒体数据的工作流', icon: 'social-media' },
-    { id: 'cm2', title: '情感分析', description: '文本情感分析的工作流', icon: 'emoji' },
-    { id: 'cm3', title: '异常检测', description: '识别数据中异常值的工作流', icon: 'warning-sign' },
-    { id: 'cm4', title: '推荐系统', description: '构建个性化推荐系统的工作流', icon: 'star' },
-    { id: 'cm5', title: '时间序列分析', description: '分析时间序列数据的工作流', icon: 'time' },
-    { id: 'cm6', title: '网络爬虫', description: '网页数据抓取和处理的工作流', icon: 'generate' },
-    { id: 'cm7', title: '地理空间分析', description: '地理数据分析和可视化的工作流', icon: 'map' },
-    { id: 'cm8', title: '音频处理', description: '音频数据处理和分析的工作流', icon: 'music' },
-  ];
 
   constructor(props: NewWorkflowProps) {
     super(props);
     this.state = {
       selectedWorkflows: [],
       targetPath: '',
-      activeTab: 'official'
+      activeTab: 'official',
+      communityWorkflows: [],
+      officialWorkflows: [],
     };
   }
+
+  componentDidMount(): void {
+    this.loadWorkflows();
+  }
+
+  loadWorkflows = async () => {
+    try {
+      const resoucePath = await resolveResource('workflow/data.json');
+      const jsonObj = JSON.parse(await readTextFile(resoucePath));
+      this.setState({
+        officialWorkflows: jsonObj.officialWorkflows || [],
+        communityWorkflows: jsonObj.communityWorkflows || [],
+      })
+    } catch (error) {
+      console.error('读取工作流文件时出错:', error);
+    }
+  };
 
   handleWorkflowSelect = (id: string) => {
     this.setState(prevState => {
@@ -84,9 +84,26 @@ export class NewWorkflow extends React.Component<NewWorkflowProps, NewWorkflowSt
     }
   };
 
-  handleConfirm = () => {
+  handleConfirm = async () => {
     const { selectedWorkflows, targetPath } = this.state;
     if (selectedWorkflows.length > 0 && targetPath) {
+
+      const resoucePath = await resolveResource('workflow/data.json');
+      const jsonObj = JSON.parse(await readTextFile(resoucePath));
+
+      const allWorkflows = [...jsonObj.officialWorkflows, ...jsonObj.communityWorkflows];
+      const matchedWorkflows = selectedWorkflows.map(path => 
+        allWorkflows.find(workflow => workflow.id === path)
+      ).filter(Boolean);
+      const allFileLists = matchedWorkflows.map(workflow => workflow.fileList || []).flat();
+      
+      const sourceDir = await resolveResource('workflow/txt2img/basic');
+      
+      for (const file of allFileLists) {
+        const sourcePath = `${sourceDir}/${file}`;
+        const destPath = `${targetPath}/${file}`;
+        await copyFile(sourcePath, destPath);
+      }
       this.props.onWorkflowSelect(selectedWorkflows, targetPath);
       this.props.onClose();
     }
@@ -168,8 +185,8 @@ export class NewWorkflow extends React.Component<NewWorkflowProps, NewWorkflowSt
             selectedTabId={activeTab}
             onChange={(newTabId) => this.setState({ activeTab: newTabId as string })}
           >
-            <Tab id="official" title="官方工作流" panel={this.renderWorkflowGrid(this.officialWorkflows)} />
-            <Tab id="community" title="社区工作流" panel={this.renderWorkflowGrid(this.communityWorkflows)} />
+            <Tab id="official" title="官方工作流" panel={this.renderWorkflowGrid(this.state.officialWorkflows)} />
+            <Tab id="community" title="社区工作流" panel={this.renderWorkflowGrid(this.state.communityWorkflows)} />
           </Tabs>
 
           {/* 路径选择 */}

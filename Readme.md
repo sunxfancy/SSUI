@@ -105,3 +105,12 @@ To test the image generation, you need the following models, including:
 
 You can download them from:
 https://huggingface.co/datasets/sunxfancy/TestSDModels/tree/main
+
+
+### Use Git Hooks to check the code before commit
+
+We use [pre-commit](https://git-scm.com/book/ms/v2/Customizing-Git-Git-Hooks) to check the code before commit.
+
+```bash
+git config --local core.hooksPath .githooks/
+```
