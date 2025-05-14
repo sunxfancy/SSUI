@@ -3,6 +3,7 @@ import { Button, Divider, NonIdealState, Tag, Intent, Callout, ProgressBar, Over
 import {Model, ModelsProvider, WatchedDirectory} from '../../../providers/IModelsProvider';
 import { produce } from 'immer'
 import styles from './style.module.css'
+import { useTranslation } from 'react-i18next'
 
 interface LocalModelsProps {
   modelsProvider: ModelsProvider;
@@ -20,6 +21,7 @@ const LocalModels: React.FC<LocalModelsProps> = (props) => {
     const [ scannedModels, setScannedModels ] = useState<Model[]>([])
 
     const toaster = useRef<Toaster>()
+    const { t } = useTranslation()
 
     const selectDirectory = async () => {
         try {
@@ -39,7 +41,7 @@ const LocalModels: React.FC<LocalModelsProps> = (props) => {
                         (model: Model) => {
                             if (model.installed) {
                                 console.log("model installed: ", model)
-                                setInstalledModels(oldModels => 
+                                setInstalledModels(oldModels =>
                                     new Set(oldModels ? [...oldModels, model.id] : [model.id])
                                 )
                             }
@@ -54,14 +56,14 @@ const LocalModels: React.FC<LocalModelsProps> = (props) => {
                     toaster.current?.show({
                         icon: 'tick',
                         intent: 'success',
-                        message: `扫描完成，共找到模型: ${models.length}`
+                        message: `${t('scanFinish')}: ${models.length}`
                     })
                     setIsScanning(false)
                 } catch (error) {
                     toaster.current?.show({
                         icon: 'warning-sign',
                         intent: 'danger',
-                        message: '扫描目录失败'
+                        message: t('scanFail')
                     })
                     console.log(error)
                     setIsScanning(false)
@@ -71,7 +73,7 @@ const LocalModels: React.FC<LocalModelsProps> = (props) => {
             toaster.current?.show({
                 icon: 'warning-sign',
                 intent: 'danger',
-                message: `选择目录失败: ${error}`
+                message: `${t('chooseDirFail')}: ${error}`
             })
         }
     }
@@ -104,11 +106,11 @@ const LocalModels: React.FC<LocalModelsProps> = (props) => {
                 onModelAdd?.(model.path);
             }
         } catch (error) {
-            console.error("添加模型失败:", error);
+            console.error(`${t('addModelFail')}:`, error);
             toaster.current?.show({
                 icon: 'warning-sign',
                 intent: 'danger',
-                message: `添加模型失败: ${error}`
+                message: `${t('addModelFail')}: ${error}`
             })
             // 安装失败，从安装中状态移除
             const newSet = new Set(installingModels)
@@ -128,7 +130,7 @@ const LocalModels: React.FC<LocalModelsProps> = (props) => {
             toaster.current?.show({
                 icon: 'warning-sign',
                 intent: 'danger',
-                message: `添加监听目录失败: ${error}`
+                message: `${t('addWatchFail')}: ${error}`
             })
         }
     }
@@ -151,13 +153,13 @@ const LocalModels: React.FC<LocalModelsProps> = (props) => {
         <div className={styles.localModel}>
             <div className={styles.scan}>
                 <div className={styles.title}>
-                    扫描目录
-                    <div className={styles.subtitle}>选择一个目录来查找模型</div>
+                    {t('scanDir')}
+                    <div className={styles.subtitle}>{t('scanDirTip')}</div>
                 </div>
 
                 <div className={styles.choose}>
-                    <Button className={styles.chooseButton} intent="primary" variant="outlined" size="large" onClick={selectDirectory}>选择目录</Button>
-                    <Callout intent={selectedDirectory ? 'success' : 'none'} compact icon={selectedDirectory ? 'folder-open' : 'folder-close'}>当前目录：{selectedDirectory || '-'}</Callout>
+                    <Button className={styles.chooseButton} intent="primary" variant="outlined" size="large" onClick={selectDirectory}>{t('chooseDir')}</Button>
+                    <Callout intent={selectedDirectory ? 'success' : 'none'} compact icon={selectedDirectory ? 'folder-open' : 'folder-close'}>{t('currentDir')}：{selectedDirectory || '-'}</Callout>
                 </div>
 
                 <div className={styles.modelList}>
@@ -166,8 +168,8 @@ const LocalModels: React.FC<LocalModelsProps> = (props) => {
                         <div className={styles.empty}>
                             <NonIdealState
                                 icon="add-to-folder"
-                                title="尚未添加目录"
-                                description="请点击上方按钮添加目录"
+                                title={t('scanDir_init_title')}
+                                description={t('scanDir_init_content')}
                             />
                         </div>
                     }
@@ -180,8 +182,8 @@ const LocalModels: React.FC<LocalModelsProps> = (props) => {
                         <div className={styles.empty}>
                             <NonIdealState
                                 icon="error"
-                                title="没有扫描到模型"
-                                description="请重新选择目录"
+                                title={t('scanDir_empty_title')}
+                                description={t('scanDir_empty_content')}
                             />
                         </div>
                     }
@@ -202,14 +204,14 @@ const LocalModels: React.FC<LocalModelsProps> = (props) => {
                                                 <Tag intent="primary" minimal style={{ marginRight: 5 }}>{model.type}</Tag>
                                                 <Tag intent="success" minimal>{model.size}</Tag>
                                                 {isInstalled && (
-                                                    <Tag intent="success" style={{ marginLeft: 5 }}>已安装</Tag>
+                                                    <Tag intent="success" style={{ marginLeft: 5 }}>{t('installed')}</Tag>
                                                 )}
                                             </div>
                                         </div>
                                         {
                                             isInstalled
-                                                ? <Button icon="tick" intent={Intent.SUCCESS} disabled>已安装</Button>
-                                                : <Button icon="plus" intent={Intent.SUCCESS} loading={isInstalling} onClick={() => handleAddModel(model)}>添加</Button>
+                                                ? <Button icon="tick" intent={Intent.SUCCESS} disabled>{t('installed')}</Button>
+                                                : <Button icon="plus" intent={Intent.SUCCESS} loading={isInstalling} onClick={() => handleAddModel(model)}>{t('add')}</Button>
                                         }
                                     </div>
                                 </div>
@@ -223,8 +225,8 @@ const LocalModels: React.FC<LocalModelsProps> = (props) => {
 
             <div className={styles.observer}>
                 <div className={styles.title}>
-                    监听目录
-                    <div className={styles.subtitle}>添加监听目录后，应用启动时将自动扫描这些目录中的模型。</div>
+                    {t('watchDir')}
+                    <div className={styles.subtitle}>{t('watchDirTip')}</div>
                 </div>
                 <div className={styles.observerContent}>
                     {
@@ -232,17 +234,17 @@ const LocalModels: React.FC<LocalModelsProps> = (props) => {
                             ?
                             <NonIdealState
                                 icon="eye-open"
-                                title="正在监听..."
+                                title={t('watching')}
                                 description={watchedDirectories.map(w => (
                                     <div className={styles.singleWatch}>
                                         <div>{w.path}</div>
-                                        <Button className={styles.removeButton} variant="minimal" intent="danger" size="small" onClick={() => cancelWatch(w.id)}>取消监听</Button>
+                                        <Button className={styles.removeButton} variant="minimal" intent="danger" size="small" onClick={() => cancelWatch(w.id)}>{t('cancelAdd')}</Button>
                                     </div>
                                 ))}
-                                action={<Button intent="primary" onClick={handleAddWatchedDirectory}>继续添加</Button>}
+                                action={<Button intent="primary" onClick={handleAddWatchedDirectory}>{t('continueAdd')}</Button>}
                             />
                           :
-                            <Button intent="primary" size="large" onClick={handleAddWatchedDirectory}>添加监听目录</Button>
+                            <Button intent="primary" size="large" onClick={handleAddWatchedDirectory}>{t('addWatchDir')}</Button>
                     }
                 </div>
             </div>

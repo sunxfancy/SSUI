@@ -4,6 +4,7 @@ import axios from 'axios';
 import HuggingfaceLogo from './logo_huggingface.svg'
 import ModelLogo from './logo_model.svg'
 import styles from './style.module.css'
+import { useTranslation } from 'react-i18next'
 
 interface HuggingfaceModel {
     id: string;
@@ -36,6 +37,8 @@ const HuggingfaceModels: React.FC<HuggingfaceModelsProps> = ({ onModelSelect }) 
     const [selectedType, setSelectedType] = useState<string>('all');
     const [hasSearched, setHasSearched] = useState(false);
 
+    const { t } = useTranslation()
+
     const searchModels = async () => {
         if (!inputValue.trim()) return;
 
@@ -56,7 +59,7 @@ const HuggingfaceModels: React.FC<HuggingfaceModelsProps> = ({ onModelSelect }) 
 
             setModels(response.data);
         } catch (err) {
-            setError('搜索模型失败');
+            setError(t('searchModelFail'));
             console.error('搜索模型时出错:', err);
         } finally {
             setLoading(false);
@@ -80,7 +83,7 @@ const HuggingfaceModels: React.FC<HuggingfaceModelsProps> = ({ onModelSelect }) 
                 setInputValue(''); // 清空输入
             }
         } catch (err) {
-            setError('添加仓库失败，请确认仓库ID格式正确');
+            setError(t('addRepoFail'));
             console.error('添加仓库时出错:', err);
         } finally {
             setLoading(false);
@@ -121,7 +124,7 @@ const HuggingfaceModels: React.FC<HuggingfaceModelsProps> = ({ onModelSelect }) 
                 <div className={styles.searchArea}>
                     <InputGroup
                         className={styles.searchInput}
-                        placeholder="搜索模型或输入仓库ID..."
+                        placeholder={t('searchHuggingface')}
                         leftElement={<div className={styles.logo}><img src={HuggingfaceLogo} alt=""/></div>}
                         value={inputValue}
                         size="large"
@@ -134,7 +137,7 @@ const HuggingfaceModels: React.FC<HuggingfaceModelsProps> = ({ onModelSelect }) 
                         size="large"
                         disabled={!inputValue.trim() || loading}
                     >
-                        搜索
+                        {t('search')}
                     </Button>
                     <Button
                         intent="success"
@@ -143,11 +146,11 @@ const HuggingfaceModels: React.FC<HuggingfaceModelsProps> = ({ onModelSelect }) 
                         size="large"
                         disabled={!inputValue.trim() || loading}
                     >
-                        添加仓库
+                        {t('addRepo')}
                     </Button>
                 </div>
                 <div className={styles.tip}>
-                    * 搜索模型或输入仓库ID (例如: 'runwayml/stable-diffusion-v1-5')
+                    * {t('searchHuggingfaceTip')}
                 </div>
             </form>
 
@@ -161,7 +164,7 @@ const HuggingfaceModels: React.FC<HuggingfaceModelsProps> = ({ onModelSelect }) 
                         <Tab
                             key={type}
                             id={type}
-                            title={type === 'all' ? '全部' : type}
+                            title={type === 'all' ? t('all') : type}
                         />
                     ))}
                 </Tabs>
@@ -181,14 +184,14 @@ const HuggingfaceModels: React.FC<HuggingfaceModelsProps> = ({ onModelSelect }) 
             ) : !hasSearched ? (
                 <NonIdealState
                     icon="search"
-                    title="搜索Huggingface模型"
-                    description="输入关键词搜索模型或直接添加仓库ID"
+                    title={t('searchHuggingface_init_title')}
+                    description={t('searchHuggingface_init_content')}
                 />
             ) : filteredModels.length === 0 ? (
                 <NonIdealState
                     icon="search"
-                    title="未找到模型"
-                    description="请尝试其他搜索关键词或直接添加仓库ID"
+                    title={t('searchHuggingface_notfound_title')}
+                    description={t('searchHuggingface_notfound_content')}
                 />
             ) : (
                 <div className={styles.cardList} id="#huggingfaceCardList">
@@ -215,17 +218,17 @@ const HuggingfaceModels: React.FC<HuggingfaceModelsProps> = ({ onModelSelect }) 
 
                             <div className={styles.bottomArea}>
                                 <div className={styles.data}>
-                                    <span title="下载次数">
+                                    <span title={t('Downloads')}>
                                         <Icon icon="download" size={14} color="rgb(93, 191, 93)" style={{ marginRight: '3px' }} />
                                         {formatNumber(model.downloads || 0)}
                                     </span>
-                                    <span title="点赞数">
+                                    <span title={t('Likes')}>
                                         <Icon icon="heart" size={14} color="rgb(255, 102, 102)" style={{ marginRight: '3px' }} />
                                         {formatNumber(model.likes || 0)}
                                     </span>
                                 </div>
                                 <Button
-                                    text="下载"
+                                    text={t('download')}
                                     intent="primary"
                                     variant="outlined"
                                     icon="download"

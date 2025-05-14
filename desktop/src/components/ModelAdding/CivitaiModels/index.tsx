@@ -3,6 +3,7 @@ import {Spinner, Tabs, Tab, Icon, Button} from '@blueprintjs/core';
 import axios from 'axios';
 import { CivitaiModel } from '../../../types/civitai';
 import styles from './style.module.css';
+import { useTranslation } from 'react-i18next'
 
 interface CivitaiModelsProps {
     onModelSelect?: (model: CivitaiModel) => void;
@@ -13,6 +14,8 @@ export const CivitaiModels: React.FC<CivitaiModelsProps> = () => {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [selectedType, setSelectedType] = useState<string>('all');
+
+    const { t } = useTranslation()
 
     useEffect(() => {
         fetchModels();
@@ -31,7 +34,7 @@ export const CivitaiModels: React.FC<CivitaiModelsProps> = () => {
             setModels(response.data.items);
             setError(null);
         } catch (err) {
-            setError('获取模型列表失败');
+            setError(t('fetchModelListFail'));
             console.error('Error fetching models:', err);
         } finally {
             setLoading(false);
@@ -52,7 +55,7 @@ export const CivitaiModels: React.FC<CivitaiModelsProps> = () => {
         <div className={styles.civitaiModel}>
             <Tabs selectedTabId={selectedType} onChange={(newTabId) => changeTab(newTabId as string)}>
                 {modelTypes.map(type => (
-                    <Tab key={type} id={type} title={type === 'all' ? '全部' : type} />
+                    <Tab key={type} id={type} title={type === 'all' ? t('all') : type} />
                 ))}
             </Tabs>
 
@@ -76,7 +79,7 @@ export const CivitaiModels: React.FC<CivitaiModelsProps> = () => {
                                     <span><Icon icon="comment" /> {model.stats.commentCount}</span>
                                 </div>
                                 <Button
-                                    text="下载"
+                                    text={t('download')}
                                     intent="primary"
                                     onClick={(e) => {
                                         e.stopPropagation();
@@ -98,8 +101,6 @@ export const CivitaiModels: React.FC<CivitaiModelsProps> = () => {
                     </div>
                 ) : null}
             </div>
-
-
         </div>
     );
 };
