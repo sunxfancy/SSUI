@@ -8,6 +8,7 @@ import { ModelManagerProvider } from '../../providers/ModelManagerProvider';
 import styles from './style.module.css'
 import HuggingfaceLogo from '../ModelAdding/HuggingfaceModels/logo_huggingface.svg'
 import CivitaiLogo from './logo_civitai.svg'
+import { useTranslation } from 'react-i18next';
 
 export interface ModelState {
     groups: ModelGroup[];
@@ -22,12 +23,12 @@ interface ModelManagerProps {
 }
 
 export const ModelManager = (props: ModelManagerProps) => {
-
+    const { t } = useTranslation();
     const [ groups, setGroups ] = useState<ModelGroup[]>([])
     const [ searchQuery, setSearchQuery ] = useState('')
     const [ selectedTags, setSelectedTags ] = useState<string[]>([])
     const [ availableTags, setAvailableTags ] = useState<string[]>([])
-    const [ currentModelType, setCurrentModelType ] = useState('全部')
+    const [ currentModelType, setCurrentModelType ] = useState(t('model.types.all'))
 
     const provider = useRef(props.provider || new ModelManagerProvider())
     const containerRef = useRef<HTMLDivElement>(null)
@@ -74,9 +75,6 @@ export const ModelManager = (props: ModelManagerProps) => {
 
         if (success) {
             setGroups(
-
-
-
                 groups
                     .map(g => {
                     return g.id === groupId
@@ -113,12 +111,12 @@ export const ModelManager = (props: ModelManagerProps) => {
     return (
         <div className={styles.modelManager} ref={containerRef}>
             <div className={styles.title}>
-                <span className={styles.titleText}>模型管理</span>
+                <span className={styles.titleText}>{t('model.title')}</span>
             </div>
             <div className={styles.input}>
                 <InputGroup
                     leftIcon="search"
-                    placeholder="搜索模型名称或描述..."
+                    placeholder={t('model.search.placeholder')}
                     value={searchQuery}
                     onChange={handleSearchChange}
                     rightElement={
@@ -134,7 +132,7 @@ export const ModelManager = (props: ModelManagerProps) => {
                 />
                 <Button
                     className={styles.addButton}
-                    text="添加模型"
+                    text={t('model.actions.add')}
                     icon="plus"
                     size="medium"
                     intent="success"
@@ -145,7 +143,13 @@ export const ModelManager = (props: ModelManagerProps) => {
 
             <div className={styles.filter}>
                 <Select
-                    items={['全部', '预设模型组', 'Civitai', 'Huggingface', '本地模型']}
+                    items={[
+                        t('model.types.all'),
+                        t('model.types.preset'),
+                        t('model.types.civitai'),
+                        t('model.types.huggingface'),
+                        t('model.types.local')
+                    ]}
                     onItemSelect={chooseModelType}
                     itemRenderer={(str, { handleClick }) => {
                         return <MenuItem text={str} onClick={handleClick} label={'2'} />
@@ -161,7 +165,9 @@ export const ModelManager = (props: ModelManagerProps) => {
                     <Button
                         icon="tag"
                         rightIcon="caret-down"
-                        text={selectedTags.length > 0 ? `已选择 ${selectedTags.length} 个标签` : "按标签筛选"}
+                        text={selectedTags.length > 0 
+                            ? t('model.tags.selected', { count: selectedTags.length })
+                            : t('model.tags.filter')}
                     />
                 </Popover>
             </div>

@@ -3,6 +3,7 @@ import { Dialog, Tabs, Tab, Button, Icon, Tooltip, InputGroup, IconName } from '
 import { open } from '@tauri-apps/plugin-dialog';
 import { readTextFile, copyFile } from '@tauri-apps/plugin-fs';
 import { resolveResource } from '@tauri-apps/api/path';
+import i18n from '../i18n/i18n';
 
 import '@blueprintjs/core/lib/css/blueprint.css';
 import '@blueprintjs/icons/lib/css/blueprint-icons.css';
@@ -54,7 +55,7 @@ export class NewWorkflow extends React.Component<NewWorkflowProps, NewWorkflowSt
         communityWorkflows: jsonObj.communityWorkflows || [],
       })
     } catch (error) {
-      console.error('读取工作流文件时出错:', error);
+      console.error(i18n.t('workflow.error.readFailed', { error }));
     }
   };
 
@@ -158,7 +159,7 @@ export class NewWorkflow extends React.Component<NewWorkflowProps, NewWorkflowSt
       <Dialog
         isOpen={isOpen}
         onClose={onClose}
-        title="选择工作流"
+        title={i18n.t('workflow.title')}
         style={{ width: '800px' }}
       >
         <div style={{ padding: '0 20px 20px' }}>
@@ -185,8 +186,8 @@ export class NewWorkflow extends React.Component<NewWorkflowProps, NewWorkflowSt
             selectedTabId={activeTab}
             onChange={(newTabId) => this.setState({ activeTab: newTabId as string })}
           >
-            <Tab id="official" title="官方工作流" panel={this.renderWorkflowGrid(this.state.officialWorkflows)} />
-            <Tab id="community" title="社区工作流" panel={this.renderWorkflowGrid(this.state.communityWorkflows)} />
+            <Tab id="official" title={i18n.t('workflow.official')} panel={this.renderWorkflowGrid(this.state.officialWorkflows)} />
+            <Tab id="community" title={i18n.t('workflow.community')} panel={this.renderWorkflowGrid(this.state.communityWorkflows)} />
           </Tabs>
 
           {/* 路径选择 */}
@@ -198,7 +199,7 @@ export class NewWorkflow extends React.Component<NewWorkflowProps, NewWorkflowSt
           }}>
             <div style={{ flex: 1, marginRight: '10px' }}>
               <InputGroup
-                placeholder="选择工作流保存位置..."
+                placeholder={i18n.t('workflow.saveLocation')}
                 value={targetPath}
                 fill
               />
@@ -207,7 +208,7 @@ export class NewWorkflow extends React.Component<NewWorkflowProps, NewWorkflowSt
               icon="folder-open"
               onClick={this.handlePathSelect}
             >
-              选择文件夹
+              {i18n.t('workflow.selectFolder')}
             </Button>
           </div>
 
@@ -217,13 +218,15 @@ export class NewWorkflow extends React.Component<NewWorkflowProps, NewWorkflowSt
             display: 'flex', 
             justifyContent: 'flex-end' 
           }}>
-            <Button onClick={onClose} style={{ marginRight: '10px' }}>取消</Button>
+            <Button onClick={onClose} style={{ marginRight: '10px' }}>
+              {i18n.t('workflow.actions.cancel')}
+            </Button>
             <Button 
               intent="primary" 
               onClick={this.handleConfirm}
               disabled={this.state.selectedWorkflows.length === 0 || !targetPath}
             >
-              确认
+              {i18n.t('workflow.actions.confirm')}
             </Button>
           </div>
         </div>

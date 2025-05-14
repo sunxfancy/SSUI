@@ -3,6 +3,7 @@ import styles from './style.module.css'
 import { Button, Icon, InputGroup, Tabs, Tab, Tag, Switch, CompoundTag, IconName } from "@blueprintjs/core";
 import { IExtensionsProvider } from '../../providers/IExtensionsProvider';
 import { ExtensionsProvider } from '../../providers/ExtensionsProvider';
+import { useTranslation } from 'react-i18next';
 
 
 export interface ExtensionItem {
@@ -25,7 +26,7 @@ interface ExtensionsProps {
 }
 
 export const Extensions = (props: ExtensionsProps) => {
-
+    const { t } = useTranslation();
     const [ searchQuery, setSearchQuery ] = useState('')
     const [ extensions, setExtensions ] = useState<ExtensionItem[]>([])
     const [ retryCount, setRetryCount ] = useState(0)
@@ -174,12 +175,12 @@ export const Extensions = (props: ExtensionsProps) => {
     return (
         <div className={styles.extensions}>
             <div className={styles.title}>
-                <div className={styles.titleText}>扩展</div>
+                <div className={styles.titleText}>{t('extensions.title')}</div>
             </div>
             <div className={styles.searchPart}>
                 <InputGroup
                     leftIcon="search"
-                    placeholder="搜索扩展..."
+                    placeholder={t('extensions.search.placeholder')}
                     value={searchQuery}
                     onChange={handleSearchChange}
                     rightElement={
@@ -194,18 +195,18 @@ export const Extensions = (props: ExtensionsProps) => {
                     onClick={props.onOpenExtensionStore}
                     className={styles.searchButton}
                 >
-                    扩展商城
+                    {t('extensions.store')}
                 </Button>
             </div>
             {
                 searchQuery
                     ?
                         <div>
-                            <h3>搜索结果</h3>
+                            <h3>{t('extensions.search.title')}</h3>
                             {
                                 extensions.length > 0
                                     ? extensions.map(RenderExtensionCard)
-                                    : <div>未找到匹配的扩展</div>
+                                    : <div>{t('extensions.search.noResults')}</div>
                             }
                         </div>
                     :
@@ -213,14 +214,14 @@ export const Extensions = (props: ExtensionsProps) => {
                             <Tabs>
                                 <Tab
                                     id="installed"
-                                    title="已安装"
+                                    title={t('extensions.tabs.installed')}
                                     panel={
                                         <div className={styles.tabContent}>
                                             {extensions.filter(ext => ext.installed).length > 0 ? (
                                                 extensions.filter(ext => ext.installed).map(RenderExtensionCard)
                                             ) : (
                                                 <div style={{ textAlign: 'center', padding: '20px', color: '#888' }}>
-                                                    暂无已安装的扩展
+                                                    {t('extensions.empty')}
                                                 </div>
                                             )}
                                         </div>
@@ -228,7 +229,7 @@ export const Extensions = (props: ExtensionsProps) => {
                                 />
                                 <Tab
                                     id="featured"
-                                    title="精选扩展"
+                                    title={t('extensions.tabs.featured')}
                                     panel={
                                         <div className={styles.tabContent}>
                                             {extensions.filter(ext => ext.featured).map(RenderExtensionCard)}

@@ -44,7 +44,7 @@ export const PresetModels: React.FC<PresetModelsProps> = ({ onModelSelect }) => 
                             <div className={styles.name}>{model.name}</div>
                             <div className={styles.actions}>
                                 <Button
-                                    text={t('dmg')}
+                                    text={t('model.actions.download')}
                                     intent="primary"
                                     onClick={() => onModelSelect?.(model)}
                                 />

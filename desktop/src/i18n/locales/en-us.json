@@ -1,10 +1,103 @@
 {
-    "onw": "Open existing workspace",
-    "sfpw": "Start from preset workflow",
-    "nodyc": "No opened directory, you can:",
-    "ocapw": "Or, choose a preset workflow:",
+    "onw": "Open Existing Workspace",
+    "sfpw": "Start from Preset Workflow",
+    "nodyc": "No directory is currently open, you can:",
+    "ocapw": "Or, choose from our preset workflows:",
     "wsp": "Workspace",
-    "dmg": "Download",
-    "preset": "Preset model groups",
-    "local": "Local models"
+    "dmg": "Download Model Group",
+    "preset": "Preset Model Group",
+    "local": "Local Models",
+    "model": {
+        "title": "Model Management",
+        "search": {
+            "placeholder": "Search model name or description...",
+            "title": "Search Results",
+            "noResults": "No matching extensions found"
+        },
+        "scan": {
+            "title": "Scan Directory",
+            "subtitle": "Select a directory to find models",
+            "chooseDir": "Choose Directory",
+            "currentDir": "Current Directory:",
+            "noDir": "No directory added yet",
+            "noDirDesc": "Please click the button above to add a directory",
+            "noModels": "No models found",
+            "noModelsDesc": "Please select a different directory",
+            "scanComplete": "Scan complete, found {{count}} models",
+            "scanFailed": "Failed to scan directory",
+            "selectDirFailed": "Failed to select directory: {{error}}",
+            "addModelFailed": "Failed to add model: {{error}}"
+        },
+        "watch": {
+            "title": "Watch Directory",
+            "subtitle": "After adding a watch directory, the application will automatically scan for models in these directories on startup.",
+            "watching": "Watching...",
+            "cancelWatch": "Cancel Watch",
+            "addWatch": "Add Watch Directory",
+            "continueAdd": "Continue Adding",
+            "addWatchFailed": "Failed to add watch directory: {{error}}"
+        },
+        "types": {
+            "all": "All",
+            "preset": "Preset Models",
+            "civitai": "Civitai",
+            "huggingface": "Huggingface",
+            "local": "Local Models"
+        },
+        "tags": {
+            "filter": "Filter by Tags",
+            "selected": "{{count}} tags selected"
+        },
+        "actions": {
+            "add": "Add Model",
+            "download": "Download"
+        }
+    },
+    "extensions": {
+        "title": "Extensions",
+        "search": {
+            "placeholder": "Search extensions...",
+            "title": "Search Results",
+            "noResults": "No matching extensions found"
+        },
+        "store": "Store",
+        "tabs": {
+            "installed": "Installed",
+            "featured": "Featured"
+        },
+        "empty": "No extensions installed"
+    },
+    "workflow": {
+        "saveLocation": "Select workflow save location...",
+        "selectFolder": "Select Folder",
+        "actions": {
+            "cancel": "Cancel",
+            "confirm": "Confirm"
+        },
+        "error": {
+            "readFailed": "Error reading workflow file: {{error}}"
+        }
+    },
+    "queue": {
+        "title": "Task Queue",
+        "totalTasks": "{{count}} tasks total",
+        "executor": "Executor",
+        "server": "Server",
+        "clearCache": "Clear Cache",
+        "disableCache": "Disable Cache",
+        "restart": {
+            "title": "Restart {{type}}",
+            "confirm": "Are you sure you want to restart the {{type}}?",
+            "warning": "The service will be temporarily unavailable during restart.",
+            "cancel": "Cancel",
+            "confirmButton": "Confirm Restart"
+        },
+        "priority": "Priority: {{priority}}",
+        "status": {
+            "waiting": "Waiting",
+            "processing": "Processing",
+            "completed": "Completed",
+            "failed": "Failed"
+        }
+    }
 }

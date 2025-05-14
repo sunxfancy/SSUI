@@ -6,5 +6,98 @@
     "wsp": "工作空间",
     "dmg": "下载模型组",
     "preset": "预制模型组",
-    "local": "本地模型"
+    "local": "本地模型",
+    "model": {
+        "title": "模型管理",
+        "search": {
+            "placeholder": "搜索模型名称或描述...",
+            "title": "搜索结果",
+            "noResults": "未找到匹配的扩展"
+        },
+        "scan": {
+            "title": "扫描目录",
+            "subtitle": "选择一个目录来查找模型",
+            "chooseDir": "选择目录",
+            "currentDir": "当前目录：",
+            "noDir": "尚未添加目录",
+            "noDirDesc": "请点击上方按钮添加目录",
+            "noModels": "没有扫描到模型",
+            "noModelsDesc": "请重新选择目录",
+            "scanComplete": "扫描完成，共找到模型: {{count}}",
+            "scanFailed": "扫描目录失败",
+            "selectDirFailed": "选择目录失败: {{error}}",
+            "addModelFailed": "添加模型失败: {{error}}"
+        },
+        "watch": {
+            "title": "监听目录",
+            "subtitle": "添加监听目录后，应用启动时将自动扫描这些目录中的模型。",
+            "watching": "正在监听...",
+            "cancelWatch": "取消监听",
+            "addWatch": "添加监听目录",
+            "continueAdd": "继续添加",
+            "addWatchFailed": "添加监听目录失败: {{error}}"
+        },
+        "types": {
+            "all": "全部",
+            "preset": "预设模型组",
+            "civitai": "Civitai",
+            "huggingface": "Huggingface",
+            "local": "本地模型"
+        },
+        "tags": {
+            "filter": "按标签筛选",
+            "selected": "已选择 {{count}} 个标签"
+        },
+        "actions": {
+            "add": "添加模型",
+            "download": "下载"
+        }
+    },
+    "extensions": {
+        "title": "扩展",
+        "search": {
+            "placeholder": "搜索扩展...",
+            "title": "搜索结果",
+            "noResults": "未找到匹配的扩展"
+        },
+        "store": "扩展商城",
+        "tabs": {
+            "installed": "已安装",
+            "featured": "精选扩展"
+        },
+        "empty": "暂无已安装的扩展"
+    },
+    "workflow": {
+        "saveLocation": "选择工作流保存位置...",
+        "selectFolder": "选择文件夹",
+        "actions": {
+            "cancel": "取消",
+            "confirm": "确认"
+        },
+        "error": {
+            "readFailed": "读取工作流文件时出错: {{error}}"
+        }
+    },
+    "queue": {
+        "title": "任务队列",
+        "totalTasks": "共 {{count}} 个任务",
+        "executor": "执行器",
+        "server": "服务器",
+        "clearCache": "清除缓存",
+        "disableCache": "禁用缓存",
+        "restart": {
+            "title": "重启{{type}}",
+            "confirm": "确定要重启{{type}}吗？",
+            "warning": "重启过程中服务将暂时不可用。",
+            "cancel": "取消",
+            "confirmButton": "确认重启"
+        },
+        "priority": "优先级: {{priority}}",
+        "status": {
+            "waiting": "等待中",
+            "processing": "处理中",
+            "completed": "已完成",
+            "failed": "失败"
+        }
+    }
 }
