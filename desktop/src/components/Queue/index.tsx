@@ -4,6 +4,7 @@ import ExecutorService from '../../services/Executor';
 import ServerService from '../../services/Server';
 import { CommandInfo } from '../../providers/IInstallerProvider';
 import styles from './style.module.css';
+import { useTranslation } from 'react-i18next';
 
 interface QueueItem {
     id: string;
@@ -28,6 +29,7 @@ const Queue: React.FC<QueueProps> = ({
                                          onPauseItem,
                                          onResumeItem
                                      }) => {
+    const { t } = useTranslation();
     const [visibleItems, setVisibleItems] = useState<QueueItem[]>([]);
     const [executorStatus, setExecutorStatus] = useState<CommandInfo | null>(null);
     const [serverStatus, setServerStatus] = useState<CommandInfo | null>(null);
@@ -116,13 +118,7 @@ const Queue: React.FC<QueueProps> = ({
 
     // 获取状态对应的中文描述
     const getStatusText = (status: string) => {
-        switch (status) {
-            case 'waiting': return '等待中';
-            case 'processing': return '处理中';
-            case 'completed': return '已完成';
-            case 'failed': return '失败';
-            default: return '未知';
-        }
+        return t(`queue.status.${status}`);
     };
 
     // 重启服务
@@ -175,13 +171,13 @@ const Queue: React.FC<QueueProps> = ({
         <div style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
             <div style={{ padding: '10px', borderBottom: '1px solid #e1e8ed', display: 'flex', justifyContent: 'space-between' }}>
                 <div>
-                    <h2 style={{ margin: 0 }}>任务队列</h2>
+                    <h2 style={{ margin: 0 }}>{t('queue.title')}</h2>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                        <div>共 {items.length} 个任务</div>
+                        <div>{t('queue.totalTasks', { count: items.length })}</div>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
-                            <span>执行器:</span>
+                            <span>{t('queue.executor')}:</span>
                             {getServiceStatusIcon(executorStatus, 'executor')}
-                            <span style={{ marginLeft: '10px' }}>服务器:</span>
+                            <span style={{ marginLeft: '10px' }}>{t('queue.server')}:</span>
                             {getServiceStatusIcon(serverStatus, 'server')}
                         </div>
                     </div>
@@ -198,30 +194,29 @@ const Queue: React.FC<QueueProps> = ({
                 </div>
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-                <Button text="清除缓存"  icon="trash" variant="solid" />
-                <Button text="禁用缓存" intent="danger" icon="disable" variant="solid" />
+                <Button text={t('queue.clearCache')} icon="trash" variant="solid" />
+                <Button text={t('queue.disableCache')} intent="danger" icon="disable" variant="solid" />
             </div>
-
 
             {/* 重启服务确认对话框 */}
             <Dialog
                 isOpen={isRestartDialogOpen}
                 onClose={() => setIsRestartDialogOpen(false)}
-                title={`重启${restartType === 'server' ? '服务器' : '执行器'}`}
+                title={t('queue.restart.title', { type: restartType === 'server' ? t('queue.server') : t('queue.executor') })}
             >
                 <div style={{ padding: '20px' }}>
-                    <p>确定要重启{restartType === 'server' ? '服务器' : '执行器'}吗？</p>
-                    <p>重启过程中服务将暂时不可用。</p>
+                    <p>{t('queue.restart.confirm', { type: restartType === 'server' ? t('queue.server') : t('queue.executor') })}</p>
+                    <p>{t('queue.restart.warning')}</p>
                 </div>
                 <div className="bp5-dialog-footer">
-                    <Button onClick={() => setIsRestartDialogOpen(false)}>取消</Button>
+                    <Button onClick={() => setIsRestartDialogOpen(false)}>{t('queue.restart.cancel')}</Button>
                     <Button
                         intent={Intent.WARNING}
                         onClick={handleRestartService}
                         loading={isRestarting}
                         disabled={isRestarting}
                     >
-                        确认重启
+                        {t('queue.restart.confirmButton')}
                     </Button>
                 </div>
             </Dialog>
@@ -264,7 +259,7 @@ const Queue: React.FC<QueueProps> = ({
                                                 {getStatusText(item.status)}
                                             </Tag>
                                             <span style={{ fontSize: '0.9em', color: '#666' }}>
-                        {item.type} · 优先级: {item.priority}
+                        {item.type} · {t('queue.priority', { priority: item.priority })}
                       </span>
                                             <span style={{ fontSize: '0.9em', color: '#666' }}>
                         {item.createdAt.toLocaleString()}

@@ -16,6 +16,7 @@
 
 .no-tabs-container {
     display: flex;
+    flex-direction: column;
     justify-content: center;
     align-items: center;
     min-height: 150px;
@@ -23,4 +24,18 @@
     width: 100%;
     font-size:20px;
     color: #666;
+}
+
+.tabs-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.tab-panels-container {
+    flex: 1;
+}
+
+.tab-panel {
+    height: 100%;
 }
