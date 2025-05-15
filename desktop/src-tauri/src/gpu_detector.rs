@@ -8,15 +8,13 @@ pub fn detect_gpu() -> Result<Vec<GpuInfo>, String> {
     #[cfg(target_os = "windows")]
     unsafe {
         // use DXGI to check GPU information on Windows
-
-        use windows::Win32::Graphics::Direct3D::*;
-        use windows::Win32::Graphics::Direct3D12::*;
         use windows::Win32::Graphics::Dxgi::*;
 
         if let Ok(factor) = CreateDXGIFactory2::<IDXGIFactory4>(DXGI_CREATE_FACTORY_FLAGS(0)) {
             let mut i = 0;
             loop {
                 if let Ok(adapter) = factor.EnumAdapters1(i) {
+                    let device_index = i;
                     i += 1;
 
                     let desc = adapter.GetDesc1().unwrap();
@@ -34,35 +32,14 @@ pub fn detect_gpu() -> Result<Vec<GpuInfo>, String> {
                         _ => "Unknown",
                     };
 
-                    // use D3D12 to check UMA or discrete GPU, necessary?
-                    let is_uma = {
-                        let mut device: Option<ID3D12Device> = None;
-                        D3D12CreateDevice(&adapter, D3D_FEATURE_LEVEL_11_0, &mut device).unwrap();
-                        let device = device.unwrap();
-                        let mut feature = D3D12_FEATURE_DATA_ARCHITECTURE::default();
-                        device
-                            .CheckFeatureSupport(
-                                D3D12_FEATURE_ARCHITECTURE,
-                                &raw mut feature as *mut _,
-                                size_of::<D3D12_FEATURE_DATA_ARCHITECTURE>() as u32,
-                            )
-                            .unwrap();
-                        feature.UMA.as_bool()
-                    };
-
                     let name = String::from_utf16_lossy(&desc.Description);
-                    let vram = if is_uma {
-                        desc.SharedSystemMemory / (1024 * 1024)
-                    } else {
-                        desc.DedicatedVideoMemory / (1024 * 1024)
-                    };
-
                     debug!("GPU类型: {}", gpu_type);
-
                     gpus.push(GpuInfo {
+                        device_index,
                         name,
                         gpu_type: gpu_type.to_string(),
-                        vram_mb: vram as u64,
+                        local_vram: desc.DedicatedVideoMemory as u64,
+                        shared_vram: desc.SharedSystemMemory as u64,
                     });
                 } else {
                     break;
@@ -84,7 +61,7 @@ pub fn detect_gpu() -> Result<Vec<GpuInfo>, String> {
         let output_str = String::from_utf8_lossy(&output.stdout);
 
         // 解析system_profiler输出
-        for line in output_str.lines() {
+        for (index, line) in output_str.lines().enumerate() {
             if line.contains("Chipset Model:") {
                 let name = line
                     .split(":")
@@ -106,9 +83,11 @@ pub fn detect_gpu() -> Result<Vec<GpuInfo>, String> {
                     .unwrap_or(0);
 
                 gpus.push(GpuInfo {
+                    device_index: index as u32,
                     name: name.clone(),
                     gpu_type: "Apple".to_string(),
-                    vram_mb: vram,
+                    local_vram: 0,
+                    shared_vram: vram * 1024 * 1024, // assume apple is always uma
                 });
             }
         }
@@ -126,7 +105,7 @@ pub fn detect_gpu() -> Result<Vec<GpuInfo>, String> {
 
         let output_str = String::from_utf8_lossy(&output.stdout);
 
-        for line in output_str.lines() {
+        for (index, line) in output_str.lines().enumerate() {
             if line.contains("VGA") || line.contains("3D") {
                 let name = line
                     .split(":")
@@ -144,9 +123,11 @@ pub fn detect_gpu() -> Result<Vec<GpuInfo>, String> {
                 };
 
                 gpus.push(GpuInfo {
+                    device_index: index as u32,
                     name,
                     gpu_type: gpu_type.to_string(),
-                    vram_mb: 0, // Linux下获取显存大小需要更复杂的方法
+                    local_vram: 0, // Linux下获取显存较复杂，暂时设为0
+                    shared_vram: 0,
                 });
             }
         }
@@ -158,9 +139,11 @@ pub fn detect_gpu() -> Result<Vec<GpuInfo>, String> {
 
 #[derive(serde::Serialize)]
 pub struct GpuInfo {
+    device_index: u32,
     name: String,
     gpu_type: String,
-    vram_mb: u64,
+    local_vram: u64,
+    shared_vram: u64,
 }
 
 #[cfg(test)]
@@ -176,8 +159,12 @@ mod tests {
         println!("检测到的GPU列表:");
         for gpu in &gpus {
             println!(
-                "名称: {}, 类型: {}, 显存: {}MB",
-                gpu.name, gpu.gpu_type, gpu.vram_mb
+                "设备序号: {}, 名称: {}, 类型: {}, 独立显存: {}MB, 共享显存: {}MB",
+                gpu.device_index,
+                gpu.name,
+                gpu.gpu_type,
+                gpu.local_vram / 1024 / 1024,
+                gpu.shared_vram / 1024 / 1024,
             );
         }
 
@@ -190,7 +177,7 @@ mod tests {
                 ["NVIDIA", "AMD", "Intel", "Unknown"].contains(&gpu.gpu_type.as_str()),
                 "GPU类型应该是NVIDIA、AMD、Intel或Unknown之一"
             );
-            assert!(gpu.vram_mb > 0, "显存大小不应为负数");
+            assert!(gpu.local_vram + gpu.shared_vram > 0, "显存大小不应为负数");
         }
     }
 }
