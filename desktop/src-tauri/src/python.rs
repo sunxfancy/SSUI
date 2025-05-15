@@ -250,7 +250,7 @@ pub struct ProcessStatus {
 }
 
 #[tauri::command]
-pub async fn run_python_background(
+pub fn run_python_background(
     path: &str,
     cwd: &str,
     args: Vec<&str>,
@@ -300,7 +300,7 @@ pub async fn run_python_background(
 
 // 启动服务器
 #[tauri::command]
-pub async fn start_server(path: &str, cwd: &str) -> Result<PythonCommand, String> {
+pub fn start_server(path: &str, cwd: &str) -> Result<PythonCommand, String> {
     info!("启动服务器: {} 在目录: {}", path, cwd);
     let mut process_manager = GLOBAL_PROCESS_STATE.process_manager();
     // 检查服务器是否已经运行
@@ -329,7 +329,7 @@ pub async fn start_server(path: &str, cwd: &str) -> Result<PythonCommand, String
 
 // 启动执行器
 #[tauri::command]
-pub async fn start_executor(path: &str, cwd: &str) -> Result<PythonCommand, String> {
+pub fn start_executor(path: &str, cwd: &str) -> Result<PythonCommand, String> {
     info!("启动执行器: {} 在目录: {}", path, cwd);
 
     let mut process_manager = GLOBAL_PROCESS_STATE.process_manager();
@@ -359,7 +359,7 @@ pub async fn start_executor(path: &str, cwd: &str) -> Result<PythonCommand, Stri
 
 // 重启服务器
 #[tauri::command]
-pub async fn restart_server(path: &str, cwd: &str) -> Result<PythonCommand, String> {
+pub fn restart_server(path: &str, cwd: &str) -> Result<PythonCommand, String> {
     info!("重启服务器: {} 在目录: {}", path, cwd);
 
     let mut process_manager = GLOBAL_PROCESS_STATE.process_manager();
@@ -385,7 +385,7 @@ pub async fn restart_server(path: &str, cwd: &str) -> Result<PythonCommand, Stri
 
 // 重启执行器
 #[tauri::command]
-pub async fn restart_executor(path: &str, cwd: &str) -> Result<PythonCommand, String> {
+pub fn restart_executor(path: &str, cwd: &str) -> Result<PythonCommand, String> {
     info!("重启执行器: {} 在目录: {}", path, cwd);
 
     let mut process_manager = GLOBAL_PROCESS_STATE.process_manager();
@@ -411,7 +411,7 @@ pub async fn restart_executor(path: &str, cwd: &str) -> Result<PythonCommand, St
 
 // 查询服务器状态
 #[tauri::command]
-pub async fn get_server_status() -> Result<ProcessStatus, String> {
+pub fn get_server_status() -> Result<ProcessStatus, String> {
     debug!("获取服务器状态");
     let mut process_manager = GLOBAL_PROCESS_STATE.process_manager();
 
@@ -427,7 +427,7 @@ pub async fn get_server_status() -> Result<ProcessStatus, String> {
 
 // 查询执行器状态
 #[tauri::command]
-pub async fn get_executor_status() -> Result<ProcessStatus, String> {
+pub fn get_executor_status() -> Result<ProcessStatus, String> {
     debug!("获取执行器状态");
     let mut process_manager = GLOBAL_PROCESS_STATE.process_manager();
     let is_running = process_manager.is_process_running("executor");
@@ -495,7 +495,7 @@ fn spawn_python_process(path: &str, cwd: &str, args: Vec<&str>) -> Result<Child,
 }
 
 #[tauri::command]
-pub async fn get_dev_root() -> Result<String, String> {
+pub fn get_dev_root() -> Result<String, String> {
     let current_dir: std::path::PathBuf = std::env::current_dir().map_err(|e| e.to_string())?;
     let current_dir = current_dir.parent().ok_or("无法获取上级目录")?;
     let current_dir = current_dir.parent().ok_or("无法获取上级目录")?;

@@ -1,7 +1,6 @@
 {
   "name": "ssui",
   "private": true,
-  "version": "1.0.0",
   "author": "西风逍遥游 <sunxfancy@gmail.com>",
   "license": "GPL-3.0-only",
   "workspaces": [
