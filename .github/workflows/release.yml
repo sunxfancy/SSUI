@@ -58,9 +58,6 @@ jobs:
       - name: Build ssext tools
         run: yarn build:extension_builder && cd extension_builder && npm link
 
-      - name: Pack extensions
-        run: yarn ext:package
-
       - name: Pack desktop
         run: yarn package
 
