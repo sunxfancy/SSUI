@@ -1,6 +1,6 @@
 import {useRef, useState} from 'react';
 import {WorkSpace} from './components/WorkSpace'
-import TabWindowManager from './components/TabWindowManager';
+import TabWindowManager from './components/TabWindowManager/index.tsx';
 import { Allotment } from "allotment";
 import "allotment/dist/style.css";
 import { ModelManager } from './components/ModelManager';
