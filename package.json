@@ -2,7 +2,7 @@
   "name": "ssui",
   "private": true,
   "author": "西风逍遥游 <sunxfancy@gmail.com>",
-  "license": "GPL-3.0-only",
+  "license": "GPL-3.0-or-later",
   "workspaces": [
     "desktop",
     "frontend/ssui_components",
