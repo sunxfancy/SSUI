@@ -4,3 +4,4 @@ export * from './controlers/InternalControlers';
 export * from './components/InternalComponents';
 export * from './components/ComponentRef';
 export * from './controlers/ControlerRef';
+export * from './shared/Workflow';

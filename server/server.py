@@ -250,6 +250,7 @@ if settings.host_web_ui:
     print("mount functional_ui", settings.host_web_ui)
 
 FileOpenerManager.instance().register_opener("FunctionalUI", ".py", "/functional_ui/?path=")
+FileOpenerManager.instance().register_opener("WorkflowUI", ".flow", "/functional_ui/?view=workflow&path=")
 FileOpenerManager.instance().register_opener("ProjectSettings", "ssproject.yaml", "/functional_ui/?view=project_settings&path=")
 FileOpenerManager.instance().register_opener("ImagePreview", ".png", "/functional_ui/?view=image_preview&path=")
 
