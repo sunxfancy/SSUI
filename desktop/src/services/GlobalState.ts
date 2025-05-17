@@ -11,6 +11,16 @@ export interface RootState {
   isServerRunning?: boolean;
 }
 
+async function checkPort(host: string, port: number) {
+  try {
+    const response = await fetch(`http://${host}:${port}`);
+    return response.ok;
+  } catch (error) {
+    console.error('检查端口状态失败:', error);
+    return false;
+  }
+}
+
 async function checkServerStatus(host: string, port: number) {
   try {
     const response = await fetch(`http://${host}:${port}/api/version`);
@@ -46,7 +56,7 @@ class GlobalStateManager {
       const production = import.meta.env.PROD;
 
       if (!production) {
-        const isUIServerUsed = await checkServerStatus("localhost", 7420);
+        const isUIServerUsed = await checkPort("localhost", 7420);
         const isServerRunning = await checkServerStatus("localhost", 7422);
         const path: string = await invoke("get_dev_root");
         this.rootState = { path, version: 'dev', host: 'localhost', port: isUIServerUsed ? 7420 : 7422, isUIServerUsed, isServerRunning };

@@ -17,7 +17,7 @@ const WithImperativeCall = () => {
   
     return (
       <div style={{height: "100vh"}}>
-        <button onClick={handleCall}>添加一个新标签</button>
+        <button style={{position: "absolute", bottom: "10px", right: "10px", zIndex: 1000}} onClick={handleCall}>添加一个新标签</button>
         <TabWindowManager ref={ref} />
       </div>
     );
