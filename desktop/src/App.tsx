@@ -52,6 +52,10 @@ const App = () => {
         tabWindowManagerRef.current?.openReactComponent(<ModelAddingPage />, "添加模型");
     }
 
+    const openSettings = () => {
+        // tabWindowManagerRef.current?.openFile(<GlobalSettings />, "设置");
+    }
+
     const openExtensionStore = () => {
         tabWindowManagerRef.current?.openFile("#internal-extension-store", "https://sunxfancy.github.io/test_page/", "扩展商城");
     }
@@ -68,7 +72,7 @@ const App = () => {
             <Allotment>
                 <Allotment.Pane preferredSize={360} minSize={360} maxSize={500}>
                     <div style={{ display: 'flex', height: '100%' }}>
-                        <Navbar navIndex={navIndex} updateNavIndex={setNavIndex} />
+                        <Navbar navIndex={navIndex} updateNavIndex={setNavIndex} openSettings={openSettings} />
                         {/*<GenerateNavContent></GenerateNavContent>*/}
                         <div style={{ width: '100%', overflow: 'hidden' }}>
                             <TabPanel
