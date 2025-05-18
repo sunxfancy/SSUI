@@ -1,28 +1,18 @@
-import React, { useEffect, useRef } from 'react';
+import React from 'react';
 import { createRoot } from 'react-dom/client';
-import { NodeEditor, GetSchemes, ClassicPreset } from 'rete';
+import { NodeEditor, ClassicPreset } from 'rete';
 import { AreaPlugin, AreaExtensions } from 'rete-area-plugin';
-import { ReactArea2D, ReactPlugin, Presets as ReactPresets, useRete } from 'rete-react-plugin';
+import { ReactPlugin, Presets as ReactPresets, useRete, RenderEmit, Presets } from 'rete-react-plugin';
 import {
     ConnectionPlugin,
     Presets as ConnectionPresets,
 } from "rete-connection-plugin";
-import {
-    ContextMenuExtra,
-    ContextMenuPlugin,
-    Presets as ContextMenuPresets,
-} from "rete-context-menu-plugin";
+
+import { AreaExtra, ButtonControl, ButtonControlRender, InputNode, OutputNode, ParameterControl, ParameterControlRender, Schemes } from './Nodes';
 
 export interface WorkflowProps {
     path: string;
 }
-
-type Schemes = GetSchemes<
-    ClassicPreset.Node,
-    ClassicPreset.Connection<ClassicPreset.Node, ClassicPreset.Node>
->;
-
-type AreaExtra = ReactArea2D<any> | ContextMenuExtra;
 
 const createEditor = async (container: HTMLElement) => {
     console.log("初始化工作流编辑器");
@@ -37,8 +27,26 @@ const createEditor = async (container: HTMLElement) => {
         accumulating: AreaExtensions.accumulateOnCtrl()
     });
 
-    reactRender.addPreset(ReactPresets.classic.setup());
     connection.addPreset(ConnectionPresets.classic.setup());
+
+    // 注册自定义节点组件
+    reactRender.addPreset(ReactPresets.classic.setup({
+        customize: {
+            control(context) {
+                if (context.payload instanceof ButtonControl) {
+                    return ButtonControlRender;
+                }
+                if (context.payload instanceof ParameterControl) {
+                    return ParameterControlRender;
+                }
+                if (context.payload instanceof ClassicPreset.InputControl) {
+                    return Presets.classic.Control;
+                }
+                return null;
+            }
+        }
+    }));
+    
 
     // 配置插件
     editor.use(area);
@@ -46,22 +54,22 @@ const createEditor = async (container: HTMLElement) => {
     area.use(reactRender);
     AreaExtensions.simpleNodesOrder(area);
 
-    // 添加一个示例节点
-    const node = new ClassicPreset.Node('函数输入');
-    node.addOutput('output', new ClassicPreset.Output(new ClassicPreset.Socket('参数1')));
+    // 添加示例节点
+    const inputNode = new InputNode(area);
+    const outputNode = new OutputNode(area);
+    inputNode.addOutputSocket();
+    outputNode.addInputSocket();
 
-    const node2 = new ClassicPreset.Node('函数输出');
-    node2.addInput('input', new ClassicPreset.Input(new ClassicPreset.Socket('结果1')));
-    await editor.addNode(node);
-    await editor.addNode(node2);
+
+    await editor.addNode(inputNode);
+    await editor.addNode(outputNode);
 
     console.log("节点已添加");
 
-    await area.translate(node.id, { x: -150, y: 0 });
-    await area.translate(node2.id, { x: 150, y: 0 });
+    await area.translate(inputNode.id, { x: -150, y: 0 });
+    await area.translate(outputNode.id, { x: 150, y: 0 });
 
     setTimeout(() => {
-        // wait until nodes rendered because they dont have predefined width and height
         AreaExtensions.zoomAt(area, editor.getNodes());
     }, 1);
 
