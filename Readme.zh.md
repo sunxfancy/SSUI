@@ -3,23 +3,50 @@ Stable Scripts UI
 
 ![quicktest](https://github.com/sunxfancy/SSUI/actions/workflows/quicktest.yml/badge.svg) [English Readme](Readme.md)
 
-Stable Scripts UI 是一个基于网页的用户界面，用于 `Stable Scripts` - 一种可以被其他用户轻松复现相同结果的 Python 脚本。
-
+Stable Scripts UI 是一个基于网页的用户界面，用于 `Stable Scripts` - 一种可以被其他用户轻松复现相同结果的 Python 脚本，用于运行生成式AI模型。
 
 ![Desktop Version](doc/images/presentation.png)
-![VSCode Plugin](doc/images/vscode-plugin.png)
 
 
 ## 为什么选择 Stable Scripts？
 
-与其他稳定扩散 UI 相比，SSUI 有 5 个主要优势：
+与其他稳定扩散/生成式AI界面相比，SSUI 有 5 个主要优势：
 
 - **易于使用**：快速创建、运行和分享稳定脚本，这些脚本是自包含的，可以自动下载必要的 Python 模块、AI 模型和其他依赖数据。
 - **可复现**：脚本、依赖的模块和 SSUI 本身都是标记版本的。脚本可以在与脚本作者完全相同的环境中运行。
-- **管理功能**：轻松管理您的模型和配置，方便地从Civitai和HuggingFace下载模型。
+- **管理功能**：在一个集中的地方管理您的模型和配置。
 - **强类型**：所有资源（包括模型）都是强类型的，可以防止被误用。
-- **可定制**：您可以自定义脚本、类型，并通过插件扩展支持的模型、面板、加载器、UI框架等。
+- **可定制**：您可以自定义脚本、类型、模型、面板、加载器、UI框架等。
 
+### 项目管理
+
+目前，大多数生成式AI工具都是基于节点的，这对于大规模工作流程来说并不友好。SSUI提供了一个项目管理系统，其中包含运行脚本所需的所有必要信息。
+
+使用SSUI，您可以复制项目并与朋友分享。他们可以轻松地使用所有必要的资源重现结果。
+
+![项目管理](doc/images/SSUI-project.gif)
+
+### 模型管理
+
+SSUI提供了一个模型管理系统，可以帮助您轻松地从Civitai、HuggingFace和本地文件下载和安装模型。
+
+![模型管理](doc/images/SSUI-model-adding.gif)
+
+### 更好的集成
+
+Stable Scripts提供了良好的集成能力，可以让您在不同场景中使用。一旦编写了脚本，它可以通过以下方式调用：
+1. 其他脚本
+2. 在功能性UI中
+3. 在画布中 - 如果函数的输入和输出包含图像
+4. 在其他扩展中
+
+![集成](doc/images/SSUI-callable-use-case.gif)
+
+### 开发者工具
+
+我们提供了VSCode插件来帮助您编写Stable Scripts。您可以在VSCode内编辑代码并运行脚本。
+
+![VSCode插件](doc/images/vscode-plugin.png)
 
 ## 如何编写Stable Scripts？
 
@@ -30,7 +57,39 @@ Stable Scripts UI 是一个基于网页的用户界面，用于 `Stable Scripts`
 - SDXL
 - Flux
 
+一个Stable Script必须包含3个部分：
 
+### 1. 引入必要的模块
+```python
+from ssui import workflow, Prompt, Image, Noise
+from ssui_image.SD1 import SD1Model, SD1Clip, SD1Latent, SD1Lora, SD1Denoise, SD1LatentDecode, SD1IPAdapter
+from ssui.config import SSUIConfig
+from typing import List, Tuple
+```
+
+### 2. 定义配置对象
+```python
+config = SSUIConfig()
+```
+
+### 3. 定义工作流函数，包含所有必要的类型提示。这些类型提示将用于生成UI。
+```python
+@workflow
+def txt2img(model: SD1Model, positive: Prompt, negative: Prompt) -> Image:
+    positive, negative = SD1Clip(config("Prompt To Condition"), model, positive, negative)
+    latent = SD1Latent(config("Create Empty Latent"))
+    latent = SD1Denoise(config("Denoise"), model, latent, positive, negative)
+    return SD1LatentDecode(config("Latent to Image"), latent)
+```
+
+配置对象将定义工作流中的每个步骤，您必须将其作为每个API调用的第一个参数传递：
+
+```python
+latent = SD1Latent(config("Create Empty Latent"))
+```
+如果有可配置的参数，这些控件将在UI的详细面板中生成。
+
+![可配置参数](doc/images/details-panel.png)
 
 ## 设置开发环境
 
@@ -105,7 +164,7 @@ http://localhost:7420/?path=<example_path>/basic/workflow-sd1.py
 - Flux
 
 您可以从以下地址下载：
-https://huggingface.co/datasets/sunxfancy/TestSDModels/tree/main 
+https://huggingface.co/datasets/sunxfancy/TestModels/tree/main 
 
 
 ### 使用 Git Hooks 检查代码
