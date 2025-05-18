@@ -1,10 +1,14 @@
-import {Icon, IconName} from "@blueprintjs/core";
+import { Icon, IconName } from "@blueprintjs/core";
 import styles from './style.module.css'
 import PropTypes from "prop-types";
 import ChangeLng from "../ChangeLng";
 
-export const Navbar = (props: {navIndex:number, updateNavIndex: (index: number) => void}) => {
-    const { navIndex, updateNavIndex } = props
+export const Navbar = (props: {
+    navIndex: number,
+    updateNavIndex: (index: number) => void,
+    openSettings: () => void
+}) => {
+    const { navIndex, updateNavIndex, openSettings } = props
 
     const icons: IconName[] = ["git-repo", "package", "sort", "settings"]
 
@@ -29,6 +33,10 @@ export const Navbar = (props: {navIndex:number, updateNavIndex: (index: number) 
                 })
             }
             <ChangeLng />
+
+            <div className={styles.settings} onClick={openSettings} key='settings'>
+                <Icon icon="cog" />
+            </div>
         </div>
     )
 }

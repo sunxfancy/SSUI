@@ -1,6 +1,7 @@
 import { FunctionalUIProvider } from "./functional/FunctionalUI";
 import { ImagePreviewProvider } from "./preview/ImagePreview";
 import { ProjectSettingsProvider } from './settings/ProjectSettings';
+import { WorkflowUIProvider } from "./workflow/WorkflowUI";
 export interface UIProvider {
     getName(): string;
     getUI(path: string): JSX.Element;
@@ -20,3 +21,4 @@ export function getUIProvider(name: string): UIProvider | undefined {
 registerUIProvider(new FunctionalUIProvider());
 registerUIProvider(new ProjectSettingsProvider());
 registerUIProvider(new ImagePreviewProvider());
+registerUIProvider(new WorkflowUIProvider());

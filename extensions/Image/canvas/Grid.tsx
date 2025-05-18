@@ -91,7 +91,7 @@ export class Grid extends React.Component<GridProps> {
                 {/* 再渲染大网格 */}
                 {this.generateGridLines(LARGE_GRID_SIZE, true)}
                 {/* 渲染视口指示器 */}
-                {this.generateViewportIndicator()}
+                {/* {this.generateViewportIndicator()} */}
             </Group>
         );
     }

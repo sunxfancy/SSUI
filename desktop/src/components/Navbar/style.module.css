@@ -44,4 +44,9 @@
         }
     }
 
+    .settings {
+        position: absolute;
+        bottom: 20px;
+        cursor: pointer;
+    }
 }
