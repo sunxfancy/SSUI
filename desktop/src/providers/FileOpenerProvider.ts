@@ -10,16 +10,16 @@ export class FileOpenerProvider {
   private message: Message;
   private openersCache: OpenersByExtension | null = null;
   private isLoading: boolean = false;
-  
+
   // 单例实例
   private static instance: FileOpenerProvider | null = null;
-  
+
   // 私有构造函数，防止外部直接实例化
   private constructor() {
     const rootState = GlobalStateManager.getInstance().getRootState();
     this.message = new Message(rootState?.host || "localhost", rootState?.port || 7420);
   }
-  
+
   /**
    * 获取FileOpenerProvider的单例实例
    */
@@ -58,12 +58,12 @@ export class FileOpenerProvider {
     try {
       console.log("正在从API获取文件打开器配置...");
       const result = await this.message.get("config/opener");
-      
+
       if (result && typeof result === 'object') {
         this.openersCache = result as OpenersByExtension;
         return this.openersCache;
       }
-      
+
       console.error("获取文件打开器配置失败: 返回数据格式不正确");
       return {};
     } catch (error) {
@@ -81,10 +81,10 @@ export class FileOpenerProvider {
     const extension = '.' + filePath.split('.').pop();
     const name = await basename(filePath);
     const openersConfig = await this.getInstance().loadOpenersConfig();
-    
+
     // 获取该扩展名的所有打开器模板
     const templates = openersConfig[extension] || openersConfig[name] || [];
-    
+
     // 转换为前端需要的格式
     return templates;
   }
@@ -94,13 +94,13 @@ export class FileOpenerProvider {
    */
   public static async constructOpenUrl(openerName: string, filePath: string): Promise<string> {
     const openers = await this.getOpenersForExtension(filePath);
-    
+
     // 查找匹配的打开器
     const opener = openers.find(o => o[0] === openerName);
     if (!opener) {
       throw new Error(`找不到名为 "${openerName}" 的打开器`);
     }
-    
+
     // 替换模板中的占位符
     return opener[1] + filePath + opener[2];
   }
