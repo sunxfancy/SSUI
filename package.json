@@ -18,7 +18,6 @@
     "dev:server:no_build": "node dependencies/venv.cjs python -m server --dev",
     "dev:executor": "node dependencies/venv.cjs python -m ss_executor",
     "dev:functional_ui": "cd frontend/functional_ui && yarn dev",
-    "dev:components": "cd frontend/ssui_components && yarn dev",
     "dev:canvas": "cd extensions/Image && yarn dev",
     "dev:vscode": "cd ssui-vscode && yarn watch",
     "build:frontend": "yarn build:components && yarn build:functional_ui",
