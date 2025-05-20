@@ -27,7 +27,7 @@ use std::env;
 mod gpu_detector;
 mod downloader;
 mod python;
-
+mod hf_transfer;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
