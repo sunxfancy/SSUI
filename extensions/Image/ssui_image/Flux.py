@@ -15,7 +15,7 @@ from .api.model import (
 )
 from ssui.base import Prompt, Image
 from ssui.annotation import param
-from ssui.controller import Select, Switch, Slider
+from ssui.controller import Random, Select, Switch, Slider
 
 _loader_instance = None
 
@@ -126,7 +126,7 @@ class FluxLora:
 @param("add_noise", Switch(), default=True)
 @param("denoising_start", Slider(0, 1.0, 0.01), default=0.0)
 @param("denoising_end", Slider(0, 1.0, 0.01), default=1.0)
-@param("seed", Slider(0, 1000000, 1), default=123454321)
+@param("seed", Random(), default=123454321)
 def FluxDenoise(
     config,
     model: FluxModel,
