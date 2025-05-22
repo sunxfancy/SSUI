@@ -11,11 +11,12 @@
         ".": {
             "import": "./dist/index.js",
             "types": "./dist/index.d.ts"
-        }
+        },
+        "./dist/style.css": "./dist/style.css"
     },
     "main": "./dist/index.js",
     "types": "./dist/index.d.ts",
-    "dependencies": {
+    "peerDependencies": {
         "@blueprintjs/core": "^5.16.2",
         "@blueprintjs/select": "^5.3.7",
         "@blueprintjs/table": "^5.3.1",
