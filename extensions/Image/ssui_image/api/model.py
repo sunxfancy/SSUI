@@ -371,3 +371,34 @@ def load_flux_model(
         ClipModel(text_encoder=clip_encoder, tokenizer=clip_tokenizer),
         VAEModel(vae=vae),
     )
+
+def load_sd1_lora(
+    model_loader_service: ModelLoaderService, 
+    lora_path: Path,
+    lora_weight: Optional[float] = None
+) -> LoRAModel:
+    """
+    Load multiple Stable Diffusion 1 LoRA models 
+    
+    Args:
+        model_loader_service: The model loader service
+        lora_path: LoRA model paths
+        lora_weight: LoRA weights, if not provided all models use default weight of 1.0
+        
+    Returns:
+        LoRAModel: loaded LoRA model objects
+    """
+    # Handle weights parameter
+    if lora_weight is None:
+        lora_weight = 1.0   
+
+    # Probe LoRA model configuration
+    lora_config = ModelProbe.probe(Path(lora_path))
+    # Load LoRA model
+    lora = _load_model_service(model_loader_service, lora_config, None)
+    # lora = model_loader_service.load_model(lora_config)
+    
+    # Create LoRAModel object
+    lora_model = LoRAModel(lora=lora,weight=lora_weight)
+  
+    return lora_model

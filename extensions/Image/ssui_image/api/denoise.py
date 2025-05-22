@@ -508,7 +508,6 @@ def denoise_image(
             ext_manager.add_extension(
                 LoRAExt(
                     lora_model=lora_field.lora,
-                    model_id=lora_field.lora,
                     weight=lora_field.weight,
                 )
             )
