@@ -3,6 +3,8 @@ import {Spinner, Tabs, Tab, Icon, Button} from '@blueprintjs/core';
 import axios from 'axios';
 import { CivitaiModel } from '../../../types/civitai';
 import styles from './style.module.css';
+import { TauriDownloaderProvider } from '../../../providers/TauriDownloaderProvider';
+import { DownloadTask } from '../../../providers/IDownloaderProvider';
 
 interface CivitaiModelsProps {
     onModelSelect?: (model: CivitaiModel) => void;
@@ -13,10 +15,18 @@ export const CivitaiModels: React.FC<CivitaiModelsProps> = () => {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [selectedType, setSelectedType] = useState<string>('all');
+    const [downloadTasks, setDownloadTasks] = useState<DownloadTask[]>([]);
+    const downloader = new TauriDownloaderProvider();
 
     useEffect(() => {
         fetchModels();
+        loadDownloadTasks();
     }, []);
+
+    const loadDownloadTasks = async () => {
+        const tasks = await downloader.getDownloadTasks();
+        setDownloadTasks(tasks);
+    };
 
     const fetchModels = async () => {
         try {
@@ -48,6 +58,32 @@ export const CivitaiModels: React.FC<CivitaiModelsProps> = () => {
         setSelectedType(newTabId);
     }
 
+    const handleDownload = async (model: CivitaiModel) => {
+        const task = await downloader.addDownloadTask(model);
+        setDownloadTasks(prev => [...prev, task]);
+    };
+
+    const getDownloadButtonText = (model: CivitaiModel) => {
+        const task = downloadTasks.find(t => t.model.id === model.id);
+        if (!task) return '下载';
+        
+        switch (task.status) {
+            case 'downloading':
+                return `下载中 ${Math.round(task.progress)}%`;
+            case 'completed':
+                return '已完成';
+            case 'failed':
+                return '失败';
+            default:
+                return '等待中';
+        }
+    };
+
+    const isDownloading = (model: CivitaiModel) => {
+        const task = downloadTasks.find(t => t.model.id === model.id);
+        return task?.status === 'downloading' || task?.status === 'pending';
+    };
+
     return (
         <div className={styles.civitaiModel}>
             <Tabs selectedTabId={selectedType} onChange={(newTabId) => changeTab(newTabId as string)}>
@@ -76,12 +112,12 @@ export const CivitaiModels: React.FC<CivitaiModelsProps> = () => {
                                     <span><Icon icon="comment" /> {model.stats.commentCount}</span>
                                 </div>
                                 <Button
-                                    text="下载"
+                                    text={getDownloadButtonText(model)}
                                     intent="primary"
+                                    disabled={isDownloading(model)}
                                     onClick={(e) => {
                                         e.stopPropagation();
-                                        // 这里可以添加下载逻辑
-                                        console.log('下载模型:', model.name);
+                                        handleDownload(model);
                                     }}
                                 />
                             </div>
