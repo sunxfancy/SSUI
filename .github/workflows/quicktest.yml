@@ -15,7 +15,11 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [windows-latest, macOS-latest]
+        include:
+          - os: windows-latest
+            platform: windows
+          - os: macOS-latest
+            platform: macosx
 
     steps:
       - uses: actions/checkout@v4
@@ -39,7 +43,7 @@ jobs:
           activate-environment: true
 
       - name: Install requirements
-        run: yarn requirements && uv pip install -r .venv/requirements.txt
+        run: uv pip install -r dependencies/requirements-${{ matrix.platform }}.txt
 
       - name: Setup Rust
         uses: actions-rust-lang/setup-rust-toolchain@v1
