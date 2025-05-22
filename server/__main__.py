@@ -1,8 +1,11 @@
 import argparse
 import uvicorn
+import os
 from server.server import app
 
 def main():
+    os.environ["HF_HUB_ENABLE_HF_TRANSFER"] = "1"
+
     # parser = argparse.ArgumentParser()
     # parser.add_argument("--dev", action="store_true", help="Enable development mode with auto-reload")
     # args = parser.parse_args()

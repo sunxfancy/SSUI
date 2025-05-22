@@ -28,6 +28,7 @@ picklescan>=0.0.24
 matplotlib>=3.10.1
 mediapipe>=0.10.21
 aioshutil>=1.5
+huggingface_hub[hf-transfer,hf_xet]>=0.31
 
 easydict>=1.13
 rembg>=2.0.65

@@ -153,14 +153,19 @@ h11==0.14.0
     # via
     #   httpcore
     #   uvicorn
+hf-transfer==0.1.9
+    # via huggingface-hub
+hf-xet==1.1.2
+    # via huggingface-hub
 httpcore==1.0.7
     # via httpx
 httptools==0.6.4
     # via uvicorn
 httpx==0.28.1
     # via fastapi
-huggingface-hub==0.29.3
+huggingface-hub==0.31.4
     # via
+    #   -r dependencies/requirements-windows.txt
     #   accelerate
     #   controlnet-aux
     #   diffusers

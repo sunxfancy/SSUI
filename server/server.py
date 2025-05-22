@@ -1,6 +1,6 @@
 import asyncio
 import hashlib
-from typing import Dict, Any
+from typing import Dict, Any, Optional
 import uuid
 from fastapi import Body, FastAPI, Request, Response, WebSocket, UploadFile, File
 from fastapi.responses import FileResponse, RedirectResponse
@@ -262,6 +262,30 @@ async def ui_state_load(script_path: str):
         return state_data
     except Exception as e:
         return {"error": str(e)}
+
+
+@app.post("/api/hf_download/{client_id}")
+async def hf_download(client_id: str, repo_id: str = Body(..., embed=True), local_dir: Optional[str] = Body(None, embed=True)):
+    request_uuid = str(uuid.uuid4())
+    if local_dir is None:
+        local_dir = os.path.join(resources_dir, "hf_models", repo_id)
+    if not os.path.exists(local_dir):
+        os.makedirs(local_dir)
+    
+    return JSONResponse(content=jsonable_encoder({
+        "type": "start",
+        "request_uuid": request_uuid,
+        "callbacks": ["download_progress"],
+    }), background=BackgroundTask(
+        model_service.hf_download,
+        repo_id=repo_id,
+        local_dir=local_dir,
+        client_id=client_id,
+        request_uuid=request_uuid,
+        callback=websocket_service.send_callback,
+        finish_callback=websocket_service.send_finish
+    ))
+
 
 @app.websocket("/ws")
 async def websocket_endpoint(websocket: WebSocket):
