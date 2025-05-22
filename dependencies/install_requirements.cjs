@@ -5,9 +5,9 @@ const path = require('path');
 function getRequirementsFile() {
     const os = platform();
     if (os === 'win32') {
-        return path.join(__dirname, 'requirements-windows.txt');
+        return path.join(__dirname, 'windows.lock');
     } else if (os === 'darwin') {
-        return path.join(__dirname, 'requirements-macosx.txt');
+        return path.join(__dirname, 'macosx.lock');
     } else {
         throw new Error(`Unsupported operating system: ${os}`);
     }

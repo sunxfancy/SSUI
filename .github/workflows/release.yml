@@ -50,7 +50,7 @@ jobs:
           activate-environment: true
 
       - name: Install requirements
-        run: uv pip install -r dependencies/requirements-${{ matrix.platform }}.txt
+        run: uv pip install -r dependencies/${{ matrix.platform }}.lock
 
       - name: Setup Rust
         uses: actions-rust-lang/setup-rust-toolchain@v1
