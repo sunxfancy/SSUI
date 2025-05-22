@@ -3,6 +3,7 @@ import { IComponent } from "./IComponent";
 import { getComponent, getComponentsByType, parsePythonTyping, PythonType } from "./ComponentsManager";
 import React from 'react';
 import { Tabs, Tab, TabsExpander, Label } from "@blueprintjs/core";
+import styles from './ComponentRef.module.css'
 
 export interface ComponentRefProps {
     name: string;
@@ -54,16 +55,15 @@ export class ComponentTabRef extends IComponent<ComponentRefProps> {
     render() {
         let components = getComponentsByType(this.parsed_type.type);
         return <Tabs ref={this.tabs_ref}>
-            <Label>
-                {this.props.name}
-            </Label>
+            <div className={styles.refTitle}>{this.props.name}</div>
             <TabsExpander />
             {components.filter(c => c.port == this.props.port)
                 .map(c =>
                     <Tab key={c.name} id={c.name} title={c.name}
-                        panel={<ComponentRef 
-                            name={c.name} type={c.type} ref={this.ref_array[c.name]} port={this.props.port}
-                            root_path={this.props.root_path} script_path={this.props.script_path} type_args={this.parsed_type.args} />} />)}
+                         panel={<ComponentRef
+                             name={c.name} type={c.type} ref={this.ref_array[c.name]} port={this.props.port}
+                             root_path={this.props.root_path} script_path={this.props.script_path} type_args={this.parsed_type.args} />} />)}
+
         </Tabs>
     }
 
