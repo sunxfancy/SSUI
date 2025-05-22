@@ -1,5 +1,6 @@
 import unittest
 from PIL import Image
+from ssui.config import SSUIConfig
 from tests.utils import should_run_slow_tests
 
 class TrellisTest(unittest.TestCase):
@@ -8,7 +9,7 @@ class TrellisTest(unittest.TestCase):
         from trellis.pipelines import TrellisImageTo3DPipeline
         from trellis.utils import render_utils, postprocessing_utils
         # Load a pipeline from a model folder or a Hugging Face model hub.
-        pipeline = TrellisImageTo3DPipeline.from_pretrained("JeffreyXiang/TRELLIS-image-large")
+        pipeline = TrellisImageTo3DPipeline.from_pretrained("jetx/trellis-image-large")
         pipeline.cuda()
 
         # Load an image
@@ -51,8 +52,14 @@ class TrellisTest(unittest.TestCase):
         )
         glb.export("sample.glb")
 
-        # Save Gaussians as PLY files
-        outputs['gaussian'][0].save_ply("sample.ply")
 
-        
+    @unittest.skipIf(not should_run_slow_tests(), "Skipping slow test")
+    def test_trellis_workflow(self):
+        from ssui_3dmodel.Trellis import TrellisModel, GenModel
+        model = TrellisModel.load("jetx/trellis-image-large")
+        image = Image.open("H:\\SSUI\\tests\\typical_building_building.png")
+        config = SSUIConfig()
+        config.set_prepared(False)
+        glb = GenModel(config("Generate 3D Model"),model,image)
+        glb._model.export("building.glb")
 
