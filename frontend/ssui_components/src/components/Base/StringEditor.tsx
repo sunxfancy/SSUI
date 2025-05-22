@@ -1,9 +1,10 @@
 import { Text } from '@blueprintjs/core';
 import { IComponent } from '../IComponent';
+import styles from './test.module.css'
 
 export class StringEditor extends IComponent<{}, { textContent: string }> {
     render(): ReactNode {
-        return <Text>String Editor</Text>
+        return <Text className={styles.normal}>String Editor</Text>
     }
 
     onExecute(): any {

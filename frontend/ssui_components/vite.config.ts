@@ -14,6 +14,7 @@ export default defineConfig({
             formats: ['es']
         },
         rollupOptions: {
+            external: ['react', 'react-dom'],
             output: {
                 preserveModules: true,
                 preserveModulesRoot: 'src',
