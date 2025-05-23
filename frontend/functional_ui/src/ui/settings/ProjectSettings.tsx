@@ -48,6 +48,23 @@ class EnumConfig extends Component<{ item: ConfigItem; onChange: (value: string)
   }
 }
 
+class StringConfig extends Component<{ item: ConfigItem; onChange: (value: string) => void }> {
+  render() {
+    const { item, onChange } = this.props;
+    return (
+      <div className="config-item">
+        <div className="config-header">
+          <label className="config-label">{item.name}</label>
+          <div className="config-tooltip" title={item.description}>?</div>
+        </div>
+        <div className="config-control">
+          <input className="config-input" type="text" value={item.value} onChange={(e) => onChange(e.target.value)} />
+        </div>
+      </div>
+    );
+  }
+}
+
 // 列表类型配置项组件
 interface ListConfigState {
   newItem: string;
@@ -217,6 +234,8 @@ class ConfigItemComponent extends Component<{ item: ConfigItem; onChange: (value
     switch (item.type) {
       case 'boolean':
         return <BooleanConfig item={item} onChange={onChange} />;
+      case 'string':
+        return <StringConfig item={item} onChange={onChange} />;
       case 'enum':
         return <EnumConfig item={item} onChange={onChange} />;
       case 'list':

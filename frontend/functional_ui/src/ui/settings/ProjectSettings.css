@@ -40,6 +40,14 @@
   gap: 20px;
 }
 
+.config-input {
+  width: 100%;
+  padding: 8px 12px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  background-color: white;
+}
+
 .config-item {
   display: flex;
   flex-direction: column;

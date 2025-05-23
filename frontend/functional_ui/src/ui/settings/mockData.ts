@@ -3,6 +3,23 @@ import { ConfigGroup } from './types';
 // 模拟配置数据
 export const mockConfigData: ConfigGroup[] = [
   {
+    title: '外部服务',
+    items: [
+      {
+        name: "Civitai网站Token",
+        type: "string",
+        description: "Civitai网站的Token",
+        value: ""
+      },
+      {
+        name: "外部代码编辑器",
+        type: "string",
+        description: "外部代码编辑器路径",
+        value: ""
+      }
+    ]
+  },
+  {
     title: '界面设置',
     items: [
       {

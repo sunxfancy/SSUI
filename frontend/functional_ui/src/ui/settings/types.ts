@@ -1,5 +1,5 @@
 // 配置项类型定义
-export type ConfigType = 'boolean' | 'enum' | 'list' | 'dict';
+export type ConfigType = 'boolean' | 'string' | 'enum' | 'list' | 'dict';
 
 // 配置项接口
 export interface ConfigItem {
