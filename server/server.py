@@ -207,6 +207,17 @@ async def upload_file(script_path: str, file: UploadFile = File(...)):
     except Exception as e:
         return {"error": str(e)}
 
+@app.post("/files/upload_json")
+async def file_upload_json(path: str = Body(..., embed=True), content: str = Body(..., embed=True)):
+    try:
+        if not os.path.exists(path):
+            os.makedirs(os.path.dirname(path), exist_ok=True)
+        with open(path, "w", encoding="utf-8") as f:
+            f.write(content)
+        return {"success": True}
+    except Exception as e:
+        return {"error": str(e)}
+    
 @app.get("/file")
 async def file(path: str):
     print("access file: ", path)
@@ -215,6 +226,8 @@ async def file(path: str):
             return FileResponse(path, media_type="image/png")
         elif path.endswith(".jpg") or path.endswith(".jpeg"):
             return FileResponse(path, media_type="image/jpeg")
+        elif path.endswith(".json"):
+            return FileResponse(path, media_type="application/json")
         else:
             return FileResponse(path)
     return None

@@ -36,27 +36,5 @@ export const mockConfigData: ConfigGroup[] = [
         options: ['light', 'dark', 'system']
       }
     ]
-  },
-  {
-    title: '功能设置',
-    items: [
-      {
-        name: '快捷键列表',
-        type: 'list',
-        description: '自定义快捷键列表',
-        value: ['Ctrl+S', 'Ctrl+Z', 'Ctrl+Y'],
-        listItems: ['Ctrl+S', 'Ctrl+Z', 'Ctrl+Y']
-      },
-      {
-        name: '环境变量',
-        type: 'dict',
-        description: '配置环境变量',
-        value: { 'API_URL': 'http://localhost:3000', 'DEBUG': 'true' },
-        items: [
-          { key: 'API_URL', value: 'http://localhost:3000' },
-          { key: 'DEBUG', value: 'true' }
-        ]
-      }
-    ]
   }
 ]; 

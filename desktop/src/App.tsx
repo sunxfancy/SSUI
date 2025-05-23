@@ -56,7 +56,8 @@ const App = () => {
         const rootState = GlobalStateManager.getInstance().getRootState();
         const host = rootState?.host || 'localhost';
         const port = rootState?.port || 7422;
-        const filePath = `/functional_ui/?view=project_settings&?path=${rootState?.path}/resources/desktop_settings.json`;
+        const path = encodeURIComponent(`${rootState?.path}/resources/desktop_settings.json`);
+        const filePath = `/functional_ui/?view=project_settings&path=${path}`;
         tabWindowManagerRef.current?.openFile("应用设置", `http://${host}:${port}${filePath}`);
     }
 

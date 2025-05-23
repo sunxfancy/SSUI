@@ -146,32 +146,33 @@ export class TauriDownloaderProvider implements IDownloaderProvider {
 
             let downloadUrl: string;
             let fileName: string;
-
+            let file = undefined;
             if (fileId) {
-                const file = latestVersion.files.find(f => f.id === fileId);
+                file = latestVersion.files.find(f => f.id === fileId);
                 if (!file) {
                     throw new Error('无法找到指定的文件');
                 }
-                downloadUrl = file.downloadUrl;
-                if (file.metadata.format || file.metadata.size || file.metadata.fp) {
-                    downloadUrl = downloadUrl + "?";
-                }
-                if (file.metadata.format) {
-                    downloadUrl = downloadUrl + "format=" + file.metadata.format;
-                }
-                if (file.metadata.size) {
-                    downloadUrl = downloadUrl + "&size=" + file.metadata.size;
-                }
-                if (file.metadata.fp) {
-                    downloadUrl = downloadUrl + "&fp=" + file.metadata.fp;
-                }
-                fileName = file.name;
-
-                console.log("找到了要下载的文件metadata: ", downloadUrl, fileName);
             } else {
-                downloadUrl = latestVersion.downloadUrl;
-                fileName = `${model.name}.safetensors`;
+                file = latestVersion.files[0];
             }
+            
+            downloadUrl = file.downloadUrl;
+            if (file.metadata.format || file.metadata.size || file.metadata.fp) {
+                downloadUrl += "?";
+            }
+            if (file.metadata.format) {
+                downloadUrl += "format=" + file.metadata.format;
+            }
+            if (file.metadata.size) {
+                downloadUrl += "&size=" + file.metadata.size;
+            }
+            if (file.metadata.fp) {
+                downloadUrl += "&fp=" + file.metadata.fp;
+            }
+            fileName = file.name;
+
+            console.log("找到了要下载的文件metadata: ", downloadUrl, fileName);
+           
 
             // 创建下载任务
             await invoke('create_download_task', {
