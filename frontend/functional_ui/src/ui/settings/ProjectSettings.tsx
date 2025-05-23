@@ -1,12 +1,12 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { ConfigItem, ConfigGroup } from './types';
-import { mockConfigData } from './mockData';
 import './ProjectSettings.css';
 import { registerUIProvider, UIProvider } from '../UIProvider';
 import { Message } from 'ssui_components';
+import { useProjectSettings } from './useProjectSettings';
 
 // 布尔类型配置项组件
-const BooleanConfig: React.FC<{ item: ConfigItem; onChange: (value: boolean) => void }> = ({ item, onChange }) => {
+const BooleanConfig: React.FC<{ item: ConfigItem; value: boolean; onChange: (value: boolean) => void }> = ({ item, value, onChange }) => {
   return (
     <div className="config-item">
       <div className="config-header">
@@ -16,7 +16,7 @@ const BooleanConfig: React.FC<{ item: ConfigItem; onChange: (value: boolean) => 
       <div className="config-control">
         <input
           type="checkbox"
-          checked={item.value}
+          checked={value}
           onChange={(e) => onChange(e.target.checked)}
         />
       </div>
@@ -25,7 +25,7 @@ const BooleanConfig: React.FC<{ item: ConfigItem; onChange: (value: boolean) => 
 };
 
 // 枚举类型配置项组件
-const EnumConfig: React.FC<{ item: ConfigItem; onChange: (value: string) => void }> = ({ item, onChange }) => {
+const EnumConfig: React.FC<{ item: ConfigItem; value: string; onChange: (value: string) => void }> = ({ item, value, onChange }) => {
   return (
     <div className="config-item">
       <div className="config-header">
@@ -33,7 +33,7 @@ const EnumConfig: React.FC<{ item: ConfigItem; onChange: (value: string) => void
         <div className="config-tooltip" title={item.description}>?</div>
       </div>
       <div className="config-control">
-        <select value={item.value} onChange={(e) => onChange(e.target.value)}>
+        <select value={value} onChange={(e) => onChange(e.target.value)}>
           {item.options?.map((option) => (
             <option key={option} value={option}>{option}</option>
           ))}
@@ -43,7 +43,7 @@ const EnumConfig: React.FC<{ item: ConfigItem; onChange: (value: string) => void
   );
 };
 
-const StringConfig: React.FC<{ item: ConfigItem; onChange: (value: string) => void }> = ({ item, onChange }) => {
+const StringConfig: React.FC<{ item: ConfigItem; value: string; onChange: (value: string) => void }> = ({ item, value, onChange }) => {
   return (
     <div className="config-item">
       <div className="config-header">
@@ -51,25 +51,25 @@ const StringConfig: React.FC<{ item: ConfigItem; onChange: (value: string) => vo
         <div className="config-tooltip" title={item.description}>?</div>
       </div>
       <div className="config-control">
-        <input className="config-input" type="text" value={item.value} onChange={(e) => onChange(e.target.value)} />
+        <input className="config-input" type="text" value={value} onChange={(e) => onChange(e.target.value)} />
       </div>
     </div>
   );
 };
 
 // 列表类型配置项组件
-const ListConfig: React.FC<{ item: ConfigItem; onChange: (value: string[]) => void }> = ({ item, onChange }) => {
+const ListConfig: React.FC<{ item: ConfigItem; value: string[]; onChange: (value: string[]) => void }> = ({ item, value, onChange }) => {
   const [newItem, setNewItem] = useState('');
   
   const handleAdd = () => {
     if (newItem.trim()) {
-      onChange([...item.listItems || [], newItem.trim()]);
+      onChange([...value, newItem.trim()]);
       setNewItem('');
     }
   };
   
   const handleRemove = (index: number) => {
-    const newList = [...(item.listItems || [])];
+    const newList = [...value];
     newList.splice(index, 1);
     onChange(newList);
   };
@@ -82,7 +82,7 @@ const ListConfig: React.FC<{ item: ConfigItem; onChange: (value: string[]) => vo
       </div>
       <div className="config-control list-control">
         <div className="list-items">
-          {(item.listItems || []).map((listItem, index) => (
+          {value.map((listItem, index) => (
             <div key={index} className="list-item">
               <span>{listItem}</span>
               <button onClick={() => handleRemove(index)}>删除</button>
@@ -104,27 +104,31 @@ const ListConfig: React.FC<{ item: ConfigItem; onChange: (value: string[]) => vo
 };
 
 // 字典类型配置项组件
-const DictConfig: React.FC<{ item: ConfigItem; onChange: (value: { key: string; value: string }[]) => void }> = ({ item, onChange }) => {
+const DictConfig: React.FC<{ 
+  item: ConfigItem; 
+  value: { key: string; value: string }[]; 
+  onChange: (value: { key: string; value: string }[]) => void 
+}> = ({ item, value, onChange }) => {
   const [newKey, setNewKey] = useState('');
   const [newValue, setNewValue] = useState('');
   
   const handleAdd = () => {
     if (newKey.trim() && newValue.trim()) {
-      onChange([...item.items || [], { key: newKey.trim(), value: newValue.trim() }]);
+      onChange([...value, { key: newKey.trim(), value: newValue.trim() }]);
       setNewKey('');
       setNewValue('');
     }
   };
   
   const handleRemove = (index: number) => {
-    const newItems = [...(item.items || [])];
+    const newItems = [...value];
     newItems.splice(index, 1);
     onChange(newItems);
   };
   
-  const handleEdit = (index: number, field: 'key' | 'value', value: string) => {
-    const newItems = [...(item.items || [])];
-    newItems[index] = { ...newItems[index], [field]: value };
+  const handleEdit = (index: number, field: 'key' | 'value', newValue: string) => {
+    const newItems = [...value];
+    newItems[index] = { ...newItems[index], [field]: newValue };
     onChange(newItems);
   };
   
@@ -144,7 +148,7 @@ const DictConfig: React.FC<{ item: ConfigItem; onChange: (value: { key: string; 
             </tr>
           </thead>
           <tbody>
-            {(item.items || []).map((dictItem, index) => (
+            {value.map((dictItem, index) => (
               <tr key={index}>
                 <td>
                   <input
@@ -188,18 +192,22 @@ const DictConfig: React.FC<{ item: ConfigItem; onChange: (value: { key: string; 
 };
 
 // 配置项组件
-const ConfigItemComponent: React.FC<{ item: ConfigItem; onChange: (value: any) => void }> = ({ item, onChange }) => {
+const ConfigItemComponent: React.FC<{ 
+  item: ConfigItem; 
+  value: any;
+  onChange: (value: any) => void 
+}> = ({ item, value, onChange }) => {
   switch (item.type) {
     case 'boolean':
-      return <BooleanConfig item={item} onChange={onChange} />;
+      return <BooleanConfig item={item} value={value} onChange={onChange} />;
     case 'string':
-      return <StringConfig item={item} onChange={onChange} />;
+      return <StringConfig item={item} value={value} onChange={onChange} />;
     case 'enum':
-      return <EnumConfig item={item} onChange={onChange} />;
+      return <EnumConfig item={item} value={value} onChange={onChange} />;
     case 'list':
-      return <ListConfig item={item} onChange={onChange} />;
+      return <ListConfig item={item} value={value} onChange={onChange} />;
     case 'dict':
-      return <DictConfig item={item} onChange={onChange} />;
+      return <DictConfig item={item} value={value} onChange={onChange} />;
     default:
       return <div>不支持的配置类型: {item.type}</div>;
   }
@@ -207,18 +215,20 @@ const ConfigItemComponent: React.FC<{ item: ConfigItem; onChange: (value: any) =
 
 // 配置组组件
 const ConfigGroupComponent: React.FC<{ 
-  group: ConfigGroup; 
-  onConfigChange: (groupTitle: string, itemIndex: number, value: any) => void 
-}> = ({ group, onConfigChange }) => {
+  group: ConfigGroup;
+  userInput: { [key: string]: any };
+  onConfigChange: (groupTitle: string, itemName: string, value: any) => void 
+}> = ({ group, userInput, onConfigChange }) => {
   return (
     <div className="config-group">
       <h2 className="config-group-title">{group.title}</h2>
       <div className="config-items">
-        {group.items.map((item, itemIndex) => (
+        {group.items.map((item) => (
           <ConfigItemComponent
             key={item.name}
             item={item}
-            onChange={(value) => onConfigChange(group.title, itemIndex, value)}
+            value={userInput[item.name]?.value}
+            onChange={(value) => onConfigChange(group.title, item.name, value)}
           />
         ))}
       </div>
@@ -232,81 +242,7 @@ interface ProjectSettingsProps {
 }
 
 const ProjectSettings: React.FC<ProjectSettingsProps> = ({ path }) => {
-  const [configData, setConfigData] = useState<ConfigGroup[]>(mockConfigData);
-  const [saveStatus, setSaveStatus] = useState<'saved' | 'saving' | 'unsaved'>('saved');
-  const [saveTimeout, setSaveTimeout] = useState<NodeJS.Timeout | null>(null);
-  const [message] = useState(() => new Message());
-  
-  const loadConfig = useCallback(async () => {
-    try {
-      const response = await message.get(`file?path=${encodeURIComponent(path)}`);
-      if (response) {
-        const config = JSON.parse(response);
-        setConfigData(config);
-      }
-    } catch (error) {
-      console.error('加载配置失败:', error);
-    }
-  }, [path, message]);
-
-  const saveConfig = useCallback(async () => {
-    setSaveStatus('saving');
-    try {
-      await message.post('files/upload_json', {
-        path: path,
-        content: JSON.stringify(configData, null, 2)
-      });
-      setSaveStatus('saved');
-    } catch (error) {
-      console.error('保存失败:', error);
-      setSaveStatus('unsaved');
-    }
-  }, [configData, path, message]);
-
-  const debouncedSave = useCallback(() => {
-    if (saveTimeout) {
-      clearTimeout(saveTimeout);
-    }
-    setSaveStatus('unsaved');
-    const timeout = setTimeout(() => {
-      saveConfig();
-    }, 2000);
-    setSaveTimeout(timeout);
-  }, [saveConfig, saveTimeout]);
-
-  useEffect(() => {
-    loadConfig();
-  }, [loadConfig]);
-
-  useEffect(() => {
-    return () => {
-      if (saveTimeout) {
-        clearTimeout(saveTimeout);
-      }
-    };
-  }, [saveTimeout]);
-  
-  const handleConfigChange = (groupTitle: string, itemIndex: number, value: any) => {
-    setConfigData(prevConfigData => 
-      prevConfigData.map(group => {
-        if (group.title === groupTitle) {
-          const newItems = [...group.items];
-          newItems[itemIndex] = { ...newItems[itemIndex], value };
-          
-          // 更新相应的数据字段
-          if (newItems[itemIndex].type === 'list') {
-            newItems[itemIndex].listItems = value;
-          } else if (newItems[itemIndex].type === 'dict') {
-            newItems[itemIndex].items = value;
-          }
-          
-          return { ...group, items: newItems };
-        }
-        return group;
-      })
-    );
-    debouncedSave();
-  };
+  const { uiConfig, userInput, saveStatus, handleConfigChange } = useProjectSettings(path);
   
   return (
     <div className="project-settings">
@@ -319,10 +255,11 @@ const ProjectSettings: React.FC<ProjectSettingsProps> = ({ path }) => {
         </div>
       </div>
       <div className="settings-content">
-        {configData.map((group) => (
+        {uiConfig.map((group) => (
           <ConfigGroupComponent
             key={group.title}
             group={group}
+            userInput={userInput[group.title] || {}}
             onConfigChange={handleConfigChange}
           />
         ))}

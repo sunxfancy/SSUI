@@ -16,4 +16,24 @@ export interface ConfigItem {
 export interface ConfigGroup {
   title: string;
   items: ConfigItem[];
+}
+
+// 用户输入状态相关类型
+export interface UserInputValue {
+  value: any;
+  listItems?: string[];
+  items?: { key: string; value: string }[];
+}
+
+export interface UserInputState {
+  [groupTitle: string]: {
+    [itemName: string]: UserInputValue;
+  };
+}
+
+// 完整的配置状态
+export interface ProjectSettingsState {
+  uiConfig: ConfigGroup[];  // 界面配置
+  userInput: UserInputState;  // 用户输入状态
+  saveStatus: 'saved' | 'saving' | 'unsaved';
 } 
