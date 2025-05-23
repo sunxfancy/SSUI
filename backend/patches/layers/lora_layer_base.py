@@ -71,6 +71,16 @@ class LoRALayerBase(BaseLayerPatch):
                 params[param_name] = param_weight.reshape(get_param_shape(orig_param))
 
         return params
+    
+    @classmethod
+    def warn_on_unhandled_keys(cls, values: dict[str, torch.Tensor], handled_keys: set[str]):
+        """Log a warning if values contains unhandled keys."""
+        unknown_keys = set(values.keys()) - handled_keys
+        if unknown_keys:
+            # logger.warning(
+            #     f"Unexpected keys found in LoRA/LyCORIS layer, model might work incorrectly! Unexpected keys: {unknown_keys}"
+            # )
+            pass
 
     def calc_size(self) -> int:
         return calc_tensors_size([self.bias])

@@ -80,3 +80,31 @@ class TestFlux(unittest.TestCase):
         latent = FluxDenoise(self.config("Denoise"), self.model, latent, positive, negative)
         image = FluxLatentDecode(self.config("Latent to Image"), self.model, latent)
         image._image.save("result_flux.png")
+
+@unittest.skipIf(not should_run_slow_tests(), "Skipping slow test")
+class TestSD1lora(unittest.TestCase):
+    def setUp(self):
+        from ssui_image.SD1 import SD1Model,SD1Lora
+        from ssui.config import SSUIConfig
+        from ssui.base import Prompt
+        loraPath = ["D:\\work\\github_code\\SSUI\\test_models\\dilireba.safetensors","D:\\work\\github_code\\SSUI\\test_models\\jirai_v2.safetensors"]
+        self.model = SD1Model.load("D:\\work\\github_code\\SSUI\\test_models\\aingdiffusion_v40.safetensors")
+        self.loras = SD1Lora.load(loraPath)
+        self.config = SSUIConfig()
+        self.config.set_prepared(False)
+
+        self.positive = Prompt("a beautiful girl, masterpiece, best quality")
+        self.negative = Prompt("a bad image")
+
+    
+    def test_workflow(self):
+        from ssui_image.SD1 import (
+            SD1Clip, SD1Latent, 
+            SD1Denoise, SD1LatentDecode,SD1MergeLora
+        )
+        self.model = SD1MergeLora(self.config("Apply Lora"), self.model, self.loras)
+        positive, negative = SD1Clip(self.config("Prompt To Condition"), self.model, self.positive, self.negative)
+        latent = SD1Latent(self.config("Create Empty Latent"))
+        latent = SD1Denoise(self.config("Denoise"), self.model, latent, positive, negative)
+        image = SD1LatentDecode(self.config("Latent to Image"), self.model, latent)
+        image._image.save("sd1Lora.png")
