@@ -24,7 +24,7 @@ def txt2imgWithRef(model: SD1Model, positive: Prompt, negative: Prompt, referenc
 
 
 @workflow
-def txt2imgWithLora(model: SD1Model, loras: List[SD1Lora], positive: Prompt, negative: Prompt) -> Tuple[Image, Image]:
+def txt2imgWithLora(model: SD1Model, loras: List[SD1Lora], positive: Prompt, negative: Prompt) -> Image:
     model_w_lora = model
     model_w_lora = SD1MergeLora(config("Apply Lora"), model_w_lora, loras)
     positive, negative = SD1Clip(config("Prompt To Condition"), model, positive, negative)

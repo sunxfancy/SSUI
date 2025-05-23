@@ -118,7 +118,7 @@ class SD1Lora:
 def SD1MergeLora(
     config,
     model: SD1Model,
-    loraModel: List[List[SD1Lora]]
+    loraModel: List[SD1Lora]
 ):
     if config.is_prepare():
         return SD1Model(config("Add Empty Lora to SD1"))
