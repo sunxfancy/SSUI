@@ -124,11 +124,12 @@ export class TauriDownloaderProvider implements IDownloaderProvider {
         }
     }
 
-    async addDownloadTask(model: CivitaiModel): Promise<DownloadTask> {
+    async addDownloadTask(model: CivitaiModel, fileId?: number): Promise<DownloadTask> {
         const taskId = model.id.toString();
         const task: DownloadTask = {
             id: taskId,
             model,
+            fileId,
             status: 'pending',
             progress: 0
         };
@@ -138,15 +139,44 @@ export class TauriDownloaderProvider implements IDownloaderProvider {
 
         try {
             // 获取模型下载URL
-            const downloadUrl = model.modelVersions[0]?.downloadUrl;
-            if (!downloadUrl) {
-                throw new Error('无法获取模型下载地址');
+            const latestVersion = model.modelVersions[0];
+            if (!latestVersion) {
+                throw new Error('无法获取模型版本信息');
+            }
+
+            let downloadUrl: string;
+            let fileName: string;
+
+            if (fileId) {
+                const file = latestVersion.files.find(f => f.id === fileId);
+                if (!file) {
+                    throw new Error('无法找到指定的文件');
+                }
+                downloadUrl = file.downloadUrl;
+                if (file.metadata.format || file.metadata.size || file.metadata.fp) {
+                    downloadUrl = downloadUrl + "?";
+                }
+                if (file.metadata.format) {
+                    downloadUrl = downloadUrl + "format=" + file.metadata.format;
+                }
+                if (file.metadata.size) {
+                    downloadUrl = downloadUrl + "&size=" + file.metadata.size;
+                }
+                if (file.metadata.fp) {
+                    downloadUrl = downloadUrl + "&fp=" + file.metadata.fp;
+                }
+                fileName = file.name;
+
+                console.log("找到了要下载的文件metadata: ", downloadUrl, fileName);
+            } else {
+                downloadUrl = latestVersion.downloadUrl;
+                fileName = `${model.name}.safetensors`;
             }
 
             // 创建下载任务
             await invoke('create_download_task', {
                 url: downloadUrl,
-                output_path: `${rootPath}/resources/civitai_models/${model.type}/${model.name}.safetensors`,
+                output_path: `${rootPath}/resources/civitai_models/${model.type}/${fileName}`,
                 sha256: '' // 暂时不验证SHA256
             });
 

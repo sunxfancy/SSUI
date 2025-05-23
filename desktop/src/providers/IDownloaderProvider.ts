@@ -3,6 +3,7 @@ import { CivitaiModel } from '../types/civitai';
 export interface DownloadTask {
     id: string;
     model: CivitaiModel;
+    fileId?: number;  // 添加文件ID字段
     status: 'pending' | 'downloading' | 'completed' | 'failed';
     progress: number;
     error?: string;
@@ -10,7 +11,7 @@ export interface DownloadTask {
 
 export interface IDownloaderProvider {
     // 添加下载任务到队列
-    addDownloadTask(model: CivitaiModel): Promise<DownloadTask>;
+    addDownloadTask(model: CivitaiModel, fileId?: number): Promise<DownloadTask>;
     
     // 获取所有下载任务
     getDownloadTasks(): Promise<DownloadTask[]>;

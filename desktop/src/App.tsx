@@ -53,7 +53,11 @@ const App = () => {
     }
 
     const openSettings = () => {
-        // tabWindowManagerRef.current?.openFile(<GlobalSettings />, "设置");
+        const rootState = GlobalStateManager.getInstance().getRootState();
+        const host = rootState?.host || 'localhost';
+        const port = rootState?.port || 7422;
+        const filePath = `/functional_ui/?view=project_settings&?path=${rootState?.path}/resources/desktop_settings.json`;
+        tabWindowManagerRef.current?.openFile("应用设置", `http://${host}:${port}${filePath}`);
     }
 
     const openExtensionStore = () => {

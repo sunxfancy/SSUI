@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import {Spinner, Tabs, Tab, Icon, Button} from '@blueprintjs/core';
+import {Spinner, Tabs, Tab, Icon, Button, Menu, MenuItem, Popover, Position} from '@blueprintjs/core';
 import axios from 'axios';
 import { CivitaiModel } from '../../../types/civitai';
 import styles from './style.module.css';
@@ -58,8 +58,8 @@ export const CivitaiModels: React.FC<CivitaiModelsProps> = () => {
         setSelectedType(newTabId);
     }
 
-    const handleDownload = async (model: CivitaiModel) => {
-        const task = await downloader.addDownloadTask(model);
+    const handleDownload = async (model: CivitaiModel, fileId: number) => {
+        const task = await downloader.addDownloadTask(model, fileId);
         setDownloadTasks(prev => [...prev, task]);
     };
 
@@ -82,6 +82,26 @@ export const CivitaiModels: React.FC<CivitaiModelsProps> = () => {
     const isDownloading = (model: CivitaiModel) => {
         const task = downloadTasks.find(t => t.model.id === model.id);
         return task?.status === 'downloading' || task?.status === 'pending';
+    };
+
+    const renderDownloadMenu = (model: CivitaiModel) => {
+        const latestVersion = model.modelVersions[0];
+        if (!latestVersion) return <Menu />;
+
+        return (
+            <Menu>
+                {latestVersion.files.map(file => (
+                    <MenuItem
+                        key={file.id}
+                        text={`${file.name} (${(file.sizeKB / 1024).toFixed(1)}MB)`}
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            handleDownload(model, file.id);
+                        }}
+                    />
+                ))}
+            </Menu>
+        );
     };
 
     return (
@@ -111,15 +131,18 @@ export const CivitaiModels: React.FC<CivitaiModelsProps> = () => {
                                     <span><Icon icon="heart" /> {model.stats.thumbsUpCount}</span>
                                     <span><Icon icon="comment" /> {model.stats.commentCount}</span>
                                 </div>
-                                <Button
-                                    text={getDownloadButtonText(model)}
-                                    intent="primary"
+                                <Popover
+                                    content={renderDownloadMenu(model)}
+                                    position={Position.BOTTOM_RIGHT}
                                     disabled={isDownloading(model)}
-                                    onClick={(e) => {
-                                        e.stopPropagation();
-                                        handleDownload(model);
-                                    }}
-                                />
+                                >
+                                    <Button
+                                        text={getDownloadButtonText(model)}
+                                        intent="primary"
+                                        disabled={isDownloading(model)}
+                                        rightIcon="caret-down"
+                                    />
+                                </Popover>
                             </div>
                         </div>
                     </div>
