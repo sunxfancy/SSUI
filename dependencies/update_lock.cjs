@@ -11,14 +11,6 @@ function parseArgs() {
   };
 }
 
-// 确定当前操作系统
-function getPlatformName() {
-  const platform = os.platform();
-  if (platform === 'win32') return 'windows';
-  if (platform === 'darwin') return 'macosx';
-  return 'linux'; // 默认为linux
-}
-
 // 读取requirements文件并提取index-url信息
 function extractIndexUrls(requirementsFile) {
   const content = fs.readFileSync(requirementsFile, 'utf8');

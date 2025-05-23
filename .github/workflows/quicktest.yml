@@ -20,6 +20,8 @@ jobs:
             platform: windows
           - os: macOS-latest
             platform: macosx
+          - os: ubuntu-latest
+            platform: linux
 
     steps:
       - uses: actions/checkout@v4

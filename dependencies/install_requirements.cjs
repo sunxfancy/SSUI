@@ -8,6 +8,8 @@ function getRequirementsFile() {
         return path.join(__dirname, 'windows.lock');
     } else if (os === 'darwin') {
         return path.join(__dirname, 'macosx.lock');
+    } else if (os === 'linux') {
+        return path.join(__dirname, 'linux.lock');
     } else {
         throw new Error(`Unsupported operating system: ${os}`);
     }
