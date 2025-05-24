@@ -25,7 +25,7 @@ class LoRAExt(ExtensionBase):
 
     @contextmanager
     def patch_unet(self, unet: UNet2DConditionModel, original_weights: OriginalWeightsStorage):
-        lora_model = self._lora_model
+        lora_model = self._lora_model.lora.model
         assert isinstance(lora_model, ModelPatchRaw)
         LayerPatcher.apply_smart_model_patch(
             model=unet,

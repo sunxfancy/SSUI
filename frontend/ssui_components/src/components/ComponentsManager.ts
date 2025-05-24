@@ -50,15 +50,15 @@ export interface PythonType {
 export function parsePythonTyping(pythonType: string): PythonType {
     // 基本类型列表
     const basicTypes = ['int', 'float', 'str', 'bool', 'None', 'Any', 'Dict', 'List', 'Set', 'Tuple', 'Optional', 'Union', 'Callable'];
-    
+
     // 如果已经是基本类型，直接返回
     if (basicTypes.includes(pythonType)) {
         return { type: pythonType };
     }
-    
+
     // 使用递归下降解析器解析类型
     let index = 0;
-    
+
     // 解析类型名称（包括点分隔符）
     function parseTypeName(): string {
         let name = '';
@@ -68,35 +68,35 @@ export function parsePythonTyping(pythonType: string): PythonType {
         }
         return name;
     }
-    
+
     // 解析类型参数
     function parseTypeArgs(): PythonType[] {
         const args: PythonType[] = [];
-        
+
         // 跳过左括号
         if (pythonType[index] === '[') {
             index++;
         } else {
             throw new Error(`Expected '[' at position ${index}`);
         }
-        
+
         // 解析参数列表
         while (index < pythonType.length) {
             // 跳过空白字符
             while (index < pythonType.length && /\s/.test(pythonType[index])) {
                 index++;
             }
-            
+
             // 如果遇到右括号，结束解析
             if (pythonType[index] === ']') {
                 index++;
                 break;
             }
-            
+
             // 解析一个类型参数
             const startIndex = index;
             let bracketCount = 0;
-            
+
             while (index < pythonType.length) {
                 if (pythonType[index] === '[') {
                     bracketCount++;
@@ -110,33 +110,33 @@ export function parsePythonTyping(pythonType: string): PythonType {
                 }
                 index++;
             }
-            
+
             const arg = pythonType.substring(startIndex, index).trim();
             args.push(parsePythonTyping(arg));
-            
+
             // 如果遇到逗号，继续解析下一个参数
             if (pythonType[index] === ',') {
                 index++;
             }
         }
-        
+
         return args;
     }
-    
+
     // 解析类型
     function parseType(): PythonType {
         // 解析类型名称
         const typeName = parseTypeName();
-        
+
         // 如果遇到左括号，解析类型参数
         if (index < pythonType.length && pythonType[index] === '[') {
             const typeArgs = parseTypeArgs();
             return { type: typeName, args: typeArgs };
         }
-        
+
         return { type: typeName };
     }
-    
+
     // 开始解析
     return parseType();
 }

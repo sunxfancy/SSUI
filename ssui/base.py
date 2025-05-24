@@ -1,9 +1,13 @@
 import PIL.Image
-from dataclasses import dataclass
+import trimesh
 
 class Image():
     def __init__(self, image: PIL.Image.Image = None):
         self._image = image
+
+class Model3D():
+    def __init__(self, model: trimesh.Trimesh = None):
+        self._model = model
 
 
 class Prompt():

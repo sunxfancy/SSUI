@@ -5,7 +5,8 @@ server:
   extension_dependencies:
     - Image
   dependencies:
-    - numpy>=1.21.2
+    - diffsynth>=1.1.7
+
   main: extension.py
 
 web_ui:

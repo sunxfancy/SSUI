@@ -106,12 +106,18 @@ contourpy:
   dependents:
     - matplotlib
 controlnet-aux:
-  version: "0.0.9"
+  version: "0.0.7"
   isRoot: true
+  dependents:
+    - diffsynth
 cumm-cu124:
   version: "0.7.11"
   dependents:
     - spconv-cu124
+cupy-cuda12x:
+  version: "13.4.1"
+  dependents:
+    - diffsynth
 cycler:
   version: "0.12.1"
   dependents:
@@ -129,6 +135,9 @@ deprecated:
   isRoot: true
   dependents:
     - pygltflib
+diffsynth:
+  version: "1.1.7"
+  isRoot: true
 diffusers:
   version: "0.32.2"
   isRoot: true
@@ -150,6 +159,7 @@ einops:
   isRoot: true
   dependents:
     - controlnet-aux
+    - diffsynth
     - spandrel
 email-validator:
   version: "2.2.0"
@@ -170,6 +180,10 @@ fastapi-cli:
   version: "0.0.7"
   dependents:
     - fastapi
+fastrlock:
+  version: "0.8.3"
+  dependents:
+    - cupy-cuda12x
 filelock:
   version: "3.13.1"
   dependents:
@@ -213,6 +227,7 @@ ftfy:
   version: "6.3.1"
   dependents:
     - clip-anytorch
+    - diffsynth
 gguf:
   version: "0.14.0"
   isRoot: true
@@ -225,6 +240,14 @@ h11:
   dependents:
     - httpcore
     - uvicorn
+hf-transfer:
+  version: "0.1.9"
+  dependents:
+    - huggingface-hub
+hf-xet:
+  version: "1.1.2"
+  dependents:
+    - huggingface-hub
 httpcore:
   version: "1.0.7"
   dependents:
@@ -238,7 +261,8 @@ httpx:
   dependents:
     - fastapi
 huggingface-hub:
-  version: "0.29.3"
+  version: "0.31.4"
+  isRoot: true
   dependents:
     - accelerate
     - controlnet-aux
@@ -263,7 +287,12 @@ igraph:
 imageio:
   version: "2.37.0"
   dependents:
+    - diffsynth
     - scikit-image
+imageio-ffmpeg:
+  version: "0.6.0"
+  dependents:
+    - imageio
 importlib-metadata:
   version: "8.6.1"
   dependents:
@@ -394,6 +423,10 @@ ml-dtypes:
   dependents:
     - jax
     - jaxlib
+modelscope:
+  version: "1.26.0"
+  dependents:
+    - diffsynth
 moderngl:
   version: "5.12.0"
   isRoot: true
@@ -436,6 +469,7 @@ numpy:
     - contourpy
     - controlnet-aux
     - cumm-cu124
+    - cupy-cuda12x
     - diffusers
     - gguf
     - imageio
@@ -451,6 +485,7 @@ numpy:
     - onnx
     - onnxruntime
     - opencv-contrib-python
+    - opencv-python
     - opencv-python-headless
     - plyfile
     - pymatting
@@ -479,10 +514,13 @@ opencv-contrib-python:
   version: "4.11.0.86"
   dependents:
     - mediapipe
-opencv-python-headless:
+opencv-python:
   version: "4.11.0.86"
   dependents:
     - controlnet-aux
+opencv-python-headless:
+  version: "4.11.0.86"
+  dependents:
     - rembg
 opt-einsum:
   version: "3.4.0"
@@ -558,6 +596,7 @@ propcache:
 protobuf:
   version: "4.25.6"
   dependents:
+    - diffsynth
     - mediapipe
     - onnx
     - onnxruntime
@@ -565,6 +604,7 @@ psutil:
   version: "7.0.0"
   dependents:
     - accelerate
+    - imageio
 pure-eval:
   version: "0.2.3"
   dependents:
@@ -677,6 +717,7 @@ requests:
     - ccimport
     - diffusers
     - huggingface-hub
+    - modelscope
     - pooch
     - transformers
 restrictedpython:
@@ -701,6 +742,7 @@ safetensors:
   isRoot: true
   dependents:
     - accelerate
+    - diffsynth
     - diffusers
     - spandrel
     - transformers
@@ -728,6 +770,7 @@ scooby:
 sentencepiece:
   version: "0.2.0"
   dependents:
+    - diffsynth
     - gguf
     - mediapipe
 setuptools:
@@ -787,7 +830,7 @@ timm:
   dependents:
     - controlnet-aux
 tokenizers:
-  version: "0.21.1"
+  version: "0.20.3"
   isRoot: true
   dependents:
     - transformers
@@ -800,6 +843,7 @@ torch:
     - clip-anytorch
     - compel
     - controlnet-aux
+    - diffsynth
     - diffusers
     - kornia
     - spandrel
@@ -820,6 +864,7 @@ torchvision:
   dependents:
     - clip-anytorch
     - controlnet-aux
+    - diffsynth
     - spandrel
     - timm
 tornado:
@@ -834,6 +879,7 @@ tqdm:
     - gguf
     - huggingface-hub
     - kaolin
+    - modelscope
     - rembg
     - transformers
 traitlets:
@@ -850,10 +896,11 @@ trampoline:
   dependents:
     - torchsde
 transformers:
-  version: "4.50.3"
+  version: "4.46.2"
   isRoot: true
   dependents:
     - compel
+    - diffsynth
 trimesh:
   version: "4.6.6"
   isRoot: true
@@ -891,6 +938,7 @@ typing-inspection:
 urllib3:
   version: "1.26.13"
   dependents:
+    - modelscope
     - requests
 usd-core:
   version: "25.2.post1"

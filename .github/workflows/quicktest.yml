@@ -15,11 +15,17 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [windows-latest, macOS-latest]
+        include:
+          - os: windows-latest
+            platform: windows
+          - os: macOS-latest
+            platform: macosx
+          - os: ubuntu-latest
+            platform: linux
 
     steps:
       - uses: actions/checkout@v4
-          
+         
       - name: Set Node.js 22.x
         uses: actions/setup-node@v4
         with:
@@ -39,7 +45,13 @@ jobs:
           activate-environment: true
 
       - name: Install requirements
-        run: yarn requirements && uv pip install -r .venv/requirements.txt
+        run: uv pip install -r dependencies/${{ matrix.platform }}.lock
+
+      - name: Install system dependencies
+        if: ${{ matrix.platform == 'linux' }}
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf libglib2.0-dev pkg-config
 
       - name: Setup Rust
         uses: actions-rust-lang/setup-rust-toolchain@v1

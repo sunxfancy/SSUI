@@ -18,7 +18,6 @@
     "dev:server:no_build": "node dependencies/venv.cjs python -m server --dev",
     "dev:executor": "node dependencies/venv.cjs python -m ss_executor",
     "dev:functional_ui": "cd frontend/functional_ui && yarn dev",
-    "dev:components": "cd frontend/ssui_components && yarn dev",
     "dev:canvas": "cd extensions/Image && yarn dev",
     "dev:vscode": "cd ssui-vscode && yarn watch",
     "build:frontend": "yarn build:components && yarn build:functional_ui",
@@ -41,10 +40,12 @@
     "package:vscode": "cd ssui-vscode && yarn package",
     "check_deps": "yarn --version && rustc --version && cargo --version",
     "requirements": "node dependencies/combine_requirements.cjs",
-    "install-requirements": "node dependencies/venv.cjs uv pip install -r .venv/requirements.txt",
+    "install-requirements": "node dependencies/install_requirements.cjs",
     "update-lock": "node dependencies/update_lock.cjs",
     "update-lock:no-upgrade": "node dependencies/update_lock.cjs --no-upgrade",
-    "postinstall": "node dependencies/install.cjs"
+    "postinstall": "node dependencies/install.cjs",
+    "docker": "docker build -t ssui-docker .",
+    "docker-run": "docker run -it --gpus all -p 7422:7422 ssui-docker"
   },
   "devDependencies": {
     "concurrently": "^9.1.2",

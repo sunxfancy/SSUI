@@ -1,16 +1,16 @@
 @echo off
 @setlocal enabledelayedexpansion
 
-rem 创建.build文件夹并将Python放入其中
+rem Create .build folder and put Python in it
 if not exist ".venv" mkdir .venv
 
-rem 检查Python是否已经存在
+rem Check if Python already exists
 if not exist ".venv\python\python.exe" (
-    rem 检查操作系统类型
+    rem Check operating system type
     set PYTHON_VERSION=3.12.8
     set RELEASE_DATE=20241219
 
-    rem 检查处理器架构
+    rem Check processor architecture
     if /I "!PROCESSOR_ARCHITECTURE!"=="x86" (
         set ARCH=i686-pc-windows-msvc
     ) else if /I "!PROCESSOR_ARCHITECTURE!"=="AMD64" (
@@ -20,11 +20,11 @@ if not exist ".venv\python\python.exe" (
         exit /b
     )
 
-    rem 设置下载链接
+    rem Set download URLs
     set DOWNLOAD_URL=https://github.com/astral-sh/python-build-standalone/releases/download/!RELEASE_DATE!/cpython-!PYTHON_VERSION!+!RELEASE_DATE!-!ARCH!-install_only_stripped.tar.gz
     set CHINA_MIRROR=https://gitee.com/Swordtooth/ssui_assets/releases/download/v0.0.2/cpython-!PYTHON_VERSION!%!RELEASE_DATE!-!ARCH!-install_only_stripped.tar.gz
 
-    rem 尝试从GitHub下载Python
+    rem Try to download Python from GitHub
     echo "Trying to download Python from GitHub..."
     curl -L !DOWNLOAD_URL! -o .venv\python.tar.gz
     if errorlevel 1 (
@@ -40,9 +40,9 @@ if not exist ".venv\python\python.exe" (
     powershell -Command "Remove-Item -Path '.venv\python.tar.gz' -Force"
 )
 
-rem 检查虚拟环境是否已经存在
+rem Check if virtual environment already exists
 if not exist ".venv\Scripts\python.exe" (
-    rem 使用virtualenv创建虚拟环境
+    rem Create virtual environment using venv
     echo "Creating virtual environment..."
     .venv\python\python.exe -m venv .venv
 )

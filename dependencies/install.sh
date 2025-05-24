@@ -1,19 +1,19 @@
 #!/bin/bash
 
-# 创建.venv文件夹
+# Create .venv folder
 mkdir -p .venv
 
-# 检查Python是否已经存在
+# Check if Python already exists
 if [ ! -f ".venv/python/bin/python3" ]; then
-    # 设置Python版本和发布日期
+    # Set Python version and release date
     PYTHON_VERSION="3.12.8"
     RELEASE_DATE="20241219"
     
-    # 检查操作系统类型
+    # Check operating system type
     OS_TYPE=$(uname -s)
     ARCHITECTURE=$(uname -m)
     
-    # 根据操作系统和架构设置下载参数
+    # Set download parameters based on OS and architecture
     if [ "$OS_TYPE" = "Darwin" ]; then
         # macOS
         if [ "$ARCHITECTURE" = "x86_64" ]; then
@@ -40,11 +40,11 @@ if [ ! -f ".venv/python/bin/python3" ]; then
     fi
     https://github.com/astral-sh/python-build-standalone/releases/download/20241219/cpython-3.12.8+20241219-${ARCH}-install_only_stripped.tar.gz
     
-    # 设置下载链接
+    # Set download URLs
     DOWNLOAD_URL="https://github.com/astral-sh/python-build-standalone/releases/download/${RELEASE_DATE}/cpython-${PYTHON_VERSION}+${RELEASE_DATE}-${ARCH}-install_only_stripped.tar.gz"
     CHINA_MIRROR="https://gitee.com/Swordtooth/ssui_assets/releases/download/v0.0.2/cpython-${PYTHON_VERSION}%${RELEASE_DATE}-${ARCH}-install_only_stripped.tar.gz"
 
-    # 下载并解压Python
+    # Download and extract Python
     echo "Downloading Python from ${DOWNLOAD_URL}..."
     if ! curl -L "${DOWNLOAD_URL}" -o .venv/python.tar.gz; then
         echo "Failed to download from primary source, trying Chinese mirror..."
@@ -54,19 +54,19 @@ if [ ! -f ".venv/python/bin/python3" ]; then
         fi
     fi
     
-    # 解压文件
+    # Extract files
     tar -xzf .venv/python.tar.gz -C .venv
     rm .venv/python.tar.gz
 fi
 
-# 检查虚拟环境是否已经存在
+# Check if virtual environment already exists
 if [ ! -f ".venv/bin/python" ]; then
-    # 创建虚拟环境
+    # Create virtual environment
     echo "Creating virtual environment..."
     .venv/python/bin/python3 -m venv .venv
 fi
 
-# 检查并安装uv工具
+# Check and install uv tool
 if [ ! -f ".venv/bin/uv" ]; then
     echo "Installing uv tool..."
     .venv/bin/python -m pip install uv==0.6.11

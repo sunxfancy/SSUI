@@ -5,7 +5,7 @@ import HuggingfaceLogo from './logo_huggingface.svg'
 import ModelLogo from './logo_model.svg'
 import styles from './style.module.css'
 
-interface HuggingfaceModel {
+export interface HuggingfaceModel {
     id: string;
     modelId: string;
     private: boolean;

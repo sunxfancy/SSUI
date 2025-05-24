@@ -18,11 +18,13 @@ jobs:
       matrix:
         include:
           - os: windows-latest
+            platform: windows
             artifacts: |
               desktop/src-tauri/target/release/bundle/msi/*.msi
               desktop/src-tauri/target/release/bundle/nsis/*.exe
 
           - os: macOS-latest
+            platform: macosx
             artifacts: |
               desktop/src-tauri/target/release/bundle/dmg/*.dmg
 
@@ -48,7 +50,7 @@ jobs:
           activate-environment: true
 
       - name: Install requirements
-        run: yarn requirements && uv pip install -r .venv/requirements.txt
+        run: uv pip install -r dependencies/${{ matrix.platform }}.lock
 
       - name: Setup Rust
         uses: actions-rust-lang/setup-rust-toolchain@v1

@@ -1,3 +1,4 @@
+
 einops>=0.8.0
 transformers>=4.46.2
 tokenizers>=0.20.0
@@ -41,18 +42,8 @@ pymeshfix>=0.17.0
 igraph>=0.11.8
 kornia>=0.8.0 
 
-# Windows 特定的其他依赖
-bitsandbytes>=0.45.3
-triton-windows==3.1.0.post17
-kaolin @ https://nvidia-kaolin.s3.us-east-2.amazonaws.com/torch-2.4.0_cu124/kaolin-0.17.0-cp312-cp312-win_amd64.whl
-nvdiffrast @ https://github.com/sunxfancy/nvdiffrast/releases/download/v0.3.3.1/nvdiffrast-0.3.3.1-cp312-cp312-win_amd64.whl
-spconv-cu124>=2.3.8
-diff-gaussian-rasterization @ https://github.com/sunxfancy/diff-gaussian-rasterization/releases/download/v0.1/diff_gaussian_rasterization-0.0.0-cp312-cp312-win_amd64.whl
-torch-scatter @ https://data.pyg.org/whl/torch-2.4.0%2Bcu124/torch_scatter-2.1.2%2Bpt24cu124-cp312-cp312-win_amd64.whl 
-
 --extra-index-url https://download.pytorch.org/whl/cu124
 
-# Windows 下使用 cu124 的 Torch 包
 torch==2.4.1+cu124
 torchvision==0.19.1+cu124
 torchaudio==2.4.1+cu124

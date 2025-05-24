@@ -1,10 +1,10 @@
 # 包依赖关系
 absl-py:
-  version: "2.2.1"
+  version: "2.2.2"
   dependents:
     - mediapipe
 accelerate:
-  version: "1.5.2"
+  version: "1.7.0"
   isRoot: true
   dependents:
     - diffusers
@@ -13,7 +13,7 @@ aiohappyeyeballs:
   dependents:
     - aiohttp
 aiohttp:
-  version: "3.11.14"
+  version: "3.11.18"
   isRoot: true
 aioshutil:
   version: "1.5"
@@ -40,10 +40,10 @@ attrs:
     - mediapipe
     - referencing
 blake3:
-  version: "1.0.4"
+  version: "1.0.5"
   isRoot: true
 certifi:
-  version: "2025.1.31"
+  version: "2022.12.7"
   dependents:
     - httpcore
     - httpx
@@ -53,7 +53,7 @@ cffi:
   dependents:
     - sounddevice
 charset-normalizer:
-  version: "3.4.1"
+  version: "2.1.1"
   dependents:
     - requests
 click:
@@ -76,15 +76,21 @@ coloredlogs:
   dependents:
     - onnxruntime
 compel:
-  version: "2.0.3"
+  version: "2.1.1"
   isRoot: true
 contourpy:
-  version: "1.3.1"
+  version: "1.3.2"
   dependents:
     - matplotlib
 controlnet-aux:
   version: "0.0.7"
   isRoot: true
+  dependents:
+    - diffsynth
+cupy-cuda12x:
+  version: "13.4.1"
+  dependents:
+    - diffsynth
 cycler:
   version: "0.12.1"
   dependents:
@@ -92,8 +98,11 @@ cycler:
 deprecated:
   version: "1.2.18"
   isRoot: true
+diffsynth:
+  version: "1.1.7"
+  isRoot: true
 diffusers:
-  version: "0.32.2"
+  version: "0.33.1"
   isRoot: true
   dependents:
     - compel
@@ -113,20 +122,25 @@ einops:
   isRoot: true
   dependents:
     - controlnet-aux
+    - diffsynth
     - spandrel
 email-validator:
   version: "2.2.0"
   dependents:
     - fastapi
 fastapi:
-  version: "0.115.12"
+  version: "0.115.6"
   isRoot: true
 fastapi-cli:
   version: "0.0.7"
   dependents:
     - fastapi
+fastrlock:
+  version: "0.8.3"
+  dependents:
+    - cupy-cuda12x
 filelock:
-  version: "3.18.0"
+  version: "3.13.1"
   dependents:
     - controlnet-aux
     - diffusers
@@ -140,16 +154,16 @@ flatbuffers:
     - mediapipe
     - onnxruntime
 fonttools:
-  version: "4.56.0"
+  version: "4.58.0"
   dependents:
     - matplotlib
 frozenlist:
-  version: "1.5.0"
+  version: "1.6.0"
   dependents:
     - aiohttp
     - aiosignal
 fsspec:
-  version: "2025.3.0"
+  version: "2024.6.1"
   dependents:
     - huggingface-hub
     - torch
@@ -157,15 +171,16 @@ ftfy:
   version: "6.3.1"
   dependents:
     - clip-anytorch
+    - diffsynth
 gguf:
-  version: "0.14.0"
+  version: "0.16.3"
   isRoot: true
 glcontext:
   version: "3.0.0"
   dependents:
     - moderngl
 h11:
-  version: "0.14.0"
+  version: "0.16.0"
   dependents:
     - httpcore
     - uvicorn
@@ -178,7 +193,7 @@ hf-xet:
   dependents:
     - huggingface-hub
 httpcore:
-  version: "1.0.7"
+  version: "1.0.9"
   dependents:
     - httpx
 httptools:
@@ -190,12 +205,13 @@ httpx:
   dependents:
     - fastapi
 huggingface-hub:
-  version: "0.31.4"
+  version: "0.32.0"
   isRoot: true
   dependents:
     - accelerate
     - controlnet-aux
     - diffusers
+    - timm
     - tokenizers
     - transformers
 humanfriendly:
@@ -203,7 +219,7 @@ humanfriendly:
   dependents:
     - coloredlogs
 idna:
-  version: "3.10"
+  version: "3.4"
   dependents:
     - anyio
     - email-validator
@@ -216,23 +232,28 @@ igraph:
 imageio:
   version: "2.37.0"
   dependents:
+    - diffsynth
     - scikit-image
+imageio-ffmpeg:
+  version: "0.6.0"
+  dependents:
+    - imageio
 importlib-metadata:
-  version: "8.6.1"
+  version: "8.7.0"
   dependents:
     - controlnet-aux
     - diffusers
 jax:
-  version: "0.5.3"
+  version: "0.6.1"
   dependents:
     - mediapipe
 jaxlib:
-  version: "0.5.3"
+  version: "0.6.1"
   dependents:
     - jax
     - mediapipe
 jinja2:
-  version: "3.1.6"
+  version: "3.1.4"
   dependents:
     - fastapi
     - torch
@@ -241,7 +262,7 @@ jsonschema:
   dependents:
     - rembg
 jsonschema-specifications:
-  version: "2024.10.1"
+  version: "2025.4.1"
   dependents:
     - jsonschema
 kiwisolver:
@@ -249,10 +270,10 @@ kiwisolver:
   dependents:
     - matplotlib
 kornia:
-  version: "0.8.0"
+  version: "0.8.1"
   isRoot: true
 kornia-rs:
-  version: "0.1.8"
+  version: "0.1.9"
   dependents:
     - kornia
 lazy-loader:
@@ -268,11 +289,11 @@ markdown-it-py:
   dependents:
     - rich
 markupsafe:
-  version: "3.0.2"
+  version: "2.1.5"
   dependents:
     - jinja2
 matplotlib:
-  version: "3.10.1"
+  version: "3.10.3"
   isRoot: true
   dependents:
     - mediapipe
@@ -290,6 +311,10 @@ ml-dtypes:
   dependents:
     - jax
     - jaxlib
+modelscope:
+  version: "1.26.0"
+  dependents:
+    - diffsynth
 moderngl:
   version: "5.12.0"
   isRoot: true
@@ -298,25 +323,26 @@ mpmath:
   dependents:
     - sympy
 multidict:
-  version: "6.2.0"
+  version: "6.4.4"
   dependents:
     - aiohttp
     - yarl
 networkx:
-  version: "3.4.2"
+  version: "3.3"
   dependents:
     - scikit-image
     - torch
 numba:
-  version: "0.61.0"
+  version: "0.61.2"
   dependents:
     - pymatting
 numpy:
-  version: "1.26.4"
+  version: "1.26.3"
   dependents:
     - accelerate
     - contourpy
     - controlnet-aux
+    - cupy-cuda12x
     - diffusers
     - gguf
     - imageio
@@ -344,11 +370,12 @@ numpy:
     - torchvision
     - transformers
     - trimesh
+    - xformers
 onnx:
-  version: "1.17.0"
+  version: "1.18.0"
   isRoot: true
 onnxruntime:
-  version: "1.21.0"
+  version: "1.22.0"
   isRoot: true
 opencv-contrib-python:
   version: "4.11.0.86"
@@ -367,7 +394,7 @@ opt-einsum:
   dependents:
     - jax
 packaging:
-  version: "24.2"
+  version: "24.1"
   dependents:
     - accelerate
     - huggingface-hub
@@ -379,10 +406,10 @@ packaging:
     - scikit-image
     - transformers
 picklescan:
-  version: "0.0.24"
+  version: "0.0.26"
   isRoot: true
 pillow:
-  version: "11.1.0"
+  version: "11.0.0"
   isRoot: true
   dependents:
     - controlnet-aux
@@ -395,7 +422,7 @@ pillow:
     - scikit-image
     - torchvision
 platformdirs:
-  version: "4.3.7"
+  version: "4.3.8"
   dependents:
     - pooch
     - virtualenv
@@ -413,8 +440,9 @@ propcache:
     - aiohttp
     - yarl
 protobuf:
-  version: "4.25.6"
+  version: "4.25.7"
   dependents:
+    - diffsynth
     - mediapipe
     - onnx
     - onnxruntime
@@ -422,33 +450,34 @@ psutil:
   version: "7.0.0"
   dependents:
     - accelerate
+    - imageio
 pycparser:
   version: "2.22"
   dependents:
     - cffi
 pydantic:
-  version: "2.11.1"
+  version: "2.11.5"
   isRoot: true
   dependents:
     - fastapi
     - pydantic-settings
 pydantic-core:
-  version: "2.33.0"
+  version: "2.33.2"
   dependents:
     - pydantic
 pydantic-settings:
-  version: "2.8.1"
+  version: "2.9.1"
   isRoot: true
 pygments:
   version: "2.19.1"
   dependents:
     - rich
 pymatting:
-  version: "1.1.13"
+  version: "1.1.14"
   dependents:
     - rembg
 pymeshfix:
-  version: "0.17.0"
+  version: "0.17.1"
   isRoot: true
 pyparsing:
   version: "3.2.3"
@@ -473,7 +502,7 @@ python-multipart:
   dependents:
     - fastapi
 pyvista:
-  version: "0.44.2"
+  version: "0.45.2"
   isRoot: true
   dependents:
     - pymeshfix
@@ -484,6 +513,7 @@ pyyaml:
     - accelerate
     - gguf
     - huggingface-hub
+    - timm
     - transformers
     - uvicorn
 referencing:
@@ -498,29 +528,30 @@ regex:
     - diffusers
     - transformers
 rembg:
-  version: "2.0.65"
+  version: "2.0.66"
   isRoot: true
 requests:
-  version: "2.32.3"
+  version: "2.28.1"
   dependents:
     - diffusers
     - huggingface-hub
+    - modelscope
     - pooch
     - transformers
 restrictedpython:
   version: "8.0"
   isRoot: true
 rich:
-  version: "13.9.4"
+  version: "14.0.0"
   dependents:
     - rich-toolkit
     - typer
 rich-toolkit:
-  version: "0.14.0"
+  version: "0.14.6"
   dependents:
     - fastapi-cli
 rpds-py:
-  version: "0.24.0"
+  version: "0.25.1"
   dependents:
     - jsonschema
     - referencing
@@ -529,8 +560,10 @@ safetensors:
   isRoot: true
   dependents:
     - accelerate
+    - diffsynth
     - diffusers
     - spandrel
+    - timm
     - transformers
 scikit-image:
   version: "0.25.2"
@@ -538,7 +571,7 @@ scikit-image:
     - controlnet-aux
     - rembg
 scipy:
-  version: "1.15.2"
+  version: "1.15.3"
   isRoot: true
   dependents:
     - controlnet-aux
@@ -549,16 +582,17 @@ scipy:
     - scikit-image
     - torchsde
 scooby:
-  version: "0.10.0"
+  version: "0.10.1"
   dependents:
     - pyvista
 sentencepiece:
   version: "0.2.0"
   dependents:
+    - diffsynth
     - gguf
     - mediapipe
 setuptools:
-  version: "78.1.0"
+  version: "70.2.0"
   dependents:
     - torch
 shellingham:
@@ -574,14 +608,14 @@ sniffio:
   dependents:
     - anyio
 sounddevice:
-  version: "0.5.1"
+  version: "0.5.2"
   dependents:
     - mediapipe
 spandrel:
   version: "0.4.1"
   isRoot: true
 starlette:
-  version: "0.46.1"
+  version: "0.41.3"
   dependents:
     - fastapi
 sympy:
@@ -594,11 +628,11 @@ texttable:
   dependents:
     - igraph
 tifffile:
-  version: "2025.3.13"
+  version: "2025.5.21"
   dependents:
     - scikit-image
 timm:
-  version: "0.6.7"
+  version: "1.0.15"
   dependents:
     - controlnet-aux
 tokenizers:
@@ -607,13 +641,14 @@ tokenizers:
   dependents:
     - transformers
 torch:
-  version: "2.4.1"
+  version: "2.4.1+cu124"
   isRoot: true
   dependents:
     - accelerate
     - clip-anytorch
     - compel
     - controlnet-aux
+    - diffsynth
     - diffusers
     - kornia
     - spandrel
@@ -621,26 +656,29 @@ torch:
     - torchaudio
     - torchsde
     - torchvision
+    - xformers
 torchaudio:
-  version: "2.4.1"
+  version: "2.4.1+cu124"
   isRoot: true
 torchsde:
   version: "0.2.6"
   isRoot: true
 torchvision:
-  version: "0.19.1"
+  version: "0.19.1+cu124"
   isRoot: true
   dependents:
     - clip-anytorch
     - controlnet-aux
+    - diffsynth
     - spandrel
     - timm
 tqdm:
-  version: "4.67.1"
+  version: "4.66.5"
   dependents:
     - clip-anytorch
     - gguf
     - huggingface-hub
+    - modelscope
     - rembg
     - transformers
 trampoline:
@@ -652,19 +690,21 @@ transformers:
   isRoot: true
   dependents:
     - compel
+    - diffsynth
 trimesh:
-  version: "4.6.6"
+  version: "4.6.10"
   isRoot: true
 typer:
-  version: "0.15.2"
+  version: "0.15.4"
   dependents:
     - fastapi-cli
 typing-extensions:
-  version: "4.13.0"
+  version: "4.12.2"
   dependents:
     - anyio
     - fastapi
     - huggingface-hub
+    - onnx
     - pydantic
     - pydantic-core
     - pyvista
@@ -675,27 +715,29 @@ typing-extensions:
     - typer
     - typing-inspection
 typing-inspection:
-  version: "0.4.0"
+  version: "0.4.1"
   dependents:
     - pydantic
+    - pydantic-settings
 urllib3:
-  version: "2.3.0"
+  version: "1.26.13"
   dependents:
+    - modelscope
     - requests
 uvicorn:
-  version: "0.34.0"
+  version: "0.34.2"
   dependents:
     - fastapi
     - fastapi-cli
 virtualenv:
-  version: "20.29.3"
+  version: "20.31.2"
   isRoot: true
 vtk:
-  version: "9.3.1"
+  version: "9.4.2"
   dependents:
     - pyvista
 watchfiles:
-  version: "1.0.4"
+  version: "1.0.5"
   dependents:
     - uvicorn
 wcwidth:
@@ -711,8 +753,14 @@ wrapt:
   version: "1.17.2"
   dependents:
     - deprecated
+xatlas:
+  version: "0.0.10"
+  isRoot: true
+xformers:
+  version: "0.0.28.post1"
+  isRoot: true
 yarl:
-  version: "1.18.3"
+  version: "1.20.0"
   dependents:
     - aiohttp
 zipp:

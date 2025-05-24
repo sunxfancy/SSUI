@@ -1,6 +1,6 @@
 import asyncio
 import hashlib
-from typing import Dict, Any
+from typing import Dict, Any, Optional
 import uuid
 from fastapi import Body, FastAPI, Request, Response, WebSocket, UploadFile, File
 from fastapi.responses import FileResponse, RedirectResponse
@@ -207,6 +207,17 @@ async def upload_file(script_path: str, file: UploadFile = File(...)):
     except Exception as e:
         return {"error": str(e)}
 
+@app.post("/files/upload_json")
+async def file_upload_json(path: str = Body(..., embed=True), content: str = Body(..., embed=True)):
+    try:
+        if not os.path.exists(path):
+            os.makedirs(os.path.dirname(path), exist_ok=True)
+        with open(path, "w", encoding="utf-8") as f:
+            f.write(content)
+        return {"success": True}
+    except Exception as e:
+        return {"error": str(e)}
+    
 @app.get("/file")
 async def file(path: str):
     print("access file: ", path)
@@ -215,6 +226,8 @@ async def file(path: str):
             return FileResponse(path, media_type="image/png")
         elif path.endswith(".jpg") or path.endswith(".jpeg"):
             return FileResponse(path, media_type="image/jpeg")
+        elif path.endswith(".json"):
+            return FileResponse(path, media_type="application/json")
         else:
             return FileResponse(path)
     return None
@@ -262,6 +275,30 @@ async def ui_state_load(script_path: str):
         return state_data
     except Exception as e:
         return {"error": str(e)}
+
+
+@app.post("/api/hf_download/{client_id}")
+async def hf_download(client_id: str, repo_id: str = Body(..., embed=True), local_dir: Optional[str] = Body(None, embed=True)):
+    request_uuid = str(uuid.uuid4())
+    if local_dir is None:
+        local_dir = os.path.join(resources_dir, "hf_models", repo_id)
+    if not os.path.exists(local_dir):
+        os.makedirs(local_dir)
+    
+    return JSONResponse(content=jsonable_encoder({
+        "type": "start",
+        "request_uuid": request_uuid,
+        "callbacks": ["download_progress"],
+    }), background=BackgroundTask(
+        model_service.hf_download,
+        repo_id=repo_id,
+        local_dir=local_dir,
+        client_id=client_id,
+        request_uuid=request_uuid,
+        callback=websocket_service.send_callback,
+        finish_callback=websocket_service.send_finish
+    ))
+
 
 @app.websocket("/ws")
 async def websocket_endpoint(websocket: WebSocket):
