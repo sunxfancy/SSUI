@@ -83,14 +83,23 @@ contourpy:
   dependents:
     - matplotlib
 controlnet-aux:
-  version: "0.0.10"
+  version: "0.0.7"
   isRoot: true
+  dependents:
+    - diffsynth
+cupy-cuda12x:
+  version: "13.4.1"
+  dependents:
+    - diffsynth
 cycler:
   version: "0.12.1"
   dependents:
     - matplotlib
 deprecated:
   version: "1.2.18"
+  isRoot: true
+diffsynth:
+  version: "1.1.7"
   isRoot: true
 diffusers:
   version: "0.33.1"
@@ -113,6 +122,7 @@ einops:
   isRoot: true
   dependents:
     - controlnet-aux
+    - diffsynth
     - spandrel
 email-validator:
   version: "2.2.0"
@@ -125,6 +135,10 @@ fastapi-cli:
   version: "0.0.7"
   dependents:
     - fastapi
+fastrlock:
+  version: "0.8.3"
+  dependents:
+    - cupy-cuda12x
 filelock:
   version: "3.13.1"
   dependents:
@@ -157,6 +171,7 @@ ftfy:
   version: "6.3.1"
   dependents:
     - clip-anytorch
+    - diffsynth
 gguf:
   version: "0.16.3"
   isRoot: true
@@ -217,7 +232,12 @@ igraph:
 imageio:
   version: "2.37.0"
   dependents:
+    - diffsynth
     - scikit-image
+imageio-ffmpeg:
+  version: "0.6.0"
+  dependents:
+    - imageio
 importlib-metadata:
   version: "8.7.0"
   dependents:
@@ -291,6 +311,10 @@ ml-dtypes:
   dependents:
     - jax
     - jaxlib
+modelscope:
+  version: "1.26.0"
+  dependents:
+    - diffsynth
 moderngl:
   version: "5.12.0"
   isRoot: true
@@ -318,6 +342,7 @@ numpy:
     - accelerate
     - contourpy
     - controlnet-aux
+    - cupy-cuda12x
     - diffusers
     - gguf
     - imageio
@@ -330,6 +355,7 @@ numpy:
     - onnx
     - onnxruntime
     - opencv-contrib-python
+    - opencv-python
     - opencv-python-headless
     - plyfile
     - pymatting
@@ -355,10 +381,13 @@ opencv-contrib-python:
   version: "4.11.0.86"
   dependents:
     - mediapipe
-opencv-python-headless:
+opencv-python:
   version: "4.11.0.86"
   dependents:
     - controlnet-aux
+opencv-python-headless:
+  version: "4.11.0.86"
+  dependents:
     - rembg
 opt-einsum:
   version: "3.4.0"
@@ -413,6 +442,7 @@ propcache:
 protobuf:
   version: "4.25.7"
   dependents:
+    - diffsynth
     - mediapipe
     - onnx
     - onnxruntime
@@ -420,6 +450,7 @@ psutil:
   version: "7.0.0"
   dependents:
     - accelerate
+    - imageio
 pycparser:
   version: "2.22"
   dependents:
@@ -504,6 +535,7 @@ requests:
   dependents:
     - diffusers
     - huggingface-hub
+    - modelscope
     - pooch
     - transformers
 restrictedpython:
@@ -528,6 +560,7 @@ safetensors:
   isRoot: true
   dependents:
     - accelerate
+    - diffsynth
     - diffusers
     - spandrel
     - timm
@@ -555,6 +588,7 @@ scooby:
 sentencepiece:
   version: "0.2.0"
   dependents:
+    - diffsynth
     - gguf
     - mediapipe
 setuptools:
@@ -602,7 +636,7 @@ timm:
   dependents:
     - controlnet-aux
 tokenizers:
-  version: "0.21.1"
+  version: "0.20.3"
   isRoot: true
   dependents:
     - transformers
@@ -614,6 +648,7 @@ torch:
     - clip-anytorch
     - compel
     - controlnet-aux
+    - diffsynth
     - diffusers
     - kornia
     - spandrel
@@ -634,6 +669,7 @@ torchvision:
   dependents:
     - clip-anytorch
     - controlnet-aux
+    - diffsynth
     - spandrel
     - timm
 tqdm:
@@ -642,6 +678,7 @@ tqdm:
     - clip-anytorch
     - gguf
     - huggingface-hub
+    - modelscope
     - rembg
     - transformers
 trampoline:
@@ -649,10 +686,11 @@ trampoline:
   dependents:
     - torchsde
 transformers:
-  version: "4.52.3"
+  version: "4.46.2"
   isRoot: true
   dependents:
     - compel
+    - diffsynth
 trimesh:
   version: "4.6.10"
   isRoot: true
@@ -684,6 +722,7 @@ typing-inspection:
 urllib3:
   version: "1.26.13"
   dependents:
+    - modelscope
     - requests
 uvicorn:
   version: "0.34.2"

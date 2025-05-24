@@ -1,6 +1,6 @@
 einops>=0.8.0
-transformers>=4.47.1
-tokenizers>=0.21.0
+transformers>=4.46.2
+tokenizers>=0.20.0
 safetensors>=0.4.5
 aiohttp>=3.11.11
 pyyaml>=6.0.2
@@ -24,7 +24,7 @@ pydantic-settings>=2.7.0
 pydantic>=2.10.4
 spandrel>=0.4.1
 gguf>=0.14.0
-controlnet-aux>=0.0.9
+controlnet-aux>=0.0.7
 clip-anytorch>=2.6.0
 compel>=2.0.3
 deprecated>=1.2.18
@@ -46,3 +46,5 @@ pyvista>=0.44.2
 pymeshfix>=0.17.0
 igraph>=0.11.8
 kornia>=0.8.0 
+
+diffsynth>=1.1.7

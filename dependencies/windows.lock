@@ -72,10 +72,14 @@ compel==2.0.3
     # via -r dependencies/requirements-windows.txt
 contourpy==1.3.1
     # via matplotlib
-controlnet-aux==0.0.9
-    # via -r dependencies/requirements-windows.txt
+controlnet-aux==0.0.7
+    # via
+    #   -r dependencies/requirements-windows.txt
+    #   diffsynth
 cumm-cu124==0.7.11
     # via spconv-cu124
+cupy-cuda12x==13.4.1
+    # via diffsynth
 cycler==0.12.1
     # via matplotlib
 dataclasses-json==0.6.7
@@ -87,6 +91,8 @@ deprecated==1.2.18
     #   -r dependencies/requirements-windows.txt
     #   pygltflib
 diff-gaussian-rasterization @ https://github.com/sunxfancy/diff-gaussian-rasterization/releases/download/v0.1/diff_gaussian_rasterization-0.0.0-cp312-cp312-win_amd64.whl
+    # via -r dependencies/requirements-windows.txt
+diffsynth==1.1.7
     # via -r dependencies/requirements-windows.txt
 diffusers==0.32.2
     # via
@@ -102,6 +108,7 @@ einops==0.8.1
     # via
     #   -r dependencies/requirements-windows.txt
     #   controlnet-aux
+    #   diffsynth
     #   spandrel
 email-validator==2.2.0
     # via fastapi
@@ -113,6 +120,8 @@ fastapi==0.115.6
     # via -r dependencies/requirements-windows.txt
 fastapi-cli==0.0.7
     # via fastapi
+fastrlock==0.8.3
+    # via cupy-cuda12x
 filelock==3.13.1
     # via
     #   controlnet-aux
@@ -144,7 +153,9 @@ fsspec==2024.6.1
     #   huggingface-hub
     #   torch
 ftfy==6.3.1
-    # via clip-anytorch
+    # via
+    #   clip-anytorch
+    #   diffsynth
 gguf==0.14.0
     # via -r dependencies/requirements-windows.txt
 glcontext==3.0.0
@@ -183,7 +194,11 @@ idna==3.4
 igraph==0.11.8
     # via -r dependencies/requirements-windows.txt
 imageio==2.37.0
-    # via scikit-image
+    # via
+    #   diffsynth
+    #   scikit-image
+imageio-ffmpeg==0.6.0
+    # via imageio
 importlib-metadata==8.6.1
     # via
     #   controlnet-aux
@@ -265,6 +280,8 @@ ml-dtypes==0.5.1
     # via
     #   jax
     #   jaxlib
+modelscope==1.26.0
+    # via diffsynth
 moderngl==5.12.0
     # via -r dependencies/requirements-windows.txt
 mpmath==1.3.0
@@ -292,6 +309,7 @@ numpy==1.26.3
     #   contourpy
     #   controlnet-aux
     #   cumm-cu124
+    #   cupy-cuda12x
     #   diffusers
     #   gguf
     #   imageio
@@ -307,6 +325,7 @@ numpy==1.26.3
     #   onnx
     #   onnxruntime
     #   opencv-contrib-python
+    #   opencv-python
     #   opencv-python-headless
     #   plyfile
     #   pymatting
@@ -333,10 +352,10 @@ onnxruntime==1.21.0
     # via -r dependencies/requirements-windows.txt
 opencv-contrib-python==4.11.0.86
     # via mediapipe
+opencv-python==4.11.0.86
+    # via controlnet-aux
 opencv-python-headless==4.11.0.86
-    # via
-    #   controlnet-aux
-    #   rembg
+    # via rembg
 opt-einsum==3.4.0
     # via jax
 packaging==24.1
@@ -394,11 +413,14 @@ propcache==0.3.1
     #   yarl
 protobuf==4.25.6
     # via
+    #   diffsynth
     #   mediapipe
     #   onnx
     #   onnxruntime
 psutil==7.0.0
-    # via accelerate
+    # via
+    #   accelerate
+    #   imageio
 pure-eval==0.2.3
     # via stack-data
 pybind11==2.13.6
@@ -480,6 +502,7 @@ requests==2.28.1
     #   ccimport
     #   diffusers
     #   huggingface-hub
+    #   modelscope
     #   pooch
     #   transformers
 restrictedpython==8.0
@@ -498,6 +521,7 @@ safetensors==0.5.3
     # via
     #   -r dependencies/requirements-windows.txt
     #   accelerate
+    #   diffsynth
     #   diffusers
     #   spandrel
     #   transformers
@@ -520,6 +544,7 @@ scooby==0.10.0
     # via pyvista
 sentencepiece==0.2.0
     # via
+    #   diffsynth
     #   gguf
     #   mediapipe
 setuptools==70.2.0
@@ -553,7 +578,7 @@ tifffile==2025.3.13
     # via scikit-image
 timm==0.6.7
     # via controlnet-aux
-tokenizers==0.21.1
+tokenizers==0.20.3
     # via
     #   -r dependencies/requirements-windows.txt
     #   transformers
@@ -565,6 +590,7 @@ torch==2.4.1+cu124
     #   clip-anytorch
     #   compel
     #   controlnet-aux
+    #   diffsynth
     #   diffusers
     #   kornia
     #   spandrel
@@ -584,6 +610,7 @@ torchvision==0.19.1+cu124
     #   -r dependencies/requirements-windows.txt
     #   clip-anytorch
     #   controlnet-aux
+    #   diffsynth
     #   spandrel
     #   timm
 tornado==6.4.2
@@ -596,6 +623,7 @@ tqdm==4.66.5
     #   gguf
     #   huggingface-hub
     #   kaolin
+    #   modelscope
     #   rembg
     #   transformers
 traitlets==5.14.3
@@ -608,10 +636,11 @@ traitlets==5.14.3
     #   matplotlib-inline
 trampoline==0.1.2
     # via torchsde
-transformers==4.50.3
+transformers==4.46.2
     # via
     #   -r dependencies/requirements-windows.txt
     #   compel
+    #   diffsynth
 trimesh==4.6.6
     # via -r dependencies/requirements-windows.txt
 triton-windows==3.1.0.post17
@@ -638,7 +667,9 @@ typing-inspect==0.9.0
 typing-inspection==0.4.0
     # via pydantic
 urllib3==1.26.13
-    # via requests
+    # via
+    #   modelscope
+    #   requests
 usd-core==25.2.post1
     # via kaolin
 uvicorn==0.34.0
