@@ -57,16 +57,10 @@ compel==2.0.3
 contourpy==1.3.1
     # via matplotlib
 controlnet-aux==0.0.7
-    # via
-    #   -r dependencies/requirements-macosx.txt
-    #   diffsynth
-cupy-cuda12x==13.4.1
-    # via diffsynth
+    # via -r dependencies/requirements-macosx.txt
 cycler==0.12.1
     # via matplotlib
 deprecated==1.2.18
-    # via -r dependencies/requirements-macosx.txt
-diffsynth==1.1.7
     # via -r dependencies/requirements-macosx.txt
 diffusers==0.32.2
     # via
@@ -82,7 +76,6 @@ einops==0.8.1
     # via
     #   -r dependencies/requirements-macosx.txt
     #   controlnet-aux
-    #   diffsynth
     #   spandrel
 email-validator==2.2.0
     # via fastapi
@@ -90,8 +83,6 @@ fastapi==0.115.12
     # via -r dependencies/requirements-macosx.txt
 fastapi-cli==0.0.7
     # via fastapi
-fastrlock==0.8.3
-    # via cupy-cuda12x
 filelock==3.18.0
     # via
     #   controlnet-aux
@@ -115,9 +106,7 @@ fsspec==2025.3.0
     #   huggingface-hub
     #   torch
 ftfy==6.3.1
-    # via
-    #   clip-anytorch
-    #   diffsynth
+    # via clip-anytorch
 gguf==0.14.0
     # via -r dependencies/requirements-macosx.txt
 glcontext==3.0.0
@@ -156,11 +145,7 @@ idna==3.10
 igraph==0.11.8
     # via -r dependencies/requirements-macosx.txt
 imageio==2.37.0
-    # via
-    #   diffsynth
-    #   scikit-image
-imageio-ffmpeg==0.6.0
-    # via imageio
+    # via scikit-image
 importlib-metadata==8.6.1
     # via
     #   controlnet-aux
@@ -207,8 +192,6 @@ ml-dtypes==0.5.1
     # via
     #   jax
     #   jaxlib
-modelscope==1.26.0
-    # via diffsynth
 moderngl==5.12.0
     # via -r dependencies/requirements-macosx.txt
 mpmath==1.3.0
@@ -228,7 +211,6 @@ numpy==1.26.4
     #   accelerate
     #   contourpy
     #   controlnet-aux
-    #   cupy-cuda12x
     #   diffusers
     #   gguf
     #   imageio
@@ -309,14 +291,11 @@ propcache==0.3.1
     #   yarl
 protobuf==4.25.6
     # via
-    #   diffsynth
     #   mediapipe
     #   onnx
     #   onnxruntime
 psutil==7.0.0
-    # via
-    #   accelerate
-    #   imageio
+    # via accelerate
 pycparser==2.22
     # via cffi
 pydantic==2.11.1
@@ -375,7 +354,6 @@ requests==2.32.3
     # via
     #   diffusers
     #   huggingface-hub
-    #   modelscope
     #   pooch
     #   transformers
 restrictedpython==8.0
@@ -394,7 +372,6 @@ safetensors==0.5.3
     # via
     #   -r dependencies/requirements-macosx.txt
     #   accelerate
-    #   diffsynth
     #   diffusers
     #   spandrel
     #   transformers
@@ -416,7 +393,6 @@ scooby==0.10.0
     # via pyvista
 sentencepiece==0.2.0
     # via
-    #   diffsynth
     #   gguf
     #   mediapipe
 setuptools==78.1.0
@@ -454,7 +430,6 @@ torch==2.4.1
     #   clip-anytorch
     #   compel
     #   controlnet-aux
-    #   diffsynth
     #   diffusers
     #   kornia
     #   spandrel
@@ -471,7 +446,6 @@ torchvision==0.19.1
     #   -r dependencies/requirements-macosx.txt
     #   clip-anytorch
     #   controlnet-aux
-    #   diffsynth
     #   spandrel
     #   timm
 tqdm==4.67.1
@@ -479,7 +453,6 @@ tqdm==4.67.1
     #   clip-anytorch
     #   gguf
     #   huggingface-hub
-    #   modelscope
     #   rembg
     #   transformers
 trampoline==0.1.2
@@ -488,7 +461,6 @@ transformers==4.46.2
     # via
     #   -r dependencies/requirements-macosx.txt
     #   compel
-    #   diffsynth
 trimesh==4.6.6
     # via -r dependencies/requirements-macosx.txt
 typer==0.15.2
@@ -510,9 +482,7 @@ typing-extensions==4.13.0
 typing-inspection==0.4.0
     # via pydantic
 urllib3==2.3.0
-    # via
-    #   modelscope
-    #   requests
+    # via requests
 uvicorn==0.34.0
     # via
     #   fastapi
