@@ -51,7 +51,7 @@ jobs:
         if: ${{ matrix.platform == 'linux' }}
         run: |
           sudo apt-get update
-          sudo apt-get install -y libglib2.0-dev pkg-config
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf libglib2.0-dev pkg-config
 
       - name: Setup Rust
         uses: actions-rust-lang/setup-rust-toolchain@v1
