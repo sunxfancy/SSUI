@@ -25,7 +25,7 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
-          
+         
       - name: Set Node.js 22.x
         uses: actions/setup-node@v4
         with:
@@ -46,6 +46,12 @@ jobs:
 
       - name: Install requirements
         run: uv pip install -r dependencies/${{ matrix.platform }}.lock
+
+      - name: Install system dependencies
+        if: ${{ matrix.platform == 'linux' }}
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libglib2.0-dev pkg-config
 
       - name: Setup Rust
         uses: actions-rust-lang/setup-rust-toolchain@v1
