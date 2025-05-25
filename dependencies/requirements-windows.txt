@@ -59,3 +59,10 @@ torchaudio==2.4.1+cu124
 xformers==0.0.28.post1
 
 diffsynth>=1.1.7
+
+# 语音相关
+conformer>=0.3.2
+soundfile==0.12.1
+pyworld==0.3.4
+librosa==0.11.0
+openai-whisper==20231117
