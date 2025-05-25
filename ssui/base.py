@@ -5,10 +5,15 @@ class Image():
     def __init__(self, image: PIL.Image.Image = None):
         self._image = image
 
-class Model3D():
+class Mesh():
     def __init__(self, model: trimesh.Trimesh = None):
         self._model = model
 
+class Video():
+    def __init__(self, format: str, frames: list[PIL.Image.Image] = None, fps: int = 30):
+        self._format = format
+        self._frames = frames
+        self._fps = fps
 
 class Prompt():
     @staticmethod
