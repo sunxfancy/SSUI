@@ -18,3 +18,7 @@ class Switch:
 class Random:
     def __init__(self):
         pass
+
+class Input:
+    def __init__(self, hints: str):
+        self.hints = hints

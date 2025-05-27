@@ -15,6 +15,14 @@ class Video():
         self._frames = frames
         self._fps = fps
 
+class Voice():
+    def __init__(self, format: str, audio: bytes = None, text: str = None, fps: int = 16000):
+        self._format = format
+        self._audio = audio
+        self._text = text
+        self._fps = fps
+
+
 class Prompt():
     @staticmethod
     def create(text: str):
