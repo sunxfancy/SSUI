@@ -19,5 +19,6 @@ models/
 /*.mp4
 /*.glb
 /*.ply
+/*.wav
 
 .idea
