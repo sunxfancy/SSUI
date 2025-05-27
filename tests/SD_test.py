@@ -108,3 +108,33 @@ class TestSD1lora(unittest.TestCase):
         latent = SD1Denoise(self.config("Denoise"), self.model, latent, positive, negative)
         image = SD1LatentDecode(self.config("Latent to Image"), self.model, latent)
         image._image.save("sd1Lora.png")
+
+@unittest.skipIf(not should_run_slow_tests(), "Skipping slow test")
+class TestSDXLlora(unittest.TestCase):
+    def setUp(self):
+        from ssui_image.SDXL import SDXLModel,SDXLLora
+        from ssui.config import SSUIConfig
+        from ssui.base import Prompt
+        self.model = SDXLModel.load("D:\\work\\github_code\\SSUI_NEW\\test_models\\Juggernaut XL v9")
+        self.config = SSUIConfig()
+        self.config.set_prepared(False)
+        loraPath = ["D:\\work\\github_code\\SSUI_NEW\\test_models\\sdxl lora\\kallen-1.safetensors","D:\\work\\github_code\\SSUI_NEW\\test_models\\sdxl lora\\SDXL_Lora_paffypafuricia_animagine.safetensors"]
+        self.loras = SDXLLora.load(loraPath)
+        self.config = SSUIConfig()
+        self.config.set_prepared(False)
+
+        self.positive = Prompt("a beautiful girl, masterpiece, best quality")
+        self.negative = Prompt("a bad image")
+
+    
+    def test_workflow(self):
+        from ssui_image.SDXL import (
+            SDXLClip, SDXLLatent, 
+            SDXLDenoise, SDXLLatentDecode,SDXLMergeLora
+        )
+        self.model = SDXLMergeLora(self.config("Apply Lora"), self.model, self.loras)
+        positive, negative = SDXLClip(self.config("Prompt To Condition"), self.model, self.positive, self.negative)
+        latent = SDXLLatent(self.config("Create Empty Latent"))
+        latent = SDXLDenoise(self.config("Denoise"), self.model, latent, positive, negative)
+        image = SDXLLatentDecode(self.config("Latent to Image"), self.model, latent)
+        image._image.save("sdXLLora.png")
