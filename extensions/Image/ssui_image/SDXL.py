@@ -207,7 +207,7 @@ def SDXLMergeLora(
     loraModel: List[SDXLLora]
 ):
     if config.is_prepare():
-        return SDXLModel(config("Add Empty Lora to SD1"))
+        return SDXLModel(config("Add Empty Lora to SDXL"))
 
     print("SDXLMergeLora executed")
 
