@@ -138,3 +138,35 @@ class TestSDXLlora(unittest.TestCase):
         latent = SDXLDenoise(self.config("Denoise"), self.model, latent, positive, negative)
         image = SDXLLatentDecode(self.config("Latent to Image"), self.model, latent)
         image._image.save("sdXLLora.png")
+
+@unittest.skipIf(not should_run_slow_tests(), "Skipping slow test")
+class TestFluxlora(unittest.TestCase):
+    def setUp(self):
+        from ssui_image.Flux import FluxModel,FluxLora
+        from ssui.config import SSUIConfig
+        from ssui.base import Prompt
+        self.model = FluxModel.load(
+            model_path="D:\\work\\github_code\\SSUI_NEW\\test_models\\Flux\\FLUX Schnell (Quantized).safetensors",
+            t5_encoder_path="D:\\work\\github_code\\SSUI_NEW\\test_models\\Flux\\t5_bnb_int8_quantized_encoder",
+            clip_path="D:\\work\\github_code\\SSUI_NEW\\test_models\\Flux\\clip-vit-large-patch14",
+            vae_path="D:\\work\\github_code\\SSUI_NEW\\test_models\\Flux\\FLUX.safetensors"
+        )
+        loraPath = ["D:\\work\\github_code\\SSUI_NEW\\test_models\\flux lora\\[FLUX LoRa] Kalin _Style_v1.0.safetensors","D:\\work\\github_code\\SSUI_NEW\\test_models\\flux lora\\umej1900.safetensors"]
+        self.loras = FluxLora.load(loraPath)
+        self.config = SSUIConfig()
+        self.config.set_prepared(False)
+
+        self.positive = Prompt("a beautiful girl in a red dress")
+        self.negative = Prompt("a bad image")
+    
+    def test_workflow(self):
+        from ssui_image.Flux import (
+            FluxClip, FluxLatent, 
+            FluxDenoise, FluxLatentDecode,FluxMergeLora
+        )
+        self.model = FluxMergeLora(self.config("Apply Lora"), self.model, self.loras)
+        positive, negative = FluxClip(self.config("Prompt To Condition"), self.model, self.positive, self.negative)
+        latent = FluxLatent(self.config("Create Empty Latent"))
+        latent = FluxDenoise(self.config("Denoise"), self.model, latent, positive, negative)
+        image = FluxLatentDecode(self.config("Latent to Image"), self.model, latent)
+        image._image.save("fluxlora.png")
