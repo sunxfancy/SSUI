@@ -644,7 +644,9 @@ threadpoolctl==3.6.0
 tifffile==2025.3.13
     # via scikit-image
 tiktoken==0.9.0
-    # via openai-whisper
+    # via
+    #   -r dependencies/requirements-windows.txt
+    #   openai-whisper
 timm==0.6.7
     # via controlnet-aux
 tokenizers==0.20.3
@@ -713,6 +715,9 @@ transformers==4.46.2
     #   -r dependencies/requirements-windows.txt
     #   compel
     #   diffsynth
+    #   transformers-stream-generator
+transformers-stream-generator==0.0.4
+    # via -r dependencies/requirements-windows.txt
 trimesh==4.6.6
     # via -r dependencies/requirements-windows.txt
 triton-windows==3.1.0.post17

@@ -915,6 +915,7 @@ tifffile:
     - scikit-image
 tiktoken:
   version: "0.9.0"
+  isRoot: true
   dependents:
     - openai-whisper
 timm:
@@ -996,6 +997,10 @@ transformers:
   dependents:
     - compel
     - diffsynth
+    - transformers-stream-generator
+transformers-stream-generator:
+  version: "0.0.4"
+  isRoot: true
 trimesh:
   version: "4.6.6"
   isRoot: true
