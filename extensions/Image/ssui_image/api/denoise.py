@@ -872,7 +872,7 @@ def flux_denoise_image(
             # applied last.
             loras.append(control_lora)
         for lora in loras:
-            lora_info = lora.lora
+            lora_info = lora.lora.lora
             assert isinstance(lora_info.model, ModelPatchRaw)
             yield (lora_info.model, lora.weight)
             del lora_info

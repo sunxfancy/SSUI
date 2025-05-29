@@ -296,6 +296,7 @@ class T5EncoderModel(BaseModel):
         description="The text encoder model", validate=False
     )
     tokenizer: "LoadedModel" = Field(description="The tokenizer model", validate=False)
+    loras: List[LoRAModel] = Field(default_factory=list, description="LoRAs to apply on model loading")
     max_seq_length: int = Field(default=512, description="The maximum sequence length")
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
@@ -372,7 +373,7 @@ def load_flux_model(
         VAEModel(vae=vae),
     )
 
-def load_sd1_lora(
+def load_lora(
     model_loader_service: ModelLoaderService, 
     lora_path: Path,
     lora_weight: Optional[float] = None
@@ -396,7 +397,6 @@ def load_sd1_lora(
     lora_config = ModelProbe.probe(Path(lora_path))
     # Load LoRA model
     lora = _load_model_service(model_loader_service, lora_config, None)
-    # lora = model_loader_service.load_model(lora_config)
     
     # Create LoRAModel object
     lora_model = LoRAModel(lora=lora,weight=lora_weight)

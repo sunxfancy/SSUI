@@ -15,7 +15,7 @@ pydantic-settings>=2.7.0
 pydantic>=2.10.4
 RestrictedPython>=8.0
 spandrel>=0.4.1
-gguf>=0.14.0
+gguf>=0.10.0
 controlnet-aux>=0.0.7
 clip-anytorch>=2.6.0
 compel>=2.0.3
@@ -59,3 +59,19 @@ torchaudio==2.4.1+cu124
 xformers==0.0.28.post1
 
 diffsynth>=1.1.7
+
+# 语音相关
+conformer>=0.3.2
+soundfile==0.12.1
+pyworld==0.3.4
+librosa==0.11.0
+openai-whisper==20240930
+pynini @ https://github.com/sunxfancy/pynini-2.1.6.post1/releases/download/2.1.6.post1/pynini-2.1.6.post1-cp312-cp312-win_amd64.whl
+WeTextProcessing @ https://github.com/sunxfancy/pynini-2.1.6.post1/releases/download/2.1.6.post1/WeTextProcessing-1.0.4-py3-none-any.whl
+hydra-core==1.3.2
+networkx==3.3
+pyarrow>=20.0.0
+
+# Qwen
+transformers_stream_generator==0.0.4
+tiktoken>=0.9.0

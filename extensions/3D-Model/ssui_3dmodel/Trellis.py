@@ -1,7 +1,7 @@
 from typing import Optional, List
 import torch
 from ssui.config import SSUIConfig
-from ssui.base import Model3D, Image
+from ssui.base import Mesh, Image
 from ssui.annotation import param
 from ssui.controller import Random, Switch, Slider
 from trellis.pipelines.trellis_image_to_3d import TrellisImageTo3DPipeline
@@ -38,7 +38,7 @@ def GenModel(
     image: Image,
 ):
     if config.is_prepare():
-        return Model3D()
+        return Mesh()
 
     print("GenModel executed")
     print("seed:", config["seed"])
@@ -76,7 +76,7 @@ def GenModel(
         texture_size=1024,      # Size of the texture used for the GLB
     )
 
-    return Model3D(glb)
+    return Mesh(glb)
 
 
 

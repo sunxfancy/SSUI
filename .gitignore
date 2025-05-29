@@ -16,5 +16,9 @@ models/
 *.pth
 *.ckpt
 /result*.png
+/*.mp4
+/*.glb
+/*.ply
+/*.wav
 
 .idea

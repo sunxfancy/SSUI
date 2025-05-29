@@ -10,7 +10,7 @@ from .api.model import (
     VAEModel,
     load_model,
     LoRAModel,
-    load_sd1_lora
+    load_lora
 )
 from ssui.base import Prompt, Image
 from ssui.annotation import param
@@ -110,7 +110,7 @@ class SD1Lora:
             lora_weights = weights
         sd1lora = []
         for i, lora_path in enumerate(path):
-            lora_models = load_sd1_lora(getModelLoader(),lora_path, lora_weights[i])
+            lora_models = load_lora(getModelLoader(),lora_path, lora_weights[i])
             sd1lora.append(SD1Lora(lora=lora_models,weight=lora_weights[i]))
 
         return sd1lora

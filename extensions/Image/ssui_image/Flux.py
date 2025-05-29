@@ -1,5 +1,5 @@
-from typing import Optional
-
+from typing import Optional,List
+from pathlib import Path
 import torch
 
 from ssui.config import SSUIConfig
@@ -12,6 +12,8 @@ from .api.model import (
     ClipModel,
     VAEModel,
     load_flux_model,
+    LoRAModel,
+    load_lora
 )
 from ssui.base import Prompt, Image
 from ssui.annotation import param
@@ -110,9 +112,24 @@ class FluxLatent:
 
 
 class FluxLora:
-    def __init__(self, config):
-        self.config = config
+    def __init__(self, path: str = "", lora: Optional[LoRAModel] = None, weight:float = 0.75):
+        self.path = path
+        self.lora = lora
+        self.weight = weight
+    @staticmethod
+    def load(path: List[Path],weights: Optional[List[float]] = None) ->"List[FluxLora]":
+        if weights is not None and (len(path) != len(weights)):
+            raise ValueError("LoRA paths list and weights list must have the same length")
+        
+        if weights is None: lora_weights = [0.75] * len(path)
+        else:
+            lora_weights = weights
+        fluxlora = []
+        for i, lora_path in enumerate(path):
+            lora_models = load_lora(getModelLoader(),lora_path, lora_weights[i])
+            fluxlora.append(FluxLora(lora=lora_models,weight=lora_weights[i]))
 
+        return fluxlora
 
 @param(
     "steps",
@@ -179,3 +196,19 @@ def FluxLatentDecode(config, model: FluxModel, latent: FluxLatent):
     
     image = flux_decode_latents(model.vae, flux_latents)
     return Image(image)
+
+def FluxMergeLora(
+    config,
+    model: FluxModel,
+    loraModel: List[FluxLora]
+):
+    if config.is_prepare():
+        return FluxModel(config("Add Empty Lora to Flux"))
+
+    print("FluxMergeLora executed")
+
+    model.transformer.loras = loraModel
+    model.clip_model.loras = loraModel
+    model.t5_model.loras = loraModel
+    
+    return model
