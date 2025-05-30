@@ -40,6 +40,14 @@
   gap: 20px;
 }
 
+.config-input {
+  width: 100%;
+  padding: 8px 12px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  background-color: white;
+}
+
 .config-item {
   display: flex;
   flex-direction: column;
@@ -218,4 +226,32 @@
   border-radius: 4px;
   padding: 8px 12px;
   cursor: pointer;
+}
+
+.settings-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.save-status {
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 14px;
+}
+
+.save-status.saved {
+  color: #52c41a;
+  background-color: #f6ffed;
+}
+
+.save-status.saving {
+  color: #1890ff;
+  background-color: #e6f7ff;
+}
+
+.save-status.unsaved {
+  color: #faad14;
+  background-color: #fffbe6;
 } 

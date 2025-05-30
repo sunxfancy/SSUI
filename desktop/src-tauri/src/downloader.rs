@@ -584,11 +584,20 @@ static TASK_MANAGER: LazyLock<RwLock<DownloadTaskManager>> = LazyLock::new(|| Rw
 
 #[tauri::command(rename_all = "snake_case")]
 pub async fn create_download_task(app: AppHandle, url: &str, output_path: &str, sha256: &str) -> Result<(), String> {
-    let mut manager = TASK_MANAGER.write().unwrap();
-    
     // 检查任务是否已存在
-    if manager.get_task(url).is_some() {
-        return Err("任务已存在".to_string());
+    {
+        let manager = TASK_MANAGER.read().unwrap();
+        if manager.get_task(url).is_some() {
+            return Err("任务已存在".to_string());
+        }
+    }
+
+    // 检查并创建输出目录
+    if let Some(parent) = Path::new(output_path).parent() {
+        if !parent.exists() {
+            info!("创建目录: {}", parent.display());
+            tokio_fs::create_dir_all(parent).await.unwrap();
+        }
     }
 
     // 创建下载器
@@ -613,12 +622,18 @@ pub async fn create_download_task(app: AppHandle, url: &str, output_path: &str, 
         });
 
     // 添加任务
-    manager.add_task(url, output_path, sha256);
-    manager.downloaders.insert(url.to_string(), Arc::new(RwLock::new(Some(downloader))));
-    manager.update_task_status(url, TaskStatus::Pending);
+    {
+        let mut manager = TASK_MANAGER.write().unwrap();
+        manager.add_task(url, output_path, sha256);
+        manager.downloaders.insert(url.to_string(), Arc::new(RwLock::new(Some(downloader))));
+        manager.update_task_status(url, TaskStatus::Pending);
+    }
 
     // 启动下载
-    let downloader = manager.downloaders.get(url).unwrap().clone();
+    let downloader = {
+        let manager = TASK_MANAGER.read().unwrap();
+        manager.downloaders.get(url).unwrap().clone()
+    };
     let url = url.to_string();
     let app = app.clone();
     
@@ -630,19 +645,22 @@ pub async fn create_download_task(app: AppHandle, url: &str, output_path: &str, 
         };
 
         if let Some(downloader) = downloader {
-            if let Ok(mut manager) = TASK_MANAGER.write() {
+            {
+                let mut manager = TASK_MANAGER.write().unwrap();
                 manager.update_task_status(&url, TaskStatus::Downloading);
             }
             
             match downloader.download().await {
                 Ok(_) => {
-                    if let Ok(mut manager) = TASK_MANAGER.write() {
+                    {
+                        let mut manager = TASK_MANAGER.write().unwrap();
                         manager.update_task_status(&url, TaskStatus::Completed);
                     }
                     let _ = app.emit("download-completed", url);
                 },
                 Err(e) => {
-                    if let Ok(mut manager) = TASK_MANAGER.write() {
+                    {
+                        let mut manager = TASK_MANAGER.write().unwrap();
                         manager.update_task_status(&url, TaskStatus::Failed);
                     }
                     let _ = app.emit("download-failed", serde_json::json!({

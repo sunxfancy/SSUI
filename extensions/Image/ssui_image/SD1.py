@@ -1,5 +1,5 @@
-from typing import Optional
-
+from typing import Optional,List
+from pathlib import Path
 from ssui.config import SSUIConfig
 from .api.conditioning import BasicConditioningInfo, create_conditioning
 from .api.denoise import decode_latents, denoise_image
@@ -9,6 +9,8 @@ from .api.model import (
     ClipModel,
     VAEModel,
     load_model,
+    LoRAModel,
+    load_lora
 )
 from ssui.base import Prompt, Image
 from ssui.annotation import param
@@ -94,8 +96,39 @@ class SD1Latent:
 
 
 class SD1Lora:
-    def __init__(self, config: SSUIConfig):
-        self.config = config
+    def __init__(self, path: str = "", lora: Optional[LoRAModel] = None, weight:float = 1.0):
+        self.path = path
+        self.lora = lora
+        self.weight = weight
+    @staticmethod
+    def load(path: List[Path],weights: Optional[List[float]] = None) ->"List[SD1Lora]":
+        if weights is not None and (len(path) != len(weights)):
+            raise ValueError("LoRA paths list and weights list must have the same length")
+        
+        if weights is None: lora_weights = [1.0] * len(path)
+        else:
+            lora_weights = weights
+        sd1lora = []
+        for i, lora_path in enumerate(path):
+            lora_models = load_lora(getModelLoader(),lora_path, lora_weights[i])
+            sd1lora.append(SD1Lora(lora=lora_models,weight=lora_weights[i]))
+
+        return sd1lora
+    
+def SD1MergeLora(
+    config,
+    model: SD1Model,
+    loraModel: List[SD1Lora]
+):
+    if config.is_prepare():
+        return SD1Model(config("Add Empty Lora to SD1"))
+
+    print("SD1MergeLora executed")
+
+    model.unet.loras = loraModel
+    model.clip.loras = loraModel
+    
+    return model
 
 
 @param(

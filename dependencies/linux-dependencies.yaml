@@ -1,0 +1,769 @@
+# 包依赖关系
+absl-py:
+  version: "2.2.2"
+  dependents:
+    - mediapipe
+accelerate:
+  version: "1.7.0"
+  isRoot: true
+  dependents:
+    - diffusers
+aiohappyeyeballs:
+  version: "2.6.1"
+  dependents:
+    - aiohttp
+aiohttp:
+  version: "3.11.18"
+  isRoot: true
+aioshutil:
+  version: "1.5"
+  isRoot: true
+aiosignal:
+  version: "1.3.2"
+  dependents:
+    - aiohttp
+annotated-types:
+  version: "0.7.0"
+  dependents:
+    - pydantic
+anyio:
+  version: "4.9.0"
+  dependents:
+    - httpx
+    - starlette
+    - watchfiles
+attrs:
+  version: "25.3.0"
+  dependents:
+    - aiohttp
+    - jsonschema
+    - mediapipe
+    - referencing
+blake3:
+  version: "1.0.5"
+  isRoot: true
+certifi:
+  version: "2022.12.7"
+  dependents:
+    - httpcore
+    - httpx
+    - requests
+cffi:
+  version: "1.17.1"
+  dependents:
+    - sounddevice
+charset-normalizer:
+  version: "2.1.1"
+  dependents:
+    - requests
+click:
+  version: "8.1.8"
+  dependents:
+    - rich-toolkit
+    - typer
+    - uvicorn
+clip-anytorch:
+  version: "2.6.0"
+  isRoot: true
+colorama:
+  version: "0.4.6"
+  dependents:
+    - click
+    - tqdm
+    - uvicorn
+coloredlogs:
+  version: "15.0.1"
+  dependents:
+    - onnxruntime
+compel:
+  version: "2.1.1"
+  isRoot: true
+contourpy:
+  version: "1.3.2"
+  dependents:
+    - matplotlib
+controlnet-aux:
+  version: "0.0.7"
+  isRoot: true
+  dependents:
+    - diffsynth
+cupy-cuda12x:
+  version: "13.4.1"
+  dependents:
+    - diffsynth
+cycler:
+  version: "0.12.1"
+  dependents:
+    - matplotlib
+deprecated:
+  version: "1.2.18"
+  isRoot: true
+diffsynth:
+  version: "1.1.7"
+  isRoot: true
+diffusers:
+  version: "0.33.1"
+  isRoot: true
+  dependents:
+    - compel
+distlib:
+  version: "0.3.9"
+  dependents:
+    - virtualenv
+dnspython:
+  version: "2.7.0"
+  dependents:
+    - email-validator
+easydict:
+  version: "1.13"
+  isRoot: true
+einops:
+  version: "0.8.1"
+  isRoot: true
+  dependents:
+    - controlnet-aux
+    - diffsynth
+    - spandrel
+email-validator:
+  version: "2.2.0"
+  dependents:
+    - fastapi
+fastapi:
+  version: "0.115.6"
+  isRoot: true
+fastapi-cli:
+  version: "0.0.7"
+  dependents:
+    - fastapi
+fastrlock:
+  version: "0.8.3"
+  dependents:
+    - cupy-cuda12x
+filelock:
+  version: "3.13.1"
+  dependents:
+    - controlnet-aux
+    - diffusers
+    - huggingface-hub
+    - torch
+    - transformers
+    - virtualenv
+flatbuffers:
+  version: "25.2.10"
+  dependents:
+    - mediapipe
+    - onnxruntime
+fonttools:
+  version: "4.58.0"
+  dependents:
+    - matplotlib
+frozenlist:
+  version: "1.6.0"
+  dependents:
+    - aiohttp
+    - aiosignal
+fsspec:
+  version: "2024.6.1"
+  dependents:
+    - huggingface-hub
+    - torch
+ftfy:
+  version: "6.3.1"
+  dependents:
+    - clip-anytorch
+    - diffsynth
+gguf:
+  version: "0.16.3"
+  isRoot: true
+glcontext:
+  version: "3.0.0"
+  dependents:
+    - moderngl
+h11:
+  version: "0.16.0"
+  dependents:
+    - httpcore
+    - uvicorn
+hf-transfer:
+  version: "0.1.9"
+  dependents:
+    - huggingface-hub
+hf-xet:
+  version: "1.1.2"
+  dependents:
+    - huggingface-hub
+httpcore:
+  version: "1.0.9"
+  dependents:
+    - httpx
+httptools:
+  version: "0.6.4"
+  dependents:
+    - uvicorn
+httpx:
+  version: "0.28.1"
+  dependents:
+    - fastapi
+huggingface-hub:
+  version: "0.32.0"
+  isRoot: true
+  dependents:
+    - accelerate
+    - controlnet-aux
+    - diffusers
+    - timm
+    - tokenizers
+    - transformers
+humanfriendly:
+  version: "10.0"
+  dependents:
+    - coloredlogs
+idna:
+  version: "3.4"
+  dependents:
+    - anyio
+    - email-validator
+    - httpx
+    - requests
+    - yarl
+igraph:
+  version: "0.11.8"
+  isRoot: true
+imageio:
+  version: "2.37.0"
+  dependents:
+    - diffsynth
+    - scikit-image
+imageio-ffmpeg:
+  version: "0.6.0"
+  dependents:
+    - imageio
+importlib-metadata:
+  version: "8.7.0"
+  dependents:
+    - controlnet-aux
+    - diffusers
+jax:
+  version: "0.6.1"
+  dependents:
+    - mediapipe
+jaxlib:
+  version: "0.6.1"
+  dependents:
+    - jax
+    - mediapipe
+jinja2:
+  version: "3.1.4"
+  dependents:
+    - fastapi
+    - torch
+jsonschema:
+  version: "4.23.0"
+  dependents:
+    - rembg
+jsonschema-specifications:
+  version: "2025.4.1"
+  dependents:
+    - jsonschema
+kiwisolver:
+  version: "1.4.8"
+  dependents:
+    - matplotlib
+kornia:
+  version: "0.8.1"
+  isRoot: true
+kornia-rs:
+  version: "0.1.9"
+  dependents:
+    - kornia
+lazy-loader:
+  version: "0.4"
+  dependents:
+    - scikit-image
+llvmlite:
+  version: "0.44.0"
+  dependents:
+    - numba
+markdown-it-py:
+  version: "3.0.0"
+  dependents:
+    - rich
+markupsafe:
+  version: "2.1.5"
+  dependents:
+    - jinja2
+matplotlib:
+  version: "3.10.3"
+  isRoot: true
+  dependents:
+    - mediapipe
+    - pyvista
+    - vtk
+mdurl:
+  version: "0.1.2"
+  dependents:
+    - markdown-it-py
+mediapipe:
+  version: "0.10.21"
+  isRoot: true
+ml-dtypes:
+  version: "0.5.1"
+  dependents:
+    - jax
+    - jaxlib
+modelscope:
+  version: "1.26.0"
+  dependents:
+    - diffsynth
+moderngl:
+  version: "5.12.0"
+  isRoot: true
+mpmath:
+  version: "1.3.0"
+  dependents:
+    - sympy
+multidict:
+  version: "6.4.4"
+  dependents:
+    - aiohttp
+    - yarl
+networkx:
+  version: "3.3"
+  dependents:
+    - scikit-image
+    - torch
+numba:
+  version: "0.61.2"
+  dependents:
+    - pymatting
+numpy:
+  version: "1.26.3"
+  dependents:
+    - accelerate
+    - contourpy
+    - controlnet-aux
+    - cupy-cuda12x
+    - diffusers
+    - gguf
+    - imageio
+    - jax
+    - jaxlib
+    - matplotlib
+    - mediapipe
+    - ml-dtypes
+    - numba
+    - onnx
+    - onnxruntime
+    - opencv-contrib-python
+    - opencv-python
+    - opencv-python-headless
+    - plyfile
+    - pymatting
+    - pymeshfix
+    - pyvista
+    - rembg
+    - scikit-image
+    - scipy
+    - spandrel
+    - tifffile
+    - torchsde
+    - torchvision
+    - transformers
+    - trimesh
+    - xformers
+onnx:
+  version: "1.18.0"
+  isRoot: true
+onnxruntime:
+  version: "1.22.0"
+  isRoot: true
+opencv-contrib-python:
+  version: "4.11.0.86"
+  dependents:
+    - mediapipe
+opencv-python:
+  version: "4.11.0.86"
+  dependents:
+    - controlnet-aux
+opencv-python-headless:
+  version: "4.11.0.86"
+  dependents:
+    - rembg
+opt-einsum:
+  version: "3.4.0"
+  dependents:
+    - jax
+packaging:
+  version: "24.1"
+  dependents:
+    - accelerate
+    - huggingface-hub
+    - kornia
+    - lazy-loader
+    - matplotlib
+    - onnxruntime
+    - pooch
+    - scikit-image
+    - transformers
+picklescan:
+  version: "0.0.26"
+  isRoot: true
+pillow:
+  version: "11.0.0"
+  isRoot: true
+  dependents:
+    - controlnet-aux
+    - diffusers
+    - imageio
+    - matplotlib
+    - pymatting
+    - pyvista
+    - rembg
+    - scikit-image
+    - torchvision
+platformdirs:
+  version: "4.3.8"
+  dependents:
+    - pooch
+    - virtualenv
+plyfile:
+  version: "1.1"
+  isRoot: true
+pooch:
+  version: "1.8.2"
+  dependents:
+    - pyvista
+    - rembg
+propcache:
+  version: "0.3.1"
+  dependents:
+    - aiohttp
+    - yarl
+protobuf:
+  version: "4.25.7"
+  dependents:
+    - diffsynth
+    - mediapipe
+    - onnx
+    - onnxruntime
+psutil:
+  version: "7.0.0"
+  dependents:
+    - accelerate
+    - imageio
+pycparser:
+  version: "2.22"
+  dependents:
+    - cffi
+pydantic:
+  version: "2.11.5"
+  isRoot: true
+  dependents:
+    - fastapi
+    - pydantic-settings
+pydantic-core:
+  version: "2.33.2"
+  dependents:
+    - pydantic
+pydantic-settings:
+  version: "2.9.1"
+  isRoot: true
+pygments:
+  version: "2.19.1"
+  dependents:
+    - rich
+pymatting:
+  version: "1.1.14"
+  dependents:
+    - rembg
+pymeshfix:
+  version: "0.17.1"
+  isRoot: true
+pyparsing:
+  version: "3.2.3"
+  dependents:
+    - compel
+    - matplotlib
+pyreadline3:
+  version: "3.5.4"
+  dependents:
+    - humanfriendly
+python-dateutil:
+  version: "2.9.0.post0"
+  dependents:
+    - matplotlib
+python-dotenv:
+  version: "1.1.0"
+  dependents:
+    - pydantic-settings
+    - uvicorn
+python-multipart:
+  version: "0.0.20"
+  dependents:
+    - fastapi
+pyvista:
+  version: "0.45.2"
+  isRoot: true
+  dependents:
+    - pymeshfix
+pyyaml:
+  version: "6.0.2"
+  isRoot: true
+  dependents:
+    - accelerate
+    - gguf
+    - huggingface-hub
+    - timm
+    - transformers
+    - uvicorn
+referencing:
+  version: "0.36.2"
+  dependents:
+    - jsonschema
+    - jsonschema-specifications
+regex:
+  version: "2024.11.6"
+  dependents:
+    - clip-anytorch
+    - diffusers
+    - transformers
+rembg:
+  version: "2.0.66"
+  isRoot: true
+requests:
+  version: "2.28.1"
+  dependents:
+    - diffusers
+    - huggingface-hub
+    - modelscope
+    - pooch
+    - transformers
+restrictedpython:
+  version: "8.0"
+  isRoot: true
+rich:
+  version: "14.0.0"
+  dependents:
+    - rich-toolkit
+    - typer
+rich-toolkit:
+  version: "0.14.6"
+  dependents:
+    - fastapi-cli
+rpds-py:
+  version: "0.25.1"
+  dependents:
+    - jsonschema
+    - referencing
+safetensors:
+  version: "0.5.3"
+  isRoot: true
+  dependents:
+    - accelerate
+    - diffsynth
+    - diffusers
+    - spandrel
+    - timm
+    - transformers
+scikit-image:
+  version: "0.25.2"
+  dependents:
+    - controlnet-aux
+    - rembg
+scipy:
+  version: "1.15.3"
+  isRoot: true
+  dependents:
+    - controlnet-aux
+    - jax
+    - jaxlib
+    - pymatting
+    - rembg
+    - scikit-image
+    - torchsde
+scooby:
+  version: "0.10.1"
+  dependents:
+    - pyvista
+sentencepiece:
+  version: "0.2.0"
+  dependents:
+    - diffsynth
+    - gguf
+    - mediapipe
+setuptools:
+  version: "70.2.0"
+  dependents:
+    - torch
+shellingham:
+  version: "1.5.4"
+  dependents:
+    - typer
+six:
+  version: "1.17.0"
+  dependents:
+    - python-dateutil
+sniffio:
+  version: "1.3.1"
+  dependents:
+    - anyio
+sounddevice:
+  version: "0.5.2"
+  dependents:
+    - mediapipe
+spandrel:
+  version: "0.4.1"
+  isRoot: true
+starlette:
+  version: "0.41.3"
+  dependents:
+    - fastapi
+sympy:
+  version: "1.13.3"
+  dependents:
+    - onnxruntime
+    - torch
+texttable:
+  version: "1.7.0"
+  dependents:
+    - igraph
+tifffile:
+  version: "2025.5.21"
+  dependents:
+    - scikit-image
+timm:
+  version: "1.0.15"
+  dependents:
+    - controlnet-aux
+tokenizers:
+  version: "0.20.3"
+  isRoot: true
+  dependents:
+    - transformers
+torch:
+  version: "2.4.1+cu124"
+  isRoot: true
+  dependents:
+    - accelerate
+    - clip-anytorch
+    - compel
+    - controlnet-aux
+    - diffsynth
+    - diffusers
+    - kornia
+    - spandrel
+    - timm
+    - torchaudio
+    - torchsde
+    - torchvision
+    - xformers
+torchaudio:
+  version: "2.4.1+cu124"
+  isRoot: true
+torchsde:
+  version: "0.2.6"
+  isRoot: true
+torchvision:
+  version: "0.19.1+cu124"
+  isRoot: true
+  dependents:
+    - clip-anytorch
+    - controlnet-aux
+    - diffsynth
+    - spandrel
+    - timm
+tqdm:
+  version: "4.66.5"
+  dependents:
+    - clip-anytorch
+    - gguf
+    - huggingface-hub
+    - modelscope
+    - rembg
+    - transformers
+trampoline:
+  version: "0.1.2"
+  dependents:
+    - torchsde
+transformers:
+  version: "4.46.2"
+  isRoot: true
+  dependents:
+    - compel
+    - diffsynth
+trimesh:
+  version: "4.6.10"
+  isRoot: true
+typer:
+  version: "0.15.4"
+  dependents:
+    - fastapi-cli
+typing-extensions:
+  version: "4.12.2"
+  dependents:
+    - anyio
+    - fastapi
+    - huggingface-hub
+    - onnx
+    - pydantic
+    - pydantic-core
+    - pyvista
+    - referencing
+    - rich-toolkit
+    - spandrel
+    - torch
+    - typer
+    - typing-inspection
+typing-inspection:
+  version: "0.4.1"
+  dependents:
+    - pydantic
+    - pydantic-settings
+urllib3:
+  version: "1.26.13"
+  dependents:
+    - modelscope
+    - requests
+uvicorn:
+  version: "0.34.2"
+  dependents:
+    - fastapi
+    - fastapi-cli
+virtualenv:
+  version: "20.31.2"
+  isRoot: true
+vtk:
+  version: "9.4.2"
+  dependents:
+    - pyvista
+watchfiles:
+  version: "1.0.5"
+  dependents:
+    - uvicorn
+wcwidth:
+  version: "0.2.13"
+  dependents:
+    - ftfy
+websockets:
+  version: "15.0.1"
+  isRoot: true
+  dependents:
+    - uvicorn
+wrapt:
+  version: "1.17.2"
+  dependents:
+    - deprecated
+xatlas:
+  version: "0.0.10"
+  isRoot: true
+xformers:
+  version: "0.0.28.post1"
+  isRoot: true
+yarl:
+  version: "1.20.0"
+  dependents:
+    - aiohttp
+zipp:
+  version: "3.21.0"
+  dependents:
+    - importlib-metadata

@@ -1,6 +1,6 @@
 einops>=0.8.0
-transformers>=4.47.1
-tokenizers>=0.21.0
+transformers>=4.46.2
+tokenizers>=0.20.0
 safetensors>=0.4.5
 aiohttp>=3.11.11
 pyyaml>=6.0.2
@@ -10,6 +10,7 @@ fastapi[standard]>=0.115.6
 websockets>=14.1
 RestrictedPython>=8.0
 aioshutil>=1.5
+huggingface_hub[hf-transfer,hf_xet]>=0.31
 
 # 基础 Torch 包（非 Windows 版本）
 torch==2.4.1
@@ -23,7 +24,7 @@ pydantic-settings>=2.7.0
 pydantic>=2.10.4
 spandrel>=0.4.1
 gguf>=0.14.0
-controlnet-aux>=0.0.9
+controlnet-aux>=0.0.7
 clip-anytorch>=2.6.0
 compel>=2.0.3
 deprecated>=1.2.18

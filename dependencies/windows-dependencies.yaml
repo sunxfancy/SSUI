@@ -26,6 +26,11 @@ annotated-types:
   version: "0.7.0"
   dependents:
     - pydantic
+antlr4-python3-runtime:
+  version: "4.9.3"
+  dependents:
+    - hydra-core
+    - omegaconf
 anyio:
   version: "4.9.0"
   dependents:
@@ -43,6 +48,10 @@ attrs:
     - jsonschema
     - mediapipe
     - referencing
+audioread:
+  version: "3.0.1"
+  dependents:
+    - librosa
 bitsandbytes:
   version: "0.45.4"
   isRoot: true
@@ -68,6 +77,7 @@ cffi:
   version: "1.17.1"
   dependents:
     - sounddevice
+    - soundfile
 charset-normalizer:
   version: "2.1.1"
   dependents:
@@ -101,21 +111,34 @@ comm:
 compel:
   version: "2.0.3"
   isRoot: true
+conformer:
+  version: "0.3.2"
+  isRoot: true
 contourpy:
   version: "1.3.1"
   dependents:
     - matplotlib
 controlnet-aux:
-  version: "0.0.9"
+  version: "0.0.7"
   isRoot: true
+  dependents:
+    - diffsynth
 cumm-cu124:
   version: "0.7.11"
   dependents:
     - spconv-cu124
+cupy-cuda12x:
+  version: "13.4.1"
+  dependents:
+    - diffsynth
 cycler:
   version: "0.12.1"
   dependents:
     - matplotlib
+cython:
+  version: "3.1.1"
+  dependents:
+    - pyworld
 dataclasses-json:
   version: "0.6.7"
   dependents:
@@ -124,11 +147,15 @@ decorator:
   version: "5.2.1"
   dependents:
     - ipython
+    - librosa
 deprecated:
   version: "1.2.18"
   isRoot: true
   dependents:
     - pygltflib
+diffsynth:
+  version: "1.1.7"
+  isRoot: true
 diffusers:
   version: "0.32.2"
   isRoot: true
@@ -149,7 +176,9 @@ einops:
   version: "0.8.1"
   isRoot: true
   dependents:
+    - conformer
     - controlnet-aux
+    - diffsynth
     - spandrel
 email-validator:
   version: "2.2.0"
@@ -170,6 +199,10 @@ fastapi-cli:
   version: "0.0.7"
   dependents:
     - fastapi
+fastrlock:
+  version: "0.8.3"
+  dependents:
+    - cupy-cuda12x
 filelock:
   version: "3.13.1"
   dependents:
@@ -213,6 +246,7 @@ ftfy:
   version: "6.3.1"
   dependents:
     - clip-anytorch
+    - diffsynth
 gguf:
   version: "0.14.0"
   isRoot: true
@@ -225,6 +259,14 @@ h11:
   dependents:
     - httpcore
     - uvicorn
+hf-transfer:
+  version: "0.1.9"
+  dependents:
+    - huggingface-hub
+hf-xet:
+  version: "1.1.2"
+  dependents:
+    - huggingface-hub
 httpcore:
   version: "1.0.7"
   dependents:
@@ -238,7 +280,8 @@ httpx:
   dependents:
     - fastapi
 huggingface-hub:
-  version: "0.29.3"
+  version: "0.31.4"
+  isRoot: true
   dependents:
     - accelerate
     - controlnet-aux
@@ -249,6 +292,9 @@ humanfriendly:
   version: "10.0"
   dependents:
     - coloredlogs
+hydra-core:
+  version: "1.3.2"
+  isRoot: true
 idna:
   version: "3.4"
   dependents:
@@ -263,12 +309,21 @@ igraph:
 imageio:
   version: "2.37.0"
   dependents:
+    - diffsynth
     - scikit-image
+imageio-ffmpeg:
+  version: "0.6.0"
+  dependents:
+    - imageio
 importlib-metadata:
   version: "8.6.1"
   dependents:
     - controlnet-aux
     - diffusers
+importlib-resources:
+  version: "6.5.2"
+  dependents:
+    - wetextprocessing
 ipycanvas:
   version: "0.13.3"
   dependents:
@@ -314,6 +369,11 @@ jinja2:
     - fastapi
     - flask
     - torch
+joblib:
+  version: "1.5.1"
+  dependents:
+    - librosa
+    - scikit-learn
 jsonschema:
   version: "4.23.0"
   dependents:
@@ -353,7 +413,11 @@ lark:
 lazy-loader:
   version: "0.4"
   dependents:
+    - librosa
     - scikit-image
+librosa:
+  version: "0.11.0"
+  isRoot: true
 llvmlite:
   version: "0.44.0"
   dependents:
@@ -394,13 +458,25 @@ ml-dtypes:
   dependents:
     - jax
     - jaxlib
+modelscope:
+  version: "1.26.0"
+  dependents:
+    - diffsynth
 moderngl:
   version: "5.12.0"
   isRoot: true
+more-itertools:
+  version: "10.7.0"
+  dependents:
+    - openai-whisper
 mpmath:
   version: "1.3.0"
   dependents:
     - sympy
+msgpack:
+  version: "1.1.0"
+  dependents:
+    - librosa
 multidict:
   version: "6.2.0"
   dependents:
@@ -416,6 +492,7 @@ nest-asyncio:
     - jupyter-client
 networkx:
   version: "3.3"
+  isRoot: true
   dependents:
     - scikit-image
     - torch
@@ -426,6 +503,8 @@ ninja:
 numba:
   version: "0.61.0"
   dependents:
+    - librosa
+    - openai-whisper
     - pymatting
 numpy:
   version: "1.26.3"
@@ -436,6 +515,7 @@ numpy:
     - contourpy
     - controlnet-aux
     - cumm-cu124
+    - cupy-cuda12x
     - diffusers
     - gguf
     - imageio
@@ -443,6 +523,7 @@ numpy:
     - jax
     - jaxlib
     - kaolin
+    - librosa
     - matplotlib
     - mediapipe
     - ml-dtypes
@@ -450,15 +531,20 @@ numpy:
     - nvdiffrast
     - onnx
     - onnxruntime
+    - openai-whisper
     - opencv-contrib-python
+    - opencv-python
     - opencv-python-headless
     - plyfile
     - pymatting
     - pymeshfix
     - pyvista
+    - pyworld
     - rembg
     - scikit-image
+    - scikit-learn
     - scipy
+    - soxr
     - spandrel
     - spconv-cu124
     - tifffile
@@ -469,20 +555,30 @@ numpy:
     - warp-lang
     - xatlas
     - xformers
+omegaconf:
+  version: "2.3.0"
+  dependents:
+    - hydra-core
 onnx:
   version: "1.17.0"
   isRoot: true
 onnxruntime:
   version: "1.21.0"
   isRoot: true
+openai-whisper:
+  version: "20240930"
+  isRoot: true
 opencv-contrib-python:
   version: "4.11.0.86"
   dependents:
     - mediapipe
-opencv-python-headless:
+opencv-python:
   version: "4.11.0.86"
   dependents:
     - controlnet-aux
+opencv-python-headless:
+  version: "4.11.0.86"
+  dependents:
     - rembg
 opt-einsum:
   version: "3.4.0"
@@ -493,6 +589,7 @@ packaging:
   dependents:
     - accelerate
     - huggingface-hub
+    - hydra-core
     - kornia
     - lazy-loader
     - marshmallow
@@ -540,6 +637,7 @@ plyfile:
 pooch:
   version: "1.8.2"
   dependents:
+    - librosa
     - pyvista
     - rembg
 portalocker:
@@ -558,6 +656,7 @@ propcache:
 protobuf:
   version: "4.25.6"
   dependents:
+    - diffsynth
     - mediapipe
     - onnx
     - onnxruntime
@@ -565,10 +664,14 @@ psutil:
   version: "7.0.0"
   dependents:
     - accelerate
+    - imageio
 pure-eval:
   version: "0.2.3"
   dependents:
     - stack-data
+pyarrow:
+  version: "20.0.0"
+  isRoot: true
 pybind11:
   version: "2.13.6"
   dependents:
@@ -644,6 +747,9 @@ pywin32:
   dependents:
     - jupyter-core
     - portalocker
+pyworld:
+  version: "0.3.4"
+  isRoot: true
 pyyaml:
   version: "6.0.2"
   isRoot: true
@@ -651,6 +757,7 @@ pyyaml:
     - accelerate
     - gguf
     - huggingface-hub
+    - omegaconf
     - transformers
     - uvicorn
 pyzmq:
@@ -667,6 +774,7 @@ regex:
   dependents:
     - clip-anytorch
     - diffusers
+    - tiktoken
     - transformers
 rembg:
   version: "2.0.65"
@@ -677,7 +785,9 @@ requests:
     - ccimport
     - diffusers
     - huggingface-hub
+    - modelscope
     - pooch
+    - tiktoken
     - transformers
 restrictedpython:
   version: "8.0"
@@ -701,6 +811,7 @@ safetensors:
   isRoot: true
   dependents:
     - accelerate
+    - diffsynth
     - diffusers
     - spandrel
     - transformers
@@ -709,6 +820,10 @@ scikit-image:
   dependents:
     - controlnet-aux
     - rembg
+scikit-learn:
+  version: "1.6.1"
+  dependents:
+    - librosa
 scipy:
   version: "1.15.2"
   isRoot: true
@@ -717,9 +832,11 @@ scipy:
     - jax
     - jaxlib
     - kaolin
+    - librosa
     - pymatting
     - rembg
     - scikit-image
+    - scikit-learn
     - torchsde
 scooby:
   version: "0.10.0"
@@ -728,6 +845,7 @@ scooby:
 sentencepiece:
   version: "0.2.0"
   dependents:
+    - diffsynth
     - gguf
     - mediapipe
 setuptools:
@@ -750,6 +868,15 @@ sounddevice:
   version: "0.5.1"
   dependents:
     - mediapipe
+soundfile:
+  version: "0.12.1"
+  isRoot: true
+  dependents:
+    - librosa
+soxr:
+  version: "0.5.0.post1"
+  dependents:
+    - librosa
 spandrel:
   version: "0.4.1"
   isRoot: true
@@ -778,16 +905,25 @@ texttable:
   version: "1.7.0"
   dependents:
     - igraph
+threadpoolctl:
+  version: "3.6.0"
+  dependents:
+    - scikit-learn
 tifffile:
   version: "2025.3.13"
   dependents:
     - scikit-image
+tiktoken:
+  version: "0.9.0"
+  isRoot: true
+  dependents:
+    - openai-whisper
 timm:
   version: "0.6.7"
   dependents:
     - controlnet-aux
 tokenizers:
-  version: "0.21.1"
+  version: "0.20.3"
   isRoot: true
   dependents:
     - transformers
@@ -799,9 +935,12 @@ torch:
     - bitsandbytes
     - clip-anytorch
     - compel
+    - conformer
     - controlnet-aux
+    - diffsynth
     - diffusers
     - kornia
+    - openai-whisper
     - spandrel
     - timm
     - torchaudio
@@ -820,6 +959,7 @@ torchvision:
   dependents:
     - clip-anytorch
     - controlnet-aux
+    - diffsynth
     - spandrel
     - timm
 tornado:
@@ -834,6 +974,8 @@ tqdm:
     - gguf
     - huggingface-hub
     - kaolin
+    - modelscope
+    - openai-whisper
     - rembg
     - transformers
 traitlets:
@@ -850,10 +992,15 @@ trampoline:
   dependents:
     - torchsde
 transformers:
-  version: "4.50.3"
+  version: "4.46.2"
   isRoot: true
   dependents:
     - compel
+    - diffsynth
+    - transformers-stream-generator
+transformers-stream-generator:
+  version: "0.0.4"
+  isRoot: true
 trimesh:
   version: "4.6.6"
   isRoot: true
@@ -870,6 +1017,7 @@ typing-extensions:
     - anyio
     - fastapi
     - huggingface-hub
+    - librosa
     - pydantic
     - pydantic-core
     - pyvista
@@ -891,6 +1039,7 @@ typing-inspection:
 urllib3:
   version: "1.26.13"
   dependents:
+    - modelscope
     - requests
 usd-core:
   version: "25.2.post1"
@@ -928,6 +1077,7 @@ websockets:
     - uvicorn
 werkzeug:
   version: "3.1.3"
+  isRoot: true
   dependents:
     - flask
 widgetsnbextension:

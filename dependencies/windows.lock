@@ -16,6 +16,10 @@ aiosignal==1.3.2
     # via aiohttp
 annotated-types==0.7.0
     # via pydantic
+antlr4-python3-runtime==4.9.3
+    # via
+    #   hydra-core
+    #   omegaconf
 anyio==4.9.0
     # via
     #   httpx
@@ -29,6 +33,8 @@ attrs==25.3.0
     #   jsonschema
     #   mediapipe
     #   referencing
+audioread==3.0.1
+    # via librosa
 bitsandbytes==0.45.4
     # via -r dependencies/requirements-windows.txt
 blake3==1.0.4
@@ -45,7 +51,9 @@ certifi==2022.12.7
     #   httpx
     #   requests
 cffi==1.17.1
-    # via sounddevice
+    # via
+    #   sounddevice
+    #   soundfile
 charset-normalizer==2.1.1
     # via requests
 click==8.1.8
@@ -70,23 +78,35 @@ comm==0.2.2
     #   kaolin
 compel==2.0.3
     # via -r dependencies/requirements-windows.txt
+conformer==0.3.2
+    # via -r dependencies/requirements-windows.txt
 contourpy==1.3.1
     # via matplotlib
-controlnet-aux==0.0.9
-    # via -r dependencies/requirements-windows.txt
+controlnet-aux==0.0.7
+    # via
+    #   -r dependencies/requirements-windows.txt
+    #   diffsynth
 cumm-cu124==0.7.11
     # via spconv-cu124
+cupy-cuda12x==13.4.1
+    # via diffsynth
 cycler==0.12.1
     # via matplotlib
+cython==3.1.1
+    # via pyworld
 dataclasses-json==0.6.7
     # via pygltflib
 decorator==5.2.1
-    # via ipython
+    # via
+    #   ipython
+    #   librosa
 deprecated==1.2.18
     # via
     #   -r dependencies/requirements-windows.txt
     #   pygltflib
 diff-gaussian-rasterization @ https://github.com/sunxfancy/diff-gaussian-rasterization/releases/download/v0.1/diff_gaussian_rasterization-0.0.0-cp312-cp312-win_amd64.whl
+    # via -r dependencies/requirements-windows.txt
+diffsynth==1.1.7
     # via -r dependencies/requirements-windows.txt
 diffusers==0.32.2
     # via
@@ -101,7 +121,9 @@ easydict==1.13
 einops==0.8.1
     # via
     #   -r dependencies/requirements-windows.txt
+    #   conformer
     #   controlnet-aux
+    #   diffsynth
     #   spandrel
 email-validator==2.2.0
     # via fastapi
@@ -113,6 +135,8 @@ fastapi==0.115.6
     # via -r dependencies/requirements-windows.txt
 fastapi-cli==0.0.7
     # via fastapi
+fastrlock==0.8.3
+    # via cupy-cuda12x
 filelock==3.13.1
     # via
     #   controlnet-aux
@@ -144,7 +168,9 @@ fsspec==2024.6.1
     #   huggingface-hub
     #   torch
 ftfy==6.3.1
-    # via clip-anytorch
+    # via
+    #   clip-anytorch
+    #   diffsynth
 gguf==0.14.0
     # via -r dependencies/requirements-windows.txt
 glcontext==3.0.0
@@ -153,14 +179,19 @@ h11==0.14.0
     # via
     #   httpcore
     #   uvicorn
+hf-transfer==0.1.9
+    # via huggingface-hub
+hf-xet==1.1.2
+    # via huggingface-hub
 httpcore==1.0.7
     # via httpx
 httptools==0.6.4
     # via uvicorn
 httpx==0.28.1
     # via fastapi
-huggingface-hub==0.29.3
+huggingface-hub==0.31.4
     # via
+    #   -r dependencies/requirements-windows.txt
     #   accelerate
     #   controlnet-aux
     #   diffusers
@@ -168,6 +199,8 @@ huggingface-hub==0.29.3
     #   transformers
 humanfriendly==10.0
     # via coloredlogs
+hydra-core==1.3.2
+    # via -r dependencies/requirements-windows.txt
 idna==3.4
     # via
     #   anyio
@@ -178,11 +211,17 @@ idna==3.4
 igraph==0.11.8
     # via -r dependencies/requirements-windows.txt
 imageio==2.37.0
-    # via scikit-image
+    # via
+    #   diffsynth
+    #   scikit-image
+imageio-ffmpeg==0.6.0
+    # via imageio
 importlib-metadata==8.6.1
     # via
     #   controlnet-aux
     #   diffusers
+importlib-resources==6.5.2
+    # via wetextprocessing
 ipycanvas==0.13.3
     # via kaolin
 ipyevents==2.0.2
@@ -212,6 +251,10 @@ jinja2==3.1.4
     #   fastapi
     #   flask
     #   torch
+joblib==1.5.1
+    # via
+    #   librosa
+    #   scikit-learn
 jsonschema==4.23.0
     # via rembg
 jsonschema-specifications==2024.10.1
@@ -233,7 +276,11 @@ kornia-rs==0.1.8
 lark==1.2.2
     # via pccm
 lazy-loader==0.4
-    # via scikit-image
+    # via
+    #   librosa
+    #   scikit-image
+librosa==0.11.0
+    # via -r dependencies/requirements-windows.txt
 llvmlite==0.44.0
     # via numba
 markdown-it-py==3.0.0
@@ -260,10 +307,16 @@ ml-dtypes==0.5.1
     # via
     #   jax
     #   jaxlib
+modelscope==1.26.0
+    # via diffsynth
 moderngl==5.12.0
     # via -r dependencies/requirements-windows.txt
+more-itertools==10.7.0
+    # via openai-whisper
 mpmath==1.3.0
     # via sympy
+msgpack==1.1.0
+    # via librosa
 multidict==6.2.0
     # via
     #   aiohttp
@@ -274,12 +327,16 @@ nest-asyncio==1.6.0
     # via jupyter-client
 networkx==3.3
     # via
+    #   -r dependencies/requirements-windows.txt
     #   scikit-image
     #   torch
 ninja==1.11.1.4
     # via ccimport
 numba==0.61.0
-    # via pymatting
+    # via
+    #   librosa
+    #   openai-whisper
+    #   pymatting
 numpy==1.26.3
     # via
     #   accelerate
@@ -287,6 +344,7 @@ numpy==1.26.3
     #   contourpy
     #   controlnet-aux
     #   cumm-cu124
+    #   cupy-cuda12x
     #   diffusers
     #   gguf
     #   imageio
@@ -294,6 +352,7 @@ numpy==1.26.3
     #   jax
     #   jaxlib
     #   kaolin
+    #   librosa
     #   matplotlib
     #   mediapipe
     #   ml-dtypes
@@ -301,15 +360,20 @@ numpy==1.26.3
     #   nvdiffrast
     #   onnx
     #   onnxruntime
+    #   openai-whisper
     #   opencv-contrib-python
+    #   opencv-python
     #   opencv-python-headless
     #   plyfile
     #   pymatting
     #   pymeshfix
     #   pyvista
+    #   pyworld
     #   rembg
     #   scikit-image
+    #   scikit-learn
     #   scipy
+    #   soxr
     #   spandrel
     #   spconv-cu124
     #   tifffile
@@ -322,22 +386,27 @@ numpy==1.26.3
     #   xformers
 nvdiffrast @ https://github.com/sunxfancy/nvdiffrast/releases/download/v0.3.3.1/nvdiffrast-0.3.3.1-cp312-cp312-win_amd64.whl
     # via -r dependencies/requirements-windows.txt
+omegaconf==2.3.0
+    # via hydra-core
 onnx==1.17.0
     # via -r dependencies/requirements-windows.txt
 onnxruntime==1.21.0
     # via -r dependencies/requirements-windows.txt
+openai-whisper==20240930
+    # via -r dependencies/requirements-windows.txt
 opencv-contrib-python==4.11.0.86
     # via mediapipe
+opencv-python==4.11.0.86
+    # via controlnet-aux
 opencv-python-headless==4.11.0.86
-    # via
-    #   controlnet-aux
-    #   rembg
+    # via rembg
 opt-einsum==3.4.0
     # via jax
 packaging==24.1
     # via
     #   accelerate
     #   huggingface-hub
+    #   hydra-core
     #   kornia
     #   lazy-loader
     #   marshmallow
@@ -377,6 +446,7 @@ plyfile==1.1
     # via -r dependencies/requirements-windows.txt
 pooch==1.8.2
     # via
+    #   librosa
     #   pyvista
     #   rembg
 portalocker==2.10.1
@@ -389,13 +459,18 @@ propcache==0.3.1
     #   yarl
 protobuf==4.25.6
     # via
+    #   diffsynth
     #   mediapipe
     #   onnx
     #   onnxruntime
 psutil==7.0.0
-    # via accelerate
+    # via
+    #   accelerate
+    #   imageio
 pure-eval==0.2.3
     # via stack-data
+pyarrow==20.0.0
+    # via -r dependencies/requirements-windows.txt
 pybind11==2.13.6
     # via
     #   ccimport
@@ -425,6 +500,8 @@ pymatting==1.1.13
     # via rembg
 pymeshfix==0.17.0
     # via -r dependencies/requirements-windows.txt
+pynini @ https://github.com/sunxfancy/pynini-2.1.6.post1/releases/download/2.1.6.post1/pynini-2.1.6.post1-cp312-cp312-win_amd64.whl
+    # via -r dependencies/requirements-windows.txt
 pyparsing==3.2.3
     # via
     #   compel
@@ -449,12 +526,15 @@ pywin32==310
     # via
     #   jupyter-core
     #   portalocker
+pyworld==0.3.4
+    # via -r dependencies/requirements-windows.txt
 pyyaml==6.0.2
     # via
     #   -r dependencies/requirements-windows.txt
     #   accelerate
     #   gguf
     #   huggingface-hub
+    #   omegaconf
     #   transformers
     #   uvicorn
 pyzmq==26.3.0
@@ -467,6 +547,7 @@ regex==2024.11.6
     # via
     #   clip-anytorch
     #   diffusers
+    #   tiktoken
     #   transformers
 rembg==2.0.65
     # via -r dependencies/requirements-windows.txt
@@ -475,7 +556,9 @@ requests==2.28.1
     #   ccimport
     #   diffusers
     #   huggingface-hub
+    #   modelscope
     #   pooch
+    #   tiktoken
     #   transformers
 restrictedpython==8.0
     # via -r dependencies/requirements-windows.txt
@@ -493,6 +576,7 @@ safetensors==0.5.3
     # via
     #   -r dependencies/requirements-windows.txt
     #   accelerate
+    #   diffsynth
     #   diffusers
     #   spandrel
     #   transformers
@@ -500,6 +584,8 @@ scikit-image==0.25.2
     # via
     #   controlnet-aux
     #   rembg
+scikit-learn==1.6.1
+    # via librosa
 scipy==1.15.2
     # via
     #   -r dependencies/requirements-windows.txt
@@ -507,14 +593,17 @@ scipy==1.15.2
     #   jax
     #   jaxlib
     #   kaolin
+    #   librosa
     #   pymatting
     #   rembg
     #   scikit-image
+    #   scikit-learn
     #   torchsde
 scooby==0.10.0
     # via pyvista
 sentencepiece==0.2.0
     # via
+    #   diffsynth
     #   gguf
     #   mediapipe
 setuptools==70.2.0
@@ -527,6 +616,12 @@ sniffio==1.3.1
     # via anyio
 sounddevice==0.5.1
     # via mediapipe
+soundfile==0.12.1
+    # via
+    #   -r dependencies/requirements-windows.txt
+    #   librosa
+soxr==0.5.0.post1
+    # via librosa
 spandrel==0.4.1
     # via -r dependencies/requirements-windows.txt
 spconv-cu124==2.3.8
@@ -544,11 +639,17 @@ termcolor==2.5.0
     # via fire
 texttable==1.7.0
     # via igraph
+threadpoolctl==3.6.0
+    # via scikit-learn
 tifffile==2025.3.13
     # via scikit-image
+tiktoken==0.9.0
+    # via
+    #   -r dependencies/requirements-windows.txt
+    #   openai-whisper
 timm==0.6.7
     # via controlnet-aux
-tokenizers==0.21.1
+tokenizers==0.20.3
     # via
     #   -r dependencies/requirements-windows.txt
     #   transformers
@@ -559,9 +660,12 @@ torch==2.4.1+cu124
     #   bitsandbytes
     #   clip-anytorch
     #   compel
+    #   conformer
     #   controlnet-aux
+    #   diffsynth
     #   diffusers
     #   kornia
+    #   openai-whisper
     #   spandrel
     #   timm
     #   torchaudio
@@ -579,6 +683,7 @@ torchvision==0.19.1+cu124
     #   -r dependencies/requirements-windows.txt
     #   clip-anytorch
     #   controlnet-aux
+    #   diffsynth
     #   spandrel
     #   timm
 tornado==6.4.2
@@ -591,6 +696,8 @@ tqdm==4.66.5
     #   gguf
     #   huggingface-hub
     #   kaolin
+    #   modelscope
+    #   openai-whisper
     #   rembg
     #   transformers
 traitlets==5.14.3
@@ -603,10 +710,14 @@ traitlets==5.14.3
     #   matplotlib-inline
 trampoline==0.1.2
     # via torchsde
-transformers==4.50.3
+transformers==4.46.2
     # via
     #   -r dependencies/requirements-windows.txt
     #   compel
+    #   diffsynth
+    #   transformers-stream-generator
+transformers-stream-generator==0.0.4
+    # via -r dependencies/requirements-windows.txt
 trimesh==4.6.6
     # via -r dependencies/requirements-windows.txt
 triton-windows==3.1.0.post17
@@ -618,6 +729,7 @@ typing-extensions==4.12.2
     #   anyio
     #   fastapi
     #   huggingface-hub
+    #   librosa
     #   pydantic
     #   pydantic-core
     #   pyvista
@@ -633,7 +745,9 @@ typing-inspect==0.9.0
 typing-inspection==0.4.0
     # via pydantic
 urllib3==1.26.13
-    # via requests
+    # via
+    #   modelscope
+    #   requests
 usd-core==25.2.post1
     # via kaolin
 uvicorn==0.34.0
@@ -658,6 +772,8 @@ websockets==15.0.1
     #   uvicorn
 werkzeug==3.1.3
     # via flask
+wetextprocessing @ https://github.com/sunxfancy/pynini-2.1.6.post1/releases/download/2.1.6.post1/WeTextProcessing-1.0.4-py3-none-any.whl
+    # via -r dependencies/requirements-windows.txt
 widgetsnbextension==4.0.13
     # via ipywidgets
 wrapt==1.17.2

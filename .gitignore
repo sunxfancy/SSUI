@@ -9,11 +9,16 @@ dist/
 test_env/
 resources/
 log/
+models/
 
 *.safetensors
 *.pt
 *.pth
 *.ckpt
 /result*.png
+/*.mp4
+/*.glb
+/*.ply
+/*.wav
 
 .idea

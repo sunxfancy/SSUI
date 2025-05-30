@@ -508,7 +508,6 @@ def denoise_image(
             ext_manager.add_extension(
                 LoRAExt(
                     lora_model=lora_field.lora,
-                    model_id=lora_field.lora,
                     weight=lora_field.weight,
                 )
             )
@@ -873,7 +872,7 @@ def flux_denoise_image(
             # applied last.
             loras.append(control_lora)
         for lora in loras:
-            lora_info = lora.lora
+            lora_info = lora.lora.lora
             assert isinstance(lora_info.model, ModelPatchRaw)
             yield (lora_info.model, lora.weight)
             del lora_info
