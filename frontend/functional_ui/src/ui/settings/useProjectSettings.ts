@@ -56,8 +56,9 @@ export const useProjectSettings = (path: string) => {
   const loadConfig = useCallback(async () => {
     try {
       const response = await message.get(`file?path=${encodeURIComponent(path)}`);
+      console.log('response', response);
       if (response) {
-        const loadedUserInput = JSON.parse(response);
+        const loadedUserInput = response;
         const mergedUserInput = {
           ...initializeUserInput(mockConfigData),
           ...loadedUserInput
