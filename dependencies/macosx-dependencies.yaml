@@ -65,12 +65,6 @@ click:
 clip-anytorch:
   version: "2.6.0"
   isRoot: true
-colorama:
-  version: "0.4.6"
-  dependents:
-    - click
-    - tqdm
-    - uvicorn
 coloredlogs:
   version: "15.0.1"
   dependents:
@@ -455,10 +449,6 @@ pyparsing:
   dependents:
     - compel
     - matplotlib
-pyreadline3:
-  version: "3.5.4"
-  dependents:
-    - humanfriendly
 python-dateutil:
   version: "2.9.0.post0"
   dependents:
@@ -496,6 +486,7 @@ regex:
   dependents:
     - clip-anytorch
     - diffusers
+    - tiktoken
     - transformers
 rembg:
   version: "2.0.65"
@@ -506,6 +497,7 @@ requests:
     - diffusers
     - huggingface-hub
     - pooch
+    - tiktoken
     - transformers
 restrictedpython:
   version: "8.0"
@@ -597,6 +589,9 @@ tifffile:
   version: "2025.3.13"
   dependents:
     - scikit-image
+tiktoken:
+  version: "0.9.0"
+  isRoot: true
 timm:
   version: "0.6.7"
   dependents:
@@ -652,6 +647,10 @@ transformers:
   isRoot: true
   dependents:
     - compel
+    - transformers-stream-generator
+transformers-stream-generator:
+  version: "0.0.4"
+  isRoot: true
 trimesh:
   version: "4.6.6"
   isRoot: true
@@ -687,6 +686,10 @@ uvicorn:
   dependents:
     - fastapi
     - fastapi-cli
+uvloop:
+  version: "0.21.0"
+  dependents:
+    - uvicorn
 virtualenv:
   version: "20.29.3"
   isRoot: true

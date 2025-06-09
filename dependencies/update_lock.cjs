@@ -7,7 +7,8 @@ const os = require('os');
 function parseArgs() {
   const args = process.argv.slice(2);
   return {
-    noUpgrade: args.includes('--no-upgrade') || args.includes('-n')
+    noUpgrade: args.includes('--no-upgrade') || args.includes('-n'),
+    all: args.includes('--all') || args.includes('-a')
   };
 }
 
@@ -34,11 +35,26 @@ function getAllPlatforms() {
   return ['windows', 'macosx', 'linux'];
 }
 
+// 获取当前平台
+function getCurrentPlatform() {
+  const platform = os.platform();
+  switch (platform) {
+    case 'win32':
+      return 'windows';
+    case 'darwin':
+      return 'macosx';
+    case 'linux':
+      return 'linux';
+    default:
+      throw new Error(`不支持的操作系统平台: ${platform}`);
+  }
+}
+
 // 主函数
 function main() {
   try {
     const args = parseArgs();
-    const platforms = getAllPlatforms();
+    const platforms = args.all ? getAllPlatforms() : [getCurrentPlatform()];
     
     for (const platformName of platforms) {
       const requirementsFile = path.join('.', 'dependencies', `requirements-${platformName}.txt`);
