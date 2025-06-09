@@ -14,8 +14,10 @@ const PromptEditor = forwardRef((props, ref) => {
         }
     }, [textContent])
 
-    const removeTag = (text: string) => {
-        setTextContent(textContent.replace(text + ',', ''))
+    const removeTag = (index: number) => {
+        const arr = textContent.split(',')
+        arr.splice(index, 1)
+        setTextContent(arr.filter(a => !!a).join(','))
     }
 
     return (
@@ -23,8 +25,8 @@ const PromptEditor = forwardRef((props, ref) => {
             <div className={styles.tagWp}>
                 <div className={styles.tagTitle}>预览（共{textContent.split(',').filter((a: string) => !!a).length}条）：</div>
                 {
-                    textContent.split(',').filter(a => !!a).map(text => (
-                        <Tag className={styles.tag} round intent="primary" minimal key={text} onRemove={() => removeTag(text)}>{text}</Tag>
+                    textContent.split(',').filter(a => !!a).map((text, index) => (
+                        <Tag className={styles.tag} round intent="primary" minimal key={index} onRemove={() => removeTag(index)}>{text}</Tag>
                     ))
                 }
             </div>
