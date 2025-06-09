@@ -222,14 +222,17 @@ async def file_upload_json(path: str = Body(..., embed=True), content: str = Bod
 async def file(path: str):
     print("access file: ", path)
     if os.path.exists(path):
+        headers = {
+            "Cache-Control": "no-store"
+        }
         if path.endswith(".png"):
-            return FileResponse(path, media_type="image/png")
+            return FileResponse(path, media_type="image/png", headers=headers)
         elif path.endswith(".jpg") or path.endswith(".jpeg"):
-            return FileResponse(path, media_type="image/jpeg")
+            return FileResponse(path, media_type="image/jpeg", headers=headers)
         elif path.endswith(".json"):
-            return FileResponse(path, media_type="application/json")
+            return FileResponse(path, media_type="application/json", headers=headers)
         else:
-            return FileResponse(path)
+            return FileResponse(path, headers=headers)
     return None
 
 
