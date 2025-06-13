@@ -66,6 +66,8 @@ class HunyuanVideoLoraModel:
 def HunyuanTextToVideo(
     config: SSUIConfig, base_model: HunyuanVideoModel, prompt: Prompt
 ) -> list[Image]:
+    if config.is_prepare():
+        return [Image()]
     # The computation device is "cuda".
     pipe = HunyuanVideoPipeline.from_model_manager(
         base_model.model_manager, torch_dtype=torch.bfloat16, device="cuda"

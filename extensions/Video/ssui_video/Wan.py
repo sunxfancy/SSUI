@@ -25,9 +25,12 @@ class WanVideoModel:
         )
 
 @param("seed", Random(), default=42)
-@param("tiled", Switch(default=True))
+@param("tiled", Switch(), default=True)
 @param("num_frames", Slider(1, 200, 1), default=50)
 def WanImageTextToVideo(config: SSUIConfig, base_model: WanVideoModel, image: Image, prompt: Prompt, negative_prompt: Prompt) -> list[Image]:
+    if config.is_prepare():
+        return [Image()]
+    
     pipe = WanVideoPipeline.from_model_manager(base_model.model_manager, torch_dtype=torch.bfloat16, device="cuda")
     pipe.enable_vram_management(num_persistent_param_in_dit=None)
 

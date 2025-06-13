@@ -18,6 +18,10 @@ from ssui.config import SSUIConfig
 if TYPE_CHECKING:
     from ss_executor.loader import ModuleExecutor
 
+allowed_modules = set([
+    'ssui', 'ssui_image', 'ssui_video', 'ssui_audio', 'ssui_3dmodel', 
+    'stdgen', 'trellis', 'cosyvoice', 'typing'])
+
 @dataclass
 class ModuleBundle:
     callables: List[Callable]
@@ -53,7 +57,7 @@ class Sandbox(ModuleExecutor):
         Args:
             ssui_api: 包含允许调用的SSUI API函数的字典
         """
-        self.allowed_modules = set(['ssui', 'ssui_image', 'typing'])  # 初始化允许导入的模块集合
+        self.allowed_modules = allowed_modules  # 初始化允许导入的模块集合
         self._setup_restricted_globals()
         self.module_path = None
         self.module_name = None
