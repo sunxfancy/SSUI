@@ -9,12 +9,16 @@ from ssui.config import SSUIConfig
 from ssui.controller import Random, Slider, Switch
 
 class WanVideoModel:
-    def __init__(self):
-        self.model_manager = ModelManager()
+    def __init__(self, model_manager: ModelManager = None):
+        self.model_manager = model_manager
+
+    @staticmethod
+    def load() -> "WanVideoModel":
+        model_manager = ModelManager()
         snapshot_download("PAI/Wan2.1-Fun-1.3B-InP", local_dir="models/PAI/Wan2.1-Fun-1.3B-InP")
 
         # Load models
-        self.model_manager.load_models(
+        model_manager.load_models(
             [
                 "models/PAI/Wan2.1-Fun-1.3B-InP/diffusion_pytorch_model.safetensors",
                 "models/PAI/Wan2.1-Fun-1.3B-InP/models_t5_umt5-xxl-enc-bf16.pth",
@@ -23,6 +27,7 @@ class WanVideoModel:
             ],
             torch_dtype=torch.bfloat16, # You can set `torch_dtype=torch.float8_e4m3fn` to enable FP8 quantization.
         )
+        return WanVideoModel(model_manager)
 
 @param("seed", Random(), default=42)
 @param("tiled", Switch(), default=True)
