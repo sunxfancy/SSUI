@@ -19,7 +19,7 @@ if TYPE_CHECKING:
     from ss_executor.loader import ModuleExecutor
 
 allowed_modules = set([
-    'ssui', 'ssui_image', 'ssui_video', 'ssui_audio', 'ssui_3dmodel', 
+    'ssui', 'ssui_image', 'ssui_video', 'ssui_audio', 'ssui_voice', 'ssui_3dmodel', 
     'stdgen', 'trellis', 'cosyvoice', 'typing'])
 
 @dataclass
