@@ -1,15 +1,15 @@
 .venv/
 .build/
-data/
+/data/
 input/
 output/
 __pycache__/
 node_modules/
 dist/
 test_env/
-resources/
-log/
-models/
+/resources/
+/log/
+/models/
 
 *.safetensors
 *.pt

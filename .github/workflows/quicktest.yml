@@ -44,6 +44,9 @@ jobs:
           python-version: 3.12.8
           activate-environment: true
 
+      - name: Install packaging
+        run: uv pip install packaging==24.1
+
       - name: Install requirements
         run: uv pip install -r dependencies/${{ matrix.platform }}.lock
 

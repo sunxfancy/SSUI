@@ -121,16 +121,13 @@ contourpy:
 controlnet-aux:
   version: "0.0.7"
   isRoot: true
-  dependents:
-    - diffsynth
 cumm-cu124:
   version: "0.7.11"
   dependents:
     - spconv-cu124
 cupy-cuda12x:
   version: "13.4.1"
-  dependents:
-    - diffsynth
+  isRoot: true
 cycler:
   version: "0.12.1"
   dependents:
@@ -153,9 +150,6 @@ deprecated:
   isRoot: true
   dependents:
     - pygltflib
-diffsynth:
-  version: "1.1.7"
-  isRoot: true
 diffusers:
   version: "0.32.2"
   isRoot: true
@@ -178,7 +172,6 @@ einops:
   dependents:
     - conformer
     - controlnet-aux
-    - diffsynth
     - spandrel
 email-validator:
   version: "2.2.0"
@@ -244,9 +237,9 @@ fsspec:
     - torch
 ftfy:
   version: "6.3.1"
+  isRoot: true
   dependents:
     - clip-anytorch
-    - diffsynth
 gguf:
   version: "0.14.0"
   isRoot: true
@@ -286,6 +279,7 @@ huggingface-hub:
     - accelerate
     - controlnet-aux
     - diffusers
+    - timm
     - tokenizers
     - transformers
 humanfriendly:
@@ -308,8 +302,8 @@ igraph:
   isRoot: true
 imageio:
   version: "2.37.0"
+  isRoot: true
   dependents:
-    - diffsynth
     - scikit-image
 imageio-ffmpeg:
   version: "0.6.0"
@@ -458,10 +452,6 @@ ml-dtypes:
   dependents:
     - jax
     - jaxlib
-modelscope:
-  version: "1.26.0"
-  dependents:
-    - diffsynth
 moderngl:
   version: "5.12.0"
   isRoot: true
@@ -578,6 +568,7 @@ opencv-python:
     - controlnet-aux
 opencv-python-headless:
   version: "4.11.0.86"
+  isRoot: true
   dependents:
     - rembg
 opt-einsum:
@@ -656,7 +647,6 @@ propcache:
 protobuf:
   version: "4.25.6"
   dependents:
-    - diffsynth
     - mediapipe
     - onnx
     - onnxruntime
@@ -758,6 +748,7 @@ pyyaml:
     - gguf
     - huggingface-hub
     - omegaconf
+    - timm
     - transformers
     - uvicorn
 pyzmq:
@@ -785,7 +776,6 @@ requests:
     - ccimport
     - diffusers
     - huggingface-hub
-    - modelscope
     - pooch
     - tiktoken
     - transformers
@@ -811,9 +801,9 @@ safetensors:
   isRoot: true
   dependents:
     - accelerate
-    - diffsynth
     - diffusers
     - spandrel
+    - timm
     - transformers
 scikit-image:
   version: "0.25.2"
@@ -844,8 +834,8 @@ scooby:
     - pyvista
 sentencepiece:
   version: "0.2.0"
+  isRoot: true
   dependents:
-    - diffsynth
     - gguf
     - mediapipe
 setuptools:
@@ -919,11 +909,12 @@ tiktoken:
   dependents:
     - openai-whisper
 timm:
-  version: "0.6.7"
+  version: "1.0.15"
+  isRoot: true
   dependents:
     - controlnet-aux
 tokenizers:
-  version: "0.20.3"
+  version: "0.21.1"
   isRoot: true
   dependents:
     - transformers
@@ -937,7 +928,6 @@ torch:
     - compel
     - conformer
     - controlnet-aux
-    - diffsynth
     - diffusers
     - kornia
     - openai-whisper
@@ -959,7 +949,6 @@ torchvision:
   dependents:
     - clip-anytorch
     - controlnet-aux
-    - diffsynth
     - spandrel
     - timm
 tornado:
@@ -974,7 +963,6 @@ tqdm:
     - gguf
     - huggingface-hub
     - kaolin
-    - modelscope
     - openai-whisper
     - rembg
     - transformers
@@ -992,11 +980,10 @@ trampoline:
   dependents:
     - torchsde
 transformers:
-  version: "4.46.2"
+  version: "4.52.4"
   isRoot: true
   dependents:
     - compel
-    - diffsynth
     - transformers-stream-generator
 transformers-stream-generator:
   version: "0.0.4"
@@ -1039,7 +1026,6 @@ typing-inspection:
 urllib3:
   version: "1.26.13"
   dependents:
-    - modelscope
     - requests
 usd-core:
   version: "25.2.post1"
