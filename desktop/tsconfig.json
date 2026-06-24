@@ -20,6 +20,6 @@
     "noUnusedParameters": true,
     "noFallthroughCasesInSwitch": true
   },
-  "include": ["src"],
+  "include": ["src", "src-tauri/workflow/data.json"],
   "references": [{ "path": "./tsconfig.node.json" }]
 }

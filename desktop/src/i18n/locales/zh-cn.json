@@ -68,6 +68,9 @@
         "empty": "暂无已安装的扩展"
     },
     "workflow": {
+        "title": "新建工作流",
+        "official": "官方",
+        "community": "社区",
         "saveLocation": "选择工作流保存位置...",
         "selectFolder": "选择文件夹",
         "actions": {

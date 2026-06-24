@@ -36,7 +36,10 @@
       "resources/extensions/*",
       "resources/app.tar.gz",
       "workflow/data.json",
-      "workflow/txt2img/basic/*"
+      "workflow/canvas-drawing/*",
+      "workflow/image-generation/*",
+      "workflow/video-generation/*",
+      "workflow/speech-synthesis/*"
     ]
   }
 }

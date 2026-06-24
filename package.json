@@ -35,7 +35,7 @@
     "ext:package_Audio": "cd extensions/Audio && ssext package -o ../../desktop/src-tauri/resources/extensions/",
     "test": "node dependencies/venv.cjs python tests/run_tests.py",
     "test_on": "node dependencies/venv.cjs python tests/run_tests.py --test",
-    "package": "yarn build:frontend && yarn ext:package && yarn build:desktop",
+    "package": "yarn build:frontend && yarn build:extension_builder && yarn ext:package && yarn build:desktop",
     "package:debug": "yarn build:frontend && yarn ext:package && yarn build:desktop:debug",
     "package:vscode": "cd ssui-vscode && yarn package",
     "check_deps": "yarn --version && rustc --version && cargo --version",
@@ -49,8 +49,8 @@
   },
   "devDependencies": {
     "concurrently": "^9.1.2",
+    "extension_builder": "*",
     "js-yaml": "^4.1.0",
-    "semver": "^7.5.4",
-    "ssext-builder": "file:extension_builder"
+    "semver": "^7.5.4"
   }
 }
