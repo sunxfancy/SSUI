@@ -1,0 +1,30 @@
+---
+description: SSUI 项目构建、验证与脚本约定（详见根目录 CLAUDE.md）
+alwaysApply: true
+---
+
+# SSUI 项目指引
+
+完整说明见根目录 [`CLAUDE.md`](../../CLAUDE.md)。执行构建、验证、启动或打包前，先查阅该文件及**被修改子目录**的 `package.json` scripts。
+
+## 验证与编译
+
+- 使用子项目已定义的 `yarn` 脚本，**不要**裸跑 `npx tsc` 等未在 package.json 中声明的命令。
+- 修改 `desktop/` → `cd desktop && yarn build`（`tsc && vite build`）
+- 修改 `frontend/ssui_components/` → `yarn build:components` 或在该目录 `yarn build`
+- 修改 `frontend/functional_ui/` → `yarn build:functional_ui` 或在该目录 `yarn build`
+- 修改 `extensions/Image/` → 在该目录 `yarn build`
+- 文档与 `package.json` 不一致时，**以 package.json 为准**
+
+## 常用开发命令（根目录）
+
+- 日常桌面开发：`yarn dev:desktop`
+- Storybook 组件开发：`yarn dev:desktop_sb`
+- Functional UI 热更新：`yarn dev:functional_ui`（端口 7420）
+- Python 测试：`yarn test`（发布前 `RUN_SLOW_TESTS=1 yarn test`）
+
+## 端口
+
+- 7422：FastAPI 服务器
+- 7420：functional_ui 开发服
+- 6006：desktop Storybook
