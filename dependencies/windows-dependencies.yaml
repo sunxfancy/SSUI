@@ -310,7 +310,7 @@ imageio-ffmpeg:
   dependents:
     - imageio
 importlib-metadata:
-  version: "8.6.1"
+  version: "7.1.0"
   dependents:
     - controlnet-aux
     - diffusers
@@ -1085,6 +1085,6 @@ yarl:
   dependents:
     - aiohttp
 zipp:
-  version: "3.21.0"
+  version: "3.19.2"
   dependents:
     - importlib-metadata
