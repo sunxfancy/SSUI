@@ -1,22 +1,13 @@
 const fs = require('fs');
 const path = require('path');
 const yaml = require('js-yaml');
-const os = require('os');
 const semver = require('semver');
+const { getCurrentTarget } = require('./platform.cjs');
 
 // 确保.venv目录存在
 const buildDir = path.join(__dirname, '..', '.venv');
 if (!fs.existsSync(buildDir)) {
   fs.mkdirSync(buildDir, { recursive: true });
-}
-
-// 确定当前平台
-function getPlatform() {
-  const platform = os.platform();
-  if (platform === 'win32') return 'windows';
-  if (platform === 'darwin') return 'macosx';
-  if (platform === 'linux') return 'linux';
-  throw new Error(`不支持的平台: ${platform}`);
 }
 
 // 解析版本约束
@@ -171,13 +162,13 @@ function formatConstraint(constraint) {
 
 // 读取根目录下依赖
 function loadCoreDependencies() {
-  const platform = getPlatform();
-  const dependenciesPath = path.join(__dirname, '..', 'dependencies', `requirements-${platform}.txt`);
-  
+  const target = getCurrentTarget();
+  const dependenciesPath = path.join(__dirname, '..', 'dependencies', `requirements-${target}.txt`);
+
   if (!fs.existsSync(dependenciesPath)) {
-    throw new Error(`找不到平台特定的依赖文件: ${dependenciesPath}`);
+    throw new Error(`找不到目标特定的依赖文件: ${dependenciesPath}`);
   }
-  
+
   return parseDependenciesFile(dependenciesPath);
 }
 

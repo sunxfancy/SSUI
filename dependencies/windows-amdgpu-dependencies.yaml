@@ -1,0 +1,1342 @@
+# 包依赖关系
+absl-py:
+  version: "2.4.0"
+  dependents:
+    - mediapipe
+accelerate:
+  version: "1.14.0"
+  isRoot: true
+  dependents:
+    - diffusers
+aiohappyeyeballs:
+  version: "2.6.2"
+  dependents:
+    - aiohttp
+aiohttp:
+  version: "3.14.1"
+  isRoot: true
+aioshutil:
+  version: "1.6"
+  isRoot: true
+aiosignal:
+  version: "1.4.0"
+  dependents:
+    - aiohttp
+annotated-doc:
+  version: "0.0.4"
+  dependents:
+    - fastapi
+    - typer
+annotated-types:
+  version: "0.7.0"
+  dependents:
+    - pydantic
+antlr4-python3-runtime:
+  version: "4.9.3"
+  dependents:
+    - hydra-core
+    - omegaconf
+anyio:
+  version: "4.14.1"
+  dependents:
+    - httpx
+    - jupyter-server
+    - starlette
+    - watchfiles
+argon2-cffi:
+  version: "25.1.0"
+  dependents:
+    - jupyter-server
+argon2-cffi-bindings:
+  version: "25.1.0"
+  dependents:
+    - argon2-cffi
+arrow:
+  version: "1.4.0"
+  dependents:
+    - isoduration
+asttokens:
+  version: "3.0.1"
+  dependents:
+    - stack-data
+async-lru:
+  version: "2.3.0"
+  dependents:
+    - jupyterlab
+attrs:
+  version: "26.1.0"
+  dependents:
+    - aiohttp
+    - cyclopts
+    - jsonschema
+    - referencing
+audioread:
+  version: "3.1.0"
+  dependents:
+    - librosa
+babel:
+  version: "2.18.0"
+  dependents:
+    - jupyterlab-server
+beautifulsoup4:
+  version: "4.15.0"
+  dependents:
+    - nbconvert
+bitsandbytes:
+  version: "0.49.2"
+  isRoot: true
+blake3:
+  version: "1.0.9"
+  isRoot: true
+bleach:
+  version: "6.4.0"
+  dependents:
+    - nbconvert
+blinker:
+  version: "1.9.0"
+  dependents:
+    - flask
+ccimport:
+  version: "0.4.4"
+  dependents:
+    - pccm
+    - spconv-cu124
+certifi:
+  version: "2022.12.7"
+  dependents:
+    - httpcore
+    - httpx
+    - mediapipe
+    - requests
+    - sentry-sdk
+cffi:
+  version: "2.0.0"
+  dependents:
+    - argon2-cffi-bindings
+    - sounddevice
+    - soundfile
+charset-normalizer:
+  version: "2.1.1"
+  dependents:
+    - requests
+click:
+  version: "8.4.2"
+  dependents:
+    - flask
+    - huggingface-hub
+    - rich-toolkit
+    - typer
+    - uvicorn
+clip-anytorch:
+  version: "2.6.0"
+  isRoot: true
+colorama:
+  version: "0.4.6"
+  dependents:
+    - click
+    - ipython
+    - tqdm
+    - uvicorn
+comm:
+  version: "0.2.3"
+  dependents:
+    - ipykernel
+    - ipywidgets
+    - kaolin
+compel:
+  version: "2.4.0"
+  isRoot: true
+conformer:
+  version: "0.3.2"
+  isRoot: true
+contourpy:
+  version: "1.3.3"
+  dependents:
+    - matplotlib
+controlnet-aux:
+  version: "0.0.10"
+  isRoot: true
+cumm-cu124:
+  version: "0.7.11"
+  dependents:
+    - spconv-cu124
+cycler:
+  version: "0.12.1"
+  dependents:
+    - matplotlib
+cyclopts:
+  version: "4.19.0"
+  dependents:
+    - pyvista
+cython:
+  version: "3.2.6"
+  dependents:
+    - pyworld
+dataclasses-json:
+  version: "0.6.7"
+  dependents:
+    - pygltflib
+debugpy:
+  version: "1.8.21"
+  dependents:
+    - ipykernel
+decorator:
+  version: "5.3.1"
+  dependents:
+    - ipython
+    - librosa
+defusedxml:
+  version: "0.7.1"
+  dependents:
+    - nbconvert
+deprecated:
+  version: "1.3.1"
+  isRoot: true
+  dependents:
+    - pygltflib
+detect-installer:
+  version: "0.1.0"
+  isRoot: true
+  dependents:
+    - fastapi-cloud-cli
+diffusers:
+  version: "0.38.0"
+  isRoot: true
+  dependents:
+    - compel
+distlib:
+  version: "0.4.3"
+  dependents:
+    - virtualenv
+dnspython:
+  version: "2.8.0"
+  dependents:
+    - email-validator
+docstring-parser:
+  version: "0.18.0"
+  dependents:
+    - cyclopts
+easydict:
+  version: "1.13"
+  isRoot: true
+einops:
+  version: "0.8.2"
+  isRoot: true
+  dependents:
+    - conformer
+    - controlnet-aux
+    - spandrel
+email-validator:
+  version: "2.3.0"
+  dependents:
+    - fastapi
+    - pydantic
+entrypoints:
+  version: "0.4"
+  dependents:
+    - jupyter-client
+executing:
+  version: "2.2.1"
+  dependents:
+    - stack-data
+fastapi:
+  version: "0.138.1"
+  isRoot: true
+fastapi-cli:
+  version: "0.0.27"
+  dependents:
+    - fastapi
+fastapi-cloud-cli:
+  version: "0.21.0"
+  dependents:
+    - fastapi-cli
+fastar:
+  version: "0.11.0"
+  dependents:
+    - fastapi
+    - fastapi-cloud-cli
+fastjsonschema:
+  version: "2.21.2"
+  dependents:
+    - nbformat
+filelock:
+  version: "3.29.0"
+  dependents:
+    - controlnet-aux
+    - diffusers
+    - huggingface-hub
+    - python-discovery
+    - torch
+    - triton-windows
+    - virtualenv
+fire:
+  version: "0.7.1"
+  dependents:
+    - cumm-cu124
+    - pccm
+    - spconv-cu124
+flask:
+  version: "3.1.3"
+  dependents:
+    - kaolin
+flatbuffers:
+  version: "25.12.19"
+  dependents:
+    - mediapipe
+    - onnxruntime
+fonttools:
+  version: "4.63.0"
+  dependents:
+    - matplotlib
+fqdn:
+  version: "1.5.1"
+  dependents:
+    - jsonschema
+frozenlist:
+  version: "1.8.0"
+  dependents:
+    - aiohttp
+    - aiosignal
+fsspec:
+  version: "2026.4.0"
+  dependents:
+    - huggingface-hub
+    - torch
+ftfy:
+  version: "6.3.1"
+  isRoot: true
+  dependents:
+    - clip-anytorch
+gguf:
+  version: "0.19.0"
+  isRoot: true
+glcontext:
+  version: "3.0.0"
+  dependents:
+    - moderngl
+h11:
+  version: "0.16.0"
+  dependents:
+    - httpcore
+    - uvicorn
+hf-xet:
+  version: "1.5.1"
+  dependents:
+    - huggingface-hub
+httpcore:
+  version: "1.0.9"
+  dependents:
+    - httpx
+httptools:
+  version: "0.8.0"
+  dependents:
+    - uvicorn
+httpx:
+  version: "0.28.1"
+  dependents:
+    - diffusers
+    - fastapi
+    - fastapi-cloud-cli
+    - huggingface-hub
+    - jupyterlab
+huggingface-hub:
+  version: "1.21.0"
+  isRoot: true
+  dependents:
+    - accelerate
+    - controlnet-aux
+    - diffusers
+    - timm
+    - tokenizers
+    - transformers
+hydra-core:
+  version: "1.3.2"
+  isRoot: true
+idna:
+  version: "3.4"
+  dependents:
+    - anyio
+    - email-validator
+    - httpx
+    - jsonschema
+    - requests
+    - yarl
+igraph:
+  version: "1.0.0"
+  isRoot: true
+imageio:
+  version: "2.37.3"
+  isRoot: true
+  dependents:
+    - scikit-image
+imageio-ffmpeg:
+  version: "0.6.0"
+  dependents:
+    - imageio
+importlib-metadata:
+  version: "7.1.0"
+  dependents:
+    - controlnet-aux
+    - diffusers
+importlib-resources:
+  version: "7.1.0"
+  dependents:
+    - wetextprocessing
+ipycanvas:
+  version: "0.14.3"
+  dependents:
+    - kaolin
+ipyevents:
+  version: "2.0.4"
+  dependents:
+    - kaolin
+ipykernel:
+  version: "6.29.5"
+  dependents:
+    - jupyterlab
+ipython:
+  version: "9.15.0"
+  dependents:
+    - ipykernel
+    - ipywidgets
+    - kaolin
+ipython-pygments-lexers:
+  version: "1.1.1"
+  dependents:
+    - ipython
+ipywidgets:
+  version: "8.1.8"
+  dependents:
+    - ipycanvas
+    - ipyevents
+isoduration:
+  version: "20.11.0"
+  dependents:
+    - jsonschema
+itsdangerous:
+  version: "2.2.0"
+  dependents:
+    - flask
+jedi:
+  version: "0.20.0"
+  dependents:
+    - ipython
+jinja2:
+  version: "3.1.6"
+  dependents:
+    - fastapi
+    - flask
+    - jupyter-server
+    - jupyterlab
+    - jupyterlab-server
+    - nbconvert
+    - torch
+joblib:
+  version: "1.5.3"
+  dependents:
+    - librosa
+    - scikit-learn
+json5:
+  version: "0.15.0"
+  dependents:
+    - jupyterlab-server
+jsonpointer:
+  version: "3.1.1"
+  dependents:
+    - jsonschema
+jsonschema:
+  version: "4.26.0"
+  dependents:
+    - jupyter-events
+    - jupyterlab-server
+    - nbformat
+    - rembg
+jsonschema-specifications:
+  version: "2025.9.1"
+  dependents:
+    - jsonschema
+jupyter-client:
+  version: "7.4.9"
+  dependents:
+    - ipykernel
+    - jupyter-server
+    - kaolin
+    - nbclient
+jupyter-core:
+  version: "5.9.1"
+  dependents:
+    - ipykernel
+    - jupyter-client
+    - jupyter-server
+    - jupyterlab
+    - nbclient
+    - nbconvert
+    - nbformat
+jupyter-events:
+  version: "0.12.1"
+  dependents:
+    - jupyter-server
+jupyter-lsp:
+  version: "2.3.1"
+  dependents:
+    - jupyterlab
+jupyter-server:
+  version: "2.20.0"
+  dependents:
+    - jupyter-lsp
+    - jupyterlab
+    - jupyterlab-server
+    - notebook
+    - notebook-shim
+jupyter-server-terminals:
+  version: "0.5.4"
+  dependents:
+    - jupyter-server
+jupyterlab:
+  version: "4.1.6"
+  dependents:
+    - notebook
+jupyterlab-pygments:
+  version: "0.3.0"
+  dependents:
+    - nbconvert
+jupyterlab-server:
+  version: "2.24.0"
+  dependents:
+    - jupyterlab
+    - notebook
+jupyterlab-widgets:
+  version: "3.0.16"
+  isRoot: true
+  dependents:
+    - ipywidgets
+kiwisolver:
+  version: "1.5.0"
+  dependents:
+    - matplotlib
+kornia:
+  version: "0.8.3"
+  isRoot: true
+kornia-rs:
+  version: "0.1.14"
+  dependents:
+    - kornia
+lark:
+  version: "1.3.1"
+  dependents:
+    - pccm
+    - rfc3987-syntax
+lazy-loader:
+  version: "0.5"
+  dependents:
+    - librosa
+    - scikit-image
+librosa:
+  version: "0.11.0"
+  isRoot: true
+llvmlite:
+  version: "0.47.0"
+  dependents:
+    - numba
+markdown-it-py:
+  version: "4.2.0"
+  dependents:
+    - rich
+markupsafe:
+  version: "3.0.3"
+  dependents:
+    - flask
+    - jinja2
+    - nbconvert
+    - werkzeug
+marshmallow:
+  version: "3.26.2"
+  dependents:
+    - dataclasses-json
+matplotlib:
+  version: "3.11.0"
+  isRoot: true
+  dependents:
+    - mediapipe
+    - pyvista
+    - vtk
+matplotlib-inline:
+  version: "0.2.2"
+  dependents:
+    - ipykernel
+    - ipython
+mdurl:
+  version: "0.1.2"
+  dependents:
+    - markdown-it-py
+mediapipe:
+  version: "0.10.35"
+  isRoot: true
+mistune:
+  version: "3.3.2"
+  dependents:
+    - nbconvert
+ml-dtypes:
+  version: "0.5.4"
+  dependents:
+    - onnx
+moderngl:
+  version: "5.12.0"
+  isRoot: true
+more-itertools:
+  version: "11.1.0"
+  dependents:
+    - openai-whisper
+mpmath:
+  version: "1.3.0"
+  dependents:
+    - sympy
+msgpack:
+  version: "1.2.1"
+  dependents:
+    - librosa
+multidict:
+  version: "6.7.1"
+  dependents:
+    - aiohttp
+    - yarl
+mypy-extensions:
+  version: "1.0.0"
+  dependents:
+    - typing-inspect
+narwhals:
+  version: "2.22.1"
+  dependents:
+    - scikit-learn
+nbclient:
+  version: "0.11.0"
+  dependents:
+    - nbconvert
+nbconvert:
+  version: "7.17.1"
+  dependents:
+    - jupyter-server
+nbformat:
+  version: "5.10.4"
+  dependents:
+    - jupyter-server
+    - nbclient
+    - nbconvert
+nest-asyncio:
+  version: "1.6.0"
+  dependents:
+    - ipykernel
+    - jupyter-client
+networkx:
+  version: "3.3"
+  isRoot: true
+  dependents:
+    - scikit-image
+    - torch
+ninja:
+  version: "1.13.0"
+  dependents:
+    - ccimport
+notebook:
+  version: "7.1.3"
+  dependents:
+    - compel
+notebook-shim:
+  version: "0.2.4"
+  dependents:
+    - jupyterlab
+    - notebook
+numba:
+  version: "0.65.1"
+  dependents:
+    - librosa
+    - openai-whisper
+    - pymatting
+numpy:
+  version: "1.26.4"
+  isRoot: true
+  dependents:
+    - accelerate
+    - bitsandbytes
+    - contourpy
+    - controlnet-aux
+    - cumm-cu124
+    - diffusers
+    - gguf
+    - imageio
+    - ipycanvas
+    - kaolin
+    - librosa
+    - matplotlib
+    - mediapipe
+    - ml-dtypes
+    - numba
+    - nvdiffrast
+    - onnx
+    - onnxruntime
+    - openai-whisper
+    - opencv-contrib-python
+    - opencv-python-headless
+    - plyfile
+    - pymatting
+    - pymeshfix
+    - pyvista
+    - pyworld
+    - rembg
+    - scikit-image
+    - scikit-learn
+    - scipy
+    - soxr
+    - spandrel
+    - spconv-cu124
+    - tifffile
+    - torchsde
+    - torchvision
+    - transformers
+    - trimesh
+    - warp-lang
+omegaconf:
+  version: "2.3.1"
+  dependents:
+    - hydra-core
+onnx:
+  version: "1.22.0"
+  isRoot: true
+onnxruntime:
+  version: "1.27.0"
+  isRoot: true
+openai-whisper:
+  version: "20240930"
+  isRoot: true
+opencv-contrib-python:
+  version: "4.11.0.86"
+  dependents:
+    - mediapipe
+opencv-python-headless:
+  version: "4.11.0.86"
+  isRoot: true
+  dependents:
+    - controlnet-aux
+    - rembg
+packaging:
+  version: "24.1"
+  dependents:
+    - accelerate
+    - bitsandbytes
+    - huggingface-hub
+    - hydra-core
+    - ipykernel
+    - jupyter-events
+    - jupyter-server
+    - jupyterlab
+    - jupyterlab-server
+    - kornia
+    - lazy-loader
+    - marshmallow
+    - matplotlib
+    - nbconvert
+    - onnxruntime
+    - pooch
+    - scikit-image
+    - transformers
+pandocfilters:
+  version: "1.5.1"
+  dependents:
+    - nbconvert
+parso:
+  version: "0.8.7"
+  dependents:
+    - jedi
+pccm:
+  version: "0.4.16"
+  dependents:
+    - cumm-cu124
+    - spconv-cu124
+picklescan:
+  version: "1.0.4"
+  isRoot: true
+pillow:
+  version: "12.2.0"
+  isRoot: true
+  dependents:
+    - controlnet-aux
+    - diffusers
+    - imageio
+    - ipycanvas
+    - kaolin
+    - matplotlib
+    - pymatting
+    - pyvista
+    - rembg
+    - scikit-image
+    - torchvision
+platformdirs:
+  version: "4.10.0"
+  dependents:
+    - jupyter-core
+    - pooch
+    - python-discovery
+    - virtualenv
+plyfile:
+  version: "1.1.3"
+  isRoot: true
+pooch:
+  version: "1.9.0"
+  dependents:
+    - librosa
+    - pyvista
+    - rembg
+portalocker:
+  version: "2.10.1"
+  dependents:
+    - pccm
+prometheus-client:
+  version: "0.25.0"
+  dependents:
+    - jupyter-server
+prompt-toolkit:
+  version: "3.0.52"
+  dependents:
+    - ipython
+propcache:
+  version: "0.5.2"
+  dependents:
+    - aiohttp
+    - yarl
+protobuf:
+  version: "7.35.1"
+  dependents:
+    - onnx
+    - onnxruntime
+psutil:
+  version: "7.2.2"
+  dependents:
+    - accelerate
+    - imageio
+    - ipykernel
+    - ipython
+pure-eval:
+  version: "0.2.3"
+  dependents:
+    - stack-data
+pyarrow:
+  version: "24.0.0"
+  isRoot: true
+pybind11:
+  version: "3.0.4"
+  dependents:
+    - ccimport
+    - cumm-cu124
+    - kaolin
+    - pccm
+    - spconv-cu124
+pycparser:
+  version: "3.0"
+  dependents:
+    - cffi
+pydantic:
+  version: "2.13.4"
+  isRoot: true
+  dependents:
+    - fastapi
+    - fastapi-cloud-cli
+    - pydantic-extra-types
+    - pydantic-settings
+pydantic-core:
+  version: "2.46.4"
+  dependents:
+    - pydantic
+pydantic-extra-types:
+  version: "2.11.1"
+  dependents:
+    - fastapi
+pydantic-settings:
+  version: "2.14.2"
+  isRoot: true
+  dependents:
+    - fastapi
+pygltflib:
+  version: "1.16.5"
+  dependents:
+    - kaolin
+pygments:
+  version: "2.20.0"
+  dependents:
+    - ipython
+    - ipython-pygments-lexers
+    - nbconvert
+    - rich
+    - rich-rst
+pymatting:
+  version: "1.1.15"
+  dependents:
+    - rembg
+pymeshfix:
+  version: "0.18.1"
+  isRoot: true
+pyparsing:
+  version: "3.3.2"
+  dependents:
+    - compel
+    - matplotlib
+python-dateutil:
+  version: "2.9.0.post0"
+  dependents:
+    - arrow
+    - jupyter-client
+    - matplotlib
+python-discovery:
+  version: "1.4.2"
+  dependents:
+    - virtualenv
+python-dotenv:
+  version: "1.2.2"
+  dependents:
+    - pydantic-settings
+    - uvicorn
+python-json-logger:
+  version: "4.1.0"
+  dependents:
+    - jupyter-events
+python-multipart:
+  version: "0.0.32"
+  dependents:
+    - fastapi
+pyvista:
+  version: "0.48.4"
+  isRoot: true
+pywin32:
+  version: "312"
+  dependents:
+    - portalocker
+pywinpty:
+  version: "3.0.5"
+  dependents:
+    - jupyter-server
+    - jupyter-server-terminals
+    - terminado
+pyworld:
+  version: "0.3.4"
+  isRoot: true
+pyyaml:
+  version: "6.0.3"
+  isRoot: true
+  dependents:
+    - accelerate
+    - gguf
+    - huggingface-hub
+    - jupyter-events
+    - omegaconf
+    - timm
+    - transformers
+    - uvicorn
+pyzmq:
+  version: "27.1.0"
+  dependents:
+    - ipykernel
+    - jupyter-client
+    - jupyter-server
+referencing:
+  version: "0.37.0"
+  dependents:
+    - jsonschema
+    - jsonschema-specifications
+    - jupyter-events
+regex:
+  version: "2026.5.9"
+  dependents:
+    - clip-anytorch
+    - diffusers
+    - tiktoken
+    - transformers
+rembg:
+  version: "2.0.69"
+  isRoot: true
+requests:
+  version: "2.28.1"
+  dependents:
+    - ccimport
+    - diffusers
+    - gguf
+    - jupyterlab-server
+    - pooch
+    - tiktoken
+restrictedpython:
+  version: "8.3"
+  isRoot: true
+rfc3339-validator:
+  version: "0.1.4"
+  dependents:
+    - jsonschema
+    - jupyter-events
+rfc3986-validator:
+  version: "0.1.1"
+  dependents:
+    - jsonschema
+    - jupyter-events
+rfc3987-syntax:
+  version: "1.1.0"
+  dependents:
+    - jsonschema
+rich:
+  version: "15.0.0"
+  dependents:
+    - cyclopts
+    - rich-rst
+    - rich-toolkit
+    - typer
+rich-rst:
+  version: "2.0.2"
+  dependents:
+    - cyclopts
+rich-toolkit:
+  version: "0.20.1"
+  dependents:
+    - fastapi-cli
+    - fastapi-cloud-cli
+rignore:
+  version: "0.7.6"
+  isRoot: true
+  dependents:
+    - fastapi-cloud-cli
+    - torch
+    - rocm
+rpds-py:
+  version: "2026.5.1"
+  dependents:
+    - jsonschema
+    - referencing
+safetensors:
+  version: "0.8.0"
+  isRoot: true
+  dependents:
+    - accelerate
+    - diffusers
+    - spandrel
+    - timm
+    - transformers
+scikit-image:
+  version: "0.26.0"
+  dependents:
+    - controlnet-aux
+    - rembg
+scikit-learn:
+  version: "1.9.0"
+  dependents:
+    - librosa
+scipy:
+  version: "1.17.1"
+  isRoot: true
+  dependents:
+    - controlnet-aux
+    - kaolin
+    - librosa
+    - pymatting
+    - rembg
+    - scikit-image
+    - scikit-learn
+    - torchsde
+scooby:
+  version: "0.11.2"
+  dependents:
+    - pyvista
+send2trash:
+  version: "2.1.0"
+  dependents:
+    - jupyter-server
+sentencepiece:
+  version: "0.2.0"
+  isRoot: true
+sentry-sdk:
+  version: "2.63.0"
+  dependents:
+    - fastapi-cloud-cli
+setuptools:
+  version: "70.2.0"
+  dependents:
+    - torch
+shellingham:
+  version: "1.5.4"
+  dependents:
+    - typer
+six:
+  version: "1.17.0"
+  dependents:
+    - python-dateutil
+    - rfc3339-validator
+sounddevice:
+  version: "0.5.5"
+  dependents:
+    - mediapipe
+soundfile:
+  version: "0.12.1"
+  isRoot: true
+  dependents:
+    - librosa
+soupsieve:
+  version: "2.8.4"
+  dependents:
+    - beautifulsoup4
+soxr:
+  version: "1.1.0"
+  dependents:
+    - librosa
+spandrel:
+  version: "0.4.2"
+  isRoot: true
+spconv-cu124:
+  version: "2.3.8"
+  isRoot: true
+stack-data:
+  version: "0.6.3"
+  dependents:
+    - ipython
+starlette:
+  version: "1.3.1"
+  dependents:
+    - fastapi
+sympy:
+  version: "1.14.0"
+  dependents:
+    - cumm-cu124
+    - torch
+termcolor:
+  version: "3.3.0"
+  dependents:
+    - fire
+terminado:
+  version: "0.18.1"
+  dependents:
+    - jupyter-server
+    - jupyter-server-terminals
+texttable:
+  version: "1.7.0"
+  dependents:
+    - igraph
+threadpoolctl:
+  version: "3.6.0"
+  dependents:
+    - scikit-learn
+tifffile:
+  version: "2026.3.3"
+  dependents:
+    - scikit-image
+tiktoken:
+  version: "0.13.0"
+  isRoot: true
+  dependents:
+    - openai-whisper
+timm:
+  version: "1.0.27"
+  isRoot: true
+  dependents:
+    - controlnet-aux
+tinycss2:
+  version: "1.5.1"
+  dependents:
+    - bleach
+tokenizers:
+  version: "0.22.2"
+  isRoot: true
+  dependents:
+    - transformers
+    - accelerate
+    - bitsandbytes
+    - clip-anytorch
+    - compel
+    - conformer
+    - controlnet-aux
+    - diffusers
+    - kornia
+    - openai-whisper
+    - spandrel
+    - timm
+    - torchaudio
+    - torchsde
+    - torchvision
+torchsde:
+  version: "0.2.6"
+  isRoot: true
+  dependents:
+    - clip-anytorch
+    - controlnet-aux
+    - spandrel
+    - timm
+tornado:
+  version: "6.5.7"
+  dependents:
+    - ipykernel
+    - jupyter-client
+    - jupyter-server
+    - jupyterlab
+    - kaolin
+    - notebook
+    - terminado
+tqdm:
+  version: "4.66.5"
+  dependents:
+    - clip-anytorch
+    - gguf
+    - huggingface-hub
+    - kaolin
+    - openai-whisper
+    - rembg
+    - transformers
+traitlets:
+  version: "5.15.1"
+  dependents:
+    - ipykernel
+    - ipython
+    - ipywidgets
+    - jupyter-client
+    - jupyter-core
+    - jupyter-events
+    - jupyter-server
+    - jupyterlab
+    - matplotlib-inline
+    - nbclient
+    - nbconvert
+    - nbformat
+trampoline:
+  version: "0.1.2"
+  dependents:
+    - torchsde
+transformers:
+  version: "5.12.1"
+  isRoot: true
+  dependents:
+    - compel
+    - transformers-stream-generator
+transformers-stream-generator:
+  version: "0.0.4"
+  isRoot: true
+trimesh:
+  version: "4.12.2"
+  isRoot: true
+triton-windows:
+  version: "3.1.0.post17"
+  isRoot: true
+typer:
+  version: "0.25.1"
+  dependents:
+    - fastapi-cli
+    - fastapi-cloud-cli
+    - huggingface-hub
+    - transformers
+typing-extensions:
+  version: "4.15.0"
+  dependents:
+    - aiohttp
+    - aiosignal
+    - anyio
+    - beautifulsoup4
+    - fastapi
+    - huggingface-hub
+    - librosa
+    - onnx
+    - pydantic
+    - pydantic-core
+    - pydantic-extra-types
+    - pyvista
+    - referencing
+    - rich-toolkit
+    - spandrel
+    - starlette
+    - torch
+    - typing-inspect
+    - typing-inspection
+typing-inspect:
+  version: "0.9.0"
+  dependents:
+    - dataclasses-json
+typing-inspection:
+  version: "0.4.2"
+  dependents:
+    - fastapi
+    - pydantic
+    - pydantic-settings
+tzdata:
+  version: "2026.2"
+  dependents:
+    - arrow
+uri-template:
+  version: "1.3.0"
+  dependents:
+    - jsonschema
+urllib3:
+  version: "1.26.13"
+  dependents:
+    - requests
+    - sentry-sdk
+usd-core:
+  version: "26.5"
+  dependents:
+    - kaolin
+uvicorn:
+  version: "0.49.0"
+  dependents:
+    - fastapi
+    - fastapi-cli
+    - fastapi-cloud-cli
+virtualenv:
+  version: "21.5.1"
+  isRoot: true
+vtk:
+  version: "9.6.2"
+  dependents:
+    - pyvista
+warp-lang:
+  version: "1.14.0"
+  dependents:
+    - kaolin
+watchfiles:
+  version: "1.2.0"
+  dependents:
+    - uvicorn
+wcwidth:
+  version: "0.8.1"
+  dependents:
+    - ftfy
+    - prompt-toolkit
+webcolors:
+  version: "25.10.0"
+  dependents:
+    - jsonschema
+webencodings:
+  version: "0.5.1"
+  dependents:
+    - bleach
+    - tinycss2
+websocket-client:
+  version: "1.9.0"
+  dependents:
+    - jupyter-server
+websockets:
+  version: "16.0"
+  isRoot: true
+  dependents:
+    - uvicorn
+werkzeug:
+  version: "3.1.8"
+  isRoot: true
+  dependents:
+    - flask
+widgetsnbextension:
+  version: "4.0.15"
+  dependents:
+    - ipywidgets
+wrapt:
+  version: "2.2.2"
+  dependents:
+    - deprecated
+xatlas:
+  version: "0.0.11"
+  isRoot: true
+yarl:
+  version: "1.24.2"
+  dependents:
+    - aiohttp
+zipp:
+  version: "3.19.2"
+  dependents:
+    - importlib-metadata

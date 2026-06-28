@@ -65,6 +65,12 @@ click:
 clip-anytorch:
   version: "2.6.0"
   isRoot: true
+colorama:
+  version: "0.4.6"
+  dependents:
+    - click
+    - tqdm
+    - uvicorn
 coloredlogs:
   version: "15.0.1"
   dependents:
@@ -449,6 +455,10 @@ pyparsing:
   dependents:
     - compel
     - matplotlib
+pyreadline3:
+  version: "3.5.6"
+  dependents:
+    - humanfriendly
 python-dateutil:
   version: "2.9.0.post0"
   dependents:
@@ -686,10 +696,6 @@ uvicorn:
   dependents:
     - fastapi
     - fastapi-cli
-uvloop:
-  version: "0.21.0"
-  dependents:
-    - uvicorn
 virtualenv:
   version: "20.29.3"
   isRoot: true

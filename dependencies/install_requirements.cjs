@@ -1,18 +1,16 @@
-const { platform } = require('os');
 const { execSync } = require('child_process');
 const path = require('path');
+const fs = require('fs');
+const { getCurrentTarget } = require('./platform.cjs');
 
 function getRequirementsFile() {
-    const os = platform();
-    if (os === 'win32') {
-        return path.join(__dirname, 'windows.lock');
-    } else if (os === 'darwin') {
-        return path.join(__dirname, 'macosx.lock');
-    } else if (os === 'linux') {
-        return path.join(__dirname, 'linux.lock');
-    } else {
-        throw new Error(`Unsupported operating system: ${os}`);
+    // 目标名（如 windows / windows-amdgpu / linux-amdgpu / macosx）直接对应锁文件
+    const target = getCurrentTarget();
+    const lockFile = path.join(__dirname, `${target}.lock`);
+    if (!fs.existsSync(lockFile)) {
+        throw new Error(`找不到锁文件: ${lockFile}，请先运行 \`yarn update-lock\` 生成`);
     }
+    return lockFile;
 }
 
 try {

@@ -42,6 +42,7 @@
     "requirements": "node dependencies/combine_requirements.cjs",
     "install-requirements": "node dependencies/install_requirements.cjs",
     "update-lock": "node dependencies/update_lock.cjs",
+    "update-lock:all": "node dependencies/update_lock.cjs --all",
     "update-lock:no-upgrade": "node dependencies/update_lock.cjs --no-upgrade",
     "postinstall": "node dependencies/install.cjs",
     "docker": "docker build -t ssui-docker .",
