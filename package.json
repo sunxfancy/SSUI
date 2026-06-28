@@ -44,6 +44,8 @@
     "update-lock": "node dependencies/update_lock.cjs",
     "update-lock:all": "node dependencies/update_lock.cjs --all",
     "update-lock:no-upgrade": "node dependencies/update_lock.cjs --no-upgrade",
+    "pack-offline": "node dependencies/pack_offline.cjs",
+    "pack-offline:all": "node dependencies/pack_offline.cjs --all",
     "postinstall": "node dependencies/install.cjs",
     "docker": "docker build -t ssui-docker .",
     "docker-run": "docker run -it --gpus all -p 7422:7422 ssui-docker"
