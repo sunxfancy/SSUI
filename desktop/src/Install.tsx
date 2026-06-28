@@ -7,6 +7,7 @@ import { invoke } from '@tauri-apps/api/core';
 interface InstallPageState {
   isOpen: boolean;
   installDir: string;
+  offlineInstaller: string;
   enableGPU: boolean;
   enableAutoUpdate: boolean;
   proxyServer: string;
@@ -33,6 +34,7 @@ class InstallPage extends React.Component<InstallPageProps, InstallPageState> {
     this.state = {
       isOpen: true,
       installDir: '',
+      offlineInstaller: '',
       enableGPU: true,
       enableAutoUpdate: true,
       proxyServer: '',
@@ -53,6 +55,18 @@ class InstallPage extends React.Component<InstallPageProps, InstallPageState> {
 
   handleInstallDirChange(event: React.ChangeEvent<HTMLInputElement>) {
     this.setState({ installDir: event.target.value });
+  }
+
+  handleOfflineInstallerChange(event: React.ChangeEvent<HTMLInputElement>) {
+    this.setState({ offlineInstaller: event.target.value });
+  }
+
+  // 选择离线安装包(.pkg)
+  async handleSelectInstaller() {
+    const selectedFile = await this.provider.selectFile(['pkg']);
+    if (selectedFile) {
+      this.setState({ offlineInstaller: selectedFile });
+    }
   }
 
   handleGPUChange(event: React.ChangeEvent<HTMLInputElement>) {
@@ -155,8 +169,10 @@ class InstallPage extends React.Component<InstallPageProps, InstallPageState> {
   }
 
   async installDependencies() {
-    const { currentPlatform, installDir, enableGPU, enableAutoUpdate, proxyServer } = this.state;
+    const { currentPlatform, installDir, offlineInstaller, enableGPU, enableAutoUpdate, proxyServer } = this.state;
     let lockFile = '';
+    const offlinePath = offlineInstaller ? offlineInstaller.trim() : '';
+    const useOffline = offlinePath !== '';
 
     // 如果设置了代理服务器，先调用setProxy命令
     if (proxyServer && proxyServer.trim() !== '') {
@@ -207,25 +223,48 @@ class InstallPage extends React.Component<InstallPageProps, InstallPageState> {
         installProgress: 2
       }));
 
-      // 2. 如果Python未安装，下载并安装
+      // 2. 如果Python未安装，安装（优先用离线包，失败再联网下载）
       if (!pythonResult.success) {
-        this.setState(prev => ({
-          shellOutput: prev.shellOutput + '正在下载Python3.12到目录' + installDir + '...\n',
-          predictProgress: 10
-        }));
+        let pythonReady = false;
 
-        const downloadResult = await this.provider.downloadPython(installDir);
-        this.setState(prev => ({
-          shellOutput: prev.shellOutput + downloadResult.message + '\n',
-          installProgress: 10
-        }));
-
-        if (!downloadResult.success) {
+        if (useOffline) {
           this.setState(prev => ({
-            shellOutput: prev.shellOutput + '下载Python失败，安装中止。\n',
+            shellOutput: prev.shellOutput + `正在从离线安装包安装 Python: ${offlinePath}...\n`,
+            predictProgress: 10
+          }));
+          const offlinePyResult = await this.provider.installPythonOffline(installDir, offlinePath);
+          this.setState(prev => ({
+            shellOutput: prev.shellOutput + offlinePyResult.message + '\n'
+          }));
+          pythonReady = offlinePyResult.success;
+          if (!pythonReady) {
+            this.setState(prev => ({
+              shellOutput: prev.shellOutput + '离线包中无可用 Python，改为联网下载...\n'
+            }));
+          }
+        }
+
+        if (!pythonReady) {
+          this.setState(prev => ({
+            shellOutput: prev.shellOutput + '正在下载Python3.12到目录' + installDir + '...\n',
+            predictProgress: 10
+          }));
+
+          const downloadResult = await this.provider.downloadPython(installDir);
+          this.setState(prev => ({
+            shellOutput: prev.shellOutput + downloadResult.message + '\n',
             installProgress: 10
           }));
-          return;
+
+          if (!downloadResult.success) {
+            this.setState(prev => ({
+              shellOutput: prev.shellOutput + '安装Python失败，安装中止。\n',
+              installProgress: 10
+            }));
+            return;
+          }
+        } else {
+          this.setState({ installProgress: 10 });
         }
       }
 
@@ -277,14 +316,18 @@ class InstallPage extends React.Component<InstallPageProps, InstallPageState> {
         installProgress: 20
       }));
 
-      // 6. 如果包未安装，安装包
+      // 6. 如果包未安装，安装包（指定了离线安装包则走离线安装，否则联网安装）
       if (!packagesResult.success) {
         this.setState(prev => ({
-          shellOutput: prev.shellOutput + '正在安装依赖包...\n',
+          shellOutput: prev.shellOutput + (useOffline
+            ? `正在从离线安装包安装依赖: ${offlinePath}...\n`
+            : '正在安装依赖包...\n'),
           predictProgress: 95
         }));
 
-        const installResult = await this.provider.installPackages(installDir, lockFile);
+        const installResult = useOffline
+          ? await this.provider.installPackagesOffline(installDir, offlinePath)
+          : await this.provider.installPackages(installDir, lockFile);
         this.setState(prev => ({
           shellOutput: prev.shellOutput + installResult.message + '\n',
           installProgress: 95
@@ -294,8 +337,14 @@ class InstallPage extends React.Component<InstallPageProps, InstallPageState> {
           this.setState(prev => ({
             shellOutput: prev.shellOutput + '安装依赖包失败，安装中止。\n',
           }));
+          if (useOffline) await this.provider.cleanupOfflinePackage(installDir);
           return;
         }
+      }
+
+      // 离线安装完成后清理解压出的临时目录（体积较大）
+      if (useOffline) {
+        await this.provider.cleanupOfflinePackage(installDir);
       }
 
       // 7. 保存配置并完成
@@ -331,6 +380,7 @@ class InstallPage extends React.Component<InstallPageProps, InstallPageState> {
       this.setState(prev => ({
         shellOutput: prev.shellOutput + `安装过程中出错: ${error}\n`,
       }));
+      if (useOffline) await this.provider.cleanupOfflinePackage(installDir);
     }
   }
 
@@ -342,7 +392,7 @@ class InstallPage extends React.Component<InstallPageProps, InstallPageState> {
   }
 
   render() {
-    const { isOpen, installDir, enableGPU, enableAutoUpdate, proxyServer, isInstalling, currentProgress, shellOutput } = this.state;
+    const { isOpen, installDir, offlineInstaller, enableGPU, enableAutoUpdate, proxyServer, isInstalling, currentProgress, shellOutput } = this.state;
 
     return (
       <div>
@@ -366,6 +416,21 @@ class InstallPage extends React.Component<InstallPageProps, InstallPageState> {
                 />}
               />
             </FormGroup >
+
+            <FormGroup label="Offline Installer (optional)" labelFor="offline-installer-path" fill={true}>
+              <InputGroup fill={true}
+                id="offline-installer-path"
+                type="text"
+                placeholder="可选离线安装包(.pkg)路径，指定后将离线安装依赖，不再联网下载"
+                value={offlineInstaller}
+                onChange={this.handleOfflineInstallerChange.bind(this)}
+                rightElement={<Button
+                  icon="folder-open"
+                  minimal
+                  onClick={this.handleSelectInstaller.bind(this)}
+                />}
+              />
+            </FormGroup>
 
             <FormGroup label="Proxy Server" labelFor="proxy-server" fill={true}>
               <InputGroup fill={true}

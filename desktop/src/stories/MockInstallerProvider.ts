@@ -15,6 +15,10 @@ export class MockInstallerProvider implements IInstallerProvider {
     return '/mock/selected/folder';
   }
 
+  async selectFile(_extensions?: string[]): Promise<string | null> {
+    return '/mock/selected/offline-installer.pkg';
+  }
+
   async exitApp(): Promise<void> {
     console.log('模拟退出应用');
   }
@@ -82,6 +86,28 @@ export class MockInstallerProvider implements IInstallerProvider {
       success: true,
       message: '依赖包安装成功'
     };
+  }
+
+  async installPythonOffline(installDir: string, offlineInstallerPath: string): Promise<CommandInfo> {
+    console.log(`模拟离线安装Python: ${installDir}, 使用离线包: ${offlineInstallerPath}`);
+    await new Promise(resolve => setTimeout(resolve, 1000)); // 模拟延迟
+    return {
+      success: true,
+      message: '离线Python安装成功'
+    };
+  }
+
+  async installPackagesOffline(installDir: string, offlineInstallerPath: string): Promise<CommandInfo> {
+    console.log(`模拟离线安装依赖包: ${installDir}, 使用离线包: ${offlineInstallerPath}`);
+    await new Promise(resolve => setTimeout(resolve, 2000)); // 模拟延迟
+    return {
+      success: true,
+      message: '离线依赖包安装成功'
+    };
+  }
+
+  async cleanupOfflinePackage(installDir: string): Promise<void> {
+    console.log(`模拟清理离线解压目录: ${installDir}`);
   }
 
   async saveSettings(installConfig: {

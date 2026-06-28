@@ -4,7 +4,7 @@ import { appDataDir, homeDir, join, resolveResource } from '@tauri-apps/api/path
 import { open } from '@tauri-apps/plugin-dialog';
 import { platform } from '@tauri-apps/plugin-os';
 import { IInstallerProvider, CommandInfo } from './IInstallerProvider';
-import { exists, readDir, writeTextFile } from '@tauri-apps/plugin-fs';
+import { exists, readDir, writeTextFile, remove } from '@tauri-apps/plugin-fs';
 import { invoke } from '@tauri-apps/api/core';
 
 export class TauriInstallerProvider implements IInstallerProvider {
@@ -20,6 +20,17 @@ export class TauriInstallerProvider implements IInstallerProvider {
         const result = await open({
             directory: true,
             multiple: false,
+        });
+        return result ? result as string : null;
+    }
+
+    async selectFile(extensions?: string[]): Promise<string | null> {
+        const result = await open({
+            directory: false,
+            multiple: false,
+            filters: extensions && extensions.length > 0
+                ? [{ name: '离线安装包', extensions }]
+                : undefined,
         });
         return result ? result as string : null;
     }
@@ -230,6 +241,148 @@ export class TauriInstallerProvider implements IInstallerProvider {
                 success: false,
                 message: `安装依赖包时出错: ${error}`
             };
+        }
+    }
+
+    // 离线包解压目录（位于安装目录下，避免跨盘/权限问题）
+    private async offlineExtractDir(installDir: string): Promise<string> {
+        return await join(installDir, '.offline_pkg');
+    }
+
+    // 确保离线包已解压到固定目录（只解压一次，Python 与依赖安装步骤共用）
+    private async ensureOfflineExtracted(installDir: string, offlineInstallerPath: string): Promise<string> {
+        const extractDir = await this.offlineExtractDir(installDir);
+        // 以 manifest.json 是否存在作为“已解压”的标志
+        const marker = await join(extractDir, 'manifest.json');
+        if (await exists(marker)) {
+            return extractDir;
+        }
+        if (!(await exists(offlineInstallerPath))) {
+            throw new Error(`离线安装包不存在: ${offlineInstallerPath}`);
+        }
+        if (await exists(extractDir)) {
+            await remove(extractDir, { recursive: true });
+        }
+        // .pkg 实为 tar.gz，复用后端 unpack_app 解压
+        await invoke('unpack_app', {
+            tar_path: offlineInstallerPath,
+            target_path: extractDir
+        });
+        return extractDir;
+    }
+
+    async installPythonOffline(installDir: string, offlineInstallerPath: string): Promise<CommandInfo> {
+        try {
+            const extractDir = await this.ensureOfflineExtracted(installDir, offlineInstallerPath);
+
+            // 离线包中的 python/ 目录内含 python-build-standalone 的 tar.gz
+            const pythonDir = await join(extractDir, 'python');
+            if (!(await exists(pythonDir))) {
+                return {
+                    success: false,
+                    message: '离线安装包未包含 Python'
+                };
+            }
+            const entries = await readDir(pythonDir);
+            const archive = entries.find(e => e.isFile && (e.name.endsWith('.tar.gz') || e.name.endsWith('.tgz')));
+            if (!archive) {
+                return {
+                    success: false,
+                    message: '离线安装包的 python/ 中未找到 Python 压缩包'
+                };
+            }
+
+            // 解压到 .venv，使其形成 .venv/python/...（与在线 downloadPython 一致）
+            const archivePath = await join(pythonDir, archive.name);
+            const venvPath = await join(installDir, '.venv');
+            await invoke('unpack_app', {
+                tar_path: archivePath,
+                target_path: venvPath
+            });
+
+            return {
+                success: true,
+                message: '离线 Python 安装成功'
+            };
+        } catch (error) {
+            return {
+                success: false,
+                message: `离线安装 Python 时出错: ${error}`
+            };
+        }
+    }
+
+    async installPackagesOffline(installDir: string, offlineInstallerPath: string): Promise<CommandInfo> {
+        const currentPlatform = await this.detectPlatform();
+        const pipPath = currentPlatform === 'windows'
+            ? `${installDir}\\.venv\\Scripts\\pip.exe`
+            : `${installDir}/.venv/bin/pip`;
+
+        const completionMarker = await join(installDir, '.venv', '.packages_installed');
+
+        try {
+            const pipExists = await exists(pipPath);
+            if (!pipExists) {
+                return {
+                    success: false,
+                    message: 'pip不可用，请先创建虚拟环境'
+                };
+            }
+
+            // 1. 确保离线包已解压（若 Python 步骤已解压则直接复用）
+            const extractDir = await this.ensureOfflineExtracted(installDir, offlineInstallerPath);
+
+            // 2. 在解压目录中定位 lock 文件与 packages 目录
+            const entries = await readDir(extractDir);
+            const lockEntry = entries.find(e => e.isFile && e.name.endsWith('.lock'));
+            if (!lockEntry) {
+                return {
+                    success: false,
+                    message: '离线安装包中未找到 .lock 文件'
+                };
+            }
+            const lockPath = await join(extractDir, lockEntry.name);
+            const packagesDir = await join(extractDir, 'packages');
+            const constraintsPath = await join(extractDir, 'constraints.txt');
+
+            // 3. 离线安装：--no-index 完全不联网，--find-links 指向本地包目录，
+            //    -c constraints.txt 钉 setuptools<81 以兼容老 sdist 的构建
+            const args = ['install', '--no-index', '--find-links', packagesDir, '-r', lockPath];
+            if (await exists(constraintsPath)) {
+                args.push('-c', constraintsPath);
+            }
+
+            const output = await invoke('run_python',
+                {
+                    path: pipPath,
+                    cwd: installDir,
+                    args: args
+                }
+            );
+            console.log('离线安装依赖包: ' + output);
+
+            await writeTextFile(completionMarker, '');
+
+            return {
+                success: true,
+                message: '离线依赖包安装成功'
+            };
+        } catch (error) {
+            return {
+                success: false,
+                message: `离线安装依赖包时出错: ${error}`
+            };
+        }
+    }
+
+    async cleanupOfflinePackage(installDir: string): Promise<void> {
+        try {
+            const extractDir = await this.offlineExtractDir(installDir);
+            if (await exists(extractDir)) {
+                await remove(extractDir, { recursive: true });
+            }
+        } catch (cleanupError) {
+            console.warn('清理离线解压目录失败(忽略):', cleanupError);
         }
     }
 

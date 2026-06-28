@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
  * 将 *.lock 中列出的全部 Python 包下载到本地，并打包成一个
- * `<target>-offline-installer.pkg`（本质是 zip）离线安装包。
+ * `<target>-offline-installer.pkg`（本质是 tar.gz）离线安装包。
  *
  * 设计目标：在有网络的机器上由维护者运行本脚本，把某个平台 lock 文件里
  * 锁定的所有 wheel / sdist（含 `name @ https://...` 直链与 `--extra-index-url`
@@ -34,6 +34,19 @@ const ROOT = path.resolve(__dirname, '..');
 const DEPS_DIR = __dirname;
 const isWin = process.platform === 'win32';
 
+// python-build-standalone 版本（与 install.cmd / install.sh / 后端 download_python 保持一致）
+const PYTHON_VERSION = '3.12.8';
+const PYTHON_RELEASE = '20241219';
+
+// 各打包目标对应的 Python 架构（用于下载对应的 standalone 解释器）
+const TARGET_ARCH = {
+  'windows': 'x86_64-pc-windows-msvc',
+  'windows-amdgpu': 'x86_64-pc-windows-msvc',
+  'linux': 'x86_64-unknown-linux-gnu',
+  'linux-amdgpu': 'x86_64-unknown-linux-gnu',
+  'macosx': 'aarch64-apple-darwin',
+};
+
 function parseArgs(argv) {
   const opts = {
     targets: [],
@@ -41,6 +54,7 @@ function parseArgs(argv) {
     outputDir: path.join(ROOT, 'dist'),
     keepStaging: false,
     python: null,
+    noPython: false,
     help: false,
   };
   for (let i = 0; i < argv.length; i++) {
@@ -50,6 +64,7 @@ function parseArgs(argv) {
     else if (a === '--output-dir' || a === '-o') opts.outputDir = path.resolve(argv[++i]);
     else if (a === '--keep-staging') opts.keepStaging = true;
     else if (a === '--python') opts.python = argv[++i];
+    else if (a === '--no-python') opts.noPython = true;
     else if (a === '-h' || a === '--help') opts.help = true;
     else console.warn(`忽略未知参数: ${a}`);
   }
@@ -57,7 +72,7 @@ function parseArgs(argv) {
 }
 
 function printHelp() {
-  console.log(`将 *.lock 中的 Python 包下载并打包为离线安装包(.pkg / zip)
+  console.log(`将 *.lock 中的 Python 包下载并打包为离线安装包(.pkg / tar.gz)
 
 用法: node dependencies/pack_offline.cjs [选项]
 
@@ -68,9 +83,10 @@ function printHelp() {
   --output-dir, -o <d>  输出目录(默认 dist/)
   --keep-staging        保留打包前的中间目录
   --python <path>       指定下载用的 python(默认 .venv 内的解释器)
+  --no-python           不把 Python 解释器(python-build-standalone)纳入离线包
   -h, --help            显示本帮助
 
-默认行为: 只处理与当前平台匹配的 lock(含 GPU 变体)。
+默认行为: 只处理与当前平台匹配的 lock(含 GPU 变体)，并随包附带对应平台的 Python。
 
 离线机器使用方式:
   解压 <target>-offline-installer.pkg 后，运行其中的
@@ -220,8 +236,13 @@ echo "离线安装完成。"
 本包由 dependencies/pack_offline.cjs 生成，内含 ${lockName} 锁定的全部
 Python 依赖(wheel / sdist)。适用于无网络或网络受限的机器。
 
+外层 .pkg 实为 tar.gz，可用 tar 解压(Win10+/macOS/Linux 均自带):
+  tar -xf ${target}-offline-installer.pkg
+SSUI 桌面端可在安装界面直接选择 .pkg，自动解压并离线安装。
+
 ## 目录结构
 - packages/            所有已下载的依赖包(含构建后端 setuptools/wheel)
+- python/              对应平台的 Python 解释器(python-build-standalone, 可选)
 - ${lockName}          锁文件(安装时作为 -r 输入)
 - constraints.txt      构建约束(钉 setuptools<81，保留 pkg_resources)
 - install-offline.cmd  Windows 一键安装
@@ -248,29 +269,51 @@ Python 依赖(wheel / sdist)。适用于无网络或网络受限的机器。
   fs.writeFileSync(path.join(stagingDir, 'README.txt'), readme, 'utf8');
 }
 
-// 把 stagingDir 的内容打包成 outFile(.pkg，内容为 zip)
+// 下载目标平台对应的 Python(python-build-standalone)到 destDir。
+// 该压缩包与平台无关地可下载（只是按 arch 取不同文件），因此可在任意机器上为任意目标打包。
+// 返回下载到的文件名；无对应架构时返回 null。
+function downloadPythonStandalone(target, destDir) {
+  const arch = TARGET_ARCH[target];
+  if (!arch) {
+    console.warn(`目标 ${target} 无对应的 Python 架构映射，跳过 Python 打包`);
+    return null;
+  }
+  fs.mkdirSync(destDir, { recursive: true });
+
+  const fileName = `cpython-${PYTHON_VERSION}+${PYTHON_RELEASE}-${arch}-install_only_stripped.tar.gz`;
+  const outFile = path.join(destDir, fileName);
+  const githubUrl = `https://github.com/astral-sh/python-build-standalone/releases/download/${PYTHON_RELEASE}/${fileName}`;
+  // Gitee 镜像用 % 代替文件名中的 +（与后端 download_python 一致）
+  const giteeUrl = `https://gitee.com/Swordtooth/ssui_assets/releases/download/v0.0.2/cpython-${PYTHON_VERSION}%${PYTHON_RELEASE}-${arch}-install_only_stripped.tar.gz`;
+
+  const curlArgs = (url) => {
+    const a = ['-fL'];
+    if (isWin) a.push('--ssl-revoke-best-effort');
+    a.push(url, '-o', outFile);
+    return a;
+  };
+
+  console.log(`\n下载 Python(${arch}): ${githubUrl}`);
+  let res = spawnSync('curl', curlArgs(githubUrl), { stdio: 'inherit' });
+  if (res.error) throw res.error;
+  if (res.status !== 0) {
+    console.warn('GitHub 下载失败，尝试 Gitee 镜像...');
+    res = spawnSync('curl', curlArgs(giteeUrl), { stdio: 'inherit' });
+    if (res.error) throw res.error;
+    if (res.status !== 0) throw new Error(`Python 下载失败(curl 退出码 ${res.status})`);
+  }
+  return fileName;
+}
+
+// 把 stagingDir 的内容打包成 outFile(.pkg，内容为 tar.gz)
+// 用 tar.gz 而非 zip：桌面端 unpack_app(flate2+tar)可直接解压复用，且 tar 在
+// Win10+/macOS/Linux 均自带，无 PowerShell Compress-Archive 的 2GB 流限制。
 function createPkg(stagingDir, outFile) {
   fs.rmSync(outFile, { force: true });
-  // Compress-Archive 对非 .zip 扩展名不友好，先压成 .zip 再改名为 .pkg
-  const tmpZip = outFile.replace(/\.pkg$/i, '') + '.zip';
-  fs.rmSync(tmpZip, { force: true });
-
-  if (isWin) {
-    // 不用 Compress-Archive：其底层 .NET ZipArchive 单流超过 2GB 会报“流太长”。
-    // 改用系统自带 tar(bsdtar/libarchive)，支持 zip64、无 2GB 限制；
-    // -a 按 .zip 扩展名自动选择 zip 格式。
-    console.log('正在用 tar 打包(zip 格式)...');
-    const res = spawnSync('tar', ['-a', '-c', '-f', tmpZip, '-C', stagingDir, '.'], { stdio: 'inherit' });
-    if (res.error) throw res.error;
-    if (res.status !== 0) throw new Error(`tar 退出码 ${res.status}`);
-  } else {
-    console.log('正在用 zip 打包...');
-    const res = spawnSync('zip', ['-r', '-q', tmpZip, '.'], { cwd: stagingDir, stdio: 'inherit' });
-    if (res.error) throw res.error;
-    if (res.status !== 0) throw new Error(`zip 退出码 ${res.status}`);
-  }
-
-  fs.renameSync(tmpZip, outFile);
+  console.log('正在用 tar 打包(tar.gz 格式)...');
+  const res = spawnSync('tar', ['-czf', outFile, '-C', stagingDir, '.'], { stdio: 'inherit' });
+  if (res.error) throw res.error;
+  if (res.status !== 0) throw new Error(`tar 退出码 ${res.status}`);
 }
 
 function packOne(target, lockFile, opts, python, pyVersion) {
@@ -293,6 +336,12 @@ function packOne(target, lockFile, opts, python, pyVersion) {
   // 拷贝锁文件供离线安装使用
   fs.copyFileSync(lockFile, path.join(stagingDir, `${target}.lock`));
 
+  // 下载并附带对应平台的 Python 解释器（python-build-standalone）
+  let pythonArchive = null;
+  if (!opts.noPython) {
+    pythonArchive = downloadPythonStandalone(target, path.join(stagingDir, 'python'));
+  }
+
   // 写入辅助脚本与说明
   writeInstallHelpers(stagingDir, target);
 
@@ -300,6 +349,9 @@ function packOne(target, lockFile, opts, python, pyVersion) {
   const manifest = {
     target,
     python: pyVersion,
+    pythonVersion: PYTHON_VERSION,
+    pythonRelease: PYTHON_RELEASE,
+    pythonArchive,
     packageCount: fileCount,
     builtOn: process.platform,
     createdAt: new Date().toISOString(),
