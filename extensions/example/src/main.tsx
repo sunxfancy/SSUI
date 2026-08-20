@@ -1,4 +1,4 @@
-import { registerComponent, ComponentRegister } from 'ssui_interface';
+import { registerComponent, ComponentRegister } from 'ssui_components';
 
 type ImagePreview2Props = {
     src: string;
