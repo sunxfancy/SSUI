@@ -41,6 +41,12 @@
 
 .layer-card {
     margin-bottom: 10px;
+    cursor: pointer;
+}
+
+.layer-card-active {
+    border: 2px solid #2d72d2;
+    box-shadow: 0 0 0 1px rgba(45, 114, 210, 0.3);
 }
 
 .layer-header {

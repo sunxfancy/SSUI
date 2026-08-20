@@ -1,5 +1,6 @@
 import React from 'react';
 import { Card, Elevation, Button, Icon } from "@blueprintjs/core";
+import { ContextMenu, ContextMenuItem } from 'ssui_components';
 import './SidePanel.css';
 
 interface Layer {
@@ -12,13 +13,70 @@ interface Layer {
 
 interface SidePanelProps {
     layers: Layer[];
+    activeLayer: string;
     onLayerChange: (layerId: string, changes: Partial<Layer>) => void;
+    onLayerSelect?: (layerId: string) => void;
+    onAddLayer?: () => void;
+    onDuplicateLayer?: (layerId: string) => void;
+    onDeleteLayer?: (layerId: string) => void;
+    onRenameLayer?: (layerId: string) => void;
+    onMoveLayer?: (layerId: string, direction: 'up' | 'down') => void;
 }
 
-export class SidePanel extends React.Component<SidePanelProps> {
+interface SidePanelState {
+    contextMenu: {
+        x: number;
+        y: number;
+        layerId: string;
+    } | null;
+}
+
+export class SidePanel extends React.Component<SidePanelProps, SidePanelState> {
+    constructor(props: SidePanelProps) {
+        super(props);
+        this.state = {
+            contextMenu: null
+        };
+    }
+
+    openLayerContextMenu = (e: React.MouseEvent, layerId: string) => {
+        e.preventDefault();
+        e.stopPropagation();
+        this.props.onLayerSelect?.(layerId);
+        this.setState({
+            contextMenu: {
+                x: e.clientX,
+                y: e.clientY,
+                layerId
+            }
+        });
+    };
+
+    openEmptyContextMenu = (e: React.MouseEvent) => {
+        e.preventDefault();
+        this.setState({
+            contextMenu: {
+                x: e.clientX,
+                y: e.clientY,
+                layerId: ''
+            }
+        });
+    };
+
+    closeContextMenu = () => {
+        this.setState({ contextMenu: null });
+    };
+
     renderLayer = (layer: Layer) => {
+        const isActive = layer.id === this.props.activeLayer;
         return (
-            <Card key={layer.id} elevation={Elevation.ONE} className="layer-card">
+            <Card
+                key={layer.id}
+                elevation={Elevation.ONE}
+                className={`layer-card ${isActive ? 'layer-card-active' : ''}`}
+                onClick={() => this.props.onLayerSelect?.(layer.id)}
+                onContextMenu={(e) => this.openLayerContextMenu(e, layer.id)}
+            >
                 <div className="layer-header">
                     <div className="layer-name">{layer.name}</div>
                     <div className="layer-controls">
@@ -76,16 +134,46 @@ export class SidePanel extends React.Component<SidePanelProps> {
     }
 
     render() {
+        const { contextMenu } = this.state;
+        const layer = contextMenu
+            ? this.props.layers.find(l => l.id === contextMenu.layerId)
+            : undefined;
+        const items: ContextMenuItem[] = contextMenu
+            ? layer
+                ? [
+                    { label: '重命名图层', icon: 'edit', onClick: () => this.props.onRenameLayer?.(layer.id) },
+                    { label: '复制图层', icon: 'duplicate', onClick: () => this.props.onDuplicateLayer?.(layer.id) },
+                    { dividerBefore: true },
+                    { label: '上移', icon: 'arrow-up', disabled: this.props.layers[0]?.id === layer.id, onClick: () => this.props.onMoveLayer?.(layer.id, 'up') },
+                    { label: '下移', icon: 'arrow-down', disabled: this.props.layers[this.props.layers.length - 1]?.id === layer.id, onClick: () => this.props.onMoveLayer?.(layer.id, 'down') },
+                    { dividerBefore: true },
+                    { label: layer.visible ? '隐藏图层' : '显示图层', icon: layer.visible ? 'eye-off' : 'eye-open', onClick: () => this.props.onLayerChange(layer.id, { visible: !layer.visible }) },
+                    { label: layer.locked ? '解锁图层' : '锁定图层', icon: layer.locked ? 'unlock' : 'lock', onClick: () => this.props.onLayerChange(layer.id, { locked: !layer.locked }) },
+                    { dividerBefore: true, label: '删除图层', icon: 'trash', intent: 'danger', disabled: this.props.layers.length <= 1, onClick: () => this.props.onDeleteLayer?.(layer.id) }
+                ]
+                : [
+                    { label: '新建图层', icon: 'add', onClick: () => this.props.onAddLayer?.() }
+                ]
+            : [];
+
         return (
             <div className="side-panel">
                 {this.renderConfigPanel()}
                 <div className="panel-header">
                     <h3>图层</h3>
-                    <Button minimal icon="plus" />
+                    <Button minimal icon="plus" onClick={() => this.props.onAddLayer?.()} />
                 </div>
-                <div className="layers-list">
+                <div className="layers-list" onContextMenu={this.openEmptyContextMenu}>
                     {this.props.layers.map(this.renderLayer)}
                 </div>
+                {contextMenu && (
+                    <ContextMenu
+                        x={contextMenu.x}
+                        y={contextMenu.y}
+                        items={items}
+                        onClose={this.closeContextMenu}
+                    />
+                )}
             </div>
         );
     }

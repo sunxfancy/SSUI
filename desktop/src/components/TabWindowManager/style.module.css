@@ -24,3 +24,12 @@
         height: 18px;
     }
 }
+
+.tabTitle {
+    cursor: context-menu;
+    user-select: none;
+    padding: 0 4px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
