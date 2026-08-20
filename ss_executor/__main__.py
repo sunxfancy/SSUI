@@ -8,15 +8,20 @@ from typing import Dict, Optional, Union
 import logging
 import sys
 
-# 添加项目根目录到sys.path
 project_root = os.path.abspath(os.path.dirname(os.path.dirname(__file__)))
-sys.path.append(project_root)
 
 # 添加extensions目录到sys.path
-for dir in os.listdir(os.path.join(project_root, "extensions")):
-    yaml_path = os.path.join(project_root, "extensions", dir, "ssextension.yaml")
+extensions_root = os.path.join(project_root, "extensions")
+for dir in os.listdir(extensions_root):
+    yaml_path = os.path.join(extensions_root, dir, "ssextension.yaml")
     if os.path.exists(yaml_path):
-        sys.path.append(os.path.join(project_root, "extensions", dir))
+        sys.path.append(os.path.join(extensions_root, dir))
+        vendor_dir = os.path.join(extensions_root, dir, "vendor")
+        if os.path.isdir(vendor_dir):
+            for sub in os.listdir(vendor_dir):
+                sub_path = os.path.join(vendor_dir, sub)
+                if os.path.isdir(sub_path):
+                    sys.path.append(sub_path)
 
 
 from ss_executor.loader import SSLoader, search_project_root

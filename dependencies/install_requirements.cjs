@@ -22,6 +22,11 @@ try {
         stdio: 'inherit'
     });
     
+    // 以可编辑模式安装本项目 Python 包（ssui / server / ss_executor / backend）
+    execSync(`node ${path.join(__dirname, 'venv.cjs')} python -m pip install -e . --no-build-isolation`, {
+        stdio: 'inherit'
+    });
+    
     console.log('Requirements installed successfully!');
 } catch (error) {
     console.error('Error installing requirements:', error.message);

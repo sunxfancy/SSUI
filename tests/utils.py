@@ -1,7 +1,37 @@
 import os
+import sys
 import requests
 from pathlib import Path
 from tqdm import tqdm
+
+
+def add_extension_paths():
+    """把扩展目录及其 vendor/ 子目录加入 sys.path。
+
+    返回实际加入的路径列表。扩展的 ``ssui_*`` SDK 包与第三方 vendored
+    代码（cosyvoice / matcha / trellis / stdgen 等）都通过这里导入。
+    """
+    extensions_dir = os.path.abspath(
+        os.path.join(os.path.dirname(__file__), "..", "extensions")
+    )
+    added = []
+    if not os.path.isdir(extensions_dir):
+        return added
+    for ext in os.listdir(extensions_dir):
+        ext_dir = os.path.join(extensions_dir, ext)
+        if not os.path.isdir(ext_dir):
+            continue
+        if ext_dir not in sys.path:
+            sys.path.insert(0, ext_dir)
+            added.append(ext_dir)
+        vendor_dir = os.path.join(ext_dir, "vendor")
+        if os.path.isdir(vendor_dir):
+            for sub in os.listdir(vendor_dir):
+                sub_path = os.path.join(vendor_dir, sub)
+                if os.path.isdir(sub_path) and sub_path not in sys.path:
+                    sys.path.insert(0, sub_path)
+                    added.append(sub_path)
+    return added
 
 # 配置模型信息
 MODEL_CONFIGS = {
