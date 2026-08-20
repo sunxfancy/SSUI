@@ -11,7 +11,13 @@ export function ImagePreview2({ src }: ImagePreview2Props) {
 }
 
 export function main() {
-    [
-        { 'name': 'ImagePreview', 'type': 'ssui.base.Image', 'port': 'output', 'component': ImagePreview2 } as ComponentRegister
-    ].forEach(registerComponent);
+    const components: ComponentRegister[] = [
+        {
+            name: 'ImagePreview',
+            type: 'ssui.base.Image',
+            port: 'output',
+            component: ImagePreview2,
+        } as unknown as ComponentRegister,
+    ];
+    components.forEach(registerComponent);
 }
