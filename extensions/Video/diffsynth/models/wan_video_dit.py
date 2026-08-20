@@ -212,9 +212,16 @@ class DiTBlock(nn.Module):
         self.gate = GateModule()
 
     def forward(self, x, context, t_mod, freqs):
+        has_seq = len(t_mod.shape) == 4
+        chunk_dim = 2 if has_seq else 1
         # msa: multi-head self-attention  mlp: multi-layer perceptron
         shift_msa, scale_msa, gate_msa, shift_mlp, scale_mlp, gate_mlp = (
-            self.modulation.to(dtype=t_mod.dtype, device=t_mod.device) + t_mod).chunk(6, dim=1)
+            self.modulation.to(dtype=t_mod.dtype, device=t_mod.device) + t_mod).chunk(6, dim=chunk_dim)
+        if has_seq:
+            shift_msa, scale_msa, gate_msa, shift_mlp, scale_mlp, gate_mlp = (
+                shift_msa.squeeze(2), scale_msa.squeeze(2), gate_msa.squeeze(2),
+                shift_mlp.squeeze(2), scale_mlp.squeeze(2), gate_mlp.squeeze(2),
+            )
         input_x = modulate(self.norm1(x), shift_msa, scale_msa)
         x = self.gate(x, gate_msa, self.self_attn(input_x, freqs))
         x = x + self.cross_attn(self.norm3(x), context)
@@ -253,8 +260,12 @@ class Head(nn.Module):
         self.modulation = nn.Parameter(torch.randn(1, 2, dim) / dim**0.5)
 
     def forward(self, x, t_mod):
-        shift, scale = (self.modulation.to(dtype=t_mod.dtype, device=t_mod.device) + t_mod).chunk(2, dim=1)
-        x = (self.head(self.norm(x) * (1 + scale) + shift))
+        if len(t_mod.shape) == 3:
+            shift, scale = (self.modulation.unsqueeze(0).to(dtype=t_mod.dtype, device=t_mod.device) + t_mod.unsqueeze(2)).chunk(2, dim=2)
+            x = (self.head(self.norm(x) * (1 + scale.squeeze(2)) + shift.squeeze(2)))
+        else:
+            shift, scale = (self.modulation.to(dtype=t_mod.dtype, device=t_mod.device) + t_mod).chunk(2, dim=1)
+            x = (self.head(self.norm(x) * (1 + scale) + shift))
         return x
 
 
@@ -276,12 +287,21 @@ class WanModel(torch.nn.Module):
         has_ref_conv: bool = False,
         add_control_adapter: bool = False,
         in_dim_control_adapter: int = 24,
+        seperated_timestep: bool = False,
+        require_vae_embedding: bool = True,
+        require_clip_embedding: bool = True,
+        fuse_vae_embedding_in_latents: bool = False,
     ):
         super().__init__()
         self.dim = dim
+        self.in_dim = in_dim
         self.freq_dim = freq_dim
         self.has_image_input = has_image_input
         self.patch_size = patch_size
+        self.seperated_timestep = seperated_timestep
+        self.require_vae_embedding = require_vae_embedding
+        self.require_clip_embedding = require_clip_embedding
+        self.fuse_vae_embedding_in_latents = fuse_vae_embedding_in_latents
 
         self.patch_embedding = nn.Conv3d(
             in_dim, dim, kernel_size=patch_size, stride=patch_size)
@@ -316,15 +336,13 @@ class WanModel(torch.nn.Module):
         else:
             self.control_adapter = None
 
-    def patchify(self, x: torch.Tensor,control_camera_latents_input: torch.Tensor = None):
+    def patchify(self, x: torch.Tensor, control_camera_latents_input: Optional[torch.Tensor] = None):
         x = self.patch_embedding(x)
         if self.control_adapter is not None and control_camera_latents_input is not None:
             y_camera = self.control_adapter(control_camera_latents_input)
             x = [u + v for u, v in zip(x, y_camera)]
             x = x[0].unsqueeze(0)
-        grid_size = x.shape[2:]
-        x = rearrange(x, 'b c f h w -> b (f h w) c').contiguous()
-        return x, grid_size  # x, grid_size: (f, h, w)
+        return x
 
     def unpatchify(self, x: torch.Tensor, grid_size: torch.Tensor):
         return rearrange(
@@ -344,7 +362,7 @@ class WanModel(torch.nn.Module):
                 **kwargs,
                 ):
         t = self.time_embedding(
-            sinusoidal_embedding_1d(self.freq_dim, timestep))
+            sinusoidal_embedding_1d(self.freq_dim, timestep).to(x.dtype))
         t_mod = self.time_projection(t).unflatten(1, (6, self.dim))
         context = self.text_embedding(context)
         
@@ -419,6 +437,11 @@ class WanModelStateDictConverter:
             "blocks.0.attn2.to_q.weight": "blocks.0.cross_attn.q.weight",
             "blocks.0.attn2.to_v.bias": "blocks.0.cross_attn.v.bias",
             "blocks.0.attn2.to_v.weight": "blocks.0.cross_attn.v.weight",
+            "blocks.0.attn2.add_k_proj.bias":"blocks.0.cross_attn.k_img.bias",
+            "blocks.0.attn2.add_k_proj.weight":"blocks.0.cross_attn.k_img.weight",
+            "blocks.0.attn2.add_v_proj.bias":"blocks.0.cross_attn.v_img.bias",
+            "blocks.0.attn2.add_v_proj.weight":"blocks.0.cross_attn.v_img.weight",
+            "blocks.0.attn2.norm_added_k.weight":"blocks.0.cross_attn.norm_k_img.weight",
             "blocks.0.ffn.net.0.proj.bias": "blocks.0.ffn.0.bias",
             "blocks.0.ffn.net.0.proj.weight": "blocks.0.ffn.0.weight",
             "blocks.0.ffn.net.2.bias": "blocks.0.ffn.2.bias",
@@ -436,6 +459,14 @@ class WanModelStateDictConverter:
             "condition_embedder.time_embedder.linear_2.weight": "time_embedding.2.weight",
             "condition_embedder.time_proj.bias": "time_projection.1.bias",
             "condition_embedder.time_proj.weight": "time_projection.1.weight",
+            "condition_embedder.image_embedder.ff.net.0.proj.bias":"img_emb.proj.1.bias",
+            "condition_embedder.image_embedder.ff.net.0.proj.weight":"img_emb.proj.1.weight",
+            "condition_embedder.image_embedder.ff.net.2.bias":"img_emb.proj.3.bias",
+            "condition_embedder.image_embedder.ff.net.2.weight":"img_emb.proj.3.weight",
+            "condition_embedder.image_embedder.norm1.bias":"img_emb.proj.0.bias",
+            "condition_embedder.image_embedder.norm1.weight":"img_emb.proj.0.weight",
+            "condition_embedder.image_embedder.norm2.bias":"img_emb.proj.4.bias",
+            "condition_embedder.image_embedder.norm2.weight":"img_emb.proj.4.weight",
             "patch_embedding.bias": "patch_embedding.bias",
             "patch_embedding.weight": "patch_embedding.weight",
             "scale_shift_table": "head.modulation",
@@ -452,7 +483,7 @@ class WanModelStateDictConverter:
                     name_ = rename_dict[name_]
                     name_ = ".".join(name_.split(".")[:1] + [name.split(".")[1]] + name_.split(".")[2:])
                     state_dict_[name_] = param
-        if hash_state_dict_keys(state_dict) == "cb104773c6c2cb6df4f9529ad5c60d0b":
+        if hash_state_dict_keys(state_dict_) == "cb104773c6c2cb6df4f9529ad5c60d0b":
             config = {
                 "model_type": "t2v",
                 "patch_size": (1, 2, 2),
@@ -470,12 +501,33 @@ class WanModelStateDictConverter:
                 "cross_attn_norm": True,
                 "eps": 1e-6,
             }
+        elif hash_state_dict_keys(state_dict_) == "6bfcfb3b342cb286ce886889d519a77e":
+            config = {
+                "has_image_input": True,
+                "patch_size": [1, 2, 2],
+                "in_dim": 36,
+                "dim": 5120,
+                "ffn_dim": 13824,
+                "freq_dim": 256,
+                "text_dim": 4096,
+                "out_dim": 16,
+                "num_heads": 40,
+                "num_layers": 40,
+                "eps": 1e-6
+            }
         else:
             config = {}
         return state_dict_, config
     
     def from_civitai(self, state_dict):
         state_dict = {name: param for name, param in state_dict.items() if not name.startswith("vace")}
+        state_dict = {name: param for name, param in state_dict.items() if name.split(".")[0] not in ["pose_patch_embedding", "face_adapter", "face_encoder", "motion_encoder"]}
+        state_dict_ = {}
+        for name, param in state_dict.items():
+            if name.startswith("model."):
+                name = name[len("model."):]
+            state_dict_[name] = param
+        state_dict = state_dict_
         if hash_state_dict_keys(state_dict) == "9269f8db9040a9d860eaca435be61814":
             config = {
                 "has_image_input": False,
@@ -530,20 +582,6 @@ class WanModelStateDictConverter:
                 "out_dim": 16,
                 "num_heads": 12,
                 "num_layers": 30,
-                "eps": 1e-6
-            }
-        elif hash_state_dict_keys(state_dict) == "6bfcfb3b342cb286ce886889d519a77e":
-            config = {
-                "has_image_input": True,
-                "patch_size": [1, 2, 2],
-                "in_dim": 36,
-                "dim": 5120,
-                "ffn_dim": 13824,
-                "freq_dim": 256,
-                "text_dim": 4096,
-                "out_dim": 16,
-                "num_heads": 40,
-                "num_layers": 40,
                 "eps": 1e-6
             }
         elif hash_state_dict_keys(state_dict) == "349723183fc063b2bfc10bb2835cf677":
@@ -658,6 +696,77 @@ class WanModelStateDictConverter:
                 "has_ref_conv": False,
                 "add_control_adapter": True,
                 "in_dim_control_adapter": 24,
+            }
+        elif hash_state_dict_keys(state_dict) == "1f5ab7703c6fc803fdded85ff040c316":
+            # Wan-AI/Wan2.2-TI2V-5B
+            config = {
+                "has_image_input": False,
+                "patch_size": [1, 2, 2],
+                "in_dim": 48,
+                "dim": 3072,
+                "ffn_dim": 14336,
+                "freq_dim": 256,
+                "text_dim": 4096,
+                "out_dim": 48,
+                "num_heads": 24,
+                "num_layers": 30,
+                "eps": 1e-6,
+                "seperated_timestep": True,
+                "require_clip_embedding": False,
+                "require_vae_embedding": False,
+                "fuse_vae_embedding_in_latents": True,
+            }
+        elif hash_state_dict_keys(state_dict) == "5b013604280dd715f8457c6ed6d6a626":
+            # Wan-AI/Wan2.2-I2V-A14B
+            config = {
+                "has_image_input": False,
+                "patch_size": [1, 2, 2],
+                "in_dim": 36,
+                "dim": 5120,
+                "ffn_dim": 13824,
+                "freq_dim": 256,
+                "text_dim": 4096,
+                "out_dim": 16,
+                "num_heads": 40,
+                "num_layers": 40,
+                "eps": 1e-6,
+                "require_clip_embedding": False,
+            }
+        elif hash_state_dict_keys(state_dict) == "2267d489f0ceb9f21836532952852ee5":
+            # Wan2.2-Fun-A14B-Control
+            config = {
+                "has_image_input": False,
+                "patch_size": [1, 2, 2],
+                "in_dim": 52,
+                "dim": 5120,
+                "ffn_dim": 13824,
+                "freq_dim": 256,
+                "text_dim": 4096,
+                "out_dim": 16,
+                "num_heads": 40,
+                "num_layers": 40,
+                "eps": 1e-6,
+                "has_ref_conv": True,
+                "require_clip_embedding": False,
+            }
+        elif hash_state_dict_keys(state_dict) == "47dbeab5e560db3180adf51dc0232fb1":
+            # Wan2.2-Fun-A14B-Control-Camera
+            config = {
+                "has_image_input": False,
+                "patch_size": [1, 2, 2],
+                "in_dim": 36,
+                "dim": 5120,
+                "ffn_dim": 13824,
+                "freq_dim": 256,
+                "text_dim": 4096,
+                "out_dim": 16,
+                "num_heads": 40,
+                "num_layers": 40,
+                "eps": 1e-6,
+                "has_ref_conv": False,
+                "add_control_adapter": True,
+                "in_dim_control_adapter": 24,
+                "require_clip_embedding": False,
             }
         else:
             config = {}
