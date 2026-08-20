@@ -29,8 +29,10 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 class Executor:
-    def __init__(self, scheduler_url: str = "ws://localhost:5000/"):
-        self.scheduler_url = scheduler_url
+    def __init__(self, scheduler_url: str = None):
+        self.scheduler_url = scheduler_url or os.environ.get(
+            "SSUI_SCHEDULER_URL", "ws://localhost:5000/"
+        )
         self.current_task: Optional[Task] = None
         self.is_running = True
         
