@@ -59,9 +59,14 @@ MODEL_CONFIGS = {
     },
 }
 
-# 检查是否应该运行慢速测试
+# 检查是否应该运行真实模型测试（默认关闭，需要下载 GB 级模型）
+def should_run_model_tests() -> bool:
+    return os.environ.get("SSUI_RUN_MODEL_TESTS", "0").lower() in ("1", "true", "yes")
+
+
+# Deprecated alias，保持向后兼容
 def should_run_slow_tests() -> bool:
-    return os.environ.get("RUN_SLOW_TESTS", "0").lower() in ("1", "true", "yes")
+    return should_run_model_tests()
 
 # 获取测试数据根目录
 def get_test_data_dir() -> Path:
