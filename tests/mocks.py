@@ -30,6 +30,7 @@ class MockWebSocketService:
         self.connect = AsyncMock()
         self.disconnect = MagicMock()
         self.send_message = AsyncMock()
+        self.send_callback = MagicMock()
         self.send_finish = AsyncMock()
         self.stop = MagicMock()
 

@@ -56,7 +56,7 @@ class TestBackendApi(unittest.TestCase):
         image.save(output)
         self.assertTrue(os.path.exists(output))
 
-    @patch("ssui_image.api.model.load_sdxl_model", lambda **kwargs: (object(), object(), object(), object()))
+    @patch("ssui_image.api.model.load_sdxl_model", lambda *args, **kwargs: (object(), object(), object(), object()))
     @patch(
         "ssui_image.api.conditioning.create_sdxl_conditioning",
         lambda *args, **kwargs: FakeCondition(),

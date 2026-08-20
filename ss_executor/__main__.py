@@ -18,10 +18,7 @@ for dir in os.listdir(extensions_root):
         sys.path.append(os.path.join(extensions_root, dir))
         vendor_dir = os.path.join(extensions_root, dir, "vendor")
         if os.path.isdir(vendor_dir):
-            for sub in os.listdir(vendor_dir):
-                sub_path = os.path.join(vendor_dir, sub)
-                if os.path.isdir(sub_path):
-                    sys.path.append(sub_path)
+            sys.path.append(vendor_dir)
 
 
 from ss_executor.loader import SSLoader, search_project_root

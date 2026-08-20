@@ -5,6 +5,8 @@ from unittest.mock import patch
 
 from PIL import Image as PILImage
 
+import ssui_3dmodel.Trellis as TrellisModule
+
 
 class FakeTrellisPipeline:
     @staticmethod
@@ -68,8 +70,8 @@ class TrellisWorkflowTest(unittest.TestCase):
             glb.export(path)
             self.assertTrue(os.path.exists(path))
 
-    @patch("ssui_3dmodel.Trellis.TrellisModel", FakeTrellisModel)
-    @patch("ssui_3dmodel.Trellis.GenModel", FakeGenModel)
+    @patch.object(TrellisModule, "TrellisModel", FakeTrellisModel)
+    @patch.object(TrellisModule, "GenModel", FakeGenModel)
     def test_trellis_workflow(self):
         from ssui.config import SSUIConfig
         from ssui_3dmodel.Trellis import GenModel, TrellisModel

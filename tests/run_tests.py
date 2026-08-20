@@ -7,11 +7,12 @@ def run_all_tests():
     """运行tests目录下的所有测试用例"""
     # 获取tests目录的路径
     tests_dir = os.path.dirname(os.path.abspath(__file__))
-    from tests.utils import add_extension_paths
-    add_extension_paths()
     
     # 将tests目录添加到Python路径中
     sys.path.insert(0, os.path.dirname(tests_dir))
+
+    from tests.utils import add_extension_paths
+    add_extension_paths()
     
     # 发现所有测试用例
     loader = unittest.TestLoader()

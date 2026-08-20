@@ -4,6 +4,7 @@
 input/
 output/
 __pycache__/
+*.egg-info/
 node_modules/
 dist/
 test_env/

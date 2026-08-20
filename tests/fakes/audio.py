@@ -14,7 +14,13 @@ class FakeCosyVoice:
 
     def _infer(self):
         return iter(
-            [{"tts_speech": torch.zeros(self.sample_rate, dtype=torch.float32)}]
+            [
+                {
+                    "tts_speech": torch.zeros(
+                        (1, self.sample_rate), dtype=torch.float32
+                    )
+                }
+            ]
         )
 
     def inference_zero_shot(self, *args, **kwargs):
