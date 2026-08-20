@@ -1,0 +1,88 @@
+# 真模型回归清单（可选门禁，默认不跑）
+#
+# 每个条目记录固定的 Hugging Face 仓库与文件；下载脚本写入 $TEST_DATA_DIR
+# （默认 ~/.ssui_test_data）。sha256 留空时下载脚本会跳过校验，请在确认
+# 文件后补全。snapshot: true 表示整个仓库快照（如 LLM / TTS 目录型模型）。
+
+sd1:
+  repo: "Lykon/dreamshaper-8"
+  file: "dreamshaper_8.safetensors"
+  revision: "main"
+  size_gb: 2.0
+  sha256: ""
+
+sdxl:
+  repo: "stabilityai/stable-diffusion-xl-base-1.0"
+  file: "sd_xl_base_1.0.safetensors"
+  revision: "main"
+  size_gb: 6.9
+  sha256: ""
+
+flux:
+  transformer:
+    repo: "InvokeAI/flux_schnell"
+    file: "transformer/bnb_nf4/flux1-schnell-bnb_nf4.safetensors"
+    revision: "main"
+    size_gb: 10.0
+    sha256: ""
+  t5_encoder:
+    repo: "InvokeAI/t5-v1_1-xxl"
+    file: "bnb_llm_int8/text_encoder_2/bnb_llm_int8_model.safetensors"
+    revision: "main"
+    size_gb: 3.0
+    sha256: ""
+  clip:
+    repo: "InvokeAI/clip-vit-large-patch14-text-encoder"
+    file: "bfloat16/text_encoder/model.safetensors"
+    revision: "main"
+    size_gb: 0.3
+    sha256: ""
+  vae:
+    repo: "InvokeAI/flux-vae"
+    file: "ae.safetensors"
+    revision: "main"
+    size_gb: 0.3
+    sha256: ""
+
+cosyvoice:
+  repo: "iic/CosyVoice2-0.5B"
+  snapshot: true
+  revision: "main"
+  size_gb: 1.0
+  sha256: ""
+
+llm:
+  repo: "Qwen/Qwen-7B-Chat"
+  snapshot: true
+  revision: "main"
+  size_gb: 15.0
+  sha256: ""
+
+trellis:
+  repo: "jetx/trellis-image-large"
+  snapshot: true
+  revision: "main"
+  size_gb: 10.0
+  sha256: ""
+
+diffsynth:
+  sd1:
+    repo: "Lykon/dreamshaper-8"
+    file: "dreamshaper_8.safetensors"
+    revision: "main"
+    size_gb: 2.0
+    sha256: ""
+  animatediff:
+    repo: "guoyww/animatediff"
+    file: "mm_sd_v15_v2.ckpt"
+    revision: "main"
+    size_gb: 1.7
+    sha256: ""
+
+stdgen:
+  canonicalize:
+    local: "StdGEN/StdGEN-canonicalize-1024"
+    note: "上游模型位置待确认，请手动放入 TEST_DATA_DIR"
+  multiview:
+    local: "StdGEN/StdGEN-multiview-1024"
+    note: "上游模型位置待确认，请手动放入 TEST_DATA_DIR"
