@@ -1,5 +1,6 @@
+import sys
+import types
 import unittest
-from unittest.mock import patch
 
 
 class FakeModelManager:
@@ -22,14 +23,29 @@ class FakePipeline:
         return object()
 
 
+def _install_diffsynth_stubs():
+    """向 sys.modules 注入 diffsynth 假模块。
+
+    diffsynth 依赖 modelscope 等包，部分平台（如 macOS）未随 SSUI 安装，
+    这里用假模块替代，只验证下游流程契约。
+    """
+    if "diffsynth" in sys.modules:
+        return
+    mod = types.ModuleType("diffsynth")
+    mod.ModelManager = FakeModelManager
+    mod.SDImagePipeline = FakePipeline
+    mod.SDVideoPipeline = FakePipeline
+    mod.download_models = lambda *args, **kwargs: None
+    mod.save_video = lambda *args, **kwargs: None
+    sys.modules["diffsynth"] = mod
+
+
+_install_diffsynth_stubs()
+
+
 class TestDiffSynthWorkflow(unittest.TestCase):
     """给定假 diffsynth 输出，验证文生图/图生视频流程能跑通。"""
 
-    @patch("diffsynth.ModelManager", FakeModelManager)
-    @patch("diffsynth.SDImagePipeline", FakePipeline)
-    @patch("diffsynth.SDVideoPipeline", FakePipeline)
-    @patch("diffsynth.download_models", lambda *args, **kwargs: None)
-    @patch("diffsynth.save_video", lambda *args, **kwargs: None)
     def test_diffsynth(self):
         from diffsynth import (
             SDImagePipeline,

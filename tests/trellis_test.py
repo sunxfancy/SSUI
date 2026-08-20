@@ -1,11 +1,10 @@
 import os
+import sys
 import tempfile
+import types
 import unittest
-from unittest.mock import patch
 
 from PIL import Image as PILImage
-
-import ssui_3dmodel.Trellis as TrellisModule
 
 
 class FakeTrellisPipeline:
@@ -41,12 +40,51 @@ class FakeGenModel:
         self._model = FakeExportable()
 
 
+def _install_trellis_stubs():
+    """向 sys.modules 注入 trellis / ssui_3dmodel 假模块。
+
+    vendored trellis 依赖 kaolin 等包，部分平台（如 macOS）没有对应 wheel，
+    这里用假模块替代，只验证 3D 管线与导出流程的契约。
+    """
+    if "trellis.pipelines" in sys.modules:
+        return
+
+    trellis = types.ModuleType("trellis")
+    trellis.__path__ = []
+    pipelines = types.ModuleType("trellis.pipelines")
+    pipelines.TrellisImageTo3DPipeline = FakeTrellisPipeline
+    utils = types.ModuleType("trellis.utils")
+    utils.__path__ = []
+    render_utils = types.ModuleType("trellis.utils.render_utils")
+    render_utils.render_video = lambda *args, **kwargs: []
+    postprocessing_utils = types.ModuleType("trellis.utils.postprocessing_utils")
+    postprocessing_utils.to_glb = lambda *args, **kwargs: FakeExportable()
+
+    ssui_3dmodel = types.ModuleType("ssui_3dmodel")
+    ssui_3dmodel.__path__ = []
+    trellis_module = types.ModuleType("ssui_3dmodel.Trellis")
+    trellis_module.TrellisModel = FakeTrellisModel
+    trellis_module.GenModel = FakeGenModel
+
+    sys.modules.update(
+        {
+            "trellis": trellis,
+            "trellis.pipelines": pipelines,
+            "trellis.utils": utils,
+            "trellis.utils.render_utils": render_utils,
+            "trellis.utils.postprocessing_utils": postprocessing_utils,
+            "ssui_3dmodel": ssui_3dmodel,
+            "ssui_3dmodel.Trellis": trellis_module,
+        }
+    )
+
+
+_install_trellis_stubs()
+
+
 class TrellisWorkflowTest(unittest.TestCase):
     """给定假 Trellis 输出，验证 3D 管线与导出流程能跑通。"""
 
-    @patch("trellis.pipelines.TrellisImageTo3DPipeline", FakeTrellisPipeline)
-    @patch("trellis.utils.render_utils.render_video", lambda *args, **kwargs: [])
-    @patch("trellis.utils.postprocessing_utils.to_glb", lambda *args, **kwargs: FakeExportable())
     def test_trellis(self):
         from trellis.pipelines import TrellisImageTo3DPipeline
         from trellis.utils import postprocessing_utils, render_utils
@@ -70,8 +108,6 @@ class TrellisWorkflowTest(unittest.TestCase):
             glb.export(path)
             self.assertTrue(os.path.exists(path))
 
-    @patch.object(TrellisModule, "TrellisModel", FakeTrellisModel)
-    @patch.object(TrellisModule, "GenModel", FakeGenModel)
     def test_trellis_workflow(self):
         from ssui.config import SSUIConfig
         from ssui_3dmodel.Trellis import GenModel, TrellisModel
