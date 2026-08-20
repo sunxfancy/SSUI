@@ -11,6 +11,7 @@ from .opener_service import FileOpenerManager
 class ExtensionServerConfig(BaseModel):
     venv: str = Field(default="shared", description="The virtual environment to use for the extension")
     dependencies: list[str] = Field(default=[], description="The dependencies to install for the extension")
+    packages: list[str] = Field(default=[], description="The SSUI SDK packages provided by the extension (e.g. ssui_image)")
     main: str = Field(default="extension.py", description="The main file to run for the extension")
 
 class ExtensionWebUIConfig(BaseModel):
