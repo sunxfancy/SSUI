@@ -1,4 +1,4 @@
-export * from './ComponentsManager';
+export * from './components/ComponentsManager';
 export * from './Message';
 export * from './controllers/InternalControllers';
 export * from './components/InternalComponents';
