@@ -1,12 +1,16 @@
 from unittest.mock import MagicMock, AsyncMock
 from typing import Dict, Any, List, Optional
 import asyncio
+from types import SimpleNamespace
 
 class MockConfigService:
     def __init__(self):
         self.config = {}
         self.update_config = MagicMock(return_value={"status": "success"})
         self.get_installed_models = MagicMock(return_value={"status": "success"})
+        self.get_settings = MagicMock(
+            return_value=SimpleNamespace(host_web_ui="")
+        )
 
 class MockModelService:
     def __init__(self):
