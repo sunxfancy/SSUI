@@ -1,5 +1,5 @@
 import React from 'react';
-import { Stage, Layer, Rect, Group, Circle, Image } from 'react-konva';
+import { Stage, Layer as KonvaLayer, Rect, Group, Circle, Image } from 'react-konva';
 import { AIDrawingService, SSUIAIDrawingService } from './AIDrawingService';
 import { Viewport } from './Viewport';
 import { Grid } from './Grid';
@@ -8,30 +8,18 @@ import { FloatingPanel } from './FloatingPanel';
 import { SidePanel } from './SidePanel';
 import Toolbar from './Toolbar';
 import { produce } from 'immer';
+import { Layer } from './types';
 
 const GRID_SIZE = 64;
 const TARGET_SIZE = 512;
 
-interface DrawableObject {
-    type: string;
-    x: number;
-    y: number;
-    obj: React.ReactNode;
-}
 interface AIDrawingCanvasState {
     targetPosition: {
         x: number;
         y: number;
     };
     isDragging: boolean;
-    layers: {
-        id: string;
-        name: string;
-        visible: boolean;
-        locked: boolean;
-        opacity: number;
-        objects: DrawableObject[];
-    }[];
+    layers: Layer[];
     activeLayer: string;
     selectedTool: string;
     brushSize: number;
@@ -176,6 +164,88 @@ class AIDrawingCanvas extends React.Component<{path: string}, AIDrawingCanvasSta
         }));
     };
 
+    handleLayerSelect = (layerId: string) => {
+        this.setState({ activeLayer: layerId });
+    };
+
+    handleLayerAdd = () => {
+        this.setState(prevState => {
+            const newLayer: Layer = {
+                id: `layer-${Date.now()}`,
+                name: `图层 ${prevState.layers.length + 1}`,
+                visible: true,
+                locked: false,
+                opacity: 1,
+                objects: []
+            };
+            return {
+                layers: [...prevState.layers, newLayer],
+                activeLayer: newLayer.id
+            };
+        });
+    };
+
+    handleLayerDelete = (layerId: string) => {
+        this.setState(prevState => {
+            const index = prevState.layers.findIndex(layer => layer.id === layerId);
+            if (index < 0) {
+                return prevState;
+            }
+            const layers = prevState.layers.filter(layer => layer.id !== layerId);
+            let activeLayer = prevState.activeLayer;
+            if (activeLayer === layerId) {
+                // 删除的是当前激活图层时，优先激活其下方图层；删除最底层时激活上方图层
+                const nextIndex = Math.min(Math.max(index - 1, 0), layers.length - 1);
+                activeLayer = layers.length > 0 ? layers[nextIndex].id : '';
+            }
+            return { layers, activeLayer };
+        });
+    };
+
+    handleLayerMove = (layerId: string, direction: 'up' | 'down') => {
+        this.setState(prevState => {
+            const index = prevState.layers.findIndex(layer => layer.id === layerId);
+            if (index < 0) {
+                return prevState;
+            }
+            // 数组中越靠后层级越高；'up' 表示在面板中上移一层（层级提升）
+            const target = direction === 'up' ? index + 1 : index - 1;
+            if (target < 0 || target >= prevState.layers.length) {
+                return prevState;
+            }
+            const layers = [...prevState.layers];
+            const [layer] = layers.splice(index, 1);
+            layers.splice(target, 0, layer);
+            return { layers };
+        });
+    };
+
+    handleLayerRename = (layerId: string, name: string) => {
+        this.handleLayerChange(layerId, { name });
+    };
+
+    handleLayerDuplicate = (layerId: string) => {
+        this.setState(prevState => {
+            const index = prevState.layers.findIndex(layer => layer.id === layerId);
+            if (index < 0) {
+                return prevState;
+            }
+            const source = prevState.layers[index];
+            const duplicate: Layer = {
+                ...source,
+                id: `layer-${Date.now()}`,
+                name: `${source.name} 副本`,
+                objects: source.objects.map(obj => ({ ...obj }))
+            };
+            const layers = [...prevState.layers];
+            layers.splice(index + 1, 0, duplicate);
+            return {
+                layers,
+                activeLayer: duplicate.id
+            };
+        });
+    };
+
     handleToolSelect = (tool: string) => {
         console.log('Selected tool:', tool);
         // 这里可以添加工具选择的处理逻辑
@@ -293,17 +363,17 @@ class AIDrawingCanvas extends React.Component<{path: string}, AIDrawingCanvasSta
                     y={worldPos.y}
                 >
                     {this.state.layers.map((layer) => (
-                        <Layer key={layer.id} opacity={layer.opacity}>
+                        <KonvaLayer key={layer.id} opacity={layer.opacity}>
                             {layer.visible && (
                                 layer.objects.map((object) => {
                                     return object.obj;
                                 })
                             )}
-                        </Layer>
+                        </KonvaLayer>
                     ))}
                     
 
-                    <Layer>
+                    <KonvaLayer>
                         {/* 渲染网格 */}
                         <Grid viewport={viewport} />
                         
@@ -335,7 +405,7 @@ class AIDrawingCanvas extends React.Component<{path: string}, AIDrawingCanvasSta
                                 />
                             </Group>
                         )}
-                    </Layer>
+                    </KonvaLayer>
                 </Stage>
 
                 {/* 添加悬浮面板 */}
@@ -346,7 +416,14 @@ class AIDrawingCanvas extends React.Component<{path: string}, AIDrawingCanvasSta
                 {/* 添加侧边面板 */}
                 <SidePanel 
                     layers={layers}
+                    activeLayer={this.state.activeLayer}
                     onLayerChange={this.handleLayerChange}
+                    onLayerSelect={this.handleLayerSelect}
+                    onLayerAdd={this.handleLayerAdd}
+                    onLayerDelete={this.handleLayerDelete}
+                    onLayerMove={this.handleLayerMove}
+                    onLayerRename={this.handleLayerRename}
+                    onLayerDuplicate={this.handleLayerDuplicate}
                 />
             </div>
         );
