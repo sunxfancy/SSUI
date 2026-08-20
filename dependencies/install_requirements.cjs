@@ -20,7 +20,7 @@ try {
     // 使用 venv.cjs 来执行 uv pip 命令
     // --index-strategy unsafe-best-match: 锁文件中 torch 的 extra-index-url 排在前，
     // 但部分包（如 importlib-metadata）只在 PyPI 上，uv 默认只查第一个 index。
-    execSync(`node ${path.join(__dirname, 'venv.cjs')} uv pip install -r "${requirementsFile}" --index-strategy unsafe-best-match`, {
+    execSync(`node ${path.join(__dirname, 'venv.cjs')} uv pip install -r "${requirementsFile}" --index-strategy unsafe-best-match --build-constraint "${path.join(__dirname, 'build-constraints.txt')}"`, {
         stdio: 'inherit'
     });
     
