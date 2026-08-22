@@ -296,3 +296,62 @@ class ModelService:
         thread.start()
 
         return {"message": "Download started"}
+
+    async def hf_file_download(
+        self,
+        repo_id: str,
+        filename: str,
+        local_dir: str,
+        client_id: str,
+        request_uuid: str,
+        callback: Callable[[str, str, Dict[str, Any]], None],
+        finish_callback: Callable[[str, str, Dict[str, Any]], None],
+    ):
+        """下载 HuggingFace 仓库中的单个文件（处理 starter model 的 repo::path 来源）。"""
+        loop: asyncio.AbstractEventLoop = asyncio.get_event_loop()
+
+        def download_thread():
+            from huggingface_hub import hf_hub_download
+            from tqdm.auto import tqdm
+
+            class download_progress_callback(tqdm):
+                def __init__(self, *args, **kwargs):
+                    super().__init__(*args, **kwargs)
+                    self.client_id = client_id
+                    self.request_uuid = request_uuid
+
+                def update(self, n=1):
+                    super().update(n)
+                    loop.call_soon_threadsafe(
+                        callback,
+                        self.client_id,
+                        self.request_uuid,
+                        "download_progress",
+                        {
+                            "progress": self.n / self.total * 100 if self.total else 0,
+                            "current": self.n,
+                            "total": self.total,
+                            "speed": self.format_dict.get("rate", 0),
+                            "eta": self.format_dict.get("eta", 0),
+                        },
+                    )
+
+                def close(self):
+                    super().close()
+                    loop.call_soon_threadsafe(
+                        finish_callback,
+                        self.client_id,
+                        self.request_uuid,
+                    )
+
+            hf_hub_download(
+                repo_id=repo_id,
+                filename=filename,
+                local_dir=local_dir,
+                tqdm_class=download_progress_callback,
+            )
+
+        thread = threading.Thread(target=download_thread)
+        thread.start()
+
+        return {"message": "Download started"}

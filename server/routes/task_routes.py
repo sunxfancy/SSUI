@@ -125,14 +125,27 @@ async def _start_download(
             finish_callback=finish_callback,
         )
     elif repo_id:
-        await model_service.hf_download(
-            repo_id=repo_id,
-            local_dir=local_dir,
-            client_id="task",
-            request_uuid=request_uuid,
-            callback=hf_progress_callback,
-            finish_callback=finish_callback,
-        )
+        if "::" in repo_id:
+            # starter model 来源格式：repo::path —— 拆分为仓库与单文件下载
+            hf_repo, hf_path = repo_id.split("::", 1)
+            await model_service.hf_file_download(
+                repo_id=hf_repo,
+                filename=hf_path,
+                local_dir=local_dir,
+                client_id="task",
+                request_uuid=request_uuid,
+                callback=hf_progress_callback,
+                finish_callback=finish_callback,
+            )
+        else:
+            await model_service.hf_download(
+                repo_id=repo_id,
+                local_dir=local_dir,
+                client_id="task",
+                request_uuid=request_uuid,
+                callback=hf_progress_callback,
+                finish_callback=finish_callback,
+            )
     else:
         task_service.update(record_id, status="failed", error="url 或 repo_id 必须提供其一")
     return request_uuid
