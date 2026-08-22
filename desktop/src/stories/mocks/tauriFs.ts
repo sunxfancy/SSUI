@@ -22,3 +22,7 @@ export async function exists(_path: string): Promise<boolean> {
 export async function writeTextFile(_path: string, _contents: string): Promise<void> {
   // Storybook mock: no-op
 }
+
+export async function remove(_path: string, _options?: { recursive?: boolean }): Promise<void> {
+  // Storybook mock: no-op
+}

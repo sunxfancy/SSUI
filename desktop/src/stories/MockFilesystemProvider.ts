@@ -3,6 +3,7 @@ import { IFilesystemProvider, ExtendTreeNodeInfo } from "../providers/Filesystem
 
 export class MockFilesystemProvider implements IFilesystemProvider {
     private mockFileSystem: Map<string, ExtendTreeNodeInfo[]> = new Map();
+    private idCounter: number = 0;
 
     constructor() {
         // 初始化模拟文件系统结构
@@ -145,6 +146,47 @@ export class MockFilesystemProvider implements IFilesystemProvider {
             currentNode = (currentNode.nodeData as any).parent as TreeNodeInfo | null;
         }
         return path;
+    }
+
+    private async addMockNode(parentPath: string, name: string): Promise<string | null> {
+        const fullPath = `${parentPath}/${name}`;
+        const files = this.mockFileSystem.get(parentPath);
+        if (!files) {
+            return null;
+        }
+        if (files.some(f => f.label === name)) {
+            return null;
+        }
+        this.idCounter += 1;
+        const nodeData = { path: fullPath, parent: null };
+        const node: ExtendTreeNodeInfo = {
+            id: `mock-${this.idCounter}`,
+            label: name,
+            isFile: true,
+            nodeData
+        };
+        files.push(node);
+        return fullPath;
+    }
+
+    public async createFile(parentPath: string, name: string): Promise<string | null> {
+        return this.addMockNode(parentPath, name);
+    }
+
+    public async createCanvas(parentPath: string, name: string): Promise<string | null> {
+        const canvasName = name.trim().endsWith('.canvas') ? name.trim() : `${name.trim()}.canvas`;
+        return this.addMockNode(parentPath, canvasName);
+    }
+
+    public async deletePath(path: string): Promise<boolean> {
+        for (const files of this.mockFileSystem.values()) {
+            const index = files.findIndex(f => f.nodeData.path === path);
+            if (index !== -1) {
+                files.splice(index, 1);
+                return true;
+            }
+        }
+        return false;
     }
 }
 
