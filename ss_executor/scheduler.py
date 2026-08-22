@@ -158,6 +158,34 @@ class TaskScheduler:
         """获取所有任务"""
         return list(self.tasks.values())
 
+    def remove_task(self, task_id: str) -> bool:
+        """移除一个已结束的任务（completed/failed/cancelled）。"""
+        task = self.tasks.get(task_id)
+        if task is None:
+            return False
+        if task.status not in [
+            TaskStatus.COMPLETED,
+            TaskStatus.FAILED,
+            TaskStatus.CANCELLED,
+        ]:
+            return False
+        del self.tasks[task_id]
+        self.task_completion_events.pop(task_id, None)
+        return True
+
+    def clear_completed_tasks(self) -> int:
+        """清除所有已结束的任务，返回清除数量。"""
+        terminal_ids = [
+            task_id
+            for task_id, task in self.tasks.items()
+            if task.status
+            in [TaskStatus.COMPLETED, TaskStatus.FAILED, TaskStatus.CANCELLED]
+        ]
+        for task_id in terminal_ids:
+            del self.tasks[task_id]
+            self.task_completion_events.pop(task_id, None)
+        return len(terminal_ids)
+
     def get_all_executors(self) -> List[ExecutorInfo]:
         """获取所有执行器信息"""
         return list(self.executors.values())

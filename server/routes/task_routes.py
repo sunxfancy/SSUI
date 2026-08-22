@@ -21,13 +21,23 @@ def _scheduler_task_to_dict(task) -> Dict[str, Any]:
     }
     status = getattr(task, "status", None)
     status_value = status.value if hasattr(status, "value") else str(status or "pending")
+
+    def to_timestamp(value) -> float:
+        if not value:
+            return 0.0
+        try:
+            from datetime import datetime
+            return datetime.fromisoformat(str(value).replace("Z", "+00:00")).timestamp()
+        except Exception:
+            return 0.0
+
     return {
         "id": task.task_id,
         "kind": "generation",
         "name": f"{task.callable} · {os.path.basename(task.script)}",
         "status": status_map.get(status_value, status_value),
         "progress": 100 if status_value == "completed" else 0,
-        "createdAt": time.time(),
+        "createdAt": to_timestamp(task.started_at) or to_timestamp(task.completed_at) or time.time(),
         "error": task.error,
         "meta": {"script": task.script, "callable": task.callable},
     }
@@ -176,16 +186,28 @@ async def create_download_task(
 
 @router.delete("/api/tasks/{task_id}")
 async def remove_task(request: Request, task_id: str):
+    """移除任务：优先移除下载任务，其次移除调度器中已结束的生图任务。"""
     task_service = request.app.state.task_service
+    scheduler = request.app.state.scheduler
     removed = task_service.remove(task_id)
+    if not removed:
+        remove_method = getattr(scheduler, "remove_task", None)
+        if remove_method is not None:
+            removed = remove_method(task_id)
     return {"success": removed}
 
 
 @router.post("/api/tasks/clear")
 async def clear_completed_tasks(request: Request):
+    """清除所有已结束任务（下载任务 + 生图任务）。"""
     task_service = request.app.state.task_service
+    scheduler = request.app.state.scheduler
     count = task_service.clear_completed()
-    return {"success": True, "removed": count}
+    scheduler_removed = 0
+    clear_method = getattr(scheduler, "clear_completed_tasks", None)
+    if clear_method is not None:
+        scheduler_removed = clear_method()
+    return {"success": True, "removed": count, "scheduler_removed": scheduler_removed}
 
 
 @router.post("/api/tasks/{task_id}/cancel")
