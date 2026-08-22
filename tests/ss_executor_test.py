@@ -6,7 +6,7 @@ import yaml
 from ss_executor.loader import SSLoader, SSProject, search_project_root
 from ss_executor.model import Task
 from ss_executor.scheduler import TaskScheduler
-from tests.utils import should_run_slow_tests
+from tests.utils import should_run_model_tests
 
 class TestSSLoader(unittest.TestCase):
     def setUp(self):
@@ -82,7 +82,7 @@ class TestScheduler(unittest.TestCase):
         self.assertEqual(task2.script, "test.py")
         self.assertEqual(task2.callable, "test")
 
-    @unittest.skipIf(not should_run_slow_tests(), "Skipping slow test")
+    @unittest.skipIf(not should_run_model_tests(), "Skipping integration test")
     def test_scheduler_async(self):
         scheduler = TaskScheduler()
         async def run_scheduler():

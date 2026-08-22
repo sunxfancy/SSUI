@@ -1,0 +1,32 @@
+# Weekly cleanup of merged release branches (vX.Y.Z / promote/* / rebase/*).
+# The release tag is never touched. Run manually via workflow_dispatch.
+#
+# Ported from EVEngine/.github/workflows/cleanup-branches.yml.
+
+name: Cleanup release branches
+
+on:
+  schedule:
+    # Monday 02:00 UTC
+    - cron: "0 2 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  cleanup:
+    name: cleanup-branches
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout
+        timeout-minutes: 10
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Clean up merged release branches
+        timeout-minutes: 15
+        run: python3 scripts/release.py cleanup-branches

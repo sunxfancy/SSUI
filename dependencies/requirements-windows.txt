@@ -59,6 +59,7 @@ torchaudio==2.4.1+cu124
 xformers==0.0.28.post1
 
 # diffsynth
+modelscope==1.26.0
 cupy-cuda12x>=13.4
 imageio[ffmpeg]>=2.37.0
 sentencepiece==0.2.0

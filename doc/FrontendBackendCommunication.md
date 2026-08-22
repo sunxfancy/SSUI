@@ -33,14 +33,14 @@ async def prepare(script_path: str, callable: str)
 {
     "Prompt To Condition": {  // 这里是配置的section
         "ignoreLastLayer": {  // 这里是配置的key, 在UI中表现为一个配置项
-            "controler": "Switch",  // 用来寻找对应的UI组件
+            "controller": "Switch",  // 用来寻找对应的UI组件
             "args": {},  // UI组件的参数
             "default": false  // UI组件的默认值
         }
     },
     "Create Empty Latent": {
         "width": {
-            "controler": "Slider",
+            "controller": "Slider",
             "args": {
                 "min": 512,
                 "max": 4096,
@@ -59,7 +59,7 @@ async def prepare(script_path: str, callable: str)
             "default": 512
         },
         "height": {
-            "controler": "Slider",
+            "controller": "Slider",
             "args": {
                 "min": 512,
                 "max": 4096,
@@ -80,7 +80,7 @@ async def prepare(script_path: str, callable: str)
     },
     "Denoise": {
         "steps": {
-            "controler": "Slider",
+            "controller": "Slider",
             "args": {
                 "min": 1,
                 "max": 100,
@@ -102,7 +102,7 @@ async def prepare(script_path: str, callable: str)
             "default": 30
         },
         "scheduler": {
-            "controler": "Select",
+            "controller": "Select",
             "args": {
                 "options": [
                     "ddim",
@@ -140,7 +140,7 @@ async def prepare(script_path: str, callable: str)
             "default": "ddim"
         },
         "CFG": {
-            "controler": "Slider",
+            "controller": "Slider",
             "args": {
                 "min": 0,
                 "max": 15,
@@ -149,7 +149,7 @@ async def prepare(script_path: str, callable: str)
             "default": 7.5
         },
         "seed": {
-            "controler": "Random",
+            "controller": "Random",
             "args": {},
             "default": 123454321
         }

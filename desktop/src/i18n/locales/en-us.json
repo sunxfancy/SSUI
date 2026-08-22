@@ -4,6 +4,16 @@
     "nodyc": "No directory is currently open, you can:",
     "ocapw": "Or, choose from our preset workflows:",
     "wsp": "Workspace",
+    "tree": {
+        "open": "Open",
+        "refresh": "Refresh",
+        "copyPath": "Copy Path"
+    },
+    "tabs": {
+        "close": "Close Tab",
+        "closeOthers": "Close Other Tabs",
+        "closeAll": "Close All Tabs"
+    },
     "dmg": "Download Model Group",
     "preset": "Preset Model Group",
     "local": "Local Models",

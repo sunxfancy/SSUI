@@ -1,0 +1,145 @@
+# Continuous integration: quality gates plus build/test on the development
+# branch (push/PR), a weekly run, and reusable via workflow_call so releases
+# run the exact same checks on the tagged ref.
+#
+# Ported from the EVEngine project (.github/workflows/ci.yml):
+#   - concurrency + minimal permissions + timeouts everywhere
+#   - fast structural checks run before the heavy platform builds
+#   - release.yml reuses this workflow through workflow_call
+#
+# EVEngine's clang-format and module-layering checks are C++-specific and are
+# not ported; the equivalent gate here is `scripts/release.py check-versions`
+# plus its unit tests.
+
+name: CI
+
+on:
+  workflow_call:
+    inputs:
+      ref:
+        description: git ref to check out (release tag or branch)
+        type: string
+        default: ""
+  push:
+    branches: [dev]
+  pull_request:
+    branches: [dev]
+  schedule:
+    # Weekly: Monday 00:00 CST ≈ Sunday 16:00 UTC
+    - cron: "0 16 * * 0"
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  SSUI_CI_SKIP_INSTALL: 1
+  # torch 等 wheel 体积大，调大 HTTP 超时避免大文件下载偶发失败
+  UV_HTTP_TIMEOUT: 600
+
+jobs:
+  # Fast structural check: no toolchain, no build.
+  qc:
+    name: Release scripts
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        timeout-minutes: 5
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: ${{ inputs.ref || github.ref }}
+
+      - name: Test release.py
+        timeout-minutes: 5
+        run: python3 -m unittest discover -s scripts/tests -p "test_*.py" -v
+
+      - name: Check release version consistency
+        timeout-minutes: 5
+        run: python3 scripts/release.py check-versions
+
+  build:
+    name: Build on ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 90
+    strategy:
+      matrix:
+        include:
+          - os: windows-latest
+            platform: windows
+          - os: macOS-latest
+            platform: macosx
+          - os: ubuntu-latest
+            platform: linux
+    steps:
+      - name: Checkout
+        timeout-minutes: 10
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: ${{ inputs.ref || github.ref }}
+
+      - name: Set Node.js 22.x
+        timeout-minutes: 5
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 22
+          cache: 'yarn'
+
+      - name: Install dependencies
+        timeout-minutes: 20
+        run: yarn install --frozen-lockfile
+
+      - name: Setup Python
+        id: setup-uv
+        timeout-minutes: 5
+        uses: astral-sh/setup-uv@d0d8abe699bfb85fec6de9f7adb5ae17292296ff # v6
+        with:
+          version: "0.6.11"
+          enable-cache: false
+          python-version: 3.12.8
+          activate-environment: true
+
+      - name: Install packaging
+        timeout-minutes: 5
+        run: uv pip install packaging==24.1
+
+      - name: Install requirements
+        timeout-minutes: 20
+        run: uv pip install -r dependencies/${{ matrix.platform }}.lock --index-strategy unsafe-best-match --build-constraint dependencies/build-constraints.txt
+
+      - name: Install system dependencies
+        if: ${{ matrix.platform == 'linux' }}
+        timeout-minutes: 20
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf libglib2.0-dev pkg-config
+
+      - name: Setup Rust
+        timeout-minutes: 10
+        uses: actions-rust-lang/setup-rust-toolchain@166cdcfd11aee3cb47222f9ddb555ce30ddb9659 # v1
+        with:
+          rustflags: ""
+
+      - name: Build Components
+        timeout-minutes: 30
+        run: yarn build:components
+
+      - name: Run Component Tests
+        timeout-minutes: 20
+        run: yarn test:components
+
+      - name: Build Functional UI
+        timeout-minutes: 30
+        run: yarn build:functional_ui
+
+      - name: Build Desktop
+        timeout-minutes: 60
+        run: yarn build:desktop
+
+      - name: Run Tests
+        timeout-minutes: 60
+        run: yarn test

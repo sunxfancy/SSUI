@@ -44,7 +44,7 @@ interface ScriptMeta {
 interface ScriptDetails {
     [key: string]: {
         [key: string]: {
-            controler: string;
+            controller: string;
             args: any;
             default: any;
         };

@@ -1,48 +1,122 @@
+# Orchestrate a release started by a GitHub Pre-release (or manual dispatch):
+#
+#   pre-release tag → start (version + vX.Y.Z branch) → strict tests →
+#   package + executable smoke test → upload artifacts → finish (formal
+#   release + promote/vX.Y.Z PR to main + rebase/vX.Y.Z PR to dev)
+#
+# Ported from EVEngine's release pipeline. The release is only formalized
+# (`gh release edit --prerelease=false`) after the packaged executables have
+# been smoke-tested, so a broken build never becomes the published release.
 
 name: Release
 
 on:
-  push:
-    branches: [ "main" ]
-    tags:
-      - "*.*.*"
+  release:
+    types: [prereleased]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Pre-release tag ([v]MAJOR.MINOR.PATCH)
+        required: true
+        type: string
 
 env:
   SSUI_CI_SKIP_INSTALL: 1
+  # torch 等 wheel 体积大，调大 HTTP 超时避免大文件下载偶发失败
+  UV_HTTP_TIMEOUT: 600
+
+concurrency:
+  group: release-${{ github.event.release.tag_name || inputs.tag }}
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+  pull-requests: write
+  checks: write
 
 jobs:
-  release:
-    name: Build on ${{ matrix.os }}
+  start:
+    name: start (version + branch)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    outputs:
+      tag: ${{ steps.go.outputs.tag }}
+      branch: ${{ steps.go.outputs.branch }}
+    steps:
+      - name: Checkout
+        timeout-minutes: 10
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          fetch-depth: 0
+          ref: ${{ github.event.release.tag_name || inputs.tag }}
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Start release
+        timeout-minutes: 10
+        id: go
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          CI: "true"
+        run: |
+          set -euo pipefail
+          TAG="${{ github.event.release.tag_name || inputs.tag }}"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          python3 scripts/release.py start --tag "$TAG"
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+          echo "branch=v${TAG#v}" >> "$GITHUB_OUTPUT"
+
+  strict-tests:
+    name: Strict tests
+    needs: start
+    uses: ./.github/workflows/ci.yml
+    with:
+      ref: ${{ needs.start.outputs.branch }}
+    secrets: inherit
+
+  package:
+    name: Package ${{ matrix.os }}
+    needs: [start, strict-tests]
     runs-on: ${{ matrix.os }}
+    timeout-minutes: 120
     strategy:
       matrix:
         include:
           - os: windows-latest
             platform: windows
+            binary: desktop/src-tauri/target/release/ssui.exe
             artifacts: |
               desktop/src-tauri/target/release/bundle/msi/*.msi
               desktop/src-tauri/target/release/bundle/nsis/*.exe
 
           - os: macOS-latest
             platform: macosx
+            binary: desktop/src-tauri/target/release/ssui
             artifacts: |
               desktop/src-tauri/target/release/bundle/dmg/*.dmg
 
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout
+        timeout-minutes: 10
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: ${{ needs.start.outputs.branch }}
 
       - name: Set Node.js 22.x
-        uses: actions/setup-node@v4
+        timeout-minutes: 5
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: 22
           cache: 'yarn'
 
       - name: Install dependencies
-        run: yarn install --frozen-lockfile 
+        timeout-minutes: 20
+        run: yarn install --frozen-lockfile
 
       - name: Setup Python
         id: setup-uv
-        uses: astral-sh/setup-uv@v6
+        timeout-minutes: 5
+        uses: astral-sh/setup-uv@d0d8abe699bfb85fec6de9f7adb5ae17292296ff # v6
         with:
           version: "0.6.11"
           enable-cache: false
@@ -50,24 +124,103 @@ jobs:
           activate-environment: true
 
       - name: Install packaging
+        timeout-minutes: 5
         run: uv pip install packaging==24.1
 
       - name: Install requirements
-        run: uv pip install -r dependencies/${{ matrix.platform }}.lock
+        timeout-minutes: 20
+        run: uv pip install -r dependencies/${{ matrix.platform }}.lock --index-strategy unsafe-best-match --build-constraint dependencies/build-constraints.txt
 
       - name: Setup Rust
-        uses: actions-rust-lang/setup-rust-toolchain@v1
+        timeout-minutes: 10
+        uses: actions-rust-lang/setup-rust-toolchain@166cdcfd11aee3cb47222f9ddb555ce30ddb9659 # v1
         with:
           rustflags: ""
 
       - name: Build ssext tools
+        timeout-minutes: 20
         run: yarn build:extension_builder && cd extension_builder && npm link
 
       - name: Pack desktop
+        timeout-minutes: 90
         run: yarn package
 
+      - name: Smoke test app executable
+        timeout-minutes: 5
+        run: node scripts/smoke_app.cjs ${{ matrix.binary }}
+
+      - name: Verify packaged artifacts
+        timeout-minutes: 5
+        shell: bash
+        run: |
+          shopt -s nullglob
+          files=(${{ matrix.artifacts }})
+          if [ ${#files[@]} -eq 0 ]; then
+            echo "error: no packaged artifacts found under the expected bundle paths" >&2
+            exit 1
+          fi
+          ls -lh "${files[@]}"
+
+      - name: Smoke test installed app (NSIS)
+        if: runner.os == 'Windows'
+        timeout-minutes: 15
+        shell: pwsh
+        run: |
+          $installer = Get-ChildItem "desktop/src-tauri/target/release/bundle/nsis/*.exe" |
+            Select-Object -First 1
+          $proc = Start-Process -FilePath $installer.FullName -ArgumentList '/S' -Wait -PassThru
+          if ($proc.ExitCode -ne 0) {
+            throw "NSIS installer exited with code $($proc.ExitCode)"
+          }
+          $exe = Get-ChildItem -Path $env:LOCALAPPDATA -Filter 'ssui.exe' -Recurse `
+            -ErrorAction SilentlyContinue | Select-Object -First 1
+          if (-not $exe) {
+            throw 'installed ssui.exe not found under LOCALAPPDATA after silent install'
+          }
+          node scripts/smoke_app.cjs $exe.FullName
+
+      - name: Smoke test installed app (DMG)
+        if: runner.os == 'macOS'
+        timeout-minutes: 15
+        run: |
+          set -euo pipefail
+          DMG="$(ls desktop/src-tauri/target/release/bundle/dmg/*.dmg | head -1)"
+          hdiutil attach "$DMG" -nobrowse -readonly -mountpoint /tmp/ssui-dmg
+          trap 'hdiutil detach /tmp/ssui-dmg >/dev/null 2>&1 || true' EXIT
+          APP="$(find /tmp/ssui-dmg -maxdepth 2 -name '*.app' | head -1)"
+          test -n "$APP" || { echo "error: no .app found in DMG" >&2; exit 1; }
+          BIN="$(find "$APP/Contents/MacOS" -maxdepth 1 -type f | head -1)"
+          test -n "$BIN" || { echo "error: no executable found in $APP" >&2; exit 1; }
+          node scripts/smoke_app.cjs "$BIN"
+
       - name: Upload release assets
-        uses: softprops/action-gh-release@v2
-        if: github.ref_type == 'tag'
+        timeout-minutes: 15
+        uses: softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65 # v2
         with:
+          tag_name: ${{ needs.start.outputs.tag }}
           files: ${{ matrix.artifacts }}
+
+  finish:
+    name: finish (formal release + PRs)
+    needs: [start, package]
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        timeout-minutes: 10
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          fetch-depth: 0
+          ref: ${{ needs.start.outputs.branch }}
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Finish release
+        timeout-minutes: 10
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          CI: "true"
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          python3 scripts/release.py finish --tag "${{ needs.start.outputs.tag }}"

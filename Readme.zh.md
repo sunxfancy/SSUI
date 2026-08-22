@@ -1,7 +1,7 @@
 Stable Scripts UI
 ====================
 
-![quicktest](https://github.com/sunxfancy/SSUI/actions/workflows/quicktest.yml/badge.svg) [English Readme](Readme.md)
+![CI](https://github.com/sunxfancy/SSUI/actions/workflows/ci.yml/badge.svg) [English Readme](Readme.md)
 
 Stable Scripts UI 是一个基于网页的用户界面，用于 `Stable Scripts` - 一种可以被其他用户轻松复现相同结果的 Python 脚本，用于运行生成式AI模型。
 

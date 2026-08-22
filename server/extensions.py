@@ -11,6 +11,7 @@ from .opener_service import FileOpenerManager
 class ExtensionServerConfig(BaseModel):
     venv: str = Field(default="shared", description="The virtual environment to use for the extension")
     dependencies: list[str] = Field(default=[], description="The dependencies to install for the extension")
+    packages: list[str] = Field(default=[], description="The SSUI SDK packages provided by the extension (e.g. ssui_image)")
     main: str = Field(default="extension.py", description="The main file to run for the extension")
 
 class ExtensionWebUIConfig(BaseModel):
@@ -92,6 +93,10 @@ class ExtensionManager:
                 dir_path = os.path.dirname(script_path)
                 sys.path.append(dir_path)
                 print(f"Appending {dir_path} to sys.path")
+                # 第三方 vendored 代码放在扩展的 vendor/ 子目录中
+                vendor_dir = os.path.join(dir_path, "vendor")
+                if os.path.isdir(vendor_dir):
+                    sys.path.append(vendor_dir)
                 import importlib.util
                 try:
                     spec = importlib.util.spec_from_file_location(name, script_path)
@@ -110,9 +115,17 @@ class ExtensionManager:
             if extension.web_ui and extension.web_ui.dist:
                 mount = extension.web_ui.mount
                 dist_path = os.path.normpath(os.path.join(extension.path, extension.web_ui.dist))
-                if os.path.exists(dist_path):
-                    print(f"Setting static files for {name} at {dist_path}")
-                    app.mount(f"/extension/{name}/{mount}", StaticFiles(directory=dist_path), name=name)
+                # check_dir=False：dist 构建完成后无需重启 server 即可生效
+                app.mount(
+                    f"/extension/{name}/{mount}",
+                    StaticFiles(directory=dist_path, check_dir=False),
+                    name=name,
+                )
+                print(f"Setting static files for {name} at {dist_path}")
+                if not os.path.exists(dist_path):
+                    print(
+                        f"警告: {name} 的 dist 目录不存在，静态文件将在构建扩展 UI 后生效: {dist_path}"
+                    )
 
     def loadFileOpener(self):
         def parseFileOpener(file_opener: str):

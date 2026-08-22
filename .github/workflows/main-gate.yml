@@ -1,0 +1,35 @@
+# Gate pull requests into main: documentation whitelist, or promote/vX.X.X
+# release branches. GITHUB_TOKEN-created PRs do not retrigger this workflow;
+# the release pipeline posts the same check name (main-gate) via the Checks
+# API so those PRs remain mergeable.
+#
+# Ported from EVEngine/.github/workflows/main-gate.yml.
+
+name: main-gate
+
+on:
+  pull_request:
+    branches: [main]
+
+permissions:
+  checks: write
+  contents: read
+  pull-requests: read
+
+jobs:
+  main-gate:
+    name: main-gate
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        timeout-minutes: 10
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          fetch-depth: 0
+
+      - name: Check main PR
+        timeout-minutes: 5
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: python3 scripts/release.py check-main-pr

@@ -1,0 +1,8 @@
+# Default owner: the project maintainer.
+#
+# As the team grows, split ownership per area so pull requests are routed to
+# the people who know the code (this also keeps agents working on disjoint
+# directories from stepping on each other's review queue).
+#
+# Until then every path is owned by the maintainer.
+* @sunxfancy

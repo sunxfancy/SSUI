@@ -72,4 +72,43 @@ export class Viewport {
             draft.position = { x: newX, y: newY };
         });
     }
+
+    /**
+     * 以指定屏幕坐标（默认视口中心）为锚点按倍数缩放。
+     */
+    zoomBy(factor: number, center?: { x: number; y: number }) {
+        const oldScale = this.scale;
+        const newScale = Math.min(4, Math.max(0.1, oldScale * factor));
+        if (newScale === oldScale) {
+            return this;
+        }
+
+        const anchor = center ?? {
+            x: this.size.width / 2,
+            y: this.size.height / 2,
+        };
+        const actualFactor = newScale / oldScale;
+        const zoomPoint = {
+            x: anchor.x - this.position.x,
+            y: anchor.y - this.position.y,
+        };
+
+        return produce(this, draft => {
+            draft.scale = newScale;
+            draft.position = {
+                x: anchor.x - zoomPoint.x * actualFactor,
+                y: anchor.y - zoomPoint.y * actualFactor,
+            };
+        });
+    }
+
+    /**
+     * 重置视图：缩放恢复为 1，位置归零。
+     */
+    resetView() {
+        return produce(this, draft => {
+            draft.scale = 1;
+            draft.position = { x: 0, y: 0 };
+        });
+    }
 } 

@@ -1,5 +1,5 @@
 import React from 'react';
-import { Stage, Layer, Rect, Group, Circle, Image, Transformer } from 'react-konva';
+import { Stage, Layer as KonvaLayer, Rect, Group, Circle, Image, Transformer } from 'react-konva';
 import { AIDrawingService, SSUIAIDrawingService } from './AIDrawingService';
 import { Viewport } from './Viewport';
 import { Grid } from './Grid';
@@ -8,38 +8,29 @@ import { FloatingPanel } from './FloatingPanel';
 import { SidePanel } from './SidePanel';
 import Toolbar from './Toolbar';
 import { produce } from 'immer';
+import { Layer } from './types';
+import { ContextMenu, ContextMenuItem } from 'ssui_components';
 
 const GRID_SIZE = 64;
 const TARGET_SIZE = 512;
 const MIN_OBJECT_SIZE = 8;
 
-interface DrawableObject {
-    id: string;
-    type: string;
+interface ContextMenuState {
     x: number;
     y: number;
-    obj?: React.ReactNode;
-    name?: string;
-    width?: number;
-    height?: number;
-    rotation?: number;
-    image?: ImageBitmap;
+    items: ContextMenuItem[];
 }
+
 interface AIDrawingCanvasState {
     targetPosition: {
         x: number;
         y: number;
     };
     isDragging: boolean;
+    showGrid: boolean;
+    contextMenu: ContextMenuState | null;
     selectedObjectId: string | null;
-    layers: {
-        id: string;
-        name: string;
-        visible: boolean;
-        locked: boolean;
-        opacity: number;
-        objects: DrawableObject[];
-    }[];
+    layers: Layer[];
     activeLayer: string;
     selectedTool: string;
     brushSize: number;
@@ -64,6 +55,8 @@ class AIDrawingCanvas extends React.Component<{path: string}, AIDrawingCanvasSta
         this.state = {
             targetPosition: { x: 0, y: 0 },
             isDragging: false,
+            showGrid: true,
+            contextMenu: null,
             selectedObjectId: null,
             layers: [
                 {
@@ -232,7 +225,7 @@ class AIDrawingCanvas extends React.Component<{path: string}, AIDrawingCanvasSta
 
     // 视口拖动相关处理
     handleViewportDragStart = (e: any) => {
-        if (e.evt.button === 1 || e.evt.button === 2) { // 中键或右键
+        if (e.evt.button === 1) { // 中键拖动视口（右键已用于上下文菜单）
             e.evt.preventDefault();
             const stage = this.stageRef.current;
             const pointer = stage.getPointerPosition();
@@ -278,12 +271,202 @@ class AIDrawingCanvas extends React.Component<{path: string}, AIDrawingCanvasSta
         }));
     };
 
+    toggleGrid = () => {
+        this.setState(prevState => ({ showGrid: !prevState.showGrid }));
+    };
+
+    zoomViewport = (factor: number) => {
+        const newViewport = this.state.viewport.zoomBy(factor);
+        this.setState({
+            viewport: newViewport,
+            worldPosition: this.state.worldPosition.setPosition(
+                -newViewport.position.x / newViewport.scale,
+                -newViewport.position.y / newViewport.scale
+            )
+        });
+    };
+
+    resetViewport = () => {
+        const newViewport = this.state.viewport.resetView();
+        this.setState({
+            viewport: newViewport,
+            worldPosition: this.state.worldPosition.setPosition(0, 0)
+        });
+    };
+
+    openContextMenu = (x: number, y: number, items: ContextMenuItem[]) => {
+        this.setState({ contextMenu: { x, y, items } });
+    };
+
+    closeContextMenu = () => {
+        this.setState({ contextMenu: null });
+    };
+
+    // 画布空白处右键菜单
+    handleCanvasContextMenu = (e: any) => {
+        e.evt.preventDefault();
+        if (this.state.viewport.isDraggingViewport()) {
+            return;
+        }
+        const items: ContextMenuItem[] = [
+            { label: '新建图层', icon: 'add', onClick: this.handleLayerAdd },
+            { label: this.state.showGrid ? '隐藏网格' : '显示网格', icon: 'grid', onClick: this.toggleGrid },
+            { dividerBefore: true },
+            { label: '放大', icon: 'zoom-in', onClick: () => this.zoomViewport(1.2) },
+            { label: '缩小', icon: 'zoom-out', onClick: () => this.zoomViewport(1 / 1.2) },
+            { label: '重置视图', icon: 'zoom-to-fit', onClick: this.resetViewport }
+        ];
+        this.openContextMenu(e.evt.clientX, e.evt.clientY, items);
+    };
+
+    // 画布对象右键菜单
+    openObjectMenu = (e: any, layerId: string, objectId: string) => {
+        e.evt.preventDefault();
+        e.cancelBubble = true;
+        const items: ContextMenuItem[] = [
+            { label: '复制对象', icon: 'duplicate', onClick: () => this.duplicateObject(layerId, objectId) },
+            { label: '置于顶层', icon: 'bring-forward', onClick: () => this.moveObject(layerId, objectId, 'front') },
+            { label: '置于底层', icon: 'send-backward', onClick: () => this.moveObject(layerId, objectId, 'back') },
+            { dividerBefore: true, label: '删除对象', icon: 'trash', intent: 'danger', onClick: () => this.deleteObject(layerId, objectId) }
+        ];
+        this.openContextMenu(e.evt.clientX, e.evt.clientY, items);
+    };
+
+    duplicateObject = (layerId: string, objectId: string) => {
+        this.setState(prevState => produce(prevState, draft => {
+            const layer = draft.layers.find(layer => layer.id === layerId);
+            if (!layer) return;
+            const index = layer.objects.findIndex(obj => obj.id === objectId);
+            if (index === -1) return;
+            const source = layer.objects[index];
+            const copy = {
+                ...source,
+                id: this.generateId(),
+                x: source.x + GRID_SIZE,
+                y: source.y + GRID_SIZE
+            };
+            layer.objects.splice(index + 1, 0, copy);
+            draft.selectedObjectId = copy.id;
+        }));
+    };
+
+    deleteObject = (layerId: string, objectId: string) => {
+        this.setState(prevState => produce(prevState, draft => {
+            const layer = draft.layers.find(layer => layer.id === layerId);
+            if (!layer) return;
+            const index = layer.objects.findIndex(obj => obj.id === objectId);
+            if (index !== -1) {
+                layer.objects.splice(index, 1);
+                if (draft.selectedObjectId === objectId) {
+                    draft.selectedObjectId = null;
+                }
+            }
+        }));
+    };
+
+    moveObject = (layerId: string, objectId: string, position: 'front' | 'back') => {
+        this.setState(prevState => produce(prevState, draft => {
+            const layer = draft.layers.find(layer => layer.id === layerId);
+            if (!layer) return;
+            const index = layer.objects.findIndex(obj => obj.id === objectId);
+            if (index === -1) return;
+            const [obj] = layer.objects.splice(index, 1);
+            if (position === 'front') {
+                layer.objects.push(obj);
+            } else {
+                layer.objects.unshift(obj);
+            }
+        }));
+    };
+
     handleLayerChange = (layerId: string, changes: any) => {
         this.setState(prevState => ({
             layers: prevState.layers.map(layer => 
                 layer.id === layerId ? { ...layer, ...changes } : layer
             )
         }));
+    };
+
+    handleLayerSelect = (layerId: string) => {
+        this.setState({ activeLayer: layerId });
+    };
+
+    handleLayerAdd = () => {
+        this.setState(prevState => {
+            const newLayer: Layer = {
+                id: `layer-${Date.now()}`,
+                name: `图层 ${prevState.layers.length + 1}`,
+                visible: true,
+                locked: false,
+                opacity: 1,
+                objects: []
+            };
+            return {
+                layers: [...prevState.layers, newLayer],
+                activeLayer: newLayer.id
+            };
+        });
+    };
+
+    handleLayerDelete = (layerId: string) => {
+        this.setState(prevState => {
+            const index = prevState.layers.findIndex(layer => layer.id === layerId);
+            if (index < 0) {
+                return { ...prevState };
+            }
+            const layers = prevState.layers.filter(layer => layer.id !== layerId);
+            let activeLayer = prevState.activeLayer;
+            if (activeLayer === layerId) {
+                // 删除的是当前激活图层时，优先激活其下方图层；删除最底层时激活上方图层
+                const nextIndex = Math.min(Math.max(index - 1, 0), layers.length - 1);
+                activeLayer = layers.length > 0 ? layers[nextIndex].id : '';
+            }
+            return { ...prevState, layers, activeLayer };
+        });
+    };
+
+    handleLayerMove = (layerId: string, direction: 'up' | 'down') => {
+        this.setState(prevState => {
+            const index = prevState.layers.findIndex(layer => layer.id === layerId);
+            if (index < 0) {
+                return { ...prevState };
+            }
+            // 数组中越靠后层级越高；'up' 表示在面板中上移一层（层级提升）
+            const target = direction === 'up' ? index + 1 : index - 1;
+            if (target < 0 || target >= prevState.layers.length) {
+                return { ...prevState };
+            }
+            const layers = [...prevState.layers];
+            const [layer] = layers.splice(index, 1);
+            layers.splice(target, 0, layer);
+            return { ...prevState, layers };
+        });
+    };
+
+    handleLayerRename = (layerId: string, name: string) => {
+        this.handleLayerChange(layerId, { name });
+    };
+
+    handleLayerDuplicate = (layerId: string) => {
+        this.setState(prevState => {
+            const index = prevState.layers.findIndex(layer => layer.id === layerId);
+            if (index < 0) {
+                return { ...prevState };
+            }
+            const source = prevState.layers[index];
+            const duplicate: Layer = {
+                ...source,
+                id: `layer-${Date.now()}`,
+                name: `${source.name} 副本`,
+                objects: source.objects.map(obj => ({ ...obj, id: this.generateId() }))
+            };
+            const layers = [...prevState.layers];
+            layers.splice(index + 1, 0, duplicate);
+            return {
+                layers,
+                activeLayer: duplicate.id
+            };
+        });
     };
 
     handleToolSelect = (tool: string) => {
@@ -372,7 +555,7 @@ class AIDrawingCanvas extends React.Component<{path: string}, AIDrawingCanvasSta
     };
 
     render() {
-        const { targetPosition, isDragging, layers, brushPosition, brushSize } = this.state;
+        const { targetPosition, isDragging, layers, brushPosition, brushSize, contextMenu } = this.state;
         const viewport = this.state.viewport;
         const worldPos = this.state.worldPosition;
         return (
@@ -403,14 +586,14 @@ class AIDrawingCanvas extends React.Component<{path: string}, AIDrawingCanvasSta
                     onMouseMove={this.handleViewportDragMove}
                     onMouseUp={this.handleViewportDragEnd}
                     onWheel={this.handleWheel}
-                    onContextMenu={(e) => e.evt.preventDefault()}
+                    onContextMenu={this.handleCanvasContextMenu}
                     scaleX={viewport.scale}
                     scaleY={viewport.scale}
                     x={worldPos.x}
                     y={worldPos.y}
                 >
                     {this.state.layers.map((layer) => (
-                        <Layer key={layer.id} opacity={layer.opacity}>
+                        <KonvaLayer key={layer.id} opacity={layer.opacity}>
                             {/* 移动工具下的放置目标矩形（渲染在图片下方，避免遮挡操作） */}
                             {layer.id === this.state.activeLayer &&
                                 this.state.selectedTool === 'move' &&
@@ -449,6 +632,7 @@ class AIDrawingCanvas extends React.Component<{path: string}, AIDrawingCanvasSta
                                                 onTap={(e) => this.handleSelectObject(e, object.id)}
                                                 onDragEnd={(e) => this.handleImageDragEnd(e, object.id)}
                                                 onTransformEnd={(e) => this.handleTransformEnd(e, object.id)}
+                                                onContextMenu={(e) => this.openObjectMenu(e, layer.id, object.id)}
                                                 ref={(node) => this.registerImageNode(object.id, node)}
                                             />
                                         );
@@ -486,13 +670,14 @@ class AIDrawingCanvas extends React.Component<{path: string}, AIDrawingCanvasSta
                                         boundBoxFunc={this.boundBoxFunc}
                                     />
                                 )
-                        </Layer>
+                            }
+                        </KonvaLayer>
                     ))}
                     
 
-                    <Layer>
+                    <KonvaLayer>
                         {/* 渲染网格 */}
-                        <Grid viewport={viewport} />
+                        {this.state.showGrid && <Grid viewport={viewport} />}
                         
                         {/* 渲染画笔大小指示器 */}
                         {brushPosition && (this.state.selectedTool === 'brush' || this.state.selectedTool === 'eraser') && (
@@ -507,7 +692,7 @@ class AIDrawingCanvas extends React.Component<{path: string}, AIDrawingCanvasSta
                                 />
                             </Group>
                         )}
-                    </Layer>
+                    </KonvaLayer>
                 </Stage>
 
                 {/* 添加悬浮面板 */}
@@ -518,8 +703,25 @@ class AIDrawingCanvas extends React.Component<{path: string}, AIDrawingCanvasSta
                 {/* 添加侧边面板 */}
                 <SidePanel 
                     layers={layers}
+                    activeLayer={this.state.activeLayer}
                     onLayerChange={this.handleLayerChange}
+                    onLayerSelect={this.handleLayerSelect}
+                    onLayerAdd={this.handleLayerAdd}
+                    onLayerDelete={this.handleLayerDelete}
+                    onLayerMove={this.handleLayerMove}
+                    onLayerRename={this.handleLayerRename}
+                    onLayerDuplicate={this.handleLayerDuplicate}
                 />
+
+                {/* 右键菜单 */}
+                {contextMenu && (
+                    <ContextMenu
+                        x={contextMenu.x}
+                        y={contextMenu.y}
+                        items={contextMenu.items}
+                        onClose={this.closeContextMenu}
+                    />
+                )}
             </div>
         );
     }

@@ -1,0 +1,41 @@
+name: Model Tests (optional, GPU)
+
+on:
+  workflow_dispatch:
+  schedule:
+    # 每天 UTC 18:00（北京时间次日 02:00）
+    - cron: "0 18 * * *"
+
+env:
+  SSUI_RUN_MODEL_TESTS: "1"
+  TEST_DATA_DIR: "${{ runner.temp }}/ssui_test_models"
+
+jobs:
+  model-tests:
+    # Hugging Face Jobs GPU runner（按分钟计费，T4）
+    runs-on: hf-jobs-t4-small
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      # openai-whisper 的 setup.py 依赖 pkg_resources（setuptools<81 才有）
+      - name: Pin setuptools for legacy build backends
+        run: python -m pip install "setuptools<81"
+
+      - name: Install Python requirements
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r dependencies/requirements-linux.txt
+
+      - name: Install project packages
+        run: pip install -e . --no-build-isolation
+
+      - name: Download test models
+        run: python tests/download_models.py --all
+
+      - name: Run model tests
+        run: python tests/run_tests.py

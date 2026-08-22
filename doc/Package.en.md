@@ -6,8 +6,12 @@ Project Packaging and Release
 Before releasing a version, all tests must pass, including slow test cases:
 
 ```bash
-RUN_SLOW_TESTS=1 yarn test
+SSUI_RUN_MODEL_TESTS=1 yarn test
 ```
+
+The regular `yarn test` runs mock-model interface/flow tests on CPU;
+set `SSUI_RUN_MODEL_TESTS=1` to download real models (see
+`tests/model_manifest.yaml`) and run the optional real-model regression suite.
 
 ## Packaging Process
 
