@@ -156,7 +156,9 @@ export const PresetModels: React.FC<PresetModelsProps> = ({ onModelSelect }) => 
                                 <Tooltip
                                     content={
                                         <div className={styles.tooltip}>
-                                            <div className={styles.tooltipItem}>{model.description}</div>
+                                            {model.description.split('·').map((line, index) => (
+                                                <div key={index} className={styles.tooltipItem}>{line.trim()}</div>
+                                            ))}
                                             {model.size && model.size !== model.description && (
                                                 <div className={styles.tooltipItem}>{model.size}</div>
                                             )}

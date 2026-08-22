@@ -124,6 +124,16 @@ async def hf_models(search: str = "", limit: int = 50):
         return JSONResponse({"error": f"HuggingFace API request failed: {e}"}, status_code=502)
 
 
+# 团队预制的 Flux 模型下载包配图（来自原 PresetModels 设计）
+FLUX_PRESET_IMAGE_URL = (
+    "https://image.civitai.com/xG1nkqKTMzGDvpLrqFT7WA/f905bc28-9db6-4f83-85ae-93c94718881d/anim=false,width=450/NfX8MYg-_nTv_PpQBNJSr.jpeg"
+)
+
+PRESET_IMAGE_URLS = {
+    "FLUX Schnell (Quantized)": FLUX_PRESET_IMAGE_URL,
+}
+
+
 def _preset_to_dict(model) -> dict:
     base = getattr(model, "base", "")
     model_type = getattr(model, "type", "")
@@ -135,7 +145,7 @@ def _preset_to_dict(model) -> dict:
         "source": model.source,
         "description": model.description,
         "size": model.description,
-        "imageUrl": "",
+        "imageUrl": PRESET_IMAGE_URLS.get(model.name, ""),
     }
 
 
@@ -144,6 +154,19 @@ async def preset_models():
     """返回精选的预设模型列表（来自 backend/model_manager/starter_models.py）。"""
     from backend.model_manager import starter_models
 
+    # 团队预制的 Flux 模型下载包（含配图），固定置于列表首位
+    flux_preset = {
+        "id": "001-flux-preset",
+        "name": "Flux Model Preset",
+        "base": "flux",
+        "type": "main",
+        "source": "InvokeAI/flux_schnell_quantized",
+        "description": "FLUX Schnell (Quantized) · clip-vit-large-patch14 · t5_bnb_int8_quantized_encoder · Flux Vae",
+        "size": "FLUX Schnell (Quantized) · clip-vit-large-patch14 · t5_bnb_int8_quantized_encoder · Flux Vae",
+        "imageUrl": FLUX_PRESET_IMAGE_URL,
+    }
+    items = [flux_preset]
+
     preset_names = [
         "cyberrealistic_sd1",
         "rev_animated_sd1",
@@ -151,10 +174,8 @@ async def preset_models():
         "deliberate_sd1",
         "juggernaut_sdxl",
         "dreamshaper_sdxl",
-        "flux_schnell_quantized",
         "flux_dev_quantized",
     ]
-    items = []
     for name in preset_names:
         model = getattr(starter_models, name, None)
         if model is not None:
