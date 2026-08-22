@@ -89,25 +89,25 @@ def create_app(
     settings = config_service.get_settings()
     if settings.host_web_ui:
         web_ui_dir = settings.host_web_ui
-        if os.path.isdir(web_ui_dir):
 
-            @app.get("/functional_ui/", response_class=RedirectResponse)
-            async def root(request: Request):
-                query_string = request.url.query
-                redirect_url = "/functional_ui/index.html"
-                if query_string:
-                    redirect_url += f"?{query_string}"
-                return RedirectResponse(url=redirect_url)
+        @app.get("/functional_ui/", response_class=RedirectResponse)
+        async def root(request: Request):
+            query_string = request.url.query
+            redirect_url = "/functional_ui/index.html"
+            if query_string:
+                redirect_url += f"?{query_string}"
+            return RedirectResponse(url=redirect_url)
 
-            app.mount(
-                "/functional_ui/",
-                StaticFiles(directory=web_ui_dir),
-                name="static",
-            )
-            print("mount functional_ui", web_ui_dir)
-        else:
+        # check_dir=False：目录不存在时也先挂载，构建完成后无需重启即可生效
+        app.mount(
+            "/functional_ui/",
+            StaticFiles(directory=web_ui_dir, check_dir=False),
+            name="static",
+        )
+        print("mount functional_ui", web_ui_dir)
+        if not os.path.isdir(web_ui_dir):
             print(
-                f"警告: functional_ui 目录不存在，跳过挂载（请先构建前端）: {web_ui_dir}"
+                f"警告: functional_ui 目录不存在，静态文件将在构建前端后生效: {web_ui_dir}"
             )
 
     FileOpenerManager.instance().register_opener(

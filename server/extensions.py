@@ -115,12 +115,16 @@ class ExtensionManager:
             if extension.web_ui and extension.web_ui.dist:
                 mount = extension.web_ui.mount
                 dist_path = os.path.normpath(os.path.join(extension.path, extension.web_ui.dist))
-                if os.path.exists(dist_path):
-                    print(f"Setting static files for {name} at {dist_path}")
-                    app.mount(f"/extension/{name}/{mount}", StaticFiles(directory=dist_path), name=name)
-                else:
+                # check_dir=False：dist 构建完成后无需重启 server 即可生效
+                app.mount(
+                    f"/extension/{name}/{mount}",
+                    StaticFiles(directory=dist_path, check_dir=False),
+                    name=name,
+                )
+                print(f"Setting static files for {name} at {dist_path}")
+                if not os.path.exists(dist_path):
                     print(
-                        f"警告: {name} 的 dist 目录不存在，跳过静态挂载（请先构建扩展 UI）: {dist_path}"
+                        f"警告: {name} 的 dist 目录不存在，静态文件将在构建扩展 UI 后生效: {dist_path}"
                     )
 
     def loadFileOpener(self):
