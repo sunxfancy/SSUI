@@ -64,7 +64,7 @@ torchvision @ https://repo.radeon.com/rocm/windows/rocm-rel-7.2.1/torchvision-0.
 --extra-index-url https://download.pytorch.org/whl/cu124
 
 # diffsynth
-modelscope==1.26.0
+modelscope==1.39.1
 imageio[ffmpeg]>=2.37.0
 sentencepiece==0.2.0
 ftfy>=6.3
