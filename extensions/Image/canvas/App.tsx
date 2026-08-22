@@ -1,5 +1,5 @@
 import React from 'react';
-import { Stage, Layer as KonvaLayer, Rect, Group, Circle, Image } from 'react-konva';
+import { Stage, Layer as KonvaLayer, Rect, Group, Circle, Image, Transformer } from 'react-konva';
 import { AIDrawingService, SSUIAIDrawingService } from './AIDrawingService';
 import { Viewport } from './Viewport';
 import { Grid } from './Grid';
@@ -12,6 +12,7 @@ import { Layer } from './types';
 
 const GRID_SIZE = 64;
 const TARGET_SIZE = 512;
+const MIN_OBJECT_SIZE = 8;
 
 interface AIDrawingCanvasState {
     targetPosition: {
@@ -19,6 +20,7 @@ interface AIDrawingCanvasState {
         y: number;
     };
     isDragging: boolean;
+    selectedObjectId: string | null;
     layers: Layer[];
     activeLayer: string;
     selectedTool: string;
@@ -35,12 +37,16 @@ class AIDrawingCanvas extends React.Component<{path: string}, AIDrawingCanvasSta
     private drawingService: AIDrawingService;
     private stageRef: React.RefObject<any>;
     private containerRef: React.RefObject<HTMLDivElement>;
+    private transformerRef: React.RefObject<any>;
+    private imageNodes: Map<string, any> = new Map();
+    private idCounter: number = 0;
 
     constructor(props: {path: string}) {
         super(props);
         this.state = {
             targetPosition: { x: 0, y: 0 },
             isDragging: false,
+            selectedObjectId: null,
             layers: [
                 {
                     id: 'layer1',
@@ -61,6 +67,7 @@ class AIDrawingCanvas extends React.Component<{path: string}, AIDrawingCanvasSta
         this.drawingService = new SSUIAIDrawingService();
         this.stageRef = React.createRef();
         this.containerRef = React.createRef();
+        this.transformerRef = React.createRef();
     }
 
     componentDidMount() {
@@ -70,6 +77,26 @@ class AIDrawingCanvas extends React.Component<{path: string}, AIDrawingCanvasSta
 
     componentWillUnmount() {
         window.removeEventListener('resize', this.updateContainerSize);
+    }
+
+    componentDidUpdate(prevProps: {path: string}, prevState: AIDrawingCanvasState) {
+        // 选中对象、图层或工具变化时，重新绑定 8 控制点缩放框
+        const selectionChanged = prevState.selectedObjectId !== this.state.selectedObjectId;
+        const layersChanged = prevState.layers !== this.state.layers;
+        const toolChanged = prevState.selectedTool !== this.state.selectedTool;
+        if (!selectionChanged && !layersChanged && !toolChanged) {
+            return;
+        }
+
+        const transformer = this.transformerRef.current;
+        if (!transformer) {
+            return;
+        }
+
+        const node = this.state.selectedObjectId
+            ? this.imageNodes.get(this.state.selectedObjectId)
+            : undefined;
+        transformer.nodes(node ? [node] : []);
     }
 
     private updateContainerSize = () => {
@@ -113,6 +140,78 @@ class AIDrawingCanvas extends React.Component<{path: string}, AIDrawingCanvasSta
         e.target.y(newY);
     };
 
+    private generateId = (): string => {
+        this.idCounter += 1;
+        return `canvas-object-${Date.now()}-${this.idCounter}`;
+    };
+
+    // 选中图片对象
+    private handleSelectObject = (e: any, objectId: string) => {
+        if (this.state.selectedTool !== 'move') {
+            return;
+        }
+        e.cancelBubble = true;
+        this.setState({ selectedObjectId: objectId });
+    };
+
+    // 图片拖动结束：吸附网格并同步状态
+    private handleImageDragEnd = (e: any, objectId: string) => {
+        if (this.state.selectedTool !== 'move') {
+            return;
+        }
+
+        const newX = this.snapToGrid(e.target.x());
+        const newY = this.snapToGrid(e.target.y());
+        e.target.x(newX);
+        e.target.y(newY);
+
+        this.setState(state => produce(state, draft => {
+            const layer = draft.layers.find(l => l.objects.some(o => o.id === objectId));
+            const obj = layer?.objects.find(o => o.id === objectId);
+            if (obj) {
+                obj.x = newX;
+                obj.y = newY;
+            }
+        }));
+    };
+
+    // 8 控制点缩放结束：将 scale 归一化为宽高并写回状态
+    private handleTransformEnd = (e: any, objectId: string) => {
+        const node = e.target;
+        const newWidth = Math.max(MIN_OBJECT_SIZE, node.width() * node.scaleX());
+        const newHeight = Math.max(MIN_OBJECT_SIZE, node.height() * node.scaleY());
+        // 归一化缩放，后续拖拽/渲染保持一致
+        node.scaleX(1);
+        node.scaleY(1);
+
+        this.setState(state => produce(state, draft => {
+            const layer = draft.layers.find(l => l.objects.some(o => o.id === objectId));
+            const obj = layer?.objects.find(o => o.id === objectId);
+            if (obj) {
+                obj.x = node.x();
+                obj.y = node.y();
+                obj.width = newWidth;
+                obj.height = newHeight;
+            }
+        }));
+    };
+
+    // 限制最小尺寸，防止缩放过小
+    private boundBoxFunc = (oldBox: any, newBox: any) => {
+        if (Math.abs(newBox.width) < MIN_OBJECT_SIZE || Math.abs(newBox.height) < MIN_OBJECT_SIZE) {
+            return oldBox;
+        }
+        return newBox;
+    };
+
+    private registerImageNode = (objectId: string, node: any) => {
+        if (node) {
+            this.imageNodes.set(objectId, node);
+        } else {
+            this.imageNodes.delete(objectId);
+        }
+    };
+
     // 视口拖动相关处理
     handleViewportDragStart = (e: any) => {
         if (e.evt.button === 1 || e.evt.button === 2) { // 中键或右键
@@ -122,6 +221,11 @@ class AIDrawingCanvas extends React.Component<{path: string}, AIDrawingCanvasSta
             this.setState(prevState => ({
                 viewport: prevState.viewport.startDragging(pointer)
             }));
+        } else if (e.evt.button === 0 && e.target === this.stageRef.current) {
+            // 左键点击空白处取消选中
+            if (this.state.selectedObjectId) {
+                this.setState({ selectedObjectId: null });
+            }
         }
     };
 
@@ -235,7 +339,7 @@ class AIDrawingCanvas extends React.Component<{path: string}, AIDrawingCanvasSta
                 ...source,
                 id: `layer-${Date.now()}`,
                 name: `${source.name} 副本`,
-                objects: source.objects.map(obj => ({ ...obj }))
+                objects: source.objects.map(obj => ({ ...obj, id: this.generateId() }))
             };
             const layers = [...prevState.layers];
             layers.splice(index + 1, 0, duplicate);
@@ -309,13 +413,20 @@ class AIDrawingCanvas extends React.Component<{path: string}, AIDrawingCanvasSta
             this.setState(state => produce(state, draft => {
                 const layer = draft.layers.find(layer => layer.id === draft.activeLayer);
                 if (layer) {
+                    const id = this.generateId();
                     console.log('添加图片', this.state.targetPosition.x, this.state.targetPosition.y);
                     layer.objects.push({
+                        id,
                         type: 'image',
+                        name: 'canvas-image',
                         x: this.state.targetPosition.x,
                         y: this.state.targetPosition.y,
-                        obj: <Image image={image} x={this.state.targetPosition.x} y={this.state.targetPosition.y} />
+                        width: image.width,
+                        height: image.height,
+                        rotation: 0,
+                        image
                     });
+                    draft.selectedObjectId = id;
                 }
             }));
         } catch (error) {
@@ -364,11 +475,81 @@ class AIDrawingCanvas extends React.Component<{path: string}, AIDrawingCanvasSta
                 >
                     {this.state.layers.map((layer) => (
                         <KonvaLayer key={layer.id} opacity={layer.opacity}>
+                            {/* 移动工具下的放置目标矩形（渲染在图片下方，避免遮挡操作） */}
+                            {layer.id === this.state.activeLayer &&
+                                this.state.selectedTool === 'move' &&
+                                !this.state.selectedObjectId && (
+                                    <Rect
+                                        x={targetPosition.x}
+                                        y={targetPosition.y}
+                                        width={TARGET_SIZE}
+                                        height={TARGET_SIZE}
+                                        fill={isDragging ? 'rgba(0, 0, 255, 0.2)' : 'rgba(0, 0, 255, 0.1)'}
+                                        stroke="blue"
+                                        strokeWidth={2}
+                                        draggable
+                                        onDragStart={this.handleDragStart}
+                                        onDragEnd={this.handleDragEnd}
+                                    />
+                                )
+                            }
+
                             {layer.visible && (
                                 layer.objects.map((object) => {
+                                    if (object.type === 'image' && object.image) {
+                                        return (
+                                            <Image
+                                                key={object.id}
+                                                id={object.id}
+                                                name={object.name || 'canvas-image'}
+                                                image={object.image}
+                                                x={object.x}
+                                                y={object.y}
+                                                width={object.width}
+                                                height={object.height}
+                                                rotation={object.rotation ?? 0}
+                                                draggable={this.state.selectedTool === 'move' && !layer.locked}
+                                                onMouseDown={(e) => this.handleSelectObject(e, object.id)}
+                                                onTap={(e) => this.handleSelectObject(e, object.id)}
+                                                onDragEnd={(e) => this.handleImageDragEnd(e, object.id)}
+                                                onTransformEnd={(e) => this.handleTransformEnd(e, object.id)}
+                                                ref={(node) => this.registerImageNode(object.id, node)}
+                                            />
+                                        );
+                                    }
                                     return object.obj;
                                 })
                             )}
+
+                            {/* 8 控制点缩放框：四角 + 四边中点，独立调整宽高 */}
+                            {this.state.selectedObjectId &&
+                                this.state.selectedTool === 'move' &&
+                                layer.visible &&
+                                !layer.locked &&
+                                layer.objects.some(o => o.id === this.state.selectedObjectId) && (
+                                    <Transformer
+                                        ref={this.transformerRef}
+                                        rotateEnabled={false}
+                                        flipEnabled={false}
+                                        enabledAnchors={[
+                                            'top-left',
+                                            'top-center',
+                                            'top-right',
+                                            'middle-left',
+                                            'middle-right',
+                                            'bottom-left',
+                                            'bottom-center',
+                                            'bottom-right'
+                                        ]}
+                                        anchorSize={8 / viewport.scale}
+                                        anchorCornerRadius={2 / viewport.scale}
+                                        anchorStroke="#3b82f6"
+                                        anchorFill="#ffffff"
+                                        borderStroke="#3b82f6"
+                                        borderStrokeWidth={1.5 / viewport.scale}
+                                        boundBoxFunc={this.boundBoxFunc}
+                                    />
+                                )
                         </KonvaLayer>
                     ))}
                     
@@ -377,21 +558,6 @@ class AIDrawingCanvas extends React.Component<{path: string}, AIDrawingCanvasSta
                         {/* 渲染网格 */}
                         <Grid viewport={viewport} />
                         
-                        {this.state.selectedTool === 'move' && (
-                            <Rect
-                                x={targetPosition.x}
-                                y={targetPosition.y}
-                                width={TARGET_SIZE}
-                                height={TARGET_SIZE}
-                                fill={isDragging ? 'rgba(0, 0, 255, 0.2)' : 'rgba(0, 0, 255, 0.1)'}
-                                stroke="blue"
-                                strokeWidth={2}
-                                draggable
-                                onDragStart={this.handleDragStart}
-                                onDragEnd={this.handleDragEnd}
-                            />
-                        )}
-
                         {/* 渲染画笔大小指示器 */}
                         {brushPosition && (this.state.selectedTool === 'brush' || this.state.selectedTool === 'eraser') && (
                             <Group>
