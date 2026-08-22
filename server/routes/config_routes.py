@@ -13,6 +13,11 @@ from server.opener_service import FileOpenerManager
 router = APIRouter()
 
 
+@router.get("/config/")
+async def get_config(request: Request):
+    return request.app.state.config_service.get_config()
+
+
 @router.post("/config/")
 async def config(request: Request, config: Dict[str, Any]):
     return request.app.state.config_service.update_config(config)

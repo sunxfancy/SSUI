@@ -21,10 +21,10 @@
 
 .loading, .error {
     font-size: 18px;
-    color: #5c7080;
+    color: var(--ssui-fg-muted);
     text-align: center;
 }
 
 .error {
-    color: #c23030;
+    color: var(--ssui-danger);
 } 

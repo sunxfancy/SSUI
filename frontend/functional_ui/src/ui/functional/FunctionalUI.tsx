@@ -5,6 +5,7 @@ import { MenuItem } from "@blueprintjs/core";
 import { ComponentTabRef } from "ssui_components";
 import { DetailsPanel } from "./Details";
 import { registerUIProvider, UIProvider } from '../UIProvider';
+import { useConfig } from '../../config';
 import './FunctionalUI.css';
 import "normalize.css";
 import "@blueprintjs/core/lib/css/blueprint.css";
@@ -34,6 +35,8 @@ interface ScriptMeta {
 
 interface FunctionalUIProps {
     path: string;
+    /** 页面打开时是否自动展开详细面板（来自用户配置） */
+    autoOpenDetails?: boolean;
 }
 
 interface FunctionalUIState {
@@ -64,6 +67,9 @@ export class FunctionalUI extends Component<FunctionalUIProps, FunctionalUIState
 
     componentDidMount() {
         this.queryScriptMeta();
+        if (this.props.autoOpenDetails) {
+            this.setState({ isOpen: true });
+        }
     }
 
     async queryScriptMeta(): Promise<void> {
@@ -299,13 +305,18 @@ export class FunctionalUI extends Component<FunctionalUIProps, FunctionalUIState
     }
 }
 
+const FunctionalUIView: React.FC<FunctionalUIProps> = ({ path }) => {
+    const { config } = useConfig();
+    return <FunctionalUI path={path} autoOpenDetails={config.auto_open_details} />;
+};
+
 export class FunctionalUIProvider implements UIProvider {
     getName(): string {
         return 'functional';
     }
 
     getUI(path: string): JSX.Element {
-        return <FunctionalUI path={path} />;
+        return <FunctionalUIView path={path} />;
     }
 }
 
