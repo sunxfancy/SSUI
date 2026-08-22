@@ -6,7 +6,7 @@ interface SDModel {
     description?: string;
     tags?: string[];
 }
-function getModelLoader(type: 'sd-1' | 'sdxl', secondary_tag?: string) {
+function getModelLoader(type: 'sd-1' | 'sdxl', secondary_tag?: string, functionName?: string) {
     return class SDModelLoader extends Component {
         state = {
             filePath: '',
@@ -32,12 +32,12 @@ function getModelLoader(type: 'sd-1' | 'sdxl', secondary_tag?: string) {
 
                 // 筛选出SD1可用的模型（标签中包含sd1的模型）
                 let sd1Models = allModels.filter((model: any) =>
-                    model.base_model.includes(`${type}`)
+                    (model.base_model || '').includes(`${type}`)
                 );
 
                 if (secondary_tag) {
                     sd1Models = sd1Models.filter((model: any) =>
-                        model.tags.includes(secondary_tag)
+                        (model.tags || []).includes(secondary_tag)
                     );
                 }
 
@@ -55,13 +55,15 @@ function getModelLoader(type: 'sd-1' | 'sdxl', secondary_tag?: string) {
         }
 
         onExecute() {
-            let functionName = '';
-            if (type === 'sd-1') {
-                functionName = 'ssui_image.SD1.SD1Model.load';
-            } else if (type === 'sdxl') {
-                functionName = 'ssui_image.SDXL.SDXLModel.load';
+            let fn = functionName;
+            if (!fn) {
+                if (type === 'sd-1') {
+                    fn = 'ssui_image.SD1.SD1Model.load';
+                } else if (type === 'sdxl') {
+                    fn = 'ssui_image.SDXL.SDXLModel.load';
+                }
             }
-            return { 'function': functionName, 'params': { 'path': this.state.filePath } };
+            return { 'function': fn, 'params': { 'path': this.state.filePath } };
         }
 
         render() {
@@ -70,7 +72,7 @@ function getModelLoader(type: 'sd-1' | 'sdxl', secondary_tag?: string) {
             return (
                 <div>
                     {loading ? (
-                        <div>加载中...</div>
+                        <div>Loading...</div>
                     ) : error ? (
                         <div style={{ color: 'red' }}>{error}</div>
                     ) : models.length > 0 ? (
@@ -79,7 +81,7 @@ function getModelLoader(type: 'sd-1' | 'sdxl', secondary_tag?: string) {
                                 onChange={this.handleModelSelect}
                                 style={{ width: '100%', marginBottom: '10px' }}
                             >
-                                <option value="">选择模型...</option>
+                                <option value="">Select model...</option>
                                 {models.map((model, index) => (
                                     <option key={index} value={model.path}>
                                         {model.name}
@@ -88,7 +90,7 @@ function getModelLoader(type: 'sd-1' | 'sdxl', secondary_tag?: string) {
                             </select>
                         </div>
                     ) : (
-                        <div>未找到{type}兼容模型</div>
+                        <div>No {type} compatible models found</div>
                     )}
                 </div>
             );
@@ -123,34 +125,43 @@ class FluxModelLoader extends Component {
     }
 
     async fetchModels() {
-        // 获取所有可用模型
-        const modelsResponse = await fetch('/api/available_models');
-        if (!modelsResponse.ok) {
-            throw new Error('获取模型列表失败');
+        this.setState({ loading: true, error: null });
+        try {
+            // 获取所有可用模型
+            const modelsResponse = await fetch('/api/available_models');
+            if (!modelsResponse.ok) {
+                throw new Error('Failed to fetch model list');
+            }
+            const allModels = await modelsResponse.json();
+
+            // 筛选出 Flux 相关模型
+            const sdModels = allModels.filter((model: any) =>
+                (model.base_model || '').includes(`flux`) && !(model.tags || []).includes(`vae`)
+            );
+            const t5EncoderModels = allModels.filter((model: any) =>
+                (model.base_model || '').includes(`any`) && (model.tags || []).includes(`t5`)
+            );
+            const clipModels = allModels.filter((model: any) =>
+                (model.base_model || '').includes(`any`) && !(model.tags || []).includes(`t5`)
+            );
+            const vaeModels = allModels.filter((model: any) =>
+                (model.base_model || '').includes(`flux`) && (model.tags || []).includes(`vae`)
+            );
+
+            this.setState({
+                models: sdModels,
+                t5EncoderModels: t5EncoderModels,
+                clipModels: clipModels,
+                vaeModels: vaeModels,
+                loading: false
+            });
+        } catch (error) {
+            console.error('获取模型列表失败:', error);
+            this.setState({
+                error: error instanceof Error ? error.message : 'Failed to fetch model list',
+                loading: false
+            });
         }
-        const allModels = await modelsResponse.json();
-
-        // 筛选出SD可用的模型（标签中包含sd1的模型）
-        const sdModels = allModels.filter((model: any) =>
-            model.base_model.includes(`flux`) && !model.tags.includes(`vae`)
-        );
-        const t5EncoderModels = allModels.filter((model: any) =>
-            model.base_model.includes(`any`) && model.tags.includes(`t5`)
-        );
-        const clipModels = allModels.filter((model: any) =>
-            model.base_model.includes(`any`) && !model.tags.includes(`t5`)
-        );
-        const vaeModels = allModels.filter((model: any) =>
-            model.base_model.includes(`flux`) && model.tags.includes(`vae`)
-        );
-
-        this.setState({
-            models: sdModels,
-            t5EncoderModels: t5EncoderModels,
-            clipModels: clipModels,
-            vaeModels: vaeModels,
-            loading: false
-        });
     }
 
     onExecute() {
@@ -163,7 +174,7 @@ class FluxModelLoader extends Component {
                 onChange={onChange}
                 style={{ width: '100%', marginBottom: '10px' }}
             >
-                <option value="">选择{model_name}模型...</option>
+                <option value="">Select {model_name} model...</option>
                 {models.map((model, index) => (
                     <option key={index} value={model.path}>
                         {model.name}
@@ -178,7 +189,7 @@ class FluxModelLoader extends Component {
         return (
             <div>
                 {loading ? (
-                    <div>加载中...</div>
+                    <div>Loading...</div>
                 ) : error ? (
                     <div style={{ color: 'red' }}>{error}</div>
                 ) : (
@@ -210,6 +221,6 @@ import { registerComponent, ComponentRegister } from '../ComponentsManager';
     { 'name': 'SD1ModelLoader', 'type': 'ssui_image.SD1.SD1Model', 'port': 'input', 'component': getModelLoader("sd-1"), } as ComponentRegister,
     { 'name': 'SDXLModelLoader', 'type': 'ssui_image.SDXL.SDXLModel', 'port': 'input', 'component': getModelLoader("sdxl"), } as ComponentRegister,
     { 'name': 'FluxModelLoader', 'type': 'ssui_image.Flux.FluxModel', 'port': 'input', 'component': FluxModelLoader, } as ComponentRegister,
-    { 'name': 'SD1LoraLoader', 'type': 'ssui_image.SD1.SD1Lora', 'port': 'input', 'component': getModelLoader("sd-1", "lora"), } as ComponentRegister,
-    { 'name': 'SDXLLoraLoader', 'type': 'ssui_image.SDXL.SDXLLora', 'port': 'input', 'component': getModelLoader("sdxl", "lora"), } as ComponentRegister,
+    { 'name': 'SD1LoraLoader', 'type': 'ssui_image.SD1.SD1Lora', 'port': 'input', 'component': getModelLoader("sd-1", "lora", "ssui_image.SD1.SD1Lora.load"), } as ComponentRegister,
+    { 'name': 'SDXLLoraLoader', 'type': 'ssui_image.SDXL.SDXLLora', 'port': 'input', 'component': getModelLoader("sdxl", "lora", "ssui_image.SDXL.SDXLLora.load"), } as ComponentRegister,
 ].forEach(registerComponent);

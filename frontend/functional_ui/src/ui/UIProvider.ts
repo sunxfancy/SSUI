@@ -2,6 +2,7 @@ import { FunctionalUIProvider } from "./functional/FunctionalUI";
 import { ImagePreviewProvider } from "./preview/ImagePreview";
 import { ProjectSettingsProvider } from './settings/ProjectSettings';
 import { WorkflowUIProvider } from "./workflow/WorkflowUI";
+import { ModelManagerUIProvider } from "./models/ModelManager";
 export interface UIProvider {
     getName(): string;
     getUI(path: string): JSX.Element;
@@ -22,3 +23,4 @@ registerUIProvider(new FunctionalUIProvider());
 registerUIProvider(new ProjectSettingsProvider());
 registerUIProvider(new ImagePreviewProvider());
 registerUIProvider(new WorkflowUIProvider());
+registerUIProvider(new ModelManagerUIProvider());
