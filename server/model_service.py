@@ -310,6 +310,13 @@ class ModelService:
         """下载 HuggingFace 仓库中的单个文件（处理 starter model 的 repo::path 来源）。"""
         loop: asyncio.AbstractEventLoop = asyncio.get_event_loop()
 
+        def safe_call_soon_threadsafe(fn, *args):
+            try:
+                loop.call_soon_threadsafe(fn, *args)
+            except RuntimeError:
+                # 事件循环已关闭（如测试环境或服务退出中），忽略进度上报
+                pass
+
         def download_thread():
             from huggingface_hub import hf_hub_download
             from tqdm.auto import tqdm
@@ -322,7 +329,7 @@ class ModelService:
 
                 def update(self, n=1):
                     super().update(n)
-                    loop.call_soon_threadsafe(
+                    safe_call_soon_threadsafe(
                         callback,
                         self.client_id,
                         self.request_uuid,
@@ -338,7 +345,7 @@ class ModelService:
 
                 def close(self):
                     super().close()
-                    loop.call_soon_threadsafe(
+                    safe_call_soon_threadsafe(
                         finish_callback,
                         self.client_id,
                         self.request_uuid,

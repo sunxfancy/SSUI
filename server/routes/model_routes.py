@@ -134,15 +134,33 @@ PRESET_IMAGE_URLS = {
 }
 
 
+def _collect_starter_members(model) -> list:
+    """递归收集模型及其所有依赖（含依赖的依赖），按 source 去重。"""
+    seen: set = set()
+    members: list = []
+
+    def visit(current):
+        source = getattr(current, "source", None)
+        if source in seen:
+            return
+        seen.add(source)
+        members.append(current)
+        for dep in list(getattr(current, "dependencies", None) or []):
+            visit(dep)
+
+    visit(model)
+    return members
+
+
 def _starter_to_preset_group(model) -> dict:
-    """把一个 starter model（含依赖）展开为一组预设模型。
+    """把一个 starter model（含全部依赖）展开为一组预设模型。
 
     模型组 = 主模型 + 其依赖的辅助模型（如 Flux 的 CLIP/T5/VAE），
     一组下载完即可直接出图。
     """
     base = getattr(model, "base", "")
     model_type = getattr(model, "type", "")
-    members = [model] + list(getattr(model, "dependencies", None) or [])
+    members = _collect_starter_members(model)
     member_items = []
     for member in members:
         m_base = getattr(member, "base", "")
