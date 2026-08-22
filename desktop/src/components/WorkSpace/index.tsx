@@ -1,5 +1,5 @@
 import {useEffect, useState,useRef} from 'react';
-import {Button, Tree, Icon, Popover, Menu, MenuItem} from "@blueprintjs/core";
+import {Button, Tree, Icon, Popover, Menu, MenuItem, Dialog, FormGroup, InputGroup, Intent} from "@blueprintjs/core";
 import { ContextMenu, ContextMenuItem } from 'ssui_components';
 import { TauriFilesystemProvider, IFilesystemProvider, ExtendTreeNodeInfo } from '../../providers/FilesystemProvider';
 import styles from './style.module.css'
@@ -22,6 +22,11 @@ export const WorkSpace = (props: WorkSpaceProps) => {
     const { currentWorkspace, onOpenWorkspace, onSelectWorkflow } = props
     const [ fileTree, setFileTree ] = useState<ExtendTreeNodeInfo>()
     const [ contextMenu, setContextMenu ] = useState<{ x: number; y: number; node: ExtendTreeNodeInfo } | null>(null)
+    const [ createDialog, setCreateDialog ] = useState<{ kind: 'file' | 'canvas'; parentNode: ExtendTreeNodeInfo | null } | null>(null)
+    const [ deleteDialog, setDeleteDialog ] = useState<{ node: ExtendTreeNodeInfo } | null>(null)
+    const [ inputName, setInputName ] = useState('')
+    const [ inputError, setInputError ] = useState<string | null>(null)
+    const [ busy, setBusy ] = useState(false)
     const filesystemProvider = useRef<IFilesystemProvider>(props.filesystemProvider || new TauriFilesystemProvider())
     const { t }= useTranslation();
 
@@ -101,6 +106,67 @@ export const WorkSpace = (props: WorkSpaceProps) => {
         }
     }
 
+    const openCreateDialog = (parentNode: ExtendTreeNodeInfo | null, kind: 'file' | 'canvas') => {
+        setInputName('');
+        setInputError(null);
+        setCreateDialog({ kind, parentNode });
+    };
+
+    const closeCreateDialog = () => {
+        if (busy) return;
+        setCreateDialog(null);
+    };
+
+    const confirmCreate = async () => {
+        if (!createDialog || busy) return;
+        const name = inputName.trim();
+        if (!name) {
+            setInputError(t('tree.nameRequired'));
+            return;
+        }
+        setBusy(true);
+        try {
+            const { kind, parentNode } = createDialog;
+            const dir = parentNode ? parentNode.nodeData.path : currentWorkspace;
+            if (!dir) {
+                setInputError(t('tree.createFailed'));
+                return;
+            }
+            const createdPath = kind === 'canvas'
+                ? await filesystemProvider.current.createCanvas(dir, name)
+                : await filesystemProvider.current.createFile(dir, name);
+            if (!createdPath) {
+                setInputError(t('tree.createFailed'));
+                return;
+            }
+            setCreateDialog(null);
+            if (kind === 'canvas') {
+                props.onFileOpen(createdPath);
+            }
+            if (parentNode) {
+                await refreshNode(parentNode);
+            } else {
+                await refreshTree();
+            }
+        } finally {
+            setBusy(false);
+        }
+    };
+
+    const confirmDelete = async () => {
+        if (!deleteDialog || busy) return;
+        setBusy(true);
+        try {
+            const ok = await filesystemProvider.current.deletePath(deleteDialog.node.nodeData.path);
+            setDeleteDialog(null);
+            if (ok) {
+                await refreshTree();
+            }
+        } finally {
+            setBusy(false);
+        }
+    };
+
     const handleNodeClick = (node: ExtendTreeNodeInfo) => {
         // 先把所有节点的选择态清空
         setFileTree((prevState) => {
@@ -138,12 +204,27 @@ export const WorkSpace = (props: WorkSpaceProps) => {
     const buildContextMenuItems = (): ContextMenuItem[] => {
         if (!contextMenu) return [];
         const { node } = contextMenu;
-        return [
-            ...(node.isFile ? [{
+        const items: ContextMenuItem[] = [];
+        if (node.isFile) {
+            items.push({
                 label: t('tree.open'),
                 icon: 'document-open' as const,
                 onClick: () => props.onFileOpen(node.nodeData.path)
-            }] : []),
+            });
+        } else {
+            items.push({
+                label: t('tree.newFile'),
+                icon: 'document' as const,
+                onClick: () => openCreateDialog(node, 'file')
+            });
+            items.push({
+                label: t('tree.newCanvas'),
+                icon: 'media' as const,
+                onClick: () => openCreateDialog(node, 'canvas')
+            });
+            items.push({ dividerBefore: true });
+        }
+        items.push(
             {
                 label: t('tree.refresh'),
                 icon: 'refresh' as const,
@@ -153,8 +234,15 @@ export const WorkSpace = (props: WorkSpaceProps) => {
                 label: t('tree.copyPath'),
                 icon: 'clipboard' as const,
                 onClick: () => copyPath(node.nodeData.path)
+            },
+            {
+                label: t('tree.delete'),
+                icon: 'trash' as const,
+                intent: Intent.DANGER,
+                onClick: () => setDeleteDialog({ node })
             }
-        ];
+        );
+        return items;
     }
 
     return (
@@ -167,6 +255,8 @@ export const WorkSpace = (props: WorkSpaceProps) => {
                             <Menu key="menu">
                                 <MenuItem icon="folder-open" text={t('onw')} onClick={onOpenWorkspace} />
                                 <MenuItem icon="generate" text={t('sfpw')} onClick={onSelectWorkflow} />
+                                <MenuItem icon="document" text={t('tree.newFile')} onClick={() => openCreateDialog(null, 'file')} />
+                                <MenuItem icon="media" text={t('tree.newCanvas')} onClick={() => openCreateDialog(null, 'canvas')} />
                             </Menu>
                         }
                         position="bottom-right"
@@ -213,6 +303,48 @@ export const WorkSpace = (props: WorkSpaceProps) => {
                     onClose={closeContextMenu}
                 />
             )}
+            <Dialog
+                isOpen={createDialog !== null}
+                onClose={closeCreateDialog}
+                title={createDialog?.kind === 'canvas' ? t('tree.createCanvasTitle') : t('tree.createFileTitle')}
+            >
+                <div style={{ padding: '20px' }}>
+                    <FormGroup label={t('tree.name')} labelFor="tree-input-name">
+                        <InputGroup
+                            id="tree-input-name"
+                            autoFocus
+                            placeholder={createDialog?.kind === 'canvas' ? t('tree.canvasNamePlaceholder') : t('tree.fileNamePlaceholder')}
+                            value={inputName}
+                            onChange={(e) => {
+                                setInputName(e.target.value);
+                                setInputError(null);
+                            }}
+                            onKeyDown={(e) => {
+                                if (e.key === 'Enter') confirmCreate();
+                            }}
+                            intent={inputError ? Intent.DANGER : Intent.NONE}
+                        />
+                        {inputError && <div style={{ color: 'red', marginTop: '5px' }}>{inputError}</div>}
+                    </FormGroup>
+                </div>
+                <div className="bp5-dialog-footer">
+                    <Button onClick={closeCreateDialog} disabled={busy}>{t('tree.cancel')}</Button>
+                    <Button intent={Intent.PRIMARY} onClick={confirmCreate} loading={busy}>{t('tree.create')}</Button>
+                </div>
+            </Dialog>
+            <Dialog
+                isOpen={deleteDialog !== null}
+                onClose={() => { if (!busy) setDeleteDialog(null); }}
+                title={t('tree.deleteConfirmTitle')}
+            >
+                <div style={{ padding: '20px' }}>
+                    <p>{t('tree.deleteConfirmMessage', { name: deleteDialog?.node.label || '' })}</p>
+                </div>
+                <div className="bp5-dialog-footer">
+                    <Button onClick={() => setDeleteDialog(null)} disabled={busy}>{t('tree.cancel')}</Button>
+                    <Button intent={Intent.DANGER} onClick={confirmDelete} loading={busy}>{t('tree.delete')}</Button>
+                </div>
+            </Dialog>
         </div>
     )
 }
