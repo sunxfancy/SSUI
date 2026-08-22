@@ -19,12 +19,12 @@ import {
     FunctionDefinitionNode,
     FunctionDefinitionRender,
     InputNode,
+    InputNodeRender,
     NameControl,
     NameControlRender,
     OperatorNode,
     OutputNode,
-    ParameterControl,
-    ParameterControlRender,
+    OutputNodeRender,
     InfoControl,
     InfoControlRender,
     Schemes,
@@ -127,9 +127,35 @@ const createEditor = async (container: HTMLElement) => {
         },
     });
 
-    // 使用 AreaExtensions 来配置插件
+    // Shift + 点击多选，拖拽时所有选中的节点一起移动
+    let shiftDown = false;
+    const onKeyDown = (e: KeyboardEvent) => {
+        if (e.key === 'Shift') shiftDown = true;
+    };
+    const onKeyUp = (e: KeyboardEvent) => {
+        if (e.key === 'Shift') shiftDown = false;
+    };
+    window.addEventListener('keydown', onKeyDown);
+    window.addEventListener('keyup', onKeyUp);
+
+    // 拖动已选中的节点时保持多选（多选后直接拖动即可整组移动，不必一直按 Shift）
+    let keepMultiSelection = false;
+    area.addPipe((context) => {
+        if (context && typeof context === 'object' && 'type' in context) {
+            const type = (context as { type: string }).type;
+            if (type === 'nodepicked') {
+                const id = (context as { data?: { id?: string } }).data?.id;
+                const node = id ? editor.getNode(id) : undefined;
+                keepMultiSelection = node?.selected === true;
+            }
+        }
+        return context;
+    });
+
     AreaExtensions.selectableNodes(area, AreaExtensions.selector(), {
-        accumulating: AreaExtensions.accumulateOnCtrl()
+        accumulating: {
+            active: () => shiftDown || keepMultiSelection,
+        },
     });
 
     connection.addPreset(ConnectionPresets.classic.setup());
@@ -142,14 +168,17 @@ const createEditor = async (container: HTMLElement) => {
                 if (context.payload instanceof FunctionDefinitionNode) {
                     return FunctionDefinitionRender;
                 }
+                if (context.payload instanceof InputNode) {
+                    return InputNodeRender;
+                }
+                if (context.payload instanceof OutputNode) {
+                    return OutputNodeRender;
+                }
                 return ReactPresets.classic.Node;
             },
             control(context) {
                 if (context.payload instanceof ButtonControl) {
                     return ButtonControlRender;
-                }
-                if (context.payload instanceof ParameterControl) {
-                    return ParameterControlRender;
                 }
                 if (context.payload instanceof NameControl) {
                     return NameControlRender;
@@ -196,6 +225,27 @@ const createEditor = async (container: HTMLElement) => {
                     }
                 });
             }
+            if (type === 'nodetranslated') {
+                // 拖动函数定义框时，框内节点一起移动
+                const data = (context as {
+                    data?: { id: string; position?: { x: number; y: number }; previous?: { x: number; y: number } };
+                }).data;
+                const node = data?.id ? editor.getNode(data.id) : undefined;
+                if (node instanceof FunctionDefinitionNode && data?.position && data.previous) {
+                    const dx = data.position.x - data.previous.x;
+                    const dy = data.position.y - data.previous.y;
+                    if (dx !== 0 || dy !== 0) {
+                        for (const member of editor.getNodes()) {
+                            if (member === node) continue;
+                            if (!node.isNodeInside(member)) continue;
+                            const view = area.nodeViews.get(member.id);
+                            if (view) {
+                                void view.translate(view.position.x + dx, view.position.y + dy);
+                            }
+                        }
+                    }
+                }
+            }
             if (
                 type === 'render' ||
                 type === 'nodetranslated' ||
@@ -203,6 +253,20 @@ const createEditor = async (container: HTMLElement) => {
                 type === 'noderemoved'
             ) {
                 syncDefinitions();
+            }
+            if (type === 'render') {
+                // 函数定义框始终渲染在其它节点下层
+                const renderData = (context as { data?: { type?: string; element?: HTMLElement; payload?: unknown } }).data;
+                if (
+                    renderData?.type === 'node' &&
+                    renderData.payload instanceof FunctionDefinitionNode &&
+                    renderData.element
+                ) {
+                    const holder = area.area.content.holder;
+                    if (holder.firstChild !== renderData.element) {
+                        holder.insertBefore(renderData.element, holder.firstChild);
+                    }
+                }
             }
         }
         return context;
@@ -300,6 +364,8 @@ const createEditor = async (container: HTMLElement) => {
 
     return {
         destroy: () => {
+            window.removeEventListener('keydown', onKeyDown);
+            window.removeEventListener('keyup', onKeyUp);
             toolbar.remove();
             area.destroy();
         },

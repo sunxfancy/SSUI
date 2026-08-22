@@ -1,7 +1,7 @@
 import type * as React from 'react';
 import { Button } from '@blueprintjs/core';
 import { ClassicPreset, GetSchemes, NodeEditor } from 'rete';
-import { ReactArea2D, type RenderEmit } from 'rete-react-plugin';
+import { Presets as ReactPresets, ReactArea2D, type RenderEmit } from 'rete-react-plugin';
 import {
     ContextMenuExtra,
 } from "rete-context-menu-plugin";
@@ -25,7 +25,6 @@ export class BaseNode extends ClassicPreset.Node<
     { [key in string]:
         ClassicPreset.Control
         | ButtonControl
-        | ParameterControl
         | NameControl
         | InfoControl
         | ClassicPreset.InputControl<"number">
@@ -167,55 +166,6 @@ export function NameControlRender(props: { data: NameControl }) {
     );
 }
 
-export class ParameterControl extends ClassicPreset.Control {
-    constructor(
-        public spec: ParamSpec,
-        public onNameChange: (value: string) => void,
-        public onTypeChange: (value: string) => void,
-        public onRemove: () => void
-    ) {
-        super();
-        this.spec = spec;
-        this.onNameChange = onNameChange;
-        this.onTypeChange = onTypeChange;
-        this.onRemove = onRemove;
-    }
-}
-
-export function ParameterControlRender(props: { data: ParameterControl }) {
-    const control = props.data;
-    return (
-        <div
-            className="flow-param-row"
-            onPointerDown={(e) => e.stopPropagation()}
-            onDoubleClick={(e) => e.stopPropagation()}
-        >
-            <input
-                className="flow-param-name"
-                type="text"
-                value={control.spec.name}
-                placeholder="参数名"
-                onChange={(e) => control.onNameChange(e.target.value)}
-            />
-            <input
-                className="flow-param-type"
-                type="text"
-                value={control.spec.type}
-                placeholder="类型"
-                onChange={(e) => control.onTypeChange(e.target.value)}
-            />
-            <Button
-                small={true}
-                minimal={true}
-                icon="cross"
-                title="删除"
-                onPointerDown={(e) => e.stopPropagation()}
-                onClick={control.onRemove}
-            />
-        </div>
-    );
-}
-
 export class InfoControl extends ClassicPreset.Control {
     constructor(public text: string) {
         super();
@@ -241,13 +191,9 @@ export class InputNode extends BaseNode {
     private parameters: ParamSpec[] = [];
     private counter = 0;
 
-    constructor(
-        area?: AreaPlugin<Schemes, AreaExtra>,
-        refreshOverride?: () => void
-    ) {
+    constructor(area?: AreaPlugin<Schemes, AreaExtra>) {
         super('输入');
         this.area = area;
-        this.refreshOverride = refreshOverride;
         this.addControl('add', new ButtonControl('添加参数', () => this.addParameter()));
     }
 
@@ -260,22 +206,6 @@ export class InputNode extends BaseNode {
         };
         this.parameters.push(spec);
         this.addOutput(key, new ClassicPreset.Output(new ClassicPreset.Socket(spec.name), spec.name));
-        this.addControl(
-            key,
-            new ParameterControl(
-                spec,
-                (name) => {
-                    spec.name = name;
-                    this.syncOutput(key);
-                    this.refresh();
-                },
-                (type) => {
-                    spec.type = type;
-                    this.refresh();
-                },
-                () => this.removeParameter(key)
-            )
-        );
         this.refresh();
         return spec;
     }
@@ -286,17 +216,27 @@ export class InputNode extends BaseNode {
         this.parameters.splice(index, 1);
         this.removeConnectionsForPort(key, 'output');
         this.removeOutput(key);
-        this.removeControl(key);
         this.refresh();
     }
 
-    private syncOutput(key: string): void {
-        const spec = this.parameters.find((p) => p.key === key);
+    getParamSpec(key: string): ParamSpec {
+        return this.parameters.find((p) => p.key === key)!;
+    }
+
+    renameParam(key: string, name: string): void {
+        const spec = this.getParamSpec(key);
+        spec.name = name;
         const output = this.outputs[key];
-        if (spec && output) {
-            output.label = spec.name;
-            output.socket = new ClassicPreset.Socket(spec.name);
+        if (output) {
+            output.label = name;
+            output.socket = new ClassicPreset.Socket(name);
         }
+        this.refresh();
+    }
+
+    retypeParam(key: string, type: string): void {
+        this.getParamSpec(key).type = type;
+        this.refresh();
     }
 
     getParameters(): ParamSpec[] {
@@ -310,13 +250,9 @@ export class OutputNode extends BaseNode {
     private returns: ParamSpec[] = [];
     private counter = 0;
 
-    constructor(
-        area?: AreaPlugin<Schemes, AreaExtra>,
-        refreshOverride?: () => void
-    ) {
+    constructor(area?: AreaPlugin<Schemes, AreaExtra>) {
         super('返回');
         this.area = area;
-        this.refreshOverride = refreshOverride;
         this.addControl('add', new ButtonControl('添加返回值', () => this.addReturn()));
     }
 
@@ -329,22 +265,6 @@ export class OutputNode extends BaseNode {
         };
         this.returns.push(spec);
         this.addInput(key, new ClassicPreset.Input(new ClassicPreset.Socket(spec.name), spec.name));
-        this.addControl(
-            key,
-            new ParameterControl(
-                spec,
-                (name) => {
-                    spec.name = name;
-                    this.syncInput(key);
-                    this.refresh();
-                },
-                (type) => {
-                    spec.type = type;
-                    this.refresh();
-                },
-                () => this.removeReturn(key)
-            )
-        );
         this.refresh();
         return spec;
     }
@@ -355,17 +275,27 @@ export class OutputNode extends BaseNode {
         this.returns.splice(index, 1);
         this.removeConnectionsForPort(key, 'input');
         this.removeInput(key);
-        this.removeControl(key);
         this.refresh();
     }
 
-    private syncInput(key: string): void {
-        const spec = this.returns.find((r) => r.key === key);
+    getReturnSpec(key: string): ParamSpec {
+        return this.returns.find((r) => r.key === key)!;
+    }
+
+    renameReturn(key: string, name: string): void {
+        const spec = this.getReturnSpec(key);
+        spec.name = name;
         const input = this.inputs[key];
-        if (spec && input) {
-            input.label = spec.name;
-            input.socket = new ClassicPreset.Socket(spec.name);
+        if (input) {
+            input.label = name;
+            input.socket = new ClassicPreset.Socket(name);
         }
+        this.refresh();
+    }
+
+    retypeReturn(key: string, type: string): void {
+        this.getReturnSpec(key).type = type;
+        this.refresh();
     }
 
     getReturns(): ParamSpec[] {
@@ -375,6 +305,130 @@ export class OutputNode extends BaseNode {
     getReturnTypes(): string[] {
         return this.returns.map((r) => r.type);
     }
+}
+
+// ============ 输入/返回节点的自定义渲染（参数名直接写在端口旁） ============
+
+const stopPointer = (e: React.PointerEvent) => {
+    e.stopPropagation();
+};
+
+export function InputNodeRender(props: {
+    data: BaseNode;
+    emit: RenderEmit<Schemes>;
+}): React.JSX.Element {
+    const node = props.data as InputNode;
+    const outputs = Object.entries(node.outputs).filter(([, output]) => output);
+    const addControl = node.controls['add'];
+
+    return (
+        <div className={`flow-io-node${node.selected ? ' selected' : ''}`}>
+            <div className="flow-io-title">输入</div>
+            <div className="flow-io-rows">
+                {outputs.map(([key, output]) => {
+                    const spec = node.getParamSpec(key);
+                    return (
+                        <div className="flow-io-row" key={key}>
+                            <ReactPresets.classic.RefSocket
+                                name="output-socket"
+                                side="output"
+                                socketKey={key}
+                                nodeId={node.id}
+                                emit={props.emit}
+                                payload={output!.socket}
+                            />
+                            <input
+                                className="flow-io-name"
+                                type="text"
+                                value={spec.name}
+                                placeholder="参数名"
+                                onPointerDown={stopPointer}
+                                onChange={(e) => node.renameParam(key, e.target.value)}
+                            />
+                            <input
+                                className="flow-io-type"
+                                type="text"
+                                value={spec.type}
+                                placeholder="类型"
+                                onPointerDown={stopPointer}
+                                onChange={(e) => node.retypeParam(key, e.target.value)}
+                            />
+                            <button
+                                className="flow-io-remove"
+                                title="删除参数"
+                                onPointerDown={stopPointer}
+                                onClick={() => node.removeParameter(key)}
+                            >
+                                ×
+                            </button>
+                        </div>
+                    );
+                })}
+            </div>
+            <div className="flow-io-add">
+                {addControl instanceof ButtonControl && <ButtonControlRender data={addControl} />}
+            </div>
+        </div>
+    );
+}
+
+export function OutputNodeRender(props: {
+    data: BaseNode;
+    emit: RenderEmit<Schemes>;
+}): React.JSX.Element {
+    const node = props.data as OutputNode;
+    const inputs = Object.entries(node.inputs).filter(([, input]) => input);
+    const addControl = node.controls['add'];
+
+    return (
+        <div className={`flow-io-node${node.selected ? ' selected' : ''}`}>
+            <div className="flow-io-title">返回</div>
+            <div className="flow-io-rows">
+                {inputs.map(([key, input]) => {
+                    const spec = node.getReturnSpec(key);
+                    return (
+                        <div className="flow-io-row" key={key}>
+                            <ReactPresets.classic.RefSocket
+                                name="input-socket"
+                                side="input"
+                                socketKey={key}
+                                nodeId={node.id}
+                                emit={props.emit}
+                                payload={input!.socket}
+                            />
+                            <input
+                                className="flow-io-name"
+                                type="text"
+                                value={spec.name}
+                                placeholder="返回值名"
+                                onPointerDown={stopPointer}
+                                onChange={(e) => node.renameReturn(key, e.target.value)}
+                            />
+                            <input
+                                className="flow-io-type"
+                                type="text"
+                                value={spec.type}
+                                placeholder="类型"
+                                onPointerDown={stopPointer}
+                                onChange={(e) => node.retypeReturn(key, e.target.value)}
+                            />
+                            <button
+                                className="flow-io-remove"
+                                title="删除返回值"
+                                onPointerDown={stopPointer}
+                                onClick={() => node.removeReturn(key)}
+                            >
+                                ×
+                            </button>
+                        </div>
+                    );
+                })}
+            </div>
+            <div className="flow-io-add">
+                {addControl instanceof ButtonControl && <ButtonControlRender data={addControl} />}
+            </div>
+        </div>
+    );
 }
 
 // ============ 算子（函数内部子元素示例） ============
@@ -442,6 +496,25 @@ export class FunctionDefinitionNode extends BaseNode {
         return this.outputNode?.getReturns() ?? [];
     }
 
+    // 判断某个节点（按中心点）是否位于该函数框内
+    isNodeInside(node: BaseNode): boolean {
+        const area = this.area;
+        if (!area) return false;
+        const defView = area.nodeViews.get(this.id);
+        const nodeView = area.nodeViews.get(node.id);
+        if (!defView || !nodeView) return false;
+        const w = nodeView.element.offsetWidth || 180;
+        const h = nodeView.element.offsetHeight || 120;
+        const cx = nodeView.position.x + w / 2;
+        const cy = nodeView.position.y + h / 2;
+        return (
+            cx >= defView.position.x &&
+            cx <= defView.position.x + this.boxWidth &&
+            cy >= defView.position.y &&
+            cy <= defView.position.y + this.boxHeight
+        );
+    }
+
     registerCaller(caller: FunctionCallNode): void {
         if (!this.callers.includes(caller)) {
             this.callers.push(caller);
@@ -461,26 +534,12 @@ export class FunctionDefinitionNode extends BaseNode {
         const view = area.nodeViews.get(this.id);
         if (!view) return;
 
-        const rect = {
-            x: view.position.x,
-            y: view.position.y,
-            w: this.boxWidth,
-            h: this.boxHeight,
-        };
         const inputNodes: InputNode[] = [];
         const outputNodes: OutputNode[] = [];
 
         for (const node of editor.getNodes()) {
             if (node === this) continue;
-            const nodeView = area.nodeViews.get(node.id);
-            if (!nodeView) continue;
-            const w = nodeView.element.offsetWidth || 180;
-            const h = nodeView.element.offsetHeight || 120;
-            const cx = nodeView.position.x + w / 2;
-            const cy = nodeView.position.y + h / 2;
-            if (cx < rect.x || cx > rect.x + rect.w || cy < rect.y || cy > rect.y + rect.h) {
-                continue;
-            }
+            if (!this.isNodeInside(node)) continue;
             if (node instanceof InputNode) inputNodes.push(node);
             else if (node instanceof OutputNode) outputNodes.push(node);
         }

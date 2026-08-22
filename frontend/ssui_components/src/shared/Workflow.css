@@ -143,14 +143,47 @@
     border-color: #ffd92c;
 }
 
-.flow-param-row {
-    display: flex;
-    align-items: center;
-    gap: 4px;
+/* ============ 输入/返回节点（参数名写在端口旁） ============ */
+
+.flow-io-node {
+    min-width: 220px;
+    box-sizing: border-box;
+    background: #23273f;
+    border: 2px solid #4e58bf;
+    border-radius: 10px;
+    color: #fff;
+    font-family: Arial, sans-serif;
+    user-select: none;
+    line-height: initial;
+    padding: 6px 8px;
 }
 
-.flow-param-row input {
-    width: 56px;
+.flow-io-node.selected {
+    background: #343a5e;
+    border-color: #ffd92c;
+}
+
+.flow-io-title {
+    font-size: 16px;
+    font-weight: bold;
+    padding: 4px 8px 6px;
+}
+
+.flow-io-rows {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding: 4px 6px;
+}
+
+.flow-io-row {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.flow-io-name,
+.flow-io-type {
     box-sizing: border-box;
     padding: 3px 6px;
     border: 1px solid rgba(255, 255, 255, 0.2);
@@ -160,9 +193,40 @@
     font-size: 12px;
 }
 
-.flow-param-row input:focus {
+.flow-io-name {
+    width: 76px;
+}
+
+.flow-io-type {
+    width: 58px;
+}
+
+.flow-io-name:focus,
+.flow-io-type:focus {
     outline: none;
     border-color: #8f97ea;
+}
+
+.flow-io-remove {
+    width: 20px;
+    height: 20px;
+    border: none;
+    border-radius: 4px;
+    background: rgba(255, 255, 255, 0.12);
+    color: #fff;
+    font-size: 13px;
+    line-height: 1;
+    cursor: pointer;
+}
+
+.flow-io-remove:hover {
+    background: #a0525f;
+}
+
+.flow-io-add {
+    display: flex;
+    justify-content: center;
+    padding-top: 4px;
 }
 
 .flow-info-text {
