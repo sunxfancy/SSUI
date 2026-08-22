@@ -223,3 +223,76 @@ class ModelService:
         thread.start()
 
         return {"message": "Model scan started"}
+
+    async def download_file(
+        self,
+        url: str,
+        local_dir: str,
+        client_id: str,
+        request_uuid: str,
+        callback: Callable[[str, str, Dict[str, Any]], None],
+        finish_callback: Callable[[str, str, Dict[str, Any]], None],
+    ):
+        """下载任意 URL 文件到本地目录，并通过 websocket 回调整下载进度。
+
+        回调约定与 scan_models 一致：callback(client_id, request_uuid, {name: data})。
+        """
+        loop: asyncio.AbstractEventLoop = asyncio.get_event_loop()
+
+        def download_thread():
+            import urllib.request
+            from urllib.parse import urlparse
+
+            try:
+                os.makedirs(local_dir, exist_ok=True)
+                filename = os.path.basename(urlparse(url).path) or "model.bin"
+                target = os.path.join(local_dir, filename)
+                print(f"downloading {url} -> {target}", flush=True)
+
+                def report(progress: float, current: float, total: float):
+                    loop.call_soon_threadsafe(
+                        callback,
+                        client_id,
+                        request_uuid,
+                        {
+                            "download_progress": {
+                                "progress": progress,
+                                "current": current,
+                                "total": total,
+                            }
+                        },
+                    )
+
+                def hook(blocks: int, block_size: int, total_size: int):
+                    if total_size > 0:
+                        report(
+                            min(blocks * block_size / total_size * 100, 100),
+                            blocks * block_size,
+                            total_size,
+                        )
+
+                urllib.request.urlretrieve(url, target, reporthook=hook)
+                loop.call_soon_threadsafe(
+                    finish_callback,
+                    client_id,
+                    request_uuid,
+                )
+            except Exception as e:
+                print(f"下载失败: {e}", flush=True)
+                loop.call_soon_threadsafe(
+                    callback,
+                    client_id,
+                    request_uuid,
+                    {"download_error": str(e)},
+                )
+                loop.call_soon_threadsafe(
+                    finish_callback,
+                    client_id,
+                    request_uuid,
+                    {"error": str(e)},
+                )
+
+        thread = threading.Thread(target=download_thread)
+        thread.start()
+
+        return {"message": "Download started"}

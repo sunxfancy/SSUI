@@ -1,9 +1,11 @@
-import React, {useState} from 'react';
-import { Button, InputGroup, Spinner, Tabs, Tab, NonIdealState, Tag, Icon, CompoundTag } from '@blueprintjs/core';
+import React, {useRef, useState} from 'react';
+import { Button, InputGroup, Spinner, Tabs, Tab, NonIdealState, Tag, Icon, CompoundTag, ProgressBar } from '@blueprintjs/core';
 import axios from 'axios';
 import HuggingfaceLogo from './logo_huggingface.svg'
 import ModelLogo from './logo_model.svg'
 import styles from './style.module.css'
+import { Message } from 'ssui_components';
+import GlobalStateManager from '../../../services/GlobalState.ts';
 
 export interface HuggingfaceModel {
     id: string;
@@ -28,13 +30,23 @@ interface HuggingfaceModelsProps {
     onModelSelect?: (model: HuggingfaceModel) => void;
 }
 
-const HuggingfaceModels: React.FC<HuggingfaceModelsProps> = ({ onModelSelect }) => {
+const HuggingfaceModels: React.FC<HuggingfaceModelsProps> = () => {
     const [models, setModels] = useState<HuggingfaceModel[]>([]);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [inputValue, setInputValue] = useState<string>('');
     const [selectedType, setSelectedType] = useState<string>('all');
     const [hasSearched, setHasSearched] = useState(false);
+    const [downloading, setDownloading] = useState<{ [id: string]: number }>({});
+    const messageRef = useRef<Message | null>(null);
+
+    const getMessage = () => {
+        if (!messageRef.current) {
+            const rootState = GlobalStateManager.getInstance().getRootState();
+            messageRef.current = new Message(rootState?.host || 'localhost', rootState?.port || 7422);
+        }
+        return messageRef.current;
+    };
 
     const searchModels = async () => {
         if (!inputValue.trim()) return;
@@ -44,13 +56,10 @@ const HuggingfaceModels: React.FC<HuggingfaceModelsProps> = ({ onModelSelect }) 
             setError(null);
             setHasSearched(true);
 
-            const response = await axios.get('https://huggingface.co/api/models', {
+            const response = await axios.get('/api/hf/models', {
                 params: {
                     search: inputValue,
                     limit: 50,
-                    sort: 'downloads',
-                    direction: -1,
-                    full: 'full'
                 }
             });
 
@@ -72,7 +81,7 @@ const HuggingfaceModels: React.FC<HuggingfaceModelsProps> = ({ onModelSelect }) 
             setHasSearched(true);
 
             // 获取单个仓库信息
-            const response = await axios.get(`https://huggingface.co/api/models/${inputValue}`);
+            const response = await axios.get(`/api/hf/models/${encodeURIComponent(inputValue)}`);
 
             // 如果成功获取，添加到模型列表的开头
             if (response.data) {
@@ -89,6 +98,31 @@ const HuggingfaceModels: React.FC<HuggingfaceModelsProps> = ({ onModelSelect }) 
 
     const handleInputChange = (event: React.ChangeEvent<HTMLInputElement>) => {
         setInputValue(event.target.value);
+    };
+
+    const handleDownload = async (model: HuggingfaceModel) => {
+        const modelId = model.modelId || model.id;
+        setDownloading(prev => ({ ...prev, [model.id]: 0 }));
+        try {
+            await getMessage().post(
+                'api/hf_download',
+                { repo_id: modelId },
+                {
+                    download_progress: (data: any) => {
+                        const progress = Math.round(data?.progress ?? 0);
+                        setDownloading(prev => ({ ...prev, [model.id]: progress }));
+                    }
+                }
+            );
+        } catch (error) {
+            console.error('HuggingFace 模型下载失败:', error);
+        } finally {
+            setDownloading(prev => {
+                const next = { ...prev };
+                delete next[model.id];
+                return next;
+            });
+        }
     };
 
     const handleSearchSubmit = (event: React.FormEvent) => {
@@ -224,17 +258,25 @@ const HuggingfaceModels: React.FC<HuggingfaceModelsProps> = ({ onModelSelect }) 
                                         {formatNumber(model.likes || 0)}
                                     </span>
                                 </div>
-                                <Button
-                                    text="下载"
-                                    intent="primary"
-                                    variant="outlined"
-                                    icon="download"
-                                    onClick={() => {
-                                        if (onModelSelect) {
-                                            onModelSelect(model);
-                                        }
-                                    }}
-                                />
+                                <div>
+                                    {downloading[model.id] !== undefined && (
+                                        <div style={{ width: '120px', marginBottom: '4px' }}>
+                                            <ProgressBar
+                                                value={(downloading[model.id] ?? 0) / 100}
+                                                intent="primary"
+                                                animate={(downloading[model.id] ?? 0) < 100}
+                                            />
+                                        </div>
+                                    )}
+                                    <Button
+                                        text={downloading[model.id] !== undefined ? `${downloading[model.id]}%` : "下载"}
+                                        intent="primary"
+                                        variant="outlined"
+                                        icon="download"
+                                        loading={downloading[model.id] !== undefined}
+                                        onClick={() => handleDownload(model)}
+                                    />
+                                </div>
                             </div>
                         </div>
                     ))}

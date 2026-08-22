@@ -60,8 +60,10 @@
         },
         "actions": {
             "add": "添加模型",
-            "download": "下载"
-        }
+            "download": "下载",
+            "downloading": "下载中 {{progress}}%"
+        },
+        "loading": "加载中..."
     },
     "extensions": {
         "title": "扩展",
