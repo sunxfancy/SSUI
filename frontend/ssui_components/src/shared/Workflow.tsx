@@ -1,12 +1,13 @@
 import React from 'react';
 import { createRoot } from 'react-dom/client';
 import { NodeEditor, ClassicPreset } from 'rete';
-import { AreaPlugin, AreaExtensions } from 'rete-area-plugin';
-import { ReactPlugin, Presets as ReactPresets, useRete } from 'rete-react-plugin';
+import { AreaPlugin, AreaExtensions, BaseAreaPlugin } from 'rete-area-plugin';
+import { ReactPlugin, Presets as ReactPresets, useRete, Drag } from 'rete-react-plugin';
 import {
     ConnectionPlugin,
     Presets as ConnectionPresets,
 } from "rete-connection-plugin";
+import { ReroutePlugin } from "rete-connection-reroute-plugin";
 import { ContextMenuPlugin } from "rete-context-menu-plugin";
 
 import {
@@ -35,6 +36,54 @@ export interface WorkflowProps {
     path: string;
 }
 
+interface ReroutePinData {
+    id: string;
+    position: { x: number; y: number };
+    selected?: boolean;
+}
+
+type WorkflowRenderPreset = {
+    render: (
+        context: Extract<AreaExtra, { type: 'render' }>,
+        plugin: ReactPlugin<Schemes, AreaExtra>
+    ) => React.ReactElement | null | undefined;
+};
+
+function ReroutePin(props: {
+    pin: ReroutePinData;
+    contextMenu: (id: string) => void;
+    translate: (id: string, dx: number, dy: number) => void;
+    pointerdown: (id: string) => void;
+    getPointer: () => { x: number; y: number };
+}) {
+    const drag = Drag.useDrag(
+        (dx, dy) => props.translate(props.pin.id, dx, dy),
+        props.getPointer
+    );
+    return (
+        <div
+            className={'flow-reroute-pin' + (props.pin.selected ? ' selected' : '')}
+            data-testid="pin"
+            style={{
+                position: 'absolute',
+                top: props.pin.position.y - 9,
+                left: props.pin.position.x - 9,
+            }}
+            onPointerDown={(e) => {
+                e.stopPropagation();
+                e.preventDefault();
+                drag.start(e);
+                props.pointerdown(props.pin.id);
+            }}
+            onContextMenu={(e) => {
+                e.stopPropagation();
+                e.preventDefault();
+                props.contextMenu(props.pin.id);
+            }}
+        />
+    );
+}
+
 const createEditor = async (container: HTMLElement) => {
     console.log("初始化工作流编辑器");
 
@@ -42,6 +91,7 @@ const createEditor = async (container: HTMLElement) => {
     const area = new AreaPlugin<Schemes, AreaExtra>(container);
     const connection = new ConnectionPlugin<Schemes, AreaExtra>();
     const reactRender = new ReactPlugin<Schemes, AreaExtra>({ createRoot });
+    const reroute = new ReroutePlugin<Schemes>();
 
     const addNode = async (node: BaseNode) => {
         await editor.addNode(node);
@@ -138,6 +188,18 @@ const createEditor = async (container: HTMLElement) => {
     window.addEventListener('keydown', onKeyDown);
     window.addEventListener('keyup', onKeyUp);
 
+    // 给连线路径中点放一个可拖拽的绿圆点（拐点）；之后再点击连线任意位置可继续添加拐点
+    const addMidpointPin = (connectionId: string, attempts = 6) => {
+        if (reroute.pins.getPins(connectionId).length > 0) return;
+        const path = area.connectionViews.get(connectionId)?.element.querySelector('path');
+        if (!path || !path.getTotalLength()) {
+            if (attempts > 0) setTimeout(() => addMidpointPin(connectionId, attempts - 1), 60);
+            return;
+        }
+        const mid = path.getPointAtLength(path.getTotalLength() / 2);
+        reroute.add(connectionId, { x: mid.x, y: mid.y });
+    };
+
     // 拖动已选中的节点时保持多选（多选后直接拖动即可整组移动，不必一直按 Shift）
     let keepMultiSelection = false;
     area.addPipe((context) => {
@@ -152,14 +214,42 @@ const createEditor = async (container: HTMLElement) => {
         return context;
     });
 
-    AreaExtensions.selectableNodes(area, AreaExtensions.selector(), {
-        accumulating: {
-            active: () => shiftDown || keepMultiSelection,
-        },
-    });
+    const selector = AreaExtensions.selector();
+    const accumulating = {
+        active: () => shiftDown || keepMultiSelection,
+    };
+
+    AreaExtensions.selectableNodes(area, selector, { accumulating });
 
     connection.addPreset(ConnectionPresets.classic.setup());
     reactRender.addPreset(ReactPresets.contextMenu.setup());
+    // 自定义连线拐点（绿圆点）：可拖拽、可选中、右键删除
+    const reroutePreset: WorkflowRenderPreset = {
+        render(context, plugin) {
+            if (context.data.type !== 'reroute-pins') return null;
+            const area = plugin.parentScope(BaseAreaPlugin);
+            return (
+                <React.Fragment>
+                    {context.data.data.pins.map((pin) => (
+                        <ReroutePin
+                            key={pin.id}
+                            pin={pin}
+                            contextMenu={(id) => void reroute.remove(id)}
+                            translate={(id, dx, dy) => void reroute.translate(id, dx, dy)}
+                            pointerdown={(id) => {
+                                // 单击切换选中状态（用于高亮，不影响拖拽）
+                                const pin = reroute.pins.getPin(id);
+                                if (pin?.selected) void reroute.unselect(id);
+                                else void reroute.select(id);
+                            }}
+                            getPointer={() => area.area.pointer}
+                        />
+                    ))}
+                </React.Fragment>
+            );
+        },
+    };
+    reactRender.addPreset(reroutePreset);
 
     // 注册自定义节点组件
     reactRender.addPreset(ReactPresets.classic.setup({
@@ -198,6 +288,7 @@ const createEditor = async (container: HTMLElement) => {
     editor.use(area);
     area.use(connection);
     area.use(contextMenu);
+    reactRender.use(reroute);
     area.use(reactRender);
     AreaExtensions.simpleNodesOrder(area);
 
@@ -246,11 +337,16 @@ const createEditor = async (container: HTMLElement) => {
                     }
                 }
             }
+            if (type === 'connectioncreated') {
+                const id = (context as { data?: { id?: string } }).data?.id;
+                if (id) addMidpointPin(id);
+            }
             if (
                 type === 'render' ||
                 type === 'nodetranslated' ||
                 type === 'nodecreated' ||
-                type === 'noderemoved'
+                type === 'noderemoved' ||
+                type === 'connectioncreated'
             ) {
                 syncDefinitions();
             }
@@ -322,6 +418,13 @@ const createEditor = async (container: HTMLElement) => {
     setTimeout(() => {
         AreaExtensions.zoomAt(area, editor.getNodes());
     }, 1);
+
+    // 初始示例的每条连线也自动加上中点绿圆点
+    setTimeout(() => {
+        for (const id of area.connectionViews.keys()) {
+            addMidpointPin(id);
+        }
+    }, 80);
 
     // 工具栏：方便添加节点
     const toolbar = document.createElement('div');

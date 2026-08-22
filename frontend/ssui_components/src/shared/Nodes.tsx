@@ -5,7 +5,8 @@ import { Presets as ReactPresets, ReactArea2D, type RenderEmit } from 'rete-reac
 import {
     ContextMenuExtra,
 } from "rete-context-menu-plugin";
-import { AreaPlugin } from 'rete-area-plugin';
+import type { RerouteExtra } from "rete-connection-reroute-plugin";
+import { AreaPlugin, Area2D } from 'rete-area-plugin';
 
 export class Connection<
     A extends BaseNode,
@@ -17,7 +18,11 @@ export type Schemes = GetSchemes<
     Connection<BaseNode, BaseNode>
 >;
 
-export type AreaExtra = ReactArea2D<any> | ContextMenuExtra;
+export type AreaExtra =
+    | ReactArea2D<any>
+    | ContextMenuExtra
+    | RerouteExtra
+    | Area2D<Schemes>;
 
 export class BaseNode extends ClassicPreset.Node<
     { [key in string]: ClassicPreset.Socket },

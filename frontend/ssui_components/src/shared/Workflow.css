@@ -237,3 +237,25 @@
     font-size: 12px;
     text-align: center;
 }
+
+/* ============ 连线拐点（绿圆点，可拖拽改变连线路径） ============ */
+
+.flow-reroute-pin {
+    width: 18px;
+    height: 18px;
+    box-sizing: border-box;
+    background: #2fbf6a;
+    border: 2px solid #d8ffe8;
+    border-radius: 50%;
+    cursor: grab;
+    touch-action: none;
+    user-select: none;
+    box-shadow: 0 0 6px rgba(47, 191, 106, 0.7);
+}
+
+.flow-reroute-pin.selected {
+    background: #ffd92c;
+    border-color: #fff;
+    box-shadow: 0 0 8px rgba(255, 217, 44, 0.9);
+    cursor: grabbing;
+}

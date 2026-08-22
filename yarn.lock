@@ -5541,6 +5541,13 @@ rete-connection-plugin@^2.0.5:
   dependencies:
     "@babel/runtime" "^7.21.0"
 
+rete-connection-reroute-plugin@^2.0.3:
+  version "2.0.3"
+  resolved "https://registry.yarnpkg.com/rete-connection-reroute-plugin/-/rete-connection-reroute-plugin-2.0.3.tgz#3b6afd8e5a2444d2d62a25c219fa6a88576d277c"
+  integrity sha512-8tWNrk7xQO0F3o6nj1mF6w9SdIP2+AYZh0a8811CusI70+T8JoJl7Ex6T5fz6bJVaYObidmZ3p7CD7pccKXc+A==
+  dependencies:
+    "@babel/runtime" "^7.21.0"
+
 rete-context-menu-plugin@^2.0.6:
   version "2.0.6"
   resolved "https://registry.yarnpkg.com/rete-context-menu-plugin/-/rete-context-menu-plugin-2.0.6.tgz#763a595f1bc1d4f25ec0b9908c126a06728650bc"
