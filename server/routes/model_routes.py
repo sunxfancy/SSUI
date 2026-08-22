@@ -124,9 +124,38 @@ async def hf_models(search: str = "", limit: int = 50):
         return JSONResponse({"error": f"HuggingFace API request failed: {e}"}, status_code=502)
 
 
-def _preset_to_dict(model) -> dict:
+# 团队预制的 Flux 模型下载包配图（来自原 PresetModels 设计）
+FLUX_PRESET_IMAGE_URL = (
+    "https://image.civitai.com/xG1nkqKTMzGDvpLrqFT7WA/f905bc28-9db6-4f83-85ae-93c94718881d/anim=false,width=450/NfX8MYg-_nTv_PpQBNJSr.jpeg"
+)
+
+PRESET_IMAGE_URLS = {
+    "FLUX Schnell (Quantized)": FLUX_PRESET_IMAGE_URL,
+}
+
+
+def _starter_to_preset_group(model) -> dict:
+    """把一个 starter model（含依赖）展开为一组预设模型。
+
+    模型组 = 主模型 + 其依赖的辅助模型（如 Flux 的 CLIP/T5/VAE），
+    一组下载完即可直接出图。
+    """
     base = getattr(model, "base", "")
     model_type = getattr(model, "type", "")
+    members = [model] + list(getattr(model, "dependencies", None) or [])
+    member_items = []
+    for member in members:
+        m_base = getattr(member, "base", "")
+        m_type = getattr(member, "type", "")
+        member_items.append(
+            {
+                "name": member.name,
+                "source": member.source,
+                "type": m_type.value if hasattr(m_type, "value") else str(m_type),
+                "base": m_base.value if hasattr(m_base, "value") else str(m_base),
+                "description": member.description,
+            }
+        )
     return {
         "id": model.name.lower().replace(" ", "-").replace("(", "").replace(")", ""),
         "name": model.name,
@@ -135,14 +164,22 @@ def _preset_to_dict(model) -> dict:
         "source": model.source,
         "description": model.description,
         "size": model.description,
-        "imageUrl": "",
+        "imageUrl": PRESET_IMAGE_URLS.get(model.name, ""),
+        "models": member_items,
     }
 
 
 @router.get("/api/preset_models")
 async def preset_models():
-    """返回精选的预设模型列表（来自 backend/model_manager/starter_models.py）。"""
+    """返回精选的预设模型组列表（每组含主模型与配套依赖）。"""
     from backend.model_manager import starter_models
+
+    # 团队预制的 Flux 模型下载包（含配图），固定置于列表首位
+    flux_group = _starter_to_preset_group(starter_models.flux_schnell_quantized)
+    flux_group["id"] = "001-flux-preset"
+    flux_group["name"] = "Flux Model Preset"
+    flux_group["imageUrl"] = FLUX_PRESET_IMAGE_URL
+    items = [flux_group]
 
     preset_names = [
         "cyberrealistic_sd1",
@@ -151,14 +188,12 @@ async def preset_models():
         "deliberate_sd1",
         "juggernaut_sdxl",
         "dreamshaper_sdxl",
-        "flux_schnell_quantized",
         "flux_dev_quantized",
     ]
-    items = []
     for name in preset_names:
         model = getattr(starter_models, name, None)
         if model is not None:
-            items.append(_preset_to_dict(model))
+            items.append(_starter_to_preset_group(model))
     return {"items": items}
 
 
@@ -189,22 +224,36 @@ async def preset_download(
             finish_callback=websocket_service.send_finish,
         )
     else:
-        # HuggingFace 仓库 ID：hf_download 的回调约定是 (client_id, request_uuid, name, data)
+        # HuggingFace 来源：hf_download 的回调约定是 (client_id, request_uuid, name, data)
         def hf_callback(cid: str, rid: str, name: str, data: dict):
             websocket_service.send_callback(cid, rid, {name: data})
 
         def hf_finish(cid: str, rid: str):
             websocket_service.send_finish(cid, rid)
 
-        background_task = BackgroundTask(
-            model_service.hf_download,
-            repo_id=source,
-            local_dir=local_dir,
-            client_id=client_id,
-            request_uuid=request_uuid,
-            callback=hf_callback,
-            finish_callback=hf_finish,
-        )
+        if "::" in source:
+            # starter model 来源格式：repo::path —— 单文件下载
+            hf_repo, hf_path = source.split("::", 1)
+            background_task = BackgroundTask(
+                model_service.hf_file_download,
+                repo_id=hf_repo,
+                filename=hf_path,
+                local_dir=local_dir,
+                client_id=client_id,
+                request_uuid=request_uuid,
+                callback=hf_callback,
+                finish_callback=hf_finish,
+            )
+        else:
+            background_task = BackgroundTask(
+                model_service.hf_download,
+                repo_id=source,
+                local_dir=local_dir,
+                client_id=client_id,
+                request_uuid=request_uuid,
+                callback=hf_callback,
+                finish_callback=hf_finish,
+            )
 
     return JSONResponse(
         content=jsonable_encoder(
