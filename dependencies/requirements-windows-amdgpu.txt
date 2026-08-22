@@ -73,7 +73,7 @@ ftfy>=6.3
 conformer>=0.3.2
 soundfile==0.12.1
 pyworld==0.3.4
-librosa==0.11.0
+librosa==1.0.0
 openai-whisper==20240930
 pynini @ https://github.com/sunxfancy/pynini-2.1.6.post1/releases/download/2.1.6.post1/pynini-2.1.6.post1-cp312-cp312-win_amd64.whl
 WeTextProcessing @ https://github.com/sunxfancy/pynini-2.1.6.post1/releases/download/2.1.6.post1/WeTextProcessing-1.0.4-py3-none-any.whl
