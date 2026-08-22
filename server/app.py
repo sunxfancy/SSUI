@@ -88,21 +88,27 @@ def create_app(
     # 对于静态数据的请求，使用文件资源管理器
     settings = config_service.get_settings()
     if settings.host_web_ui:
+        web_ui_dir = settings.host_web_ui
+        if os.path.isdir(web_ui_dir):
 
-        @app.get("/functional_ui/", response_class=RedirectResponse)
-        async def root(request: Request):
-            query_string = request.url.query
-            redirect_url = "/functional_ui/index.html"
-            if query_string:
-                redirect_url += f"?{query_string}"
-            return RedirectResponse(url=redirect_url)
+            @app.get("/functional_ui/", response_class=RedirectResponse)
+            async def root(request: Request):
+                query_string = request.url.query
+                redirect_url = "/functional_ui/index.html"
+                if query_string:
+                    redirect_url += f"?{query_string}"
+                return RedirectResponse(url=redirect_url)
 
-        app.mount(
-            "/functional_ui/",
-            StaticFiles(directory=settings.host_web_ui),
-            name="static",
-        )
-        print("mount functional_ui", settings.host_web_ui)
+            app.mount(
+                "/functional_ui/",
+                StaticFiles(directory=web_ui_dir),
+                name="static",
+            )
+            print("mount functional_ui", web_ui_dir)
+        else:
+            print(
+                f"警告: functional_ui 目录不存在，跳过挂载（请先构建前端）: {web_ui_dir}"
+            )
 
     FileOpenerManager.instance().register_opener(
         "FunctionalUI", ".py", "/functional_ui/?path="

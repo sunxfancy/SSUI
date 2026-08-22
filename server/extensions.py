@@ -118,6 +118,10 @@ class ExtensionManager:
                 if os.path.exists(dist_path):
                     print(f"Setting static files for {name} at {dist_path}")
                     app.mount(f"/extension/{name}/{mount}", StaticFiles(directory=dist_path), name=name)
+                else:
+                    print(
+                        f"警告: {name} 的 dist 目录不存在，跳过静态挂载（请先构建扩展 UI）: {dist_path}"
+                    )
 
     def loadFileOpener(self):
         def parseFileOpener(file_opener: str):
