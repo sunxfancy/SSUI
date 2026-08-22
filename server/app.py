@@ -16,10 +16,12 @@ from server.routes import (
     file_routes,
     model_routes,
     script_routes,
+    task_routes,
     ui_state_routes,
     websocket_routes,
 )
 from server.script_service import ScriptService
+from server.task_service import TaskService
 from server.websocket_service import WebSocketService
 from ss_executor.scheduler import TaskScheduler
 
@@ -30,6 +32,7 @@ def create_app(
     scheduler=None,
     script_service=None,
     websocket_service=None,
+    task_service=None,
 ) -> FastAPI:
     """组装 FastAPI 应用。
 
@@ -46,6 +49,7 @@ def create_app(
     script_service = script_service or ScriptService(scheduler)
     model_service = model_service or ModelService(resources_dir)
     websocket_service = websocket_service or WebSocketService()
+    task_service = task_service or TaskService()
 
     @asynccontextmanager
     async def lifespan(app: FastAPI):
@@ -66,6 +70,7 @@ def create_app(
     app.state.scheduler = scheduler
     app.state.script_service = script_service
     app.state.websocket_service = websocket_service
+    app.state.task_service = task_service
     app.state.resources_dir = resources_dir
     app.state.settings_path = settings_path
 
@@ -84,6 +89,7 @@ def create_app(
     app.include_router(ui_state_routes.router)
     app.include_router(extension_routes.router)
     app.include_router(websocket_routes.router)
+    app.include_router(task_routes.router)
 
     # 对于静态数据的请求，使用文件资源管理器
     settings = config_service.get_settings()
