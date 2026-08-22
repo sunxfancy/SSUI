@@ -146,7 +146,7 @@ class AIDrawingCanvas extends React.Component<{path: string}, AIDrawingCanvasSta
 
     // 视口拖动相关处理
     handleViewportDragStart = (e: any) => {
-        if (e.evt.button === 1 || e.evt.button === 2) { // 中键或右键
+        if (e.evt.button === 1) { // 中键拖动视口（右键已用于上下文菜单）
             e.evt.preventDefault();
             const stage = this.stageRef.current;
             const pointer = stage.getPointerPosition();
