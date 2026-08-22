@@ -2,10 +2,11 @@ import React from 'react';
 import './Toolbar.css';
 
 interface ToolbarProps {
+    selectedTool: string;
     onToolSelect: (tool: string) => void;
 }
 
-const Toolbar: React.FC<ToolbarProps> = ({ onToolSelect }) => {
+const Toolbar: React.FC<ToolbarProps> = ({ selectedTool, onToolSelect }) => {
     const tools = [
         { id: 'move', icon: '✋', label: '移动' },
         { id: 'brush', icon: '🖌️', label: '画笔' },
@@ -18,7 +19,7 @@ const Toolbar: React.FC<ToolbarProps> = ({ onToolSelect }) => {
             {tools.map((tool) => (
                 <button
                     key={tool.id}
-                    className="tool-button"
+                    className={`tool-button ${selectedTool === tool.id ? 'active' : ''}`}
                     onClick={() => onToolSelect(tool.id)}
                     title={tool.label}
                 >

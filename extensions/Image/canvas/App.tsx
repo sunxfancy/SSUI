@@ -32,8 +32,15 @@ interface AIDrawingCanvasState {
     selectedObjectId: string | null;
     layers: Layer[];
     activeLayer: string;
+    focusTarget: 'canvas' | 'tool';
     selectedTool: string;
     brushSize: number;
+    brushStyle: string;
+    brushFeather: number;
+    eraserSize: number;
+    eraserFeather: number;
+    shapeType: 'rectangle' | 'ellipse';
+    shapeFeather: number;
     brushPosition: {
         x: number;
         y: number;
@@ -69,8 +76,15 @@ class AIDrawingCanvas extends React.Component<{path: string}, AIDrawingCanvasSta
                 }
             ],
             activeLayer: 'layer1',
+            focusTarget: 'canvas',
             selectedTool: 'move',
             brushSize: 20,
+            brushStyle: 'normal',
+            brushFeather: 0,
+            eraserSize: 20,
+            eraserFeather: 0,
+            shapeType: 'rectangle',
+            shapeFeather: 0,
             brushPosition: null,
             worldPosition: new WorldPosition(0, 0),
             viewport: new Viewport(window.innerWidth, window.innerHeight)
@@ -234,9 +248,8 @@ class AIDrawingCanvas extends React.Component<{path: string}, AIDrawingCanvasSta
             }));
         } else if (e.evt.button === 0 && e.target === this.stageRef.current) {
             // 左键点击空白处取消选中
-            if (this.state.selectedObjectId) {
-                this.setState({ selectedObjectId: null });
-            }
+            // 焦点切换到画布，侧边属性面板显示画布配置
+            this.setState({ selectedObjectId: null, focusTarget: 'canvas' });
         }
     };
 
@@ -473,8 +486,37 @@ class AIDrawingCanvas extends React.Component<{path: string}, AIDrawingCanvasSta
         console.log('Selected tool:', tool);
         // 这里可以添加工具选择的处理逻辑
         this.setState({
-            selectedTool: tool
+            selectedTool: tool,
+            focusTarget: 'tool'
         });
+    };
+
+    handleBrushSizeChange = (size: number) => {
+        this.setState({ brushSize: size });
+    };
+
+    handleBrushStyleChange = (style: string) => {
+        this.setState({ brushStyle: style });
+    };
+
+    handleBrushFeatherChange = (feather: number) => {
+        this.setState({ brushFeather: feather });
+    };
+
+    handleEraserSizeChange = (size: number) => {
+        this.setState({ eraserSize: size });
+    };
+
+    handleEraserFeatherChange = (feather: number) => {
+        this.setState({ eraserFeather: feather });
+    };
+
+    handleShapeTypeChange = (shapeType: string) => {
+        this.setState({ shapeType: shapeType as 'rectangle' | 'ellipse' });
+    };
+
+    handleShapeFeatherChange = (feather: number) => {
+        this.setState({ shapeFeather: feather });
     };
 
     handleSelectScript = (script: string) => {
@@ -576,7 +618,7 @@ class AIDrawingCanvas extends React.Component<{path: string}, AIDrawingCanvasSta
                 onPointerMove={this.handlePointerMove}
                 onPointerUp={this.handlePointerUp}
             >
-                <Toolbar onToolSelect={this.handleToolSelect} />
+                <Toolbar selectedTool={this.state.selectedTool} onToolSelect={this.handleToolSelect} />
                 <Stage
                     ref={this.stageRef}
                     width={viewport.size.width}
@@ -704,6 +746,24 @@ class AIDrawingCanvas extends React.Component<{path: string}, AIDrawingCanvasSta
                 <SidePanel 
                     layers={layers}
                     activeLayer={this.state.activeLayer}
+                    focusTarget={this.state.focusTarget}
+                    selectedTool={this.state.selectedTool}
+                    showGrid={this.state.showGrid}
+                    brushSize={this.state.brushSize}
+                    brushStyle={this.state.brushStyle}
+                    brushFeather={this.state.brushFeather}
+                    eraserSize={this.state.eraserSize}
+                    eraserFeather={this.state.eraserFeather}
+                    shapeType={this.state.shapeType}
+                    shapeFeather={this.state.shapeFeather}
+                    onToggleGrid={this.toggleGrid}
+                    onBrushSizeChange={this.handleBrushSizeChange}
+                    onBrushStyleChange={this.handleBrushStyleChange}
+                    onBrushFeatherChange={this.handleBrushFeatherChange}
+                    onEraserSizeChange={this.handleEraserSizeChange}
+                    onEraserFeatherChange={this.handleEraserFeatherChange}
+                    onShapeTypeChange={this.handleShapeTypeChange}
+                    onShapeFeatherChange={this.handleShapeFeatherChange}
                     onLayerChange={this.handleLayerChange}
                     onLayerSelect={this.handleLayerSelect}
                     onLayerAdd={this.handleLayerAdd}

@@ -1,5 +1,5 @@
 import React from 'react';
-import { Card, Elevation, Button, Icon, InputGroup } from "@blueprintjs/core";
+import { Card, Elevation, Button, Icon, InputGroup, HTMLSelect, Switch } from "@blueprintjs/core";
 import './SidePanel.css';
 import { Layer } from './types';
 import { ContextMenu, ContextMenuItem } from 'ssui_components';
@@ -7,6 +7,24 @@ import { ContextMenu, ContextMenuItem } from 'ssui_components';
 interface SidePanelProps {
     layers: Layer[];
     activeLayer: string;
+    focusTarget: 'canvas' | 'tool';
+    selectedTool: string;
+    showGrid: boolean;
+    brushSize: number;
+    brushStyle: string;
+    brushFeather: number;
+    eraserSize: number;
+    eraserFeather: number;
+    shapeType: 'rectangle' | 'ellipse';
+    shapeFeather: number;
+    onToggleGrid: () => void;
+    onBrushSizeChange: (size: number) => void;
+    onBrushStyleChange: (style: string) => void;
+    onBrushFeatherChange: (feather: number) => void;
+    onEraserSizeChange: (size: number) => void;
+    onEraserFeatherChange: (feather: number) => void;
+    onShapeTypeChange: (type: string) => void;
+    onShapeFeatherChange: (feather: number) => void;
     onLayerChange: (layerId: string, changes: Partial<Layer>) => void;
     onLayerSelect: (layerId: string) => void;
     onLayerAdd: () => void;
@@ -215,28 +233,154 @@ export class SidePanel extends React.Component<SidePanelProps, SidePanelState> {
         );
     }
 
-    renderConfigPanel = () => {
+    getToolLabel = (tool: string): string => {
+        const labels: Record<string, string> = {
+            move: '移动',
+            brush: '画笔',
+            eraser: '橡皮擦',
+            shape: '选区'
+        };
+        return labels[tool] ?? '工具';
+    };
+
+    renderCanvasConfig = () => {
+        return (
+            <>
+                <div className="config-item">
+                    <label>画布大小</label>
+                    <div className="config-controls">
+                        <input type="number" placeholder="宽度" />
+                        <input type="number" placeholder="高度" />
+                    </div>
+                </div>
+                <div className="config-item">
+                    <label>背景颜色</label>
+                    <input type="color" />
+                </div>
+                <div className="config-item">
+                    <label>网格显示</label>
+                    <Switch
+                        checked={this.props.showGrid}
+                        label={this.props.showGrid ? '显示网格' : '隐藏网格'}
+                        onChange={this.props.onToggleGrid}
+                    />
+                </div>
+            </>
+        );
+    };
+
+    renderToolConfig = (tool: string) => {
+        switch (tool) {
+            case 'brush':
+                return (
+                    <>
+                        <div className="config-item">
+                            <label>大小：{this.props.brushSize}px</label>
+                            <input
+                                type="range"
+                                min={1}
+                                max={200}
+                                value={this.props.brushSize}
+                                onChange={(e) => this.props.onBrushSizeChange(Number(e.target.value))}
+                            />
+                        </div>
+                        <div className="config-item">
+                            <label>样式</label>
+                            <HTMLSelect
+                                value={this.props.brushStyle}
+                                onChange={(e) => this.props.onBrushStyleChange(e.target.value)}
+                            >
+                                <option value="normal">常规</option>
+                                <option value="airbrush">喷枪</option>
+                                <option value="texture">纹理</option>
+                            </HTMLSelect>
+                        </div>
+                        <div className="config-item">
+                            <label>羽化半径：{this.props.brushFeather}px</label>
+                            <input
+                                type="range"
+                                min={0}
+                                max={100}
+                                value={this.props.brushFeather}
+                                onChange={(e) => this.props.onBrushFeatherChange(Number(e.target.value))}
+                            />
+                        </div>
+                    </>
+                );
+            case 'eraser':
+                return (
+                    <>
+                        <div className="config-item">
+                            <label>大小：{this.props.eraserSize}px</label>
+                            <input
+                                type="range"
+                                min={1}
+                                max={200}
+                                value={this.props.eraserSize}
+                                onChange={(e) => this.props.onEraserSizeChange(Number(e.target.value))}
+                            />
+                        </div>
+                        <div className="config-item">
+                            <label>羽化半径：{this.props.eraserFeather}px</label>
+                            <input
+                                type="range"
+                                min={0}
+                                max={100}
+                                value={this.props.eraserFeather}
+                                onChange={(e) => this.props.onEraserFeatherChange(Number(e.target.value))}
+                            />
+                        </div>
+                    </>
+                );
+            case 'shape':
+                return (
+                    <>
+                        <div className="config-item">
+                            <label>选区类型</label>
+                            <HTMLSelect
+                                value={this.props.shapeType}
+                                onChange={(e) => this.props.onShapeTypeChange(e.target.value)}
+                            >
+                                <option value="rectangle">矩形</option>
+                                <option value="ellipse">椭圆</option>
+                            </HTMLSelect>
+                        </div>
+                        <div className="config-item">
+                            <label>羽化半径：{this.props.shapeFeather}px</label>
+                            <input
+                                type="range"
+                                min={0}
+                                max={100}
+                                value={this.props.shapeFeather}
+                                onChange={(e) => this.props.onShapeFeatherChange(Number(e.target.value))}
+                            />
+                        </div>
+                    </>
+                );
+            case 'move':
+            default:
+                return (
+                    <div className="config-hint">
+                        移动工具暂无属性，点击画布可切换为画布配置
+                    </div>
+                );
+        }
+    };
+
+    renderPropertiesPanel = () => {
+        const { focusTarget, selectedTool } = this.props;
+        const title = focusTarget === 'canvas'
+            ? '画布配置'
+            : `${this.getToolLabel(selectedTool)}属性`;
         return (
             <div className="config-panel">
                 <div className="panel-header">
-                    <h3>配置</h3>
+                    <h3>{title}</h3>
                 </div>
                 <Card elevation={Elevation.ONE} className="config-card">
-                    <div className="config-item">
-                        <label>画布大小</label>
-                        <div className="config-controls">
-                            <input type="number" placeholder="宽度" />
-                            <input type="number" placeholder="高度" />
-                        </div>
-                    </div>
-                    <div className="config-item">
-                        <label>背景颜色</label>
-                        <input type="color" />
-                    </div>
-                    <div className="config-item">
-                        <label>网格显示</label>
-                        <Button minimal icon="grid" />
-                    </div>
+                    {focusTarget === 'canvas'
+                        ? this.renderCanvasConfig()
+                        : this.renderToolConfig(selectedTool)}
                 </Card>
             </div>
         );
@@ -272,7 +416,7 @@ export class SidePanel extends React.Component<SidePanelProps, SidePanelState> {
 
         return (
             <div className="side-panel">
-                {this.renderConfigPanel()}
+                {this.renderPropertiesPanel()}
                 <div className="panel-header">
                     <h3>图层</h3>
                     <Button
