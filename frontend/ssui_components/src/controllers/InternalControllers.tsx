@@ -1,8 +1,8 @@
-import { IControler, IControlerProps } from "./IControler";
+import { IController, IControllerProps } from "./IController";
 import { Alignment, Button, MenuItem, Slider, Switch } from "@blueprintjs/core";
 
-export class SliderControler extends IControler<{ value: number }> {
-    constructor(props: IControlerProps) {
+export class SliderController extends IController<{ value: number }> {
+    constructor(props: IControllerProps) {
         super(props);
         console.log(this.props.params, this.props.default);
         this.state = {
@@ -37,8 +37,8 @@ export class SliderControler extends IControler<{ value: number }> {
     }
 }
 
-export class SwitchControler extends IControler<{ value: boolean }> {
-    constructor(props: IControlerProps) {
+export class SwitchController extends IController<{ value: boolean }> {
+    constructor(props: IControllerProps) {
         super(props);
 
         this.state = {
@@ -65,8 +65,8 @@ interface SelectItem {
     rank: number;
 }
 
-export class SelectControler extends IControler<{ value: string }> {
-    constructor(props: IControlerProps) {
+export class SelectController extends IController<{ value: string }> {
+    constructor(props: IControllerProps) {
         super(props);
 
         this.state = {
@@ -119,8 +119,8 @@ export class SelectControler extends IControler<{ value: string }> {
 }
 
 
-export class RandomControler extends IControler<{ value: number; userInput: boolean }> {
-    constructor(props: IControlerProps) {
+export class RandomController extends IController<{ value: number; userInput: boolean }> {
+    constructor(props: IControllerProps) {
         super(props);
     }
     
@@ -185,11 +185,11 @@ export class RandomControler extends IControler<{ value: number; userInput: bool
 }
 
 
-import { registerControler, ControlerRegister } from './IControler';
+import { registerController, ControllerRegister } from './IController';
 import { ItemPredicate, ItemRenderer, Select } from "@blueprintjs/select";
 [
-    { 'name': 'Slider', 'component': SliderControler } as ControlerRegister,
-    { 'name': 'Switch', 'component': SwitchControler } as ControlerRegister,
-    { 'name': 'Select', 'component': SelectControler } as ControlerRegister,
-    { 'name': 'Random', 'component': RandomControler } as ControlerRegister,
-].forEach(registerControler);
+    { 'name': 'Slider', 'component': SliderController } as ControllerRegister,
+    { 'name': 'Switch', 'component': SwitchController } as ControllerRegister,
+    { 'name': 'Select', 'component': SelectController } as ControllerRegister,
+    { 'name': 'Random', 'component': RandomController } as ControllerRegister,
+].forEach(registerController);

@@ -68,7 +68,10 @@ The project supports packaging multiple extensions:
 - `yarn test` - Run all tests
 - `yarn test_on <test_name>` - Run specified test, e.g., `yarn test_on ss_executor_test`
 
-Please note that tests are divided into normal and slow types. Slow tests take more time and depend on some large models, and won't run by default. If needed, set the environment variable `RUN_SLOW_TESTS=1` to run slow tests.
+Please note that tests are divided into regular and real-model regression.
+Regular tests verify interfaces and flows on CPU with mocked model outputs and
+run by default. Real-model regression downloads large models and is off by
+default; set `SSUI_RUN_MODEL_TESTS=1` (optionally with `TEST_DATA_DIR`) to run it.
 
 ## Dependency Management
 

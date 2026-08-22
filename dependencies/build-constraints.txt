@@ -1,0 +1,6 @@
+# uv 构建隔离环境约束
+#
+# openai-whisper 的 setup.py 依赖 pkg_resources，而 setuptools>=81 已将其移除，
+# 导致 uv 在隔离构建环境中编译 whisper 时失败。这里把构建环境的 setuptools
+# 固定到 <81，保证 pkg_resources 可用。
+setuptools<81

@@ -1,5 +1,5 @@
 import './App.css';
-import '../../ssui_components/src/components/InternalComponents';
+import 'ssui_components';
 import { getUIProvider } from './ui/UIProvider';
 
 

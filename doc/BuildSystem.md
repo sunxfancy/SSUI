@@ -70,7 +70,9 @@ yarn dev:executor
 - `yarn test` - 运行所有测试
 - `yarn test_on <test_name>` - 运行指定测试，例如`yarn test_on ss_executor_test`
 
-请注意，测试分为normal和slow两种，slow测试会消耗更多时间，并依赖一些大型的模型，默认不会运行。如需要，设置环境变量`RUN_SLOW_TESTS=1`来运行slow测试。
+请注意，测试分为常规与真模型回归两类：常规测试使用模拟模型输出在 CPU 上验证
+接口与流程，默认全部运行；真模型回归会下载大型模型，默认不运行。如需要，
+设置环境变量`SSUI_RUN_MODEL_TESTS=1`（配合`TEST_DATA_DIR`指定缓存目录）来运行。
 
 ## 依赖管理
 

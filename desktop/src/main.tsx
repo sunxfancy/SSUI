@@ -7,6 +7,7 @@ import { BlueprintProvider } from "@blueprintjs/core";
 import GlobalStateManager from "./services/GlobalState";
 import ExecutorService from "./services/Executor";
 import ServerService from "./services/Server";
+import { resolvePortConflicts } from "./services/PortService";
 import { enableMapSet } from 'immer'
 
 // 载入 i18n
@@ -17,8 +18,6 @@ import "normalize.css";
 import "@blueprintjs/core/lib/css/blueprint.css";
 import "@blueprintjs/icons/lib/css/blueprint-icons.css";
 import "./App.css";
-
-const production = import.meta.env.PROD;
 
 interface RootState {
   root?: { path: string, version: string, host: string, port: number };
@@ -58,21 +57,12 @@ class Root extends Component<{}, RootState> {
         console.log('root version:', rootState.version);
         tray_init();
 
-        // 自动启动服务
+        // 自动启动服务：先检查端口是否被外部进程占用
         try {
-          if (!production) {
-            // 开发环境，需要先检查用户是否自己启动了执行器和服务器用来调试
+          const useExternalServer = await resolvePortConflicts();
 
-            if (!rootState?.isServerRunning) {
-              // 启动服务器服务
-              const serverResult = await ServerService.getInstance().startServer();
-              console.log('服务器服务启动结果:', serverResult.message);
-
-              // 启动执行器服务
-              const executorResult = await ExecutorService.getInstance().startExecutor();
-              console.log('执行器服务启动结果:', executorResult.message);
-            }
-
+          if (useExternalServer) {
+            console.log('使用现有外部服务器，跳过自动启动');
           } else {
             // 启动服务器服务
             const serverResult = await ServerService.getInstance().startServer();

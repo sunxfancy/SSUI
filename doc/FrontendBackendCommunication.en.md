@@ -33,14 +33,14 @@ Example response:
 {
     "Prompt To Condition": {  // This is the configuration section
         "ignoreLastLayer": {  // This is the configuration key, shown as a configuration item in the UI
-            "controler": "Switch",  // Used to find the corresponding UI component
+            "controller": "Switch",  // Used to find the corresponding UI component
             "args": {},  // UI component parameters
             "default": false  // UI component default value
         }
     },
     "Create Empty Latent": {
         "width": {
-            "controler": "Slider",
+            "controller": "Slider",
             "args": {
                 "min": 512,
                 "max": 4096,
@@ -59,7 +59,7 @@ Example response:
             "default": 512
         },
         "height": {
-            "controler": "Slider",
+            "controller": "Slider",
             "args": {
                 "min": 512,
                 "max": 4096,
@@ -80,7 +80,7 @@ Example response:
     },
     "Denoise": {
         "steps": {
-            "controler": "Slider",
+            "controller": "Slider",
             "args": {
                 "min": 1,
                 "max": 100,
@@ -102,7 +102,7 @@ Example response:
             "default": 30
         },
         "scheduler": {
-            "controler": "Select",
+            "controller": "Select",
             "args": {
                 "options": [
                     "ddim",
@@ -140,7 +140,7 @@ Example response:
             "default": "ddim"
         },
         "CFG": {
-            "controler": "Slider",
+            "controller": "Slider",
             "args": {
                 "min": 0,
                 "max": 15,
@@ -149,7 +149,7 @@ Example response:
             "default": 7.5
         },
         "seed": {
-            "controler": "Random",
+            "controller": "Random",
             "args": {},
             "default": 123454321
         }
