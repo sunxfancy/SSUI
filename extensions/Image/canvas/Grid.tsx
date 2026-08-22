@@ -43,6 +43,7 @@ export class Grid extends React.Component<GridProps> {
                     points={[x, startY, x, endY]}
                     stroke={isLargeGrid ? '#ddd' : '#eee'}
                     strokeWidth={isLargeGrid ? 1 : 0.5}
+                    listening={false}
                 />
             );
         }
@@ -55,6 +56,7 @@ export class Grid extends React.Component<GridProps> {
                     points={[startX, y, endX, y]}
                     stroke={isLargeGrid ? '#ddd' : '#eee'}
                     strokeWidth={isLargeGrid ? 1 : 0.5}
+                    listening={false}
                 />
             );
         }
