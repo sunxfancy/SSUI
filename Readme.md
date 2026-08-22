@@ -1,7 +1,7 @@
 Stable Scripts UI
 ====================
 
-![quicktest](https://github.com/sunxfancy/SSUI/actions/workflows/quicktest.yml/badge.svg) [中文Readme](Readme.zh.md)
+![CI](https://github.com/sunxfancy/SSUI/actions/workflows/ci.yml/badge.svg) [中文Readme](Readme.zh.md)
 
 Stable Scripts UI is a web-based user interface for `Stable Scripts` - a kind of python scripts can easily reproduce the same results created by other users to run GenAI models.
 

@@ -1,0 +1,21 @@
+# Dependabot keeps third-party GitHub Actions and tooling manifests up to date.
+# GitHub Actions updates also cover SHA-pinned actions (commit-level updates).
+version: 2
+updates:
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    groups:
+      github-actions:
+        patterns: ["*"]
+
+  - package-ecosystem: "npm"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+
+  - package-ecosystem: "pip"
+    directory: "/dependencies"
+    schedule:
+      interval: "weekly"
