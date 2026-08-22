@@ -5,7 +5,8 @@ server:
   extension_dependencies:
     - Image
   dependencies:
-    - diffsynth>=1.1.7
+    - diffsynth>=1.1.9
+    - modelscope==1.26.0
 
   main: extension.py
 
