@@ -2,8 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { Button, Icon, Tooltip, ProgressBar } from '@blueprintjs/core';
 import styles from './style.module.css';
 import { useTranslation } from 'react-i18next';
-import { Message } from 'ssui_components';
-import GlobalStateManager from '../../../services/GlobalState.ts';
+import TaskService from '../../../services/TaskService';
 
 interface PresetModel {
     id: string;
@@ -43,15 +42,8 @@ export const PresetModels: React.FC<PresetModelsProps> = ({ onModelSelect }) => 
     const [loading, setLoading] = useState(false);
     const [loadError, setLoadError] = useState<string | null>(null);
     const [downloading, setDownloading] = useState<{ [id: string]: number }>({});
-    const messageRef = useRef<Message | null>(null);
-
-    const getMessage = () => {
-        if (!messageRef.current) {
-            const rootState = GlobalStateManager.getInstance().getRootState();
-            messageRef.current = new Message(rootState?.host || 'localhost', rootState?.port || 7422);
-        }
-        return messageRef.current;
-    };
+    const taskService = useRef(TaskService.getInstance());
+    const taskIds = useRef<{ [modelId: string]: string }>({});
 
     useEffect(() => {
         const fetchPresets = async () => {
@@ -76,28 +68,42 @@ export const PresetModels: React.FC<PresetModelsProps> = ({ onModelSelect }) => 
         fetchPresets();
     }, []);
 
+    useEffect(() => {
+        // 通过任务队列的 task_update 推送更新下载进度
+        const unsubscribe = taskService.current.subscribe((task) => {
+            if (task.kind !== 'download') return;
+            for (const [modelId, taskId] of Object.entries(taskIds.current)) {
+                if (taskId === task.id) {
+                    if (task.status === 'completed' || task.status === 'failed' || task.status === 'cancelled') {
+                        delete taskIds.current[modelId];
+                        setDownloading(prev => {
+                            const next = { ...prev };
+                            delete next[modelId];
+                            return next;
+                        });
+                    } else {
+                        setDownloading(prev => ({ ...prev, [modelId]: task.progress }));
+                    }
+                }
+            }
+        });
+        return unsubscribe;
+    }, []);
+
     const handleDownload = async (model: PresetModel) => {
         onModelSelect?.(model);
         setDownloading(prev => ({ ...prev, [model.id]: 0 }));
         try {
-            await getMessage().post(
-                'api/preset_download',
-                { name: model.name, source: model.source, base: model.base || '' },
-                {
-                    download_progress: (data: any) => {
-                        const progress = Math.round(data?.progress ?? 0);
-                        setDownloading(prev => ({ ...prev, [model.id]: progress }));
-                    }
-                }
+            const isUrl = model.source.startsWith('http://') || model.source.startsWith('https://');
+            const taskId = await taskService.current.createDownloadTask(
+                'preset',
+                model.name,
+                isUrl ? model.source : undefined,
+                isUrl ? undefined : model.source
             );
+            taskIds.current[model.id] = taskId;
         } catch (error) {
             console.error('预设模型下载失败:', error);
-        } finally {
-            setDownloading(prev => {
-                const next = { ...prev };
-                delete next[model.id];
-                return next;
-            });
         }
     };
 

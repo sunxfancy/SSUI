@@ -64,6 +64,33 @@ class TaskService {
         });
     }
 
+    /**
+     * 通过统一任务队列创建下载任务（HTTP 直链或 HuggingFace 仓库）。
+     * @returns 任务 id；失败抛异常。
+     */
+    public async createDownloadTask(
+        kind: string,
+        name: string,
+        url?: string,
+        repo_id?: string
+    ): Promise<string> {
+        const response = await fetch(`${this.getBaseUrl()}/api/tasks/download`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ kind, name, url, repo_id })
+        });
+        if (!response.ok) {
+            throw new Error(`Failed to create download task: ${response.status}`);
+        }
+        const data = await response.json();
+        if (!data.task_id) {
+            throw new Error('Failed to create download task: missing task_id');
+        }
+        return data.task_id as string;
+    }
+
     public subscribe(callback: (task: QueueTask) => void): () => void {
         this.listeners.push(callback);
         this.ensureSocket();

@@ -1,11 +1,10 @@
-import React, {useRef, useState} from 'react';
+import React, {useEffect, useRef, useState} from 'react';
 import { Button, InputGroup, Spinner, Tabs, Tab, NonIdealState, Tag, Icon, CompoundTag, ProgressBar } from '@blueprintjs/core';
 import axios from 'axios';
 import HuggingfaceLogo from './logo_huggingface.svg'
 import ModelLogo from './logo_model.svg'
 import styles from './style.module.css'
-import { Message } from 'ssui_components';
-import GlobalStateManager from '../../../services/GlobalState.ts';
+import TaskService from '../../../services/TaskService';
 
 export interface HuggingfaceModel {
     id: string;
@@ -38,15 +37,30 @@ const HuggingfaceModels: React.FC<HuggingfaceModelsProps> = () => {
     const [selectedType, setSelectedType] = useState<string>('all');
     const [hasSearched, setHasSearched] = useState(false);
     const [downloading, setDownloading] = useState<{ [id: string]: number }>({});
-    const messageRef = useRef<Message | null>(null);
+    const taskService = useRef(TaskService.getInstance());
+    const taskIds = useRef<{ [modelId: string]: string }>({});
 
-    const getMessage = () => {
-        if (!messageRef.current) {
-            const rootState = GlobalStateManager.getInstance().getRootState();
-            messageRef.current = new Message(rootState?.host || 'localhost', rootState?.port || 7422);
-        }
-        return messageRef.current;
-    };
+    useEffect(() => {
+        // 通过任务队列的 task_update 推送更新下载进度
+        const unsubscribe = taskService.current.subscribe((task) => {
+            if (task.kind !== 'download') return;
+            for (const [modelId, taskId] of Object.entries(taskIds.current)) {
+                if (taskId === task.id) {
+                    if (task.status === 'completed' || task.status === 'failed' || task.status === 'cancelled') {
+                        delete taskIds.current[modelId];
+                        setDownloading(prev => {
+                            const next = { ...prev };
+                            delete next[modelId];
+                            return next;
+                        });
+                    } else {
+                        setDownloading(prev => ({ ...prev, [modelId]: task.progress }));
+                    }
+                }
+            }
+        });
+        return unsubscribe;
+    }, []);
 
     const searchModels = async () => {
         if (!inputValue.trim()) return;
@@ -104,24 +118,15 @@ const HuggingfaceModels: React.FC<HuggingfaceModelsProps> = () => {
         const modelId = model.modelId || model.id;
         setDownloading(prev => ({ ...prev, [model.id]: 0 }));
         try {
-            await getMessage().post(
-                'api/hf_download',
-                { repo_id: modelId },
-                {
-                    download_progress: (data: any) => {
-                        const progress = Math.round(data?.progress ?? 0);
-                        setDownloading(prev => ({ ...prev, [model.id]: progress }));
-                    }
-                }
+            const taskId = await taskService.current.createDownloadTask(
+                'huggingface',
+                modelId,
+                undefined,
+                modelId
             );
+            taskIds.current[model.id] = taskId;
         } catch (error) {
             console.error('HuggingFace 模型下载失败:', error);
-        } finally {
-            setDownloading(prev => {
-                const next = { ...prev };
-                delete next[model.id];
-                return next;
-            });
         }
     };
 
