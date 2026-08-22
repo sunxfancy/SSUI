@@ -1,5 +1,5 @@
 from ssui import workflow, Prompt, Image, Noise
-from ssui_image.SDXL import SDXLModel, SDXLClip, SDXLLatent, SDXLLora, SDXLDenoise, SDXLLatentDecode,SDXLMergeLora
+from ssui_image.SDXL import SDXLModel, SDXLClip, SDXLLatent, SDXLLora, SDXLControlNet, SDXLDenoise, SDXLLatentDecode,SDXLMergeLora
 from ssui.config import SSUIConfig
 from typing import List, Tuple
 
@@ -10,6 +10,14 @@ def txt2img(model: SDXLModel, positive: Prompt, negative: Prompt) -> Image:
     positive, negative = SDXLClip(config("Prompt To Condition"), model, positive, negative)
     latent = SDXLLatent(config("Create Empty Latent"))
     latent = SDXLDenoise(config("Denoise"), model, latent, positive, negative)
+    return SDXLLatentDecode(config("Latent to Image"), model, latent)
+
+
+@workflow
+def txt2imgWithControlNet(model: SDXLModel, control: SDXLControlNet, positive: Prompt, negative: Prompt) -> Image:
+    positive, negative = SDXLClip(config("Prompt To Condition"), model, positive, negative)
+    latent = SDXLLatent(config("Create Empty Latent"))
+    latent = SDXLDenoise(config("Denoise"), model, latent, positive, negative, control)
     return SDXLLatentDecode(config("Latent to Image"), model, latent)
 
 
