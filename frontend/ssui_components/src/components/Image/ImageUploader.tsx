@@ -60,21 +60,21 @@ export class ImageUploader extends IComponent<{ script_path: string }, ImageUplo
     preview() {
         if (this.state.image) {
             return <div>
-                <img src={'/file?path=' + this.state.image} alt="preview" style={{ maxWidth: '100%', height: 'auto' }} />
+                <img src={'/file?path=' + encodeURIComponent(this.state.image)} alt="preview" style={{ maxWidth: '100%', height: 'auto' }} />
             </div>
         }
     }
 
     override render() {
         return <div>
-            <h5>图片上传</h5>
+            <h5>Image Upload</h5>
             <input 
                 type="file" 
                 accept="image/*"
                 onChange={this.handleFileChange}
                 disabled={this.state.uploading}
             />
-            {this.state.uploading && <p>上传中...</p>}
+            {this.state.uploading && <p>Uploading...</p>}
             {this.state.error && <p style={{ color: 'red' }}>{this.state.error}</p>}
             {this.preview()}
         </div>;
@@ -95,7 +95,7 @@ export class ImagePreview extends IComponent<{}, ImagePreviewState> {
         return <div>
             {this.state.image != '' ? 
                 <img 
-                    src={'/file?path=' + this.state.image} 
+                    src={'/file?path=' + encodeURIComponent(this.state.image)} 
                     alt="placeholder" 
                     style={{ 
                         maxWidth: '100%', 

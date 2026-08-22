@@ -7,7 +7,7 @@ app = FastAPI()
 # 用来模拟一个“WebSocket客户端池”，这里只存一个连接
 ws_clients = {}
 
-@app.websocket("/")
+@app.websocket("/ws")
 async def websocket_endpoint(websocket: WebSocket):
     await websocket.accept()
     client_id = str(uuid.uuid4())
