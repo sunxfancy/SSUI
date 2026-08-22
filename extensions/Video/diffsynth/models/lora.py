@@ -277,7 +277,7 @@ class FluxLoRAConverter:
         pass
 
     @staticmethod
-    def align_to_opensource_format(state_dict, alpha=1.0):
+    def align_to_opensource_format(state_dict, alpha=None):
         prefix_rename_dict = {
             "single_blocks": "lora_unet_single_blocks",
             "blocks": "lora_unet_double_blocks",
@@ -316,7 +316,8 @@ class FluxLoRAConverter:
             rename = prefix_rename_dict[prefix] + "_" + block_id + "_" + middle_rename_dict[middle] + "." + suffix_rename_dict[suffix]
             state_dict_[rename] = param
             if rename.endswith("lora_up.weight"):
-                state_dict_[rename.replace("lora_up.weight", "alpha")] = torch.tensor((alpha,))[0]
+                lora_alpha = alpha if alpha is not None else param.shape[-1]
+                state_dict_[rename.replace("lora_up.weight", "alpha")] = torch.tensor((lora_alpha,))[0]
         return state_dict_
     
     @staticmethod
@@ -379,6 +380,21 @@ class WanLoRAConverter:
     @staticmethod
     def align_to_diffsynth_format(state_dict, **kwargs):
         state_dict = {name.replace("diffusion_model.", "").replace(".lora_A.weight", ".lora_A.default.weight").replace(".lora_B.weight", ".lora_B.default.weight"): param for name, param in state_dict.items()}
+        return state_dict
+
+
+class QwenImageLoRAConverter:
+    def __init__(self):
+        pass
+
+    @staticmethod
+    def align_to_opensource_format(state_dict, **kwargs):
+        state_dict = {name.replace(".default.", "."): param for name, param in state_dict.items()}
+        return state_dict
+    
+    @staticmethod
+    def align_to_diffsynth_format(state_dict, **kwargs):
+        state_dict = {name.replace(".lora_A.weight", ".lora_A.default.weight").replace(".lora_B.weight", ".lora_B.default.weight"): param for name, param in state_dict.items()}
         return state_dict
 
 

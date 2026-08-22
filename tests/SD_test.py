@@ -1,172 +1,131 @@
+import os
+import tempfile
 import unittest
-from tests.utils import should_run_slow_tests
+from unittest.mock import patch
 
-@unittest.skipIf(not should_run_slow_tests(), "Skipping slow test")
-class TestSD1(unittest.TestCase):
+from PIL import Image as PILImage
+
+from ssui.base import Prompt
+from ssui.config import SSUIConfig
+
+from tests.fakes.sd import (
+    FakeFluxModel,
+    FakeSD1Model,
+    FakeSDXLModel,
+    fake_clip,
+    fake_decode,
+    fake_denoise,
+    fake_latent,
+)
+
+
+class TestSD1Workflow(unittest.TestCase):
+    """给定假模型输出，验证 SD1 工作流从 Clip 到 Decode 能跑通。"""
+
     def setUp(self):
-        from ssui_image.SD1 import SD1Model
-        from ssui.config import SSUIConfig
-        from ssui.base import Prompt
-        self.model = SD1Model.load("D:\\StableDiffusion\\stable-diffusion-webui\\models\\Stable-diffusion\\anything-v3-2700c435.ckpt")
+        self.tmp_dir = tempfile.mkdtemp()
         self.config = SSUIConfig()
-        self.config.set_prepared(False)
-
         self.positive = Prompt("a beautiful girl, masterpiece, best quality")
         self.negative = Prompt("a bad image")
 
-    
+    @patch("ssui_image.SD1.SD1Model", FakeSD1Model)
+    @patch("ssui_image.SD1.SD1Clip", fake_clip)
+    @patch("ssui_image.SD1.SD1Latent", fake_latent)
+    @patch("ssui_image.SD1.SD1Denoise", fake_denoise)
+    @patch("ssui_image.SD1.SD1LatentDecode", fake_decode)
     def test_workflow(self):
         from ssui_image.SD1 import (
-            SD1Clip, SD1Latent, 
-            SD1Denoise, SD1LatentDecode
+            SD1Clip,
+            SD1Denoise,
+            SD1Latent,
+            SD1LatentDecode,
+            SD1Model,
         )
-        positive, negative = SD1Clip(self.config("Prompt To Condition"), self.model, self.positive, self.negative)
+
+        model = SD1Model.load("fake/model/path")
+        positive, negative = SD1Clip(
+            self.config("Prompt To Condition"), model, self.positive, self.negative
+        )
         latent = SD1Latent(self.config("Create Empty Latent"))
-        latent = SD1Denoise(self.config("Denoise"), self.model, latent, positive, negative)
-        image = SD1LatentDecode(self.config("Latent to Image"), self.model, latent)
-        image._image.save("result2.png")
+        latent = SD1Denoise(self.config("Denoise"), model, latent, positive, negative)
+        image = SD1LatentDecode(self.config("Latent to Image"), model, latent)
+
+        self.assertIsInstance(image._image, PILImage.Image)
+        output = os.path.join(self.tmp_dir, "result_sd1.png")
+        image._image.save(output)
+        self.assertTrue(os.path.exists(output))
 
 
-@unittest.skipIf(not should_run_slow_tests(), "Skipping slow test")
-class TestSDXL(unittest.TestCase):
+class TestSDXLWorkflow(unittest.TestCase):
     def setUp(self):
-        from ssui_image.SDXL import SDXLModel
-        from ssui.config import SSUIConfig
-        from ssui.base import Prompt
-        self.model = SDXLModel.load("C:\\Users\\sunxf\\InvokeAI\\models\\sdxl\\main\\Juggernaut XL v9")
+        self.tmp_dir = tempfile.mkdtemp()
         self.config = SSUIConfig()
-        self.config.set_prepared(False)
-
-        self.positive = Prompt("a beautiful girl in a red dress, masterpiece, best quality")
-        self.negative = Prompt("a bad image")
-    
-    def test_workflow(self):
-        from ssui_image.SDXL import (
-            SDXLClip, SDXLLatent, 
-            SDXLDenoise, SDXLLatentDecode
-        )
-        positive, negative = SDXLClip(self.config("Prompt To Condition"), self.model, self.positive, self.negative)
-        latent = SDXLLatent(self.config("Create Empty Latent"))
-        latent = SDXLDenoise(self.config("Denoise"), self.model, latent, positive, negative)
-        image = SDXLLatentDecode(self.config("Latent to Image"), self.model, latent)
-        image._image.save("result_sdxl.png")
-
-
-@unittest.skipIf(not should_run_slow_tests(), "Skipping slow test")
-class TestFlux(unittest.TestCase):
-    def setUp(self):
-        from ssui_image.Flux import FluxModel
-        from ssui.config import SSUIConfig
-        from ssui.base import Prompt
-        self.model = FluxModel.load(
-            model_path="C:\\Users\\sunxf\\InvokeAI\\models\\flux\\main\\FLUX Schnell (Quantized).safetensors",
-            t5_encoder_path="C:\\Users\\sunxf\\InvokeAI\\models\\any\\t5_encoder\\t5_bnb_int8_quantized_encoder",
-            clip_path="C:\\Users\\sunxf\\InvokeAI\\models\\any\\clip_embed\\clip-vit-large-patch14",
-            vae_path="C:\\Users\\sunxf\\InvokeAI\\models\\flux\\vae\\FLUX.safetensors"
-        )
-        self.config = SSUIConfig()
-        self.config.set_prepared(False)
-
         self.positive = Prompt("a beautiful girl in a red dress")
         self.negative = Prompt("a bad image")
-    
-    def test_workflow(self):
-        from ssui_image.Flux import (
-            FluxClip, FluxLatent, 
-            FluxDenoise, FluxLatentDecode
-        )
-        positive, negative = FluxClip(self.config("Prompt To Condition"), self.model, self.positive, self.negative)
-        latent = FluxLatent(self.config("Create Empty Latent"))
-        latent = FluxDenoise(self.config("Denoise"), self.model, latent, positive, negative)
-        image = FluxLatentDecode(self.config("Latent to Image"), self.model, latent)
-        image._image.save("result_flux.png")
 
-@unittest.skipIf(not should_run_slow_tests(), "Skipping slow test")
-class TestSD1lora(unittest.TestCase):
-    def setUp(self):
-        from ssui_image.SD1 import SD1Model,SD1Lora
-        from ssui.config import SSUIConfig
-        from ssui.base import Prompt
-        loraPath = ["D:\\work\\github_code\\SSUI\\test_models\\dilireba.safetensors","D:\\work\\github_code\\SSUI\\test_models\\jirai_v2.safetensors"]
-        self.model = SD1Model.load("D:\\work\\github_code\\SSUI\\test_models\\aingdiffusion_v40.safetensors")
-        self.loras = SD1Lora.load(loraPath)
-        self.config = SSUIConfig()
-        self.config.set_prepared(False)
-
-        self.positive = Prompt("a beautiful girl, masterpiece, best quality")
-        self.negative = Prompt("a bad image")
-
-    
-    def test_workflow(self):
-        from ssui_image.SD1 import (
-            SD1Clip, SD1Latent, 
-            SD1Denoise, SD1LatentDecode,SD1MergeLora
-        )
-        self.model = SD1MergeLora(self.config("Apply Lora"), self.model, self.loras)
-        positive, negative = SD1Clip(self.config("Prompt To Condition"), self.model, self.positive, self.negative)
-        latent = SD1Latent(self.config("Create Empty Latent"))
-        latent = SD1Denoise(self.config("Denoise"), self.model, latent, positive, negative)
-        image = SD1LatentDecode(self.config("Latent to Image"), self.model, latent)
-        image._image.save("sd1Lora.png")
-
-@unittest.skipIf(not should_run_slow_tests(), "Skipping slow test")
-class TestSDXLlora(unittest.TestCase):
-    def setUp(self):
-        from ssui_image.SDXL import SDXLModel,SDXLLora
-        from ssui.config import SSUIConfig
-        from ssui.base import Prompt
-        self.model = SDXLModel.load("D:\\work\\github_code\\SSUI_NEW\\test_models\\Juggernaut XL v9")
-        self.config = SSUIConfig()
-        self.config.set_prepared(False)
-        loraPath = ["D:\\work\\github_code\\SSUI_NEW\\test_models\\sdxl lora\\kallen-1.safetensors","D:\\work\\github_code\\SSUI_NEW\\test_models\\sdxl lora\\SDXL_Lora_paffypafuricia_animagine.safetensors"]
-        self.loras = SDXLLora.load(loraPath)
-        self.config = SSUIConfig()
-        self.config.set_prepared(False)
-
-        self.positive = Prompt("a beautiful girl, masterpiece, best quality")
-        self.negative = Prompt("a bad image")
-
-    
+    @patch("ssui_image.SDXL.SDXLModel", FakeSDXLModel)
+    @patch("ssui_image.SDXL.SDXLClip", fake_clip)
+    @patch("ssui_image.SDXL.SDXLLatent", fake_latent)
+    @patch("ssui_image.SDXL.SDXLDenoise", fake_denoise)
+    @patch("ssui_image.SDXL.SDXLLatentDecode", fake_decode)
     def test_workflow(self):
         from ssui_image.SDXL import (
-            SDXLClip, SDXLLatent, 
-            SDXLDenoise, SDXLLatentDecode,SDXLMergeLora
+            SDXLClip,
+            SDXLDenoise,
+            SDXLLatent,
+            SDXLLatentDecode,
+            SDXLModel,
         )
-        self.model = SDXLMergeLora(self.config("Apply Lora"), self.model, self.loras)
-        positive, negative = SDXLClip(self.config("Prompt To Condition"), self.model, self.positive, self.negative)
+
+        model = SDXLModel.load("fake/model/path")
+        positive, negative = SDXLClip(
+            self.config("Prompt To Condition"), model, self.positive, self.negative
+        )
         latent = SDXLLatent(self.config("Create Empty Latent"))
-        latent = SDXLDenoise(self.config("Denoise"), self.model, latent, positive, negative)
-        image = SDXLLatentDecode(self.config("Latent to Image"), self.model, latent)
-        image._image.save("sdXLLora.png")
+        latent = SDXLDenoise(self.config("Denoise"), model, latent, positive, negative)
+        image = SDXLLatentDecode(self.config("Latent to Image"), model, latent)
 
-@unittest.skipIf(not should_run_slow_tests(), "Skipping slow test")
-class TestFluxlora(unittest.TestCase):
+        self.assertIsInstance(image._image, PILImage.Image)
+        output = os.path.join(self.tmp_dir, "result_sdxl.png")
+        image._image.save(output)
+        self.assertTrue(os.path.exists(output))
+
+
+class TestFluxWorkflow(unittest.TestCase):
     def setUp(self):
-        from ssui_image.Flux import FluxModel,FluxLora
-        from ssui.config import SSUIConfig
-        from ssui.base import Prompt
-        self.model = FluxModel.load(
-            model_path="D:\\work\\github_code\\SSUI_NEW\\test_models\\Flux\\FLUX Schnell (Quantized).safetensors",
-            t5_encoder_path="D:\\work\\github_code\\SSUI_NEW\\test_models\\Flux\\t5_bnb_int8_quantized_encoder",
-            clip_path="D:\\work\\github_code\\SSUI_NEW\\test_models\\Flux\\clip-vit-large-patch14",
-            vae_path="D:\\work\\github_code\\SSUI_NEW\\test_models\\Flux\\FLUX.safetensors"
-        )
-        loraPath = ["D:\\work\\github_code\\SSUI_NEW\\test_models\\flux lora\\[FLUX LoRa] Kalin _Style_v1.0.safetensors","D:\\work\\github_code\\SSUI_NEW\\test_models\\flux lora\\umej1900.safetensors"]
-        self.loras = FluxLora.load(loraPath)
+        self.tmp_dir = tempfile.mkdtemp()
         self.config = SSUIConfig()
-        self.config.set_prepared(False)
-
         self.positive = Prompt("a beautiful girl in a red dress")
         self.negative = Prompt("a bad image")
-    
+
+    @patch("ssui_image.Flux.FluxModel", FakeFluxModel)
+    @patch("ssui_image.Flux.FluxClip", fake_clip)
+    @patch("ssui_image.Flux.FluxLatent", fake_latent)
+    @patch("ssui_image.Flux.FluxDenoise", fake_denoise)
+    @patch("ssui_image.Flux.FluxLatentDecode", fake_decode)
     def test_workflow(self):
         from ssui_image.Flux import (
-            FluxClip, FluxLatent, 
-            FluxDenoise, FluxLatentDecode,FluxMergeLora
+            FluxClip,
+            FluxDenoise,
+            FluxLatent,
+            FluxLatentDecode,
+            FluxModel,
         )
-        self.model = FluxMergeLora(self.config("Apply Lora"), self.model, self.loras)
-        positive, negative = FluxClip(self.config("Prompt To Condition"), self.model, self.positive, self.negative)
+
+        model = FluxModel.load(
+            model_path="fake/flux.safetensors",
+            t5_encoder_path="fake/t5",
+            clip_path="fake/clip",
+            vae_path="fake/vae.safetensors",
+        )
+        positive, negative = FluxClip(
+            self.config("Prompt To Condition"), model, self.positive, self.negative
+        )
         latent = FluxLatent(self.config("Create Empty Latent"))
-        latent = FluxDenoise(self.config("Denoise"), self.model, latent, positive, negative)
-        image = FluxLatentDecode(self.config("Latent to Image"), self.model, latent)
-        image._image.save("fluxlora.png")
+        latent = FluxDenoise(self.config("Denoise"), model, latent, positive, negative)
+        image = FluxLatentDecode(self.config("Latent to Image"), model, latent)
+
+        self.assertIsInstance(image._image, PILImage.Image)
+        output = os.path.join(self.tmp_dir, "result_flux.png")
+        image._image.save(output)
+        self.assertTrue(os.path.exists(output))

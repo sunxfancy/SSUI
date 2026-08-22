@@ -6,8 +6,12 @@
 项目发布release版本前，需要通过所有测试，包括slow test cases：
 
 ```bash
-RUN_SLOW_TESTS=1 yarn test
+SSUI_RUN_MODEL_TESTS=1 yarn test
 ```
+
+常规 `yarn test` 使用模拟模型在 CPU 上运行接口与流程测试；
+`SSUI_RUN_MODEL_TESTS=1` 才会下载真实模型（见 `tests/model_manifest.yaml`）
+并运行可选的真模型回归套件。
 
 
 ## 打包流程
@@ -42,10 +46,10 @@ yarn package:debug # 调试版本，会包含完整的调试信息, 网页端也
 
 发布流程由 CI 自动完成（`release.yml`，与 EVEngine 相同的发布体系）：
 
-1. 先在本地跑通全部测试（含慢速用例）：
+1. 先在本地跑通全部测试（含真模型用例）：
 
 ```bash
-RUN_SLOW_TESTS=1 yarn test
+SSUI_RUN_MODEL_TESTS=1 yarn test
 ```
 
 2. 在 GitHub 上从 `dev` 分支创建 **Pre-release**，tag 形如 `0.1.2`（`v` 前缀可选，如 `v0.1.2`）。

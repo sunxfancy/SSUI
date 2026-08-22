@@ -38,6 +38,8 @@ permissions:
 
 env:
   SSUI_CI_SKIP_INSTALL: 1
+  # torch 等 wheel 体积大，调大 HTTP 超时避免大文件下载偶发失败
+  UV_HTTP_TIMEOUT: 600
 
 jobs:
   # Fast structural check: no toolchain, no build.
@@ -107,7 +109,7 @@ jobs:
 
       - name: Install requirements
         timeout-minutes: 20
-        run: uv pip install -r dependencies/${{ matrix.platform }}.lock
+        run: uv pip install -r dependencies/${{ matrix.platform }}.lock --index-strategy unsafe-best-match --build-constraint dependencies/build-constraints.txt
 
       - name: Install system dependencies
         if: ${{ matrix.platform == 'linux' }}
@@ -125,6 +127,10 @@ jobs:
       - name: Build Components
         timeout-minutes: 30
         run: yarn build:components
+
+      - name: Run Component Tests
+        timeout-minutes: 20
+        run: yarn test:components
 
       - name: Build Functional UI
         timeout-minutes: 30

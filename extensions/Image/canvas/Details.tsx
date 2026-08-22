@@ -1,11 +1,11 @@
 import React, { Component } from "react";
 import { Section, SectionCard } from "@blueprintjs/core";
-import { ControlerRef } from "ssui_components";
+import { ControllerRef } from "ssui_components";
 
 interface ScriptDetails {
     [key: string]: {
         [key: string]: {
-            controler: string;
+            controller: string;
             args: any;
             default: any;
         };
@@ -24,7 +24,7 @@ interface DetailsState {
 }
 
 export class DetailsPanel extends Component<DetailsProps, DetailsState> {
-    private refMap: Map<string, Map<string, React.RefObject<ControlerRef>>> = new Map();
+    private refMap: Map<string, Map<string, React.RefObject<ControllerRef>>> = new Map();
 
     constructor(props: DetailsProps) {
         super(props);
@@ -84,9 +84,9 @@ export class DetailsPanel extends Component<DetailsProps, DetailsState> {
         }
     }
 
-    getRef = (section: string, index: string): React.RefObject<ControlerRef> => {
+    getRef = (section: string, index: string): React.RefObject<ControllerRef> => {
         if (!this.refMap.has(section)) {
-            this.refMap.set(section, new Map<string, React.RefObject<ControlerRef>>());
+            this.refMap.set(section, new Map<string, React.RefObject<ControllerRef>>());
         }
 
         const sectionMap = this.refMap.get(section);
@@ -95,14 +95,14 @@ export class DetailsPanel extends Component<DetailsProps, DetailsState> {
         }
 
         if (!sectionMap.has(index)) {
-            const newRef = React.createRef<ControlerRef>();
+            const newRef = React.createRef<ControllerRef>();
             sectionMap.set(index, newRef);
             return newRef;
         }
 
         const ref = sectionMap.get(index);
         if (!ref) {
-            const newRef = React.createRef<ControlerRef>();
+            const newRef = React.createRef<ControllerRef>();
             sectionMap.set(index, newRef);
             return newRef;
         }
@@ -131,9 +131,9 @@ export class DetailsPanel extends Component<DetailsProps, DetailsState> {
             >
                 {Object.entries(controls).map(([name, control]) => (
                     <SectionCard key={name}>
-                        <ControlerRef
+                        <ControllerRef
                             name={name}
-                            type={control.controler}
+                            type={control.controller}
                             params={control.args}
                             default={control.default}
                             ref={this.getRef(section, name)}

@@ -99,7 +99,7 @@
 |------|------|
 | `yarn test` | 运行全部 Python 测试 |
 | `yarn test_on <name>` | 运行指定测试，如 `yarn test_on ss_executor_test` |
-| `RUN_SLOW_TESTS=1 yarn test` | 包含慢速测试（依赖大模型，发布前需跑通） |
+| `SSUI_RUN_MODEL_TESTS=1 yarn test` | 包含真模型回归测试（发布前需跑通，见 `tests/model_manifest.yaml`） |
 
 子包内测试：
 
@@ -304,7 +304,7 @@ Actions 均固定 commit SHA（由 dependabot 每周更新）。文档白名单�
 
 ## 发布流程
 
-1. 确保 `RUN_SLOW_TESTS=1 yarn test` 通过（本地验证）。
+1. 确保 `SSUI_RUN_MODEL_TESTS=1 yarn test` 通过（本地验证）。
 2. 在 GitHub 上从 `dev` 创建 **Pre-release**，tag 形如 `0.1.2`（`v` 前缀可选）。
 3. `release.yml` 自动执行：`start` → 严格测试 → Windows/macOS 打包 → 冒烟测试（直接运行 release 二进制 + 静默安装 NSIS / 挂载 DMG 验证可执行）→ 上传安装包 → `finish` 把 release 标记为正式。
 4. 合并 `promote/v0.1.2` PR 到 `main`（main-gate 放行）；合并 `rebase/v0.1.2` PR 到 `dev` 使 dev 包含发布改动。
@@ -319,5 +319,5 @@ Actions 均固定 commit SHA（由 dependabot 每周更新）。文档白名单�
 1. **验证 TypeScript/React 改动**：到**被修改包所在目录**执行 `yarn build`，不要裸跑 `npx tsc`。
 2. **验证 desktop 故事/组件**：`cd desktop && yarn build` 或 `yarn dev:desktop_sb` 手动查看。
 3. **修改了 ssui_components**：先 `yarn build:components`，或根目录 `yarn build:frontend`，再启动依赖它的 dev 服务。
-4. **完整发布前**：`RUN_SLOW_TESTS=1 yarn test`，再按 `doc/Package.md` 执行 `yarn package`。
+4. **完整发布前**：`SSUI_RUN_MODEL_TESTS=1 yarn test`，再按 `doc/Package.md` 执行 `yarn package`。
 5. **文档与代码不一致时以 `package.json` 为准**（已知：`dev:components`、`dev:desktop_ui` 在文档/README 中出现但根 scripts 无定义）。

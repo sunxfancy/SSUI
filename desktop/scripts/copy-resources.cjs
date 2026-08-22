@@ -170,6 +170,21 @@ async function main() {
   
   console.log('资源文件复制完成!');
 
+  // 从 examples/basic 复制官方工作流示例（单一来源，避免两处漂移）
+  const workflowSourceDir = path.resolve(__dirname, '../../examples/basic');
+  const workflowTargetDir = path.resolve(__dirname, '../src-tauri/workflow/txt2img/basic');
+  ensureDirectoryExists(workflowTargetDir);
+  if (fs.existsSync(workflowSourceDir)) {
+    for (const file of fs.readdirSync(workflowSourceDir)) {
+      const src = path.join(workflowSourceDir, file);
+      if (fs.statSync(src).isFile()) {
+        copyFile(src, path.join(workflowTargetDir, file));
+      }
+    }
+  } else {
+    console.warn(`警告: 示例目录不存在 - ${workflowSourceDir}`);
+  }
+
   // 创建app.tar.gz压缩包
   await createTarball();
 }

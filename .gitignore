@@ -4,6 +4,7 @@
 input/
 output/
 __pycache__/
+*.egg-info/
 node_modules/
 dist/
 test_env/
@@ -20,5 +21,8 @@ test_env/
 /*.glb
 /*.ply
 /*.wav
+
+# 构建时由 copy-resources 从 examples/ 生成的官方工作流副本
+desktop/src-tauri/workflow/txt2img/
 
 .idea

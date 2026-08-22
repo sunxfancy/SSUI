@@ -1,5 +1,6 @@
 # scheduler.py
 import asyncio
+import os
 from typing import Dict, List, Optional, Any, Union, Tuple
 from datetime import datetime
 from .model import KillMessage, Task, TaskStatus, ExecutorInfo, ExecutorRegister, RegisterResponse, UpdateStatus, TaskResult, ExeMessage
@@ -28,11 +29,13 @@ class TaskScheduler:
     async def start(self):
         """启动调度器"""
         try:
-            print("启动调度器服务器，监听端口5000")
+            host = os.environ.get("SSUI_SCHEDULER_HOST", "localhost")
+            port = int(os.environ.get("SSUI_SCHEDULER_PORT", "5000"))
+            print(f"启动调度器服务器，监听 {host}:{port}")
             self.server = await websockets.serve(
                 self.handle_executor_connection, 
-                "localhost", 
-                5000
+                host, 
+                port
             )
             print("任务调度器已启动")
           

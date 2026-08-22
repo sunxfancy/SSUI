@@ -63,6 +63,34 @@ class HunyuanVideoLoraModel:
         )
 
 
+class HunyuanImageToVideoModel:
+    """HunyuanVideo I2V-720p 图生视频模型。"""
+
+    def __init__(self, model_manager: ModelManager = None):
+        self.model_manager = model_manager
+
+    @staticmethod
+    def load() -> "HunyuanImageToVideoModel":
+        model_manager = ModelManager()
+        download_models(["HunyuanVideoI2V"])
+
+        model_manager.load_models(
+            ["models/HunyuanVideoI2V/transformers/mp_rank_00_model_states.pt"],
+            torch_dtype=torch.bfloat16,
+            device="cpu",
+        )
+        model_manager.load_models(
+            [
+                "models/HunyuanVideoI2V/text_encoder/model.safetensors",
+                "models/HunyuanVideoI2V/text_encoder_2",
+                "models/HunyuanVideoI2V/vae/pytorch_model.pt",
+            ],
+            torch_dtype=torch.float16,
+            device="cpu",
+        )
+        return HunyuanImageToVideoModel(model_manager)
+
+
 @param("seed", Random(), default=42)
 @param("num_frames", Slider(1, 500, 1), default=129)
 @param("num_inference_steps", Slider(1, 50, 1), default=18)
@@ -81,6 +109,34 @@ def HunyuanTextToVideo(
     pipe.scheduler = FlowMatchScheduler(shift=9.0, sigma_min=0.0, extra_one_step=True)
     video = pipe(
         prompt=prompt.text,
+        seed=config["seed"],
+        height=config["height"],
+        width=config["width"],
+        num_frames=config["num_frames"],
+        num_inference_steps=config["num_inference_steps"],
+        tile_size=(17, 16, 16),
+        tile_stride=(12, 12, 12),
+    )
+    return [Image(image) for image in video]
+
+
+@param("seed", Random(), default=42)
+@param("num_frames", Slider(1, 500, 1), default=129)
+@param("num_inference_steps", Slider(1, 50, 1), default=24)
+@param("height", Slider(1, 1000, 1), default=720)
+@param("width", Slider(1, 1000, 1), default=1280)
+def HunyuanImageToVideo(
+    config: SSUIConfig, base_model: HunyuanImageToVideoModel, image: Image, prompt: Prompt
+) -> list[Image]:
+    if config.is_prepare():
+        return [Image()]
+    pipe = HunyuanVideoPipeline.from_model_manager(
+        base_model.model_manager, torch_dtype=torch.bfloat16, device="cuda"
+    )
+    video = pipe(
+        prompt=prompt.text,
+        input_images=[image._image],
+        i2v_resolution="720p",
         seed=config["seed"],
         height=config["height"],
         width=config["width"],

@@ -1,9 +1,6 @@
 import os
-import sys
 import yaml
 from pydantic import BaseModel, Field
-
-sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
 
 from ss_executor.sandbox import Sandbox, NoSandbox
 
@@ -18,7 +15,59 @@ class SSLoader:
     def load(self, path: str):
         """加载模块"""
         self.current_file_path = os.path.abspath(path)
+        self._allow_extension_packages()
         self.executor.load(path)
+
+    def _allow_extension_packages(self):
+        """动态放行扩展提供的 SDK 包与项目声明的 ssui_* 依赖。
+
+        允许以下模块在沙盒中导入：
+        - 扩展目录下的 ``ssui_*`` Python 包（如 ssui_image / ssui_video）
+        - 各扩展 ``ssextension.yaml`` 中 ``server.packages`` 声明的包
+        - 项目 ``ssproject.yaml`` dependencies 中以 ``ssui_`` 开头的包
+        """
+        if not hasattr(self.executor, "allow_modules"):
+            return
+
+        allowed = set()
+        extensions_root = os.path.abspath(
+            os.path.join(os.path.dirname(__file__), "..", "extensions")
+        )
+        if os.path.isdir(extensions_root):
+            for entry in os.listdir(extensions_root):
+                extension_dir = os.path.join(extensions_root, entry)
+                if not os.path.isdir(extension_dir):
+                    continue
+                for sub in os.listdir(extension_dir):
+                    sub_path = os.path.join(extension_dir, sub)
+                    if (
+                        sub.startswith("ssui_")
+                        and os.path.isdir(sub_path)
+                        and os.path.exists(os.path.join(sub_path, "__init__.py"))
+                    ):
+                        allowed.add(sub)
+                yaml_path = os.path.join(extension_dir, "ssextension.yaml")
+                if os.path.exists(yaml_path):
+                    try:
+                        with open(yaml_path, "r", encoding="utf-8") as f:
+                            data = yaml.safe_load(f) or {}
+                        packages = ((data.get("server") or {}).get("packages")) or []
+                        allowed.update(p for p in packages if isinstance(p, str))
+                    except Exception:
+                        continue
+
+        project_root = search_project_root(os.path.dirname(self.current_file_path))
+        if project_root is not None:
+            try:
+                project = SSProject(path=project_root)
+                for dep in project.dependencies_map():
+                    if dep.startswith("ssui_"):
+                        allowed.add(dep)
+            except Exception:
+                pass
+
+        if allowed:
+            self.executor.allow_modules(list(allowed))
 
     # 执行模块并获取可调用对象
     def Execute(self):
