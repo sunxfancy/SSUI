@@ -17,15 +17,15 @@
 }
 
 .details-scrollable::-webkit-scrollbar-track {
-    background: #f1f1f1;
+    background: var(--ssui-scrollbar-track);
     border-radius: 4px;
 }
 
 .details-scrollable::-webkit-scrollbar-thumb {
-    background: #888;
+    background: var(--ssui-scrollbar-thumb);
     border-radius: 4px;
 }
 
 .details-scrollable::-webkit-scrollbar-thumb:hover {
-    background: #555;
+    background: var(--ssui-fg-muted);
 } 

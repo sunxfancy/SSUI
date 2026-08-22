@@ -7,6 +7,7 @@ class MockConfigService:
     def __init__(self):
         self.config = {}
         self.update_config = MagicMock(return_value={"status": "success"})
+        self.get_config = MagicMock(return_value={"ui": {"theme": "system"}})
         self.get_installed_models = MagicMock(return_value={"status": "success"})
         self.get_settings = MagicMock(
             return_value=SimpleNamespace(host_web_ui="")

@@ -96,7 +96,7 @@ export class ModelManager extends React.Component<ModelManagerProps, ModelManage
                                 <strong>{model.name}</strong>
                                 <Tag minimal>{model.base_model || model.type || 'unknown'}</Tag>
                             </div>
-                            <div style={{ fontSize: '12px', color: '#666', marginTop: '4px', wordBreak: 'break-all' }}>{model.path}</div>
+                            <div style={{ fontSize: '12px', color: 'var(--ssui-fg-muted)', marginTop: '4px', wordBreak: 'break-all' }}>{model.path}</div>
                             {(model.tags || []).length > 0 && (
                                 <div style={{ marginTop: '6px' }}>
                                     {model.tags!.map(tag => (

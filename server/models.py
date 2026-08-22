@@ -9,11 +9,26 @@ class ModelInfo(BaseModel):
     base_model: str
     tags: List[str]
 
+
+class UiSettings(BaseModel):
+    """Functional UI 用户可配置项。
+
+    这些字段由前端 Functional UI 读写并持久化到 ``ssui_config.json``，
+    目前包含主题、面板行为与外部服务相关配置。
+    """
+
+    theme: Literal["light", "dark", "system"] = "system"
+    auto_open_details: bool = True
+    external_code_editor: str = ""
+    civitai_token: str = ""
+
+
 class Settings(BaseModel):
     host_web_ui: str
     additional_model_dirs: List[str] = []
     installed_models: List[ModelInfo] = []
     resources_dir: Optional[str] = None
+    ui: UiSettings = UiSettings()
 
 class ScanModelsRequest(BaseModel):
     scan_dir: str = Field(description="The directory to scan for models")

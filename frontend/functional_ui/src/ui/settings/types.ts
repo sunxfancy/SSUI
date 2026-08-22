@@ -3,6 +3,8 @@ export type ConfigType = 'boolean' | 'string' | 'enum' | 'list' | 'dict';
 
 // 配置项接口
 export interface ConfigItem {
+  /** 对应持久化配置中的字段名（如 theme、auto_open_details） */
+  key: string;
   name: string;
   type: ConfigType;
   description: string;
