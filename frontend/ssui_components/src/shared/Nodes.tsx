@@ -1,7 +1,7 @@
-import type { ReactNode } from 'react';
+import type * as React from 'react';
 import { Button } from '@blueprintjs/core';
 import { ClassicPreset, GetSchemes, NodeEditor } from 'rete';
-import { Presets as ReactPresets, ReactArea2D, type RenderEmit } from 'rete-react-plugin';
+import { ReactArea2D, type RenderEmit } from 'rete-react-plugin';
 import {
     ContextMenuExtra,
 } from "rete-context-menu-plugin";
@@ -397,12 +397,18 @@ export class OperatorNode extends BaseNode {
     }
 }
 
-// ============ 函数定义节点（一个大方框 = 一个 Python 函数） ============
+// ============ 函数定义节点（透明大矩形框，框住画布上的一部分节点） ============
 
 export class FunctionDefinitionNode extends BaseNode {
     static counter = 0;
-    children: BaseNode[] = [];
+    boxWidth = 560;
+    boxHeight = 320;
+    inputNode?: InputNode;
+    outputNode?: OutputNode;
+    hasTooManyInputs = false;
+    hasTooManyOutputs = false;
     private callers: FunctionCallNode[] = [];
+    private lastSignature = '';
 
     constructor(
         area: AreaPlugin<Schemes, AreaExtra>,
@@ -412,15 +418,6 @@ export class FunctionDefinitionNode extends BaseNode {
         super(fnName);
         this.area = area;
 
-        // 内部的输入/返回节点：它们的参数/返回值就是这个函数的输入/输出
-        const refresh = () => {
-            this.syncSignature();
-            this.refresh();
-        };
-        const innerInput = new InputNode(undefined, refresh);
-        const innerOutput = new OutputNode(undefined, refresh);
-        this.children.push(innerInput, innerOutput);
-
         const nameControl = new NameControl(fnName, () => {});
         this.addControl('name', nameControl);
         nameControl.onChange = (value) => {
@@ -429,44 +426,20 @@ export class FunctionDefinitionNode extends BaseNode {
             this.syncCallers();
             this.refresh();
         };
-        this.addControl('addChild', new ButtonControl('添加子节点', () => this.addChild()));
         this.addControl('createCall', new ButtonControl('创建函数调用', () => this.createCall()));
-
-        // 默认一个参数、一个返回值
-        innerInput.addParameter();
-        innerOutput.addReturn();
-        this.syncSignature();
     }
 
-    getInnerInput(): InputNode {
-        return this.children.find((c): c is InputNode => c instanceof InputNode)!;
+    getArea(): AreaPlugin<Schemes, AreaExtra> | undefined {
+        return this.area;
     }
 
-    getInnerOutput(): OutputNode {
-        return this.children.find((c): c is OutputNode => c instanceof OutputNode)!;
+    // 框内输入/输出节点定义函数的参数与返回值
+    getParameters(): ParamSpec[] {
+        return this.inputNode?.getParameters() ?? [];
     }
 
-    addParameter(): ParamSpec {
-        return this.getInnerInput().addParameter();
-    }
-
-    removeParameter(key: string): void {
-        this.getInnerInput().removeParameter(key);
-    }
-
-    addReturn(): ParamSpec {
-        return this.getInnerOutput().addReturn();
-    }
-
-    removeReturn(key: string): void {
-        this.getInnerOutput().removeReturn(key);
-    }
-
-    addChild(): BaseNode {
-        const child = new OperatorNode(`算子 ${this.children.length - 1}`, () => this.refresh());
-        this.children.push(child);
-        this.refresh();
-        return child;
+    getReturns(): ParamSpec[] {
+        return this.outputNode?.getReturns() ?? [];
     }
 
     registerCaller(caller: FunctionCallNode): void {
@@ -479,32 +452,101 @@ export class FunctionDefinitionNode extends BaseNode {
         this.callers = this.callers.filter((c) => c !== caller);
     }
 
-    // 根据定义创建/更新调用节点，并放到定义右侧
+    // 依据节点在画布上的位置计算框内成员：
+    // 一个框内只能有一个输入节点和一个输出节点，它们定义函数的输入/输出
+    sync(): void {
+        const editor = this.getEditor();
+        const area = this.area;
+        if (!editor || !area) return;
+        const view = area.nodeViews.get(this.id);
+        if (!view) return;
+
+        const rect = {
+            x: view.position.x,
+            y: view.position.y,
+            w: this.boxWidth,
+            h: this.boxHeight,
+        };
+        const inputNodes: InputNode[] = [];
+        const outputNodes: OutputNode[] = [];
+
+        for (const node of editor.getNodes()) {
+            if (node === this) continue;
+            const nodeView = area.nodeViews.get(node.id);
+            if (!nodeView) continue;
+            const w = nodeView.element.offsetWidth || 180;
+            const h = nodeView.element.offsetHeight || 120;
+            const cx = nodeView.position.x + w / 2;
+            const cy = nodeView.position.y + h / 2;
+            if (cx < rect.x || cx > rect.x + rect.w || cy < rect.y || cy > rect.y + rect.h) {
+                continue;
+            }
+            if (node instanceof InputNode) inputNodes.push(node);
+            else if (node instanceof OutputNode) outputNodes.push(node);
+        }
+
+        this.hasTooManyInputs = inputNodes.length > 1;
+        this.hasTooManyOutputs = outputNodes.length > 1;
+        const inputNode = inputNodes[0];
+        const outputNode = outputNodes[0];
+
+        const params = inputNode?.getParameters() ?? [];
+        const returns = outputNode?.getReturns() ?? [];
+        const signature =
+            `${this.label}|` +
+            `${inputNode?.id ?? '-'}|${params.map((p) => `${p.key}:${p.name}:${p.type}`).join(',')}|` +
+            `${outputNode?.id ?? '-'}|${returns.map((r) => `${r.key}:${r.name}:${r.type}`).join(',')}|` +
+            `${this.boxWidth}x${this.boxHeight}|${this.hasTooManyInputs}|${this.hasTooManyOutputs}`;
+
+        if (signature === this.lastSignature) return;
+        this.lastSignature = signature;
+        this.inputNode = inputNode;
+        this.outputNode = outputNode;
+        this.syncCallers();
+        void area.update('node', this.id);
+    }
+
+    // 按选中节点的最小包围盒调整矩形，把节点框起来
+    fitToNodes(nodes: BaseNode[]): void {
+        const area = this.area;
+        if (!area) return;
+        let minX = Infinity;
+        let minY = Infinity;
+        let maxX = -Infinity;
+        let maxY = -Infinity;
+        for (const node of nodes) {
+            const view = area.nodeViews.get(node.id);
+            if (!view) continue;
+            const w = view.element.offsetWidth || 180;
+            const h = view.element.offsetHeight || 120;
+            minX = Math.min(minX, view.position.x);
+            minY = Math.min(minY, view.position.y);
+            maxX = Math.max(maxX, view.position.x + w);
+            maxY = Math.max(maxY, view.position.y + h);
+        }
+        if (minX === Infinity) return;
+        const padding = 46;
+        this.boxWidth = Math.max(240, maxX - minX + padding * 2);
+        this.boxHeight = Math.max(140, maxY - minY + padding * 2);
+        void area.translate(this.id, { x: minX - padding, y: minY - padding });
+    }
+
+    // 根据定义创建调用节点，放到定义右侧
     async createCall(): Promise<FunctionCallNode> {
         const caller = new FunctionCallNode(this.area!, this);
         await this.area!.parentScope(NodeEditor).addNode(caller);
         const pos = this.area!.nodeViews.get(this.id)?.position;
         await this.area!.translate(caller.id, {
-            x: (pos?.x ?? 0) + 300,
+            x: (pos?.x ?? 0) + this.boxWidth + 80,
             y: pos?.y ?? 0,
         });
         return caller;
     }
 
-    // 把内部输入节点的参数同步为外层输入端口，内部返回节点同步为外层输出端口
-    private syncSignature(): void {
-        this.syncPortsFromInner(
-            this.getInnerInput().getParameters(),
-            this.getInnerOutput().getReturns()
-        );
-        this.syncCallers();
-    }
-
-    // 函数签名/名称变化后，同步所有引用它的调用节点
+    // 函数名/签名变化后，同步所有引用它的调用节点
     private syncCallers(): void {
         this.callers.forEach((caller) => {
-            caller.syncSignature();
-            if (caller.getEditor()?.getNode(caller.id)) {
+            if (caller.syncSignature()) {
                 void this.area?.update('node', caller.id);
             }
         });
@@ -514,6 +556,8 @@ export class FunctionDefinitionNode extends BaseNode {
 // ============ 函数调用节点（端口数量由被调用的函数定义决定） ============
 
 export class FunctionCallNode extends BaseNode {
+    private lastSignature = '';
+
     constructor(
         area: AreaPlugin<Schemes, AreaExtra>,
         public definition: FunctionDefinitionNode
@@ -526,116 +570,76 @@ export class FunctionCallNode extends BaseNode {
         this.syncSignature();
     }
 
-    // 从函数定义同步名称和端口：输入端口 = 定义的参数，输出端口 = 定义的返回值
-    syncSignature(): void {
+    // 从函数定义同步名称和端口：输入端口 = 定义内输入节点的参数，输出端口 = 定义内返回节点的返回值
+    syncSignature(): boolean {
+        const params = this.definition.getParameters();
+        const returns = this.definition.getReturns();
+        const signature =
+            `${this.definition.label}|` +
+            `${params.map((p) => `${p.key}:${p.name}:${p.type}`).join(',')}|` +
+            `${returns.map((r) => `${r.key}:${r.name}:${r.type}`).join(',')}`;
+        if (signature === this.lastSignature) return false;
+        this.lastSignature = signature;
         this.label = this.definition.label;
-        this.syncPortsFromInner(
-            this.definition.getInnerInput().getParameters(),
-            this.definition.getInnerOutput().getReturns()
-        );
+        this.syncPortsFromInner(params, returns);
+        return true;
     }
 }
 
-// ============ 函数定义节点的自定义渲染（大矩形框） ============
-
-function renderControl(control: ClassicPreset.Control): ReactNode | null {
-    if (control instanceof ButtonControl) {
-        return <ButtonControlRender data={control} />;
-    }
-    if (control instanceof ParameterControl) {
-        return <ParameterControlRender data={control} />;
-    }
-    if (control instanceof NameControl) {
-        return <NameControlRender data={control} />;
-    }
-    if (control instanceof InfoControl) {
-        return <InfoControlRender data={control} />;
-    }
-    return null;
-}
-
-function ChildBlock({ child }: { child: BaseNode }) {
-    const entries = Object.entries(child.controls).filter(([, control]) => control);
-    const addEntry = entries.find(([key]) => key === 'add');
-    const rest = entries.filter(([key]) => key !== 'add');
-    const ordered = addEntry ? [...rest, addEntry] : rest;
-
-    return (
-        <div className="flow-child-node">
-            <div className="flow-child-title">{child.label}</div>
-            {ordered.map(([, control]) => (
-                <div className="flow-child-control" key={control!.id}>
-                    {renderControl(control!)}
-                </div>
-            ))}
-        </div>
-    );
-}
+// ============ 函数定义节点的自定义渲染（透明矩形框） ============
 
 export function FunctionDefinitionRender(props: {
     data: BaseNode;
     emit: RenderEmit<Schemes>;
 }): React.JSX.Element {
     const node = props.data as FunctionDefinitionNode;
-    const inputs = Object.entries(node.inputs).filter(([, input]) => input);
-    const outputs = Object.entries(node.outputs).filter(([, output]) => output);
     const nameControl = node.controls['name'];
-    const addChildControl = node.controls['addChild'];
     const createCallControl = node.controls['createCall'];
+    const params = node.getParameters().length;
+    const returns = node.getReturns().length;
+
+    const onResizePointerDown = (e: React.PointerEvent) => {
+        e.stopPropagation();
+        e.preventDefault();
+        const area = node.getArea();
+        if (!area) return;
+        const k = area.area.transform.k || 1;
+        const startX = e.clientX;
+        const startY = e.clientY;
+        const startW = node.boxWidth;
+        const startH = node.boxHeight;
+        const move = (ev: PointerEvent) => {
+            node.boxWidth = Math.max(240, startW + (ev.clientX - startX) / k);
+            node.boxHeight = Math.max(140, startH + (ev.clientY - startY) / k);
+            node.sync();
+            void area.update('node', node.id);
+        };
+        const up = () => {
+            window.removeEventListener('pointermove', move);
+            window.removeEventListener('pointerup', up);
+        };
+        window.addEventListener('pointermove', move);
+        window.addEventListener('pointerup', up);
+    };
 
     return (
-        <div className={`flow-function-node${node.selected ? ' selected' : ''}`}>
-            <div className="flow-function-header">
+        <div
+            className={`flow-function-def${node.selected ? ' selected' : ''}`}
+            style={{ width: node.boxWidth, height: node.boxHeight }}
+        >
+            <div className="flow-def-header">
                 <span className="flow-function-badge">函数定义</span>
                 {nameControl instanceof NameControl && <NameControlRender data={nameControl} />}
-                <span className="flow-function-meta">
-                    {inputs.length} 参数 · {outputs.length} 返回值
-                </span>
-            </div>
-
-            <div className="flow-function-children">
-                {node.children.map((child) => (
-                    <ChildBlock key={child.id} child={child} />
-                ))}
-            </div>
-
-            <div className="flow-function-footer">
-                {addChildControl instanceof ButtonControl && <ButtonControlRender data={addChildControl} />}
                 {createCallControl instanceof ButtonControl && <ButtonControlRender data={createCallControl} />}
+                <span className="flow-function-meta">{params} 参数 · {returns} 返回值</span>
             </div>
-
-            <div className="flow-function-ports">
-                <div className="flow-function-inputs">
-                    {inputs.map(([key, input]) => (
-                        <div className="flow-port-row" key={key}>
-                            <ReactPresets.classic.RefSocket
-                                name="input-socket"
-                                side="input"
-                                socketKey={key}
-                                nodeId={node.id}
-                                emit={props.emit}
-                                payload={input!.socket}
-                            />
-                            <span className="flow-port-label">{input!.label}</span>
-                        </div>
-                    ))}
-                </div>
-                <div className="flow-function-outputs">
-                    {outputs.map(([key, output]) => (
-                        <div className="flow-port-row" key={key}>
-                            <span className="flow-port-label">{output!.label}</span>
-                            <ReactPresets.classic.RefSocket
-                                name="output-socket"
-                                side="output"
-                                socketKey={key}
-                                nodeId={node.id}
-                                emit={props.emit}
-                                payload={output!.socket}
-                            />
-                        </div>
-                    ))}
-                </div>
-            </div>
+            {node.hasTooManyInputs && (
+                <div className="flow-def-warning">⚠ 一个函数内只能有一个输入节点</div>
+            )}
+            {node.hasTooManyOutputs && (
+                <div className="flow-def-warning">⚠ 一个函数内只能有一个返回节点</div>
+            )}
+            <div className="flow-def-resize" onPointerDown={onResizePointerDown} />
         </div>
     );
 }

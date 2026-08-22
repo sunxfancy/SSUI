@@ -45,33 +45,41 @@
     background: #93505f;
 }
 
-/* ============ 函数调用节点（大矩形框） ============ */
+/* ============ 函数定义节点（透明大矩形框） ============ */
 
-.flow-function-node {
-    width: 380px;
+.flow-function-def {
+    position: relative;
     box-sizing: border-box;
-    background: #23273f;
-    border: 2px solid #4e58bf;
-    border-radius: 12px;
+    background: rgba(78, 88, 191, 0.07);
+    border: 2px dashed rgba(122, 134, 255, 0.8);
+    border-radius: 14px;
+    pointer-events: none;
+    user-select: none;
     color: #fff;
     font-family: Arial, sans-serif;
-    user-select: none;
     line-height: initial;
-    padding: 8px 12px 12px;
-    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.35);
 }
 
-.flow-function-node.selected {
-    background: #343a5e;
+.flow-function-def.selected {
     border-color: #ffd92c;
+    background: rgba(255, 217, 44, 0.06);
 }
 
-.flow-function-header {
+.flow-def-header {
+    position: absolute;
+    top: 8px;
+    left: 12px;
+    right: 12px;
     display: flex;
     align-items: center;
     gap: 8px;
-    padding-bottom: 8px;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.15);
+    padding: 3px 8px;
+    background: rgba(28, 31, 48, 0.92);
+    border: 1px solid rgba(122, 134, 255, 0.6);
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+    pointer-events: auto;
+    cursor: move;
 }
 
 .flow-function-badge {
@@ -109,34 +117,30 @@
     white-space: nowrap;
 }
 
-.flow-function-children {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 10px;
-    padding: 10px 0;
+.flow-def-warning {
+    position: absolute;
+    top: 46px;
+    left: 14px;
+    font-size: 12px;
+    color: #ffb366;
+    pointer-events: none;
 }
 
-.flow-child-node {
-    flex: 1;
-    min-width: 140px;
-    box-sizing: border-box;
-    background: #2c3150;
-    border: 1px solid #4e58bf;
-    border-radius: 8px;
-    padding: 6px 8px;
+.flow-def-resize {
+    position: absolute;
+    right: 0;
+    bottom: 0;
+    width: 18px;
+    height: 18px;
+    cursor: nwse-resize;
+    pointer-events: auto;
+    border-right: 3px solid rgba(122, 134, 255, 0.9);
+    border-bottom: 3px solid rgba(122, 134, 255, 0.9);
+    border-bottom-right-radius: 12px;
 }
 
-.flow-child-title {
-    font-size: 13px;
-    font-weight: bold;
-    color: #dfe3ff;
-    padding-bottom: 4px;
-    margin-bottom: 4px;
-    border-bottom: 1px dashed rgba(255, 255, 255, 0.2);
-}
-
-.flow-child-control {
-    margin: 3px 0;
+.flow-def-resize:hover {
+    border-color: #ffd92c;
 }
 
 .flow-param-row {
@@ -159,51 +163,6 @@
 .flow-param-row input:focus {
     outline: none;
     border-color: #8f97ea;
-}
-
-.flow-function-footer {
-    display: flex;
-    gap: 6px;
-    padding-top: 6px;
-    border-top: 1px solid rgba(255, 255, 255, 0.15);
-}
-
-.flow-function-ports {
-    display: flex;
-    justify-content: space-between;
-    align-items: flex-start;
-    margin-top: 6px;
-}
-
-.flow-function-inputs,
-.flow-function-outputs {
-    display: flex;
-    flex-direction: column;
-    gap: 3px;
-}
-
-.flow-port-row {
-    display: flex;
-    align-items: center;
-    gap: 4px;
-    font-size: 13px;
-    color: #dfe3ff;
-}
-
-.flow-function-inputs .flow-port-row {
-    margin-left: -10px;
-}
-
-.flow-function-outputs .flow-port-row {
-    justify-content: flex-end;
-    margin-right: -10px;
-}
-
-.flow-port-label {
-    max-width: 110px;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
 }
 
 .flow-info-text {

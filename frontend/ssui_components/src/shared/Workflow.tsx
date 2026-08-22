@@ -21,6 +21,7 @@ import {
     InputNode,
     NameControl,
     NameControlRender,
+    OperatorNode,
     OutputNode,
     ParameterControl,
     ParameterControlRender,
@@ -47,6 +48,27 @@ const createEditor = async (container: HTMLElement) => {
         await area.translate(node.id, area.area.pointer);
     };
 
+    const syncDefinitions = () => {
+        for (const node of editor.getNodes()) {
+            if (node instanceof FunctionDefinitionNode) {
+                node.sync();
+            }
+        }
+    };
+
+    // 创建函数定义：有选中节点时按选中节点生成包围框，否则创建空框
+    const createDefinition = async () => {
+        const def = new FunctionDefinitionNode(area);
+        await editor.addNode(def);
+        const selected = editor.getNodes().filter((n) => n.selected && n !== def);
+        if (selected.length > 0) {
+            def.fitToNodes(selected);
+        } else {
+            await area.translate(def.id, area.area.pointer);
+        }
+        syncDefinitions();
+    };
+
     const contextMenu = new ContextMenuPlugin<Schemes>({
         items: (context) => {
             if (context === 'root') {
@@ -58,7 +80,8 @@ const createEditor = async (container: HTMLElement) => {
                     list: [
                         { label: '输入节点', key: 'input', handler: () => addNode(new InputNode(area)) },
                         { label: '返回节点', key: 'output', handler: () => addNode(new OutputNode(area)) },
-                        { label: '函数定义', key: 'definition', handler: () => addNode(new FunctionDefinitionNode(area)) },
+                        { label: '算子节点', key: 'operator', handler: () => addNode(new OperatorNode('算子')) },
+                        { label: '函数定义（框选节点）', key: 'definition', handler: () => createDefinition() },
                         {
                             label: '函数调用',
                             key: 'call',
@@ -149,34 +172,88 @@ const createEditor = async (container: HTMLElement) => {
     area.use(reactRender);
     AreaExtensions.simpleNodesOrder(area);
 
-    // 添加示例流程：输入 → 函数调用（引用函数定义）→ 返回
-    const inputNode = new InputNode(area);
+    // 右键前选中的节点快照：右键会清空选中，菜单打开前恢复，便于“框选节点生成函数”
+    let rightClickSelection: string[] = [];
+
+    // 节点/矩形移动、增删、重渲染时，重算函数定义框内的成员
+    area.addPipe((context) => {
+        if (context && typeof context === 'object' && 'type' in context) {
+            const type = (context as { type: string }).type;
+            if (type === 'pointerdown') {
+                const event = (context as { data?: { event?: PointerEvent } }).data?.event;
+                if (event?.button === 2) {
+                    rightClickSelection = editor.getNodes()
+                        .filter((n) => n.selected)
+                        .map((n) => n.id);
+                }
+            }
+            if (type === 'contextmenu') {
+                rightClickSelection.forEach((id) => {
+                    const node = editor.getNode(id);
+                    if (node && !node.selected) {
+                        node.selected = true;
+                        void area.update('node', id);
+                    }
+                });
+            }
+            if (
+                type === 'render' ||
+                type === 'nodetranslated' ||
+                type === 'nodecreated' ||
+                type === 'noderemoved'
+            ) {
+                syncDefinitions();
+            }
+        }
+        return context;
+    });
+
+    // 示例流程：一个函数定义框把 输入 → 算子 → 返回 框起来，
+    // 框外的 输入/返回 节点通过函数调用节点使用该函数
     const definitionNode = new FunctionDefinitionNode(area, '图像生成');
+    definitionNode.boxWidth = 900;
+    definitionNode.boxHeight = 340;
+
+    const innerInput = new InputNode(area);
+    innerInput.addParameter();
+    innerInput.addParameter();
+    const operator = new OperatorNode('采样');
+    const innerOutput = new OutputNode(area);
+    innerOutput.addReturn();
+    innerOutput.addReturn();
+
     const callNode = new FunctionCallNode(area, definitionNode);
-    const outputNode = new OutputNode(area);
 
-    inputNode.addParameter();
-    inputNode.addParameter();
-    definitionNode.addParameter();
-    definitionNode.addReturn();
-    outputNode.addReturn();
-    outputNode.addReturn();
+    const topInput = new InputNode(area);
+    topInput.addParameter();
+    topInput.addParameter();
+    const topOutput = new OutputNode(area);
+    topOutput.addReturn();
+    topOutput.addReturn();
 
-    await editor.addNode(inputNode);
     await editor.addNode(definitionNode);
+    await editor.addNode(innerInput);
+    await editor.addNode(operator);
+    await editor.addNode(innerOutput);
     await editor.addNode(callNode);
-    await editor.addNode(outputNode);
+    await editor.addNode(topInput);
+    await editor.addNode(topOutput);
 
-    // 连接示例：输入参数 → 函数调用 → 返回
-    await editor.addConnection(new Connection<BaseNode, BaseNode>(inputNode, 'param_0', callNode, 'in_param_0'));
-    await editor.addConnection(new Connection<BaseNode, BaseNode>(inputNode, 'param_1', callNode, 'in_param_1'));
-    await editor.addConnection(new Connection<BaseNode, BaseNode>(callNode, 'out_return_0', outputNode, 'return_0'));
-    await editor.addConnection(new Connection<BaseNode, BaseNode>(callNode, 'out_return_1', outputNode, 'return_1'));
+    await area.translate(definitionNode.id, { x: -560, y: 20 });
+    await area.translate(innerInput.id, { x: -520, y: 150 });
+    await area.translate(operator.id, { x: -250, y: 180 });
+    await area.translate(innerOutput.id, { x: 20, y: 150 });
+    await area.translate(callNode.id, { x: 520, y: 200 });
+    await area.translate(topInput.id, { x: -1040, y: 250 });
+    await area.translate(topOutput.id, { x: 840, y: 250 });
 
-    await area.translate(inputNode.id, { x: -620, y: 100 });
-    await area.translate(definitionNode.id, { x: -200, y: 0 });
-    await area.translate(callNode.id, { x: 420, y: 100 });
-    await area.translate(outputNode.id, { x: 700, y: 100 });
+    // 连接示例：顶层输入参数 → 函数调用 → 顶层返回
+    await editor.addConnection(new Connection<BaseNode, BaseNode>(topInput, 'param_0', callNode, 'in_param_0'));
+    await editor.addConnection(new Connection<BaseNode, BaseNode>(topInput, 'param_1', callNode, 'in_param_1'));
+    await editor.addConnection(new Connection<BaseNode, BaseNode>(callNode, 'out_return_0', topOutput, 'return_0'));
+    await editor.addConnection(new Connection<BaseNode, BaseNode>(callNode, 'out_return_1', topOutput, 'return_1'));
+
+    syncDefinitions();
 
     setTimeout(() => {
         AreaExtensions.zoomAt(area, editor.getNodes());
@@ -185,22 +262,19 @@ const createEditor = async (container: HTMLElement) => {
     // 工具栏：方便添加节点
     const toolbar = document.createElement('div');
     toolbar.className = 'workflow-toolbar';
-    const addToolbarButton = (label: string, factory: () => BaseNode) => {
+    const addToolbarButton = (label: string, handler: () => void | Promise<void>) => {
         const button = document.createElement('button');
         button.className = 'workflow-toolbar-button';
         button.textContent = label;
         button.addEventListener('pointerdown', (e) => e.stopPropagation());
         button.addEventListener('contextmenu', (e) => e.stopPropagation());
-        button.addEventListener('click', async () => {
-            const node = factory();
-            await editor.addNode(node);
-            await area.translate(node.id, area.area.pointer);
-        });
+        button.addEventListener('click', () => void handler());
         toolbar.appendChild(button);
     };
-    addToolbarButton('添加输入节点', () => new InputNode(area));
-    addToolbarButton('添加返回节点', () => new OutputNode(area));
-    addToolbarButton('添加函数定义', () => new FunctionDefinitionNode(area));
+    addToolbarButton('添加输入节点', () => addNode(new InputNode(area)));
+    addToolbarButton('添加返回节点', () => addNode(new OutputNode(area)));
+    addToolbarButton('添加算子节点', () => addNode(new OperatorNode('算子')));
+    addToolbarButton('添加函数定义', () => createDefinition());
     const callButton = document.createElement('button');
     callButton.className = 'workflow-toolbar-button';
     callButton.textContent = '添加函数调用';
