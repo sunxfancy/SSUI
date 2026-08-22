@@ -22,12 +22,14 @@ use python::{
     get_executor_status,
     GLOBAL_PROCESS_STATE,
 };
+use port::{check_port_owner, kill_pid};
 use std::env;
 
 mod gpu_detector;
 mod downloader;
 mod python;
 mod hf_transfer;
+mod port;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
@@ -67,6 +69,8 @@ pub fn run() {
             restart_server,
             restart_executor,
             set_proxy,
+            check_port_owner,
+            kill_pid,
 
             create_download_task,
             pause_download_task,
