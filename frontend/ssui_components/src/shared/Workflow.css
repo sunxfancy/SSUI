@@ -1,0 +1,216 @@
+/* ============ 工作流画布与工具栏 ============ */
+
+.workflow-ui {
+    position: relative;
+    width: 100%;
+    height: 100vh;
+}
+
+.workflow-toolbar {
+    position: absolute;
+    top: 12px;
+    left: 12px;
+    z-index: 100;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 8px;
+    background: rgba(28, 31, 48, 0.92);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 8px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.35);
+    pointer-events: auto;
+}
+
+.workflow-toolbar-button {
+    border: none;
+    border-radius: 6px;
+    padding: 6px 10px;
+    font-size: 13px;
+    color: #e6e9ff;
+    background: #4e58bf;
+    cursor: pointer;
+    white-space: nowrap;
+}
+
+.workflow-toolbar-button:hover {
+    background: #5f69d6;
+}
+
+.workflow-toolbar-clear {
+    background: #7a3f4d;
+}
+
+.workflow-toolbar-clear:hover {
+    background: #93505f;
+}
+
+/* ============ 函数调用节点（大矩形框） ============ */
+
+.flow-function-node {
+    width: 380px;
+    box-sizing: border-box;
+    background: #23273f;
+    border: 2px solid #4e58bf;
+    border-radius: 12px;
+    color: #fff;
+    font-family: Arial, sans-serif;
+    user-select: none;
+    line-height: initial;
+    padding: 8px 12px 12px;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.35);
+}
+
+.flow-function-node.selected {
+    background: #343a5e;
+    border-color: #ffd92c;
+}
+
+.flow-function-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.15);
+}
+
+.flow-function-badge {
+    flex-shrink: 0;
+    padding: 2px 10px;
+    border-radius: 999px;
+    background: #4e58bf;
+    font-size: 12px;
+    font-weight: bold;
+    white-space: nowrap;
+}
+
+.flow-name-input {
+    flex: 1;
+    min-width: 60px;
+    padding: 4px 8px;
+    border: 1px solid rgba(255, 255, 255, 0.25);
+    border-radius: 6px;
+    background: rgba(255, 255, 255, 0.12);
+    color: #fff;
+    font-size: 14px;
+    box-sizing: border-box;
+}
+
+.flow-name-input:focus {
+    outline: none;
+    border-color: #8f97ea;
+    background: rgba(255, 255, 255, 0.2);
+}
+
+.flow-function-meta {
+    flex-shrink: 0;
+    font-size: 12px;
+    color: #aeb4d8;
+    white-space: nowrap;
+}
+
+.flow-function-children {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    padding: 10px 0;
+}
+
+.flow-child-node {
+    flex: 1;
+    min-width: 140px;
+    box-sizing: border-box;
+    background: #2c3150;
+    border: 1px solid #4e58bf;
+    border-radius: 8px;
+    padding: 6px 8px;
+}
+
+.flow-child-title {
+    font-size: 13px;
+    font-weight: bold;
+    color: #dfe3ff;
+    padding-bottom: 4px;
+    margin-bottom: 4px;
+    border-bottom: 1px dashed rgba(255, 255, 255, 0.2);
+}
+
+.flow-child-control {
+    margin: 3px 0;
+}
+
+.flow-param-row {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.flow-param-row input {
+    width: 56px;
+    box-sizing: border-box;
+    padding: 3px 6px;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 5px;
+    background: rgba(255, 255, 255, 0.1);
+    color: #fff;
+    font-size: 12px;
+}
+
+.flow-param-row input:focus {
+    outline: none;
+    border-color: #8f97ea;
+}
+
+.flow-function-footer {
+    display: flex;
+    gap: 6px;
+    padding-top: 6px;
+    border-top: 1px solid rgba(255, 255, 255, 0.15);
+}
+
+.flow-function-ports {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-top: 6px;
+}
+
+.flow-function-inputs,
+.flow-function-outputs {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+}
+
+.flow-port-row {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 13px;
+    color: #dfe3ff;
+}
+
+.flow-function-inputs .flow-port-row {
+    margin-left: -10px;
+}
+
+.flow-function-outputs .flow-port-row {
+    justify-content: flex-end;
+    margin-right: -10px;
+}
+
+.flow-port-label {
+    max-width: 110px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.flow-info-text {
+    padding: 2px 8px;
+    border-radius: 999px;
+    background: rgba(78, 88, 191, 0.35);
+    color: #cfd5ff;
+    font-size: 12px;
+    text-align: center;
+}
