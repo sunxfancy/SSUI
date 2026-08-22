@@ -99,7 +99,7 @@
 |------|------|
 | `yarn test` | 运行全部 Python 测试 |
 | `yarn test_on <name>` | 运行指定测试，如 `yarn test_on ss_executor_test` |
-| `RUN_SLOW_TESTS=1 yarn test` | 包含慢速测试（依赖大模型，发布前需跑通） |
+| `SSUI_RUN_MODEL_TESTS=1 yarn test` | 包含真模型回归测试（发布前需跑通，见 `tests/model_manifest.yaml`） |
 
 子包内测试：
 
@@ -277,10 +277,47 @@ git config --local core.hooksPath .githooks/
 
 ---
 
+## CI / 质量门禁
+
+仓库采用与 EVEngine 项目一致的质量控制体系（`.github/workflows/` + `scripts/release.py`）：
+
+| 工作流 | 触发 | 作用 |
+|--------|------|------|
+| `ci.yml` | push/PR 到 `dev`、每周、手动、可被 release 复用 | 先跑版本一致性检查与 release.py 单测，再在 Windows / macOS / Linux 三平台构建并运行测试 |
+| `main-gate.yml` | PR 到 `main` | 只放行 docs-only 或 `promote/vX.Y.Z` 发布分支，其余一律拒绝 |
+| `sync-docs.yml` | `main` 上文档变更 | 通过 PR 把 `main` 的文档变更同步回 `dev`（`main` 受保护，禁止 `dev` 合入 `main`） |
+| `cleanup-branches.yml` | 每周 / 手动 | 删除已合入的 `vX.Y.Z` / `promote/*` / `rebase/*` 发布分支（不动 tag） |
+| `release.yml` | GitHub Pre-release 事件 / 手动 | `start` 写官方版本并切 `vX.Y.Z` 分支 → 复用 `ci.yml` 跑严格测试 → 打包 Windows / macOS 安装包 → 冒烟验证可执行 → 上传产物 → `finish` 转为正式发布并开 `promote/vX.Y.Z`（进 main）与 `rebase/vX.Y.Z`（回 dev）PR |
+
+质量门禁脚本 `scripts/release.py`（由 CI 的 qc job 运行单测）：
+
+| 命令 | 说明 |
+|------|------|
+| `python3 scripts/release.py check-versions` | 以 `desktop/src-tauri/Cargo.toml` 为版本源，required touchpoint（`desktop/package.json`）必须一致，tracked 包仅告警 |
+| `python3 scripts/release.py start --tag 0.1.2` | 把 pre-release tag 变成官方版本提交：改写版本号、移动 tag、推送 `v0.1.2` 分支 |
+| `python3 scripts/release.py finish --tag 0.1.2` | `gh release edit --prerelease=false` 正式发布，并打开 promote / rebase PR |
+| `python3 scripts/release.py check-main-pr` | main-gate 判定：docs-only 或 `promote/vX.Y.Z` 才允许进 `main` |
+| `python3 scripts/release.py sync-docs` | 把 `main` 的文档变更通过 PR 同步到 `dev` |
+| `python3 scripts/release.py cleanup-branches` | 清理已合并的发布分支 |
+
+Actions 均固定 commit SHA（由 dependabot 每周更新）。文档白名单：`Readme.md` / `Readme.zh.md` / `README.md` / `doc/**`。
+
+## 发布流程
+
+1. 确保 `SSUI_RUN_MODEL_TESTS=1 yarn test` 通过（本地验证）。
+2. 在 GitHub 上从 `dev` 创建 **Pre-release**，tag 形如 `0.1.2`（`v` 前缀可选）。
+3. `release.yml` 自动执行：`start` → 严格测试 → Windows/macOS 打包 → 冒烟测试（直接运行 release 二进制 + 静默安装 NSIS / 挂载 DMG 验证可执行）→ 上传安装包 → `finish` 把 release 标记为正式。
+4. 合并 `promote/v0.1.2` PR 到 `main`（main-gate 放行）；合并 `rebase/v0.1.2` PR 到 `dev` 使 dev 包含发布改动。
+5. 每周定时 `cleanup-branches.yml` 自动清理已合并的发布分支。
+
+冒烟测试脚本：`node scripts/smoke_app.cjs <可执行文件> [秒数]`。
+
+---
+
 ## AI 助手操作备忘
 
 1. **验证 TypeScript/React 改动**：到**被修改包所在目录**执行 `yarn build`，不要裸跑 `npx tsc`。
 2. **验证 desktop 故事/组件**：`cd desktop && yarn build` 或 `yarn dev:desktop_sb` 手动查看。
 3. **修改了 ssui_components**：先 `yarn build:components`，或根目录 `yarn build:frontend`，再启动依赖它的 dev 服务。
-4. **完整发布前**：`RUN_SLOW_TESTS=1 yarn test`，再按 `doc/Package.md` 执行 `yarn package`。
+4. **完整发布前**：`SSUI_RUN_MODEL_TESTS=1 yarn test`，再按 `doc/Package.md` 执行 `yarn package`。
 5. **文档与代码不一致时以 `package.json` 为准**（已知：`dev:components`、`dev:desktop_ui` 在文档/README 中出现但根 scripts 无定义）。

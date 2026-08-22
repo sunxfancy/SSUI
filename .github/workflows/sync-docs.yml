@@ -1,0 +1,43 @@
+# Cherry-pick documentation changes from main onto dev.
+# Non-doc files on main (relative to dev) fail the job.
+#
+# Ported from EVEngine/.github/workflows/sync-docs.yml.
+
+name: Sync docs
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - Readme.md
+      - Readme.zh.md
+      - README.md
+      - doc/**
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  sync:
+    name: sync-docs
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        timeout-minutes: 10
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Sync documentation to dev
+        timeout-minutes: 10
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          CI: "true"
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          python3 scripts/release.py sync-docs
