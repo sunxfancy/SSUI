@@ -4,6 +4,16 @@
     "nodyc": "当前没有打开的目录, 您可以：",
     "ocapw": "或者，选择我们准备的预制工作流：",
     "wsp": "工作空间",
+    "tree": {
+        "open": "打开",
+        "refresh": "刷新",
+        "copyPath": "复制路径"
+    },
+    "tabs": {
+        "close": "关闭标签页",
+        "closeOthers": "关闭其他标签页",
+        "closeAll": "关闭全部标签页"
+    },
     "dmg": "下载模型组",
     "preset": "预制模型组",
     "local": "本地模型",
