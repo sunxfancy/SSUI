@@ -14,6 +14,33 @@ pub struct BackgroundProcessesGuard {
     processes: Vec<Child>,
 }
 
+/// 终止 Python 子进程（含其整个进程树）。
+///
+/// Windows 上 venv 的 `Scripts\python.exe` 只是启动器，真正的 Python
+/// （`python\python.exe`）是它的子进程。直接 `child.kill()` 只会杀掉启动器，
+/// 真正的 Python 会变成孤儿进程继续占用端口（如 7422/5000），导致后续
+/// 重启 server 时端口被占而失败。因此 Windows 下用 `taskkill /T /F` 按树终止。
+fn kill_child_process(child: &mut Child) {
+    #[cfg(windows)]
+    {
+        let pid = child.id().to_string();
+        match std::process::Command::new("taskkill")
+            .args(["/PID", pid.as_str(), "/T", "/F"])
+            .output()
+        {
+            Ok(_) => {}
+            Err(e) => {
+                error!("taskkill 失败，回退到 child.kill(): {}", e);
+                let _ = child.kill();
+            }
+        }
+    }
+    #[cfg(not(windows))]
+    {
+        let _ = child.kill();
+    }
+}
+
 impl BackgroundProcessesGuard {
     pub const fn new() -> Self {
         Self {
@@ -29,9 +56,7 @@ impl BackgroundProcessesGuard {
     pub fn kill_all_processes(&mut self) {
         info!("开始关闭所有后台进程");
         for child in self.processes.iter_mut() {
-            if let Err(e) = child.kill() {
-                error!("无法终止进程: {}", e);
-            }
+            kill_child_process(child);
         }
         self.processes.clear();
         info!("所有后台进程已关闭");
@@ -83,10 +108,7 @@ impl ProcessManager {
 
     pub fn kill_process(&mut self, process_type: &str) -> bool {
         if let Some(child) = self.processes.get_mut(process_type) {
-            if let Err(e) = child.kill() {
-                eprintln!("无法终止进程 {}: {}", process_type, e);
-                return false;
-            }
+            kill_child_process(child);
             self.processes.remove(process_type);
             true
         } else {
@@ -97,11 +119,8 @@ impl ProcessManager {
     pub fn kill_all_processes(&mut self) {
         info!("开始关闭所有特定类型进程");
         for (process_type, child) in self.processes.iter_mut() {
-            if let Err(e) = child.kill() {
-                error!("无法终止进程 {}: {}", process_type, e);
-            } else {
-                info!("进程 {} 已终止", process_type);
-            }
+            kill_child_process(child);
+            info!("进程 {} 已终止", process_type);
         }
         self.processes.clear();
         info!("所有特定类型进程已关闭");
