@@ -115,6 +115,17 @@
         "server": "Server",
         "clearCache": "Clear Cache",
         "disableCache": "Disable Cache",
+        "clearCompleted": "Clear Completed",
+        "loadError": "Failed to load tasks",
+        "empty": "No tasks",
+        "actions": {
+            "cancel": "Cancel Task",
+            "remove": "Remove Task"
+        },
+        "kind": {
+            "download": "Download",
+            "generation": "Generation"
+        },
         "restart": {
             "title": "Restart {{type}}",
             "confirm": "Are you sure you want to restart the {{type}}?",
@@ -127,7 +138,8 @@
             "waiting": "Waiting",
             "processing": "Processing",
             "completed": "Completed",
-            "failed": "Failed"
+            "failed": "Failed",
+            "cancelled": "Cancelled"
         }
     }
 }
