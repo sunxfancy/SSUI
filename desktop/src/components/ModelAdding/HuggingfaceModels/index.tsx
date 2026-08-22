@@ -5,6 +5,7 @@ import HuggingfaceLogo from './logo_huggingface.svg'
 import ModelLogo from './logo_model.svg'
 import styles from './style.module.css'
 import TaskService from '../../../services/TaskService';
+import { getApiBaseUrl } from '../../../services/apiBase';
 
 export interface HuggingfaceModel {
     id: string;
@@ -70,7 +71,7 @@ const HuggingfaceModels: React.FC<HuggingfaceModelsProps> = () => {
             setError(null);
             setHasSearched(true);
 
-            const response = await axios.get('/api/hf/models', {
+            const response = await axios.get(`${getApiBaseUrl()}/api/hf/models`, {
                 params: {
                     search: inputValue,
                     limit: 50,
@@ -95,7 +96,7 @@ const HuggingfaceModels: React.FC<HuggingfaceModelsProps> = () => {
             setHasSearched(true);
 
             // 获取单个仓库信息
-            const response = await axios.get(`/api/hf/models/${encodeURIComponent(inputValue)}`);
+            const response = await axios.get(`${getApiBaseUrl()}/api/hf/models/${encodeURIComponent(inputValue)}`);
 
             // 如果成功获取，添加到模型列表的开头
             if (response.data) {

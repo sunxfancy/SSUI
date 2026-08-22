@@ -5,6 +5,7 @@ import { CivitaiModel } from '../../../types/civitai';
 import styles from './style.module.css';
 import { TauriDownloaderProvider } from '../../../providers/TauriDownloaderProvider';
 import { DownloadTask } from '../../../providers/IDownloaderProvider';
+import { getApiBaseUrl } from '../../../services/apiBase';
 
 interface CivitaiModelsProps {
     onModelSelect?: (model: CivitaiModel) => void;
@@ -32,7 +33,7 @@ export const CivitaiModels: React.FC<CivitaiModelsProps> = () => {
     const fetchModels = async (query?: string) => {
         try {
             setLoading(true);
-            const response = await axios.get('/api/civitai/models', {
+            const response = await axios.get(`${getApiBaseUrl()}/api/civitai/models`, {
                 params: {
                     query: query || undefined,
                     page: 1,
