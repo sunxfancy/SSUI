@@ -1494,10 +1494,10 @@
   resolved "https://registry.yarnpkg.com/@storybook/theming/-/theming-8.6.12.tgz#2d521f422daf85e0b27179520ce1cfb520284447"
   integrity sha512-6VjZg8HJ2Op7+KV7ihJpYrDnFtd9D1jrQnUS8LckcpuBXrIEbaut5+34ObY8ssQnSqkk2GwIZBBBQYQBCVvkOw==
 
-"@tauri-apps/api@^2.0.0", "@tauri-apps/api@^2.1.1":
-  version "2.5.0"
-  resolved "https://registry.yarnpkg.com/@tauri-apps/api/-/api-2.5.0.tgz#f1c67b5505ba689621b549f9d0165389337586dc"
-  integrity sha512-Ldux4ip+HGAcPUmuLT8EIkk6yafl5vK0P0c0byzAKzxJh7vxelVtdPONjfgTm96PbN24yjZNESY8CKo8qniluA==
+"@tauri-apps/api@^2.0.0", "@tauri-apps/api@^2.1.1", "@tauri-apps/api@^2.8.0":
+  version "2.11.1"
+  resolved "https://registry.yarnpkg.com/@tauri-apps/api/-/api-2.11.1.tgz#cd6b13fc26403ca095a02e39ecdbec8048d2872d"
+  integrity sha512-M2FPuYND2m+wh5hfW9ZpSdxMPdEJovPBWwoHJmwUpysTYNHaOkVFN419m/K0LIgjb/7KU2vBgsUepJWugQCvAA==
 
 "@tauri-apps/cli-darwin-arm64@2.5.0":
   version "2.5.0"
@@ -1635,11 +1635,11 @@
     "@tauri-apps/api" "^2.0.0"
 
 "@tauri-apps/plugin-upload@~2":
-  version "2.2.1"
-  resolved "https://registry.yarnpkg.com/@tauri-apps/plugin-upload/-/plugin-upload-2.2.1.tgz#9b13009a15db366c5f78e890cd36665b434bfa03"
-  integrity sha512-2EyVhJYLAp2mJH0UzO3QGU0vPk/YWvAfdI2wXbczyzEZY/AZVa9wConyB1TV/NGhyJRim4LwWgkmnEvcKLkECw==
+  version "2.4.0"
+  resolved "https://registry.yarnpkg.com/@tauri-apps/plugin-upload/-/plugin-upload-2.4.0.tgz#a08f7174471936429f5601c1477f40462915b2e8"
+  integrity sha512-ebhsqXmiELnpKu2p46EZG14UKxvbVP28BpJBiHzR+quWVrMxm40518PXTDlXXcJUW5CkbmP/6RL5ERSVXBL8sQ==
   dependencies:
-    "@tauri-apps/api" "^2.0.0"
+    "@tauri-apps/api" "^2.8.0"
 
 "@tauri-apps/plugin-websocket@~2":
   version "2.3.0"
