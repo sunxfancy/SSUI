@@ -3,6 +3,7 @@ import { Button, Icon, Tooltip, ProgressBar } from '@blueprintjs/core';
 import styles from './style.module.css';
 import { useTranslation } from 'react-i18next';
 import TaskService from '../../../services/TaskService';
+import { getApiBaseUrl } from '../../../services/apiBase';
 
 interface PresetModel {
     id: string;
@@ -49,7 +50,7 @@ export const PresetModels: React.FC<PresetModelsProps> = ({ onModelSelect }) => 
         const fetchPresets = async () => {
             try {
                 setLoading(true);
-                const response = await fetch('/api/preset_models');
+                const response = await fetch(`${getApiBaseUrl()}/api/preset_models`);
                 if (!response.ok) {
                     throw new Error(`Failed to fetch preset models: ${response.status}`);
                 }
