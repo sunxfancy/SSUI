@@ -26,10 +26,10 @@ if not exist ".venv\python\python.exe" (
 
     rem Try to download Python from GitHub
     echo "Trying to download Python from GitHub..."
-    curl -L !DOWNLOAD_URL! -o .venv\python.tar.gz
+    curl  --ssl-revoke-best-effort -L !DOWNLOAD_URL! -o .venv\python.tar.gz
     if errorlevel 1 (
         echo "GitHub download failed, trying China mirror..."
-        curl -L !CHINA_MIRROR! -o .venv\python.tar.gz
+        curl  --ssl-revoke-best-effort -L !CHINA_MIRROR! -o .venv\python.tar.gz
         if errorlevel 1 (
             echo "Both downloads failed. Please check your internet connection."
             exit /b 1
@@ -49,5 +49,5 @@ if not exist ".venv\Scripts\python.exe" (
 
 if not exist ".venv\Scripts\uv.exe" (
     echo "Install uv tool..."
-    .venv\python\python.exe -m pip install uv==0.6.11
+    .venv\python\python.exe -m pip install uv==0.6.11 packaging==24.1
 )

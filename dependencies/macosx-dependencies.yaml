@@ -456,7 +456,7 @@ pyparsing:
     - compel
     - matplotlib
 pyreadline3:
-  version: "3.5.4"
+  version: "3.5.6"
   dependents:
     - humanfriendly
 python-dateutil:
@@ -496,6 +496,7 @@ regex:
   dependents:
     - clip-anytorch
     - diffusers
+    - tiktoken
     - transformers
 rembg:
   version: "2.0.65"
@@ -506,6 +507,7 @@ requests:
     - diffusers
     - huggingface-hub
     - pooch
+    - tiktoken
     - transformers
 restrictedpython:
   version: "8.0"
@@ -597,6 +599,9 @@ tifffile:
   version: "2025.3.13"
   dependents:
     - scikit-image
+tiktoken:
+  version: "0.9.0"
+  isRoot: true
 timm:
   version: "0.6.7"
   dependents:
@@ -652,6 +657,10 @@ transformers:
   isRoot: true
   dependents:
     - compel
+    - transformers-stream-generator
+transformers-stream-generator:
+  version: "0.0.4"
+  isRoot: true
 trimesh:
   version: "4.6.6"
   isRoot: true

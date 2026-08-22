@@ -165,7 +165,7 @@ export const ModelManager = (props: ModelManagerProps) => {
                     <Button
                         icon="tag"
                         rightIcon="caret-down"
-                        text={selectedTags.length > 0 
+                        text={selectedTags.length > 0
                             ? t('model.tags.selected', { count: selectedTags.length })
                             : t('model.tags.filter')}
                     />

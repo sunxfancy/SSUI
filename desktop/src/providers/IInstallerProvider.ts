@@ -9,6 +9,8 @@ export interface IInstallerProvider {
   getAppDataDir(): Promise<string>;
   getUserDir(): Promise<string>;
   selectFolder(): Promise<string | null>;
+  // 选择单个文件（用于挑选离线安装包 .pkg）
+  selectFile(extensions?: string[]): Promise<string | null>;
   exitApp(): Promise<void>;
   relaunchApp(): Promise<void>;
   
@@ -32,6 +34,15 @@ export interface IInstallerProvider {
   
   // 安装包
   installPackages(installDir: string, lockFile: string): Promise<CommandInfo>;
+
+  // 从离线安装包(.pkg)中解压并安装 Python 解释器到 .venv
+  installPythonOffline(installDir: string, offlineInstallerPath: string): Promise<CommandInfo>;
+
+  // 使用离线安装包(.pkg, 内含 packages/ 与 lock)离线安装依赖
+  installPackagesOffline(installDir: string, offlineInstallerPath: string): Promise<CommandInfo>;
+
+  // 清理离线安装过程中解压出的临时目录
+  cleanupOfflinePackage(installDir: string): Promise<void>;
   
   // 配置存储
   saveSettings(installConfig: {

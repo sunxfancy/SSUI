@@ -5827,16 +5827,6 @@ sprintf-js@~1.0.2:
   resolved "https://registry.yarnpkg.com/sprintf-js/-/sprintf-js-1.0.3.tgz#04e6926f662895354f3dd015203633b857297e2c"
   integrity sha512-D9cPgkvLlV3t3IzL0D0YLvGA9Ahk4PcvVwUbN0dSGr1aP0Nrt4AEnTUbuGvquEC0mA64Gqt1fzirlRs5ibXx8g==
 
-"ssext-builder@file:extension_builder":
-  version "0.1.0"
-  dependencies:
-    chalk "^4.1.2"
-    commander "^11.0.4"
-    fs-extra "^11.3.0"
-    inquirer "^8.2.6"
-    tar "~6.1.13"
-    yaml "^2.3.4"
-
 stack-generator@^2.0.5:
   version "2.0.10"
   resolved "https://registry.yarnpkg.com/stack-generator/-/stack-generator-2.0.10.tgz#8ae171e985ed62287d4f1ed55a1633b3fb53bb4d"

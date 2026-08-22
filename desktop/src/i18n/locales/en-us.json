@@ -68,6 +68,9 @@
         "empty": "No extensions installed"
     },
     "workflow": {
+        "title": "New Workflow",
+        "official": "Official",
+        "community": "Community",
         "saveLocation": "Select workflow save location...",
         "selectFolder": "Select Folder",
         "actions": {

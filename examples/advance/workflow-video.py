@@ -7,13 +7,19 @@ config = SSUIConfig()
 
 @workflow
 def img2vid(image: Image, prompt: Prompt, negative_prompt: Prompt) -> Video:
-    model = WanVideoModel()
+    if config.is_prepare():
+        model = WanVideoModel()
+    else:
+        model = WanVideoModel.load()
     video = WanImageTextToVideo(config("Generate Video"), model, image, prompt, negative_prompt)
     return Video("mp4", video, fps=30)
 
 
 @workflow
-def txt2vid(prompt: Prompt, negative_prompt: Prompt) -> Video:
-    model = HunyuanVideoModel()
-    video = HunyuanTextToVideo(config("Generate Video"), model, prompt, negative_prompt)
+def txt2vid(prompt: Prompt) -> Video:
+    if config.is_prepare():
+        model = HunyuanVideoModel()
+    else:
+        model = HunyuanVideoModel.load()
+    video = HunyuanTextToVideo(config("Generate Video"), model, prompt)
     return Video("mp4", video, fps=30)

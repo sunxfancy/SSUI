@@ -46,3 +46,7 @@ pyvista>=0.44.2
 pymeshfix>=0.17.0
 igraph>=0.11.8
 kornia>=0.8.0 
+
+# Qwen
+transformers_stream_generator==0.0.4
+tiktoken>=0.9.0

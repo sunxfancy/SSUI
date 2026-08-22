@@ -40,6 +40,8 @@ def AnimateDiffTextToVideo(
     prompt: Prompt,
     negative_prompt: Prompt,
 ) -> list[PIL.Image.Image]:
+    if config.is_prepare():
+        return []
 
     # Text -> Image
     pipe_image = SDImagePipeline.from_model_manager(base_model.model_manager)

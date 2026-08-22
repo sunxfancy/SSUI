@@ -2,12 +2,14 @@ const { execSync } = require('child_process');
 const fs = require('fs');
 const path = require('path');
 const os = require('os');
+const { getAllTargets, getCurrentPlatformTargets } = require('./platform.cjs');
 
 // 检查命令行参数
 function parseArgs() {
   const args = process.argv.slice(2);
   return {
-    noUpgrade: args.includes('--no-upgrade') || args.includes('-n')
+    noUpgrade: args.includes('--no-upgrade') || args.includes('-n'),
+    all: args.includes('--all') || args.includes('-a')
   };
 }
 
@@ -29,34 +31,30 @@ function extractIndexUrls(requirementsFile) {
   return indexUrls;
 }
 
-// 获取所有支持的平台列表
-function getAllPlatforms() {
-  return ['windows', 'macosx', 'linux'];
-}
-
 // 主函数
 function main() {
   try {
     const args = parseArgs();
-    const platforms = getAllPlatforms();
+    // --all 生成全部目标，否则只生成当前平台下的所有变体（含 GPU 变体）
+    const targets = args.all ? getAllTargets() : getCurrentPlatformTargets();
     
-    for (const platformName of platforms) {
-      const requirementsFile = path.join('.', 'dependencies', `requirements-${platformName}.txt`);
-      const lockFile = path.join('.', 'dependencies', `${platformName}.lock`);
+    for (const targetName of targets) {
+      const requirementsFile = path.join('.', 'dependencies', `requirements-${targetName}.txt`);
+      const lockFile = path.join('.', 'dependencies', `${targetName}.lock`);
       
       // 检查requirements文件是否存在
       if (!fs.existsSync(requirementsFile)) {
-        console.log(`跳过平台 ${platformName}: 未找到requirements文件: ${requirementsFile}`);
+        console.log(`跳过目标 ${targetName}: 未找到requirements文件: ${requirementsFile}`);
         continue;
       }
 
       // 提取requirements文件中的index-url信息
       const indexUrls = extractIndexUrls(requirementsFile);
       if (indexUrls.length > 0) {
-        console.log(`发现以下index URL配置 (${platformName}):`, indexUrls);
+        console.log(`发现以下index URL配置 (${targetName}):`, indexUrls);
       }
 
-      console.log(`正在为平台 ${platformName} 生成锁文件...`);
+      console.log(`正在为目标 ${targetName} 生成锁文件...`);
       
       // 构建uv命令，根据参数决定是否添加--no-upgrade选项
       const venvPath = os.platform() === 'win32' ? '.venv\\Scripts\\uv.exe' : '.venv/bin/uv';
@@ -90,7 +88,7 @@ function main() {
       
       // 生成YAML文件
       const yamlContent = generateYaml(dependencies);
-      const yamlFile = path.join('.', 'dependencies', `${platformName}-dependencies.yaml`);
+      const yamlFile = path.join('.', 'dependencies', `${targetName}-dependencies.yaml`);
       fs.writeFileSync(yamlFile, yamlContent);
       
       console.log(`已生成依赖YAML文件: ${yamlFile}`);
