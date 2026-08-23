@@ -177,9 +177,22 @@
 }
 
 .flow-io-row {
+    position: relative;
     display: flex;
     align-items: center;
     gap: 5px;
+}
+
+/* 端口绿圆点挂在节点边缘：输入端口在左侧，输出端口在右侧
+   使用负 margin 挂在边缘（不用 absolute/transform，避免影响连线端点定位） */
+.flow-io-row .input-socket {
+    margin-left: -31px;
+}
+
+.flow-io-row .output-socket {
+    order: 99;
+    margin-left: auto;
+    margin-right: -31px;
 }
 
 .flow-io-name,
