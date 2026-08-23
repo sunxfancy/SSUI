@@ -20,7 +20,7 @@
     "react-i18next": "^15.5.1",
     "react-konva": "^18.2.10",
     "react-use": "^17.6.0",
-    "immer": "^10.1.1",
+    "immer": "^11.1.18",
     "ssui_components": "*"
   },
   "devDependencies": {
