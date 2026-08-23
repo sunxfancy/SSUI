@@ -143,14 +143,60 @@
     border-color: #ffd92c;
 }
 
-.flow-param-row {
-    display: flex;
-    align-items: center;
-    gap: 4px;
+/* ============ 输入/返回节点（参数名写在端口旁） ============ */
+
+.flow-io-node {
+    min-width: 220px;
+    box-sizing: border-box;
+    background: #23273f;
+    border: 2px solid #4e58bf;
+    border-radius: 10px;
+    color: #fff;
+    font-family: Arial, sans-serif;
+    user-select: none;
+    line-height: initial;
+    padding: 6px 8px;
 }
 
-.flow-param-row input {
-    width: 56px;
+.flow-io-node.selected {
+    background: #343a5e;
+    border-color: #ffd92c;
+}
+
+.flow-io-title {
+    font-size: 16px;
+    font-weight: bold;
+    padding: 4px 8px 6px;
+}
+
+.flow-io-rows {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding: 4px 6px;
+}
+
+.flow-io-row {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
+/* 端口绿圆点挂在节点边缘：输入端口在左侧，输出端口在右侧
+   使用负 margin 挂在边缘（不用 absolute/transform，避免影响连线端点定位） */
+.flow-io-row .input-socket {
+    margin-left: -31px;
+}
+
+.flow-io-row .output-socket {
+    order: 99;
+    margin-left: auto;
+    margin-right: -31px;
+}
+
+.flow-io-name,
+.flow-io-type {
     box-sizing: border-box;
     padding: 3px 6px;
     border: 1px solid rgba(255, 255, 255, 0.2);
@@ -160,9 +206,40 @@
     font-size: 12px;
 }
 
-.flow-param-row input:focus {
+.flow-io-name {
+    width: 76px;
+}
+
+.flow-io-type {
+    width: 58px;
+}
+
+.flow-io-name:focus,
+.flow-io-type:focus {
     outline: none;
     border-color: #8f97ea;
+}
+
+.flow-io-remove {
+    width: 20px;
+    height: 20px;
+    border: none;
+    border-radius: 4px;
+    background: rgba(255, 255, 255, 0.12);
+    color: #fff;
+    font-size: 13px;
+    line-height: 1;
+    cursor: pointer;
+}
+
+.flow-io-remove:hover {
+    background: #a0525f;
+}
+
+.flow-io-add {
+    display: flex;
+    justify-content: center;
+    padding-top: 4px;
 }
 
 .flow-info-text {
@@ -172,4 +249,26 @@
     color: #cfd5ff;
     font-size: 12px;
     text-align: center;
+}
+
+/* ============ 连线拐点（绿圆点，可拖拽改变连线路径） ============ */
+
+.flow-reroute-pin {
+    width: 18px;
+    height: 18px;
+    box-sizing: border-box;
+    background: #2fbf6a;
+    border: 2px solid #d8ffe8;
+    border-radius: 50%;
+    cursor: grab;
+    touch-action: none;
+    user-select: none;
+    box-shadow: 0 0 6px rgba(47, 191, 106, 0.7);
+}
+
+.flow-reroute-pin.selected {
+    background: #ffd92c;
+    border-color: #fff;
+    box-shadow: 0 0 8px rgba(255, 217, 44, 0.9);
+    cursor: grabbing;
 }
