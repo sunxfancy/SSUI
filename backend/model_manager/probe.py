@@ -616,8 +616,10 @@ class VaeCheckpointProbe(CheckpointProbeBase):
         for regexp, basetype in [
             (r"xl", BaseModelType.StableDiffusionXL),
             (r"sd2", BaseModelType.StableDiffusion2),
-            (r"vae", BaseModelType.StableDiffusion1),
             (r"FLUX", BaseModelType.Flux),
+            # FLUX VAE is conventionally named ae.safetensors
+            (r"^ae(\.|$)", BaseModelType.Flux),
+            (r"vae", BaseModelType.StableDiffusion1),
         ]:
             if re.search(regexp, self.model_path.name, re.IGNORECASE):
                 return basetype
