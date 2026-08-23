@@ -3437,10 +3437,10 @@ flatted@^3.2.9:
   resolved "https://registry.yarnpkg.com/flatted/-/flatted-3.3.3.tgz#67c8fad95454a7c7abebf74bb78ee74a44023358"
   integrity sha512-GX+ysw4PBCz0PzosHDepZGANEuFCMLrnRTiEy9McGjmkCQYwRq4A/X786G/fjM/+OjsWSU1ZrY5qyARZmO/uwg==
 
-flexlayout-react@^0.8.17:
-  version "0.8.17"
-  resolved "https://registry.yarnpkg.com/flexlayout-react/-/flexlayout-react-0.8.17.tgz#52c5f7e147b3baccd5f531ac4ada69efe59eda9d"
-  integrity sha512-F0utJcrIGBpF4btqRYLFOoITQcyFxUp19X4dvFvEceD/CJkRoefV96iN1lDU63t9ystgltmWw7AscgNbKJMlcA==
+flexlayout-react@^0.10.5:
+  version "0.10.5"
+  resolved "https://registry.yarnpkg.com/flexlayout-react/-/flexlayout-react-0.10.5.tgz#970732fa4138256fdc144b21744b7c290d032f1c"
+  integrity sha512-VP2AGJxERKeECmW1xHFnJRm3tl7wsFUl/o4XLAmaExGmpr30/kn41yDRpYtZW5RiGstNqZ1l6e96UdSYnwNYfw==
 
 follow-redirects@^1.15.6:
   version "1.15.9"
