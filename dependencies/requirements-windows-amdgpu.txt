@@ -14,7 +14,7 @@ accelerate==1.5.2
 pydantic-settings>=2.7.0
 pydantic>=2.10.4
 RestrictedPython>=8.0
-spandrel>=0.4.1
+spandrel>=0.4.2
 gguf>=0.10.0
 controlnet-aux>=0.0.7
 clip-anytorch>=2.6.0
