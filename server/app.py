@@ -120,6 +120,9 @@ def create_app(
         "FunctionalUI", ".py", "/functional_ui/?path="
     )
     FileOpenerManager.instance().register_opener(
+        "CodeEditorUI", ".py", "/functional_ui/?view=code_editor&path="
+    )
+    FileOpenerManager.instance().register_opener(
         "WorkflowUI", ".flow", "/functional_ui/?view=workflow&path="
     )
     FileOpenerManager.instance().register_opener(

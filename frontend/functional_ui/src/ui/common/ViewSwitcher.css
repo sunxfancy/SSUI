@@ -1,0 +1,13 @@
+.view-switcher {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px;
+    background: var(--ssui-card-bg);
+    border: 1px solid var(--ssui-border);
+    border-radius: 6px;
+}
+
+.view-switcher-button {
+    white-space: nowrap;
+}

@@ -4,6 +4,15 @@
     padding-right: 30px;
 }
 
+.functional-ui-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+    flex-wrap: wrap;
+    padding-top: 10px;
+}
+
 .functional-ui-container {
     margin-top: 20px;
     display: flex;

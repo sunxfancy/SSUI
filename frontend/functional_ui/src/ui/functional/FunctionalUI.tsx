@@ -6,6 +6,7 @@ import { ComponentTabRef } from "ssui_components";
 import { DetailsPanel } from "./Details";
 import { registerUIProvider, UIProvider } from '../UIProvider';
 import { useConfig } from '../../config';
+import { ViewSwitcher } from "../common/ViewSwitcher";
 import './FunctionalUI.css';
 import "normalize.css";
 import "@blueprintjs/core/lib/css/blueprint.css";
@@ -256,7 +257,15 @@ export class FunctionalUI extends Component<FunctionalUIProps, FunctionalUIState
         const { selectedFunc, isOpen } = this.state;
         const { path } = this.props;
 
-        const selected = selectedFunc?.name ?? Object.keys(meta)[0];
+        const keys = Object.keys(meta).filter(key => key !== "error");
+        if (keys.length === 0) {
+            const message = typeof meta["error"] === "string"
+                ? meta["error"]
+                : "该文件不是可用的 Python 脚本";
+            return <p>Error: {message}</p>;
+        }
+
+        const selected = selectedFunc?.name ?? keys[0];
 
         return (
             <div>
@@ -290,8 +299,13 @@ export class FunctionalUI extends Component<FunctionalUIProps, FunctionalUIState
 
         return (
             <div className='functional-ui-root'>
-                <h1>Functional UI</h1>
-                <p>Path: {path}</p>
+                <div className="functional-ui-header">
+                    <div>
+                        <h1>Functional UI</h1>
+                        <p>Path: {path}</p>
+                    </div>
+                    <ViewSwitcher path={path} currentView="functional" />
+                </div>
 
                 {loading ? (
                     <p>Loading...</p>
