@@ -188,18 +188,6 @@ const createEditor = async (container: HTMLElement) => {
     window.addEventListener('keydown', onKeyDown);
     window.addEventListener('keyup', onKeyUp);
 
-    // 给连线路径中点放一个可拖拽的绿圆点（拐点）；之后再点击连线任意位置可继续添加拐点
-    const addMidpointPin = (connectionId: string, attempts = 6) => {
-        if (reroute.pins.getPins(connectionId).length > 0) return;
-        const path = area.connectionViews.get(connectionId)?.element.querySelector('path');
-        if (!path || !path.getTotalLength()) {
-            if (attempts > 0) setTimeout(() => addMidpointPin(connectionId, attempts - 1), 60);
-            return;
-        }
-        const mid = path.getPointAtLength(path.getTotalLength() / 2);
-        reroute.add(connectionId, { x: mid.x, y: mid.y });
-    };
-
     // 拖动已选中的节点时保持多选（多选后直接拖动即可整组移动，不必一直按 Shift）
     let keepMultiSelection = false;
     area.addPipe((context) => {
@@ -337,16 +325,11 @@ const createEditor = async (container: HTMLElement) => {
                     }
                 }
             }
-            if (type === 'connectioncreated') {
-                const id = (context as { data?: { id?: string } }).data?.id;
-                if (id) addMidpointPin(id);
-            }
             if (
                 type === 'render' ||
                 type === 'nodetranslated' ||
                 type === 'nodecreated' ||
-                type === 'noderemoved' ||
-                type === 'connectioncreated'
+                type === 'noderemoved'
             ) {
                 syncDefinitions();
             }
@@ -418,13 +401,6 @@ const createEditor = async (container: HTMLElement) => {
     setTimeout(() => {
         AreaExtensions.zoomAt(area, editor.getNodes());
     }, 1);
-
-    // 初始示例的每条连线也自动加上中点绿圆点
-    setTimeout(() => {
-        for (const id of area.connectionViews.keys()) {
-            addMidpointPin(id);
-        }
-    }, 80);
 
     // 工具栏：方便添加节点
     const toolbar = document.createElement('div');
