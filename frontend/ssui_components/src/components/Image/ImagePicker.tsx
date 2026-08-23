@@ -69,16 +69,25 @@ export class ImagePicker extends IComponent<{ root_path: string, script_path: st
                     items={this.state.available_images}
                     itemPredicate={this.filterImage}
                     itemRenderer={this.renderImage}
-                    noResults={<MenuItem disabled={true} text="没有找到图片" roleStructure="listoption" />}
+                    noResults={<MenuItem disabled={true} text="No images found" roleStructure="listoption" />}
                     onItemSelect={this.handleImageSelect}
                 >
                     <Button
-                        text={this.state.selected_image || "请选择图片"}
+                        text={this.state.selected_image || "Select an image"}
                         rightIcon="double-caret-vertical"
                         fill={true}
                         minimal={true}
                     />
                 </Select>
+                {this.state.selected_image && (
+                    <div style={{ marginTop: '8px', textAlign: 'center' }}>
+                        <img
+                            src={'/file?path=' + encodeURIComponent(this.state.selected_image)}
+                            alt={this.state.selected_image}
+                            style={{ maxWidth: '100%', maxHeight: '200px', height: 'auto', borderRadius: '4px' }}
+                        />
+                    </div>
+                )}
             </div>
         );
     }

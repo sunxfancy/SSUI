@@ -98,6 +98,11 @@ def download_entry(model_key, sub_key=None):
 
     dest = base / entry["file"]
     _download_file(entry, dest)
+    for extra in entry.get("extra_files", []):
+        extra_entry = {**entry, "file": extra}
+        _download_file(extra_entry, base / extra)
+    if entry.get("return_dir"):
+        return base / entry["return_dir"]
     return dest
 
 

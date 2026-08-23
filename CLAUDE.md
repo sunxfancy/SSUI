@@ -304,7 +304,10 @@ Actions 均固定 commit SHA（由 dependabot 每周更新）。文档白名单�
 
 ## 发布流程
 
-1. 确保 `SSUI_RUN_MODEL_TESTS=1 yarn test` 通过（本地验证）。
+  0. **仓库前置条件**：Settings → Actions → General → Workflow permissions 需勾选
+     “Allow GitHub Actions to create and approve pull requests”，否则 `finish`
+     无法自动创建 promote / rebase PR（release.py 会降级为打印手动创建命令）。
+  1. 确保 `SSUI_RUN_MODEL_TESTS=1 yarn test` 通过（本地验证）。
 2. 在 GitHub 上从 `dev` 创建 **Pre-release**，tag 形如 `0.1.2`（`v` 前缀可选）。
 3. `release.yml` 自动执行：`start` → 严格测试 → Windows/macOS 打包 → 冒烟测试（直接运行 release 二进制 + 静默安装 NSIS / 挂载 DMG 验证可执行）→ 上传安装包 → `finish` 把 release 标记为正式。
 4. 合并 `promote/v0.1.2` PR 到 `main`（main-gate 放行）；合并 `rebase/v0.1.2` PR 到 `dev` 使 dev 包含发布改动。

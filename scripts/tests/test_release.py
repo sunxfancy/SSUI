@@ -505,6 +505,22 @@ class FinishTest(unittest.TestCase):
         self.assertTrue(all("promote/v0.1.2" not in c for c in prs))
         self.assertTrue(any(c[:2] == ["gh", "api"] for c in r.calls))
 
+    def test_finish_warns_when_actions_cannot_create_prs(self):
+        r = self._base()
+        self._wire_rebase_ok(r)
+        r.when(
+            ["gh", "pr", "create"],
+            rc=1,
+            stdout=(
+                "pull request create failed: GraphQL: GitHub Actions is not "
+                "permitted to create or approve pull requests (createPullRequest)"
+            ),
+        )
+        # 不应抛出：正式发布已完成，PR 创建失败时降级为警告并给出手动命令
+        release.cmd_finish(r, tag="0.1.2")
+        prs = [c for c in r.calls if c[:3] == ["gh", "pr", "create"]]
+        self.assertEqual(len(prs), 2)
+
 
 class CliTest(unittest.TestCase):
     def test_check_main_pr_requires_gh(self):

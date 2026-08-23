@@ -1,10 +1,11 @@
 from typing import Optional,List
 from pathlib import Path
 import torch
+import PIL
 from backend.stable_diffusion.diffusion.conditioning_data import SDXLConditioningInfo
 from ssui.config import SSUIConfig
 from .api.conditioning import BasicConditioningInfo, create_sdxl_conditioning
-from .api.denoise import decode_latents, denoise_image
+from .api.denoise import ApplyRange, ControlNet, decode_latents, denoise_image
 from .api.model import (
     ModelLoaderService,
     UNetModel,
@@ -13,7 +14,9 @@ from .api.model import (
     load_model,
     load_sdxl_model,
     LoRAModel,
-    load_lora
+    load_lora,
+    ControlNetModel,
+    load_controlnet,
 )
 from ssui.base import Prompt, Image
 from ssui.annotation import param
@@ -120,6 +123,78 @@ class SDXLLora:
             sdxlLora.append(SDXLLora(lora=lora_models,weight=lora_weights[i]))
 
         return sdxlLora
+
+
+class SDXLControlNet:
+    """SDXL ControlNet workflow node.
+
+    Pairs an SDXL ControlNet model file with a control image and tuning
+    parameters. ``load()`` is invoked by the frontend; the resulting node is
+    passed to ``SDXLDenoise``.
+    """
+
+    def __init__(
+        self,
+        path: str = "",
+        image_path: str = "",
+        controlnet: Optional[ControlNetModel] = None,
+        image: Optional[PIL.Image.Image] = None,
+        weight: float = 1.0,
+        control_mode: str = "balanced",
+        resize_mode: str = "just_resize",
+        begin_step_percent: float = 0.0,
+        end_step_percent: float = 1.0,
+    ):
+        self.path = path
+        self.image_path = image_path
+        self.controlnet = controlnet
+        self.image = image
+        self.weight = weight
+        self.control_mode = control_mode
+        self.resize_mode = resize_mode
+        self.begin_step_percent = begin_step_percent
+        self.end_step_percent = end_step_percent
+
+    @staticmethod
+    def load(
+        path: str,
+        image_path: str,
+        weight: float = 1.0,
+        control_mode: str = "balanced",
+        resize_mode: str = "just_resize",
+        begin_step_percent: float = 0.0,
+        end_step_percent: float = 1.0,
+    ) -> "SDXLControlNet":
+        controlnet = load_controlnet(getModelLoader(), Path(path))
+        image = PIL.Image.open(image_path).convert("RGB")
+        return SDXLControlNet(
+            path=path,
+            image_path=image_path,
+            controlnet=controlnet,
+            image=image,
+            weight=weight,
+            control_mode=control_mode,
+            resize_mode=resize_mode,
+            begin_step_percent=begin_step_percent,
+            end_step_percent=end_step_percent,
+        )
+
+    def to_api_field(self) -> ControlNet:
+        if self.controlnet is None or self.image is None:
+            raise ValueError(
+                "SDXLControlNet is not loaded; call SDXLControlNet.load() first."
+            )
+        return ControlNet(
+            image=self.image,
+            control_model=self.controlnet.controlnet,
+            control_weight=self.weight,
+            apply_range=ApplyRange(
+                begin_step_percent=self.begin_step_percent,
+                end_step_percent=self.end_step_percent,
+            ),
+            control_mode=self.control_mode,
+            resize_mode=self.resize_mode,
+        )
     
 @param(
     "steps",
@@ -169,6 +244,7 @@ def SDXLDenoise(
     latent: SDXLLatent,
     positive: SDXLCondition,
     negative: SDXLCondition,
+    control: Optional[SDXLControlNet] = None,
 ):
     if config.is_prepare():
         return SDXLLatent(config("DenoiseToLatents"))
@@ -188,6 +264,7 @@ def SDXLDenoise(
         scheduler_name=config["scheduler"],
         steps=config["steps"],
         cfg_scale=config["CFG"],
+        control=control.to_api_field() if control is not None else None,
     )
     return SDXLLatent(config("DenoiseToLatents"), tensor)
 

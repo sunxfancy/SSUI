@@ -7,7 +7,22 @@
     "tree": {
         "open": "打开",
         "refresh": "刷新",
-        "copyPath": "复制路径"
+        "copyPath": "复制路径",
+        "newFile": "新建文件",
+        "newCanvas": "新建绘图板",
+        "delete": "删除",
+        "createFileTitle": "新建文件",
+        "createCanvasTitle": "新建绘图板",
+        "name": "名称",
+        "namePlaceholder": "请输入文件名称",
+        "fileNamePlaceholder": "例如：script.py",
+        "canvasNamePlaceholder": "例如：我的画板",
+        "nameRequired": "名称不能为空",
+        "create": "创建",
+        "cancel": "取消",
+        "createFailed": "创建失败，请检查名称是否合法或已存在",
+        "deleteConfirmTitle": "删除确认",
+        "deleteConfirmMessage": "确定要删除「{{name}}」吗？此操作不可恢复。"
     },
     "tabs": {
         "close": "关闭标签页",
@@ -60,8 +75,10 @@
         },
         "actions": {
             "add": "添加模型",
-            "download": "下载"
-        }
+            "download": "下载",
+            "downloading": "下载中 {{progress}}%"
+        },
+        "loading": "加载中..."
     },
     "extensions": {
         "title": "扩展",
@@ -98,6 +115,17 @@
         "server": "服务器",
         "clearCache": "清除缓存",
         "disableCache": "禁用缓存",
+        "clearCompleted": "清除已完成",
+        "loadError": "加载任务失败",
+        "empty": "暂无任务",
+        "actions": {
+            "cancel": "取消任务",
+            "remove": "移除任务"
+        },
+        "kind": {
+            "download": "下载任务",
+            "generation": "生图任务"
+        },
         "restart": {
             "title": "重启{{type}}",
             "confirm": "确定要重启{{type}}吗？",
@@ -110,7 +138,8 @@
             "waiting": "等待中",
             "processing": "处理中",
             "completed": "已完成",
-            "failed": "失败"
+            "failed": "失败",
+            "cancelled": "已取消"
         }
     }
 }

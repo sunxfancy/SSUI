@@ -8,8 +8,8 @@
 .settings-title {
   font-size: 24px;
   margin-bottom: 20px;
-  color: #333;
-  border-bottom: 1px solid #eee;
+  color: var(--ssui-fg);
+  border-bottom: 1px solid var(--ssui-card-border);
   padding-bottom: 10px;
 }
 
@@ -20,7 +20,7 @@
 }
 
 .config-group {
-  background-color: #fff;
+  background-color: var(--ssui-card-bg);
   border-radius: 8px;
   box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
   padding: 20px;
@@ -29,8 +29,8 @@
 .config-group-title {
   font-size: 18px;
   margin-bottom: 15px;
-  color: #444;
-  border-bottom: 1px solid #eee;
+  color: var(--ssui-fg);
+  border-bottom: 1px solid var(--ssui-card-border);
   padding-bottom: 8px;
 }
 
@@ -43,9 +43,10 @@
 .config-input {
   width: 100%;
   padding: 8px 12px;
-  border: 1px solid #ddd;
+  border: 1px solid var(--ssui-border);
   border-radius: 4px;
-  background-color: white;
+  background-color: var(--ssui-input-bg);
+  color: var(--ssui-fg);
 }
 
 .config-item {
@@ -54,12 +55,12 @@
   gap: 8px;
   padding: 15px;
   border-radius: 6px;
-  background-color: #f9f9f9;
+  background-color: var(--ssui-item-bg);
   transition: background-color 0.2s;
 }
 
 .config-item:hover {
-  background-color: #f0f0f0;
+  background-color: var(--ssui-hover-bg);
 }
 
 .config-header {
@@ -70,15 +71,15 @@
 
 .config-label {
   font-weight: 600;
-  color: #333;
+  color: var(--ssui-fg);
 }
 
 .config-tooltip {
   width: 20px;
   height: 20px;
   border-radius: 50%;
-  background-color: #e0e0e0;
-  color: #666;
+  background-color: var(--ssui-hover-bg);
+  color: var(--ssui-fg-muted);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -88,7 +89,7 @@
 }
 
 .config-tooltip:hover {
-  background-color: #d0d0d0;
+  background-color: var(--ssui-item-bg);
 }
 
 .config-control {
@@ -106,9 +107,10 @@
 .config-control select {
   width: 100%;
   padding: 8px 12px;
-  border: 1px solid #ddd;
+  border: 1px solid var(--ssui-border);
   border-radius: 4px;
-  background-color: white;
+  background-color: var(--ssui-input-bg);
+  color: var(--ssui-fg);
   font-size: 14px;
 }
 
@@ -130,13 +132,13 @@
   justify-content: space-between;
   align-items: center;
   padding: 8px 12px;
-  background-color: white;
-  border: 1px solid #eee;
+  background-color: var(--ssui-input-bg);
+  border: 1px solid var(--ssui-card-border);
   border-radius: 4px;
 }
 
 .list-item button {
-  background-color: #ff4d4f;
+  background-color: var(--ssui-danger);
   color: white;
   border: none;
   border-radius: 4px;
@@ -153,12 +155,14 @@
 .list-add input {
   flex: 1;
   padding: 8px 12px;
-  border: 1px solid #ddd;
+  border: 1px solid var(--ssui-border);
   border-radius: 4px;
+  background-color: var(--ssui-input-bg);
+  color: var(--ssui-fg);
 }
 
 .list-add button {
-  background-color: #1890ff;
+  background-color: var(--ssui-primary);
   color: white;
   border: none;
   border-radius: 4px;
@@ -182,23 +186,25 @@
 .dict-table th, .dict-table td {
   padding: 8px 12px;
   text-align: left;
-  border-bottom: 1px solid #eee;
+  border-bottom: 1px solid var(--ssui-card-border);
 }
 
 .dict-table th {
-  background-color: #f5f5f5;
+  background-color: var(--ssui-table-header-bg);
   font-weight: 600;
 }
 
 .dict-table input {
   width: 100%;
   padding: 6px 8px;
-  border: 1px solid #ddd;
+  border: 1px solid var(--ssui-border);
   border-radius: 4px;
+  background-color: var(--ssui-input-bg);
+  color: var(--ssui-fg);
 }
 
 .dict-table button {
-  background-color: #ff4d4f;
+  background-color: var(--ssui-danger);
   color: white;
   border: none;
   border-radius: 4px;
@@ -215,12 +221,14 @@
 .dict-add input {
   flex: 1;
   padding: 8px 12px;
-  border: 1px solid #ddd;
+  border: 1px solid var(--ssui-border);
   border-radius: 4px;
+  background-color: var(--ssui-input-bg);
+  color: var(--ssui-fg);
 }
 
 .dict-add button {
-  background-color: #1890ff;
+  background-color: var(--ssui-primary);
   color: white;
   border: none;
   border-radius: 4px;
@@ -243,15 +251,15 @@
 
 .save-status.saved {
   color: #52c41a;
-  background-color: #f6ffed;
+  background-color: rgba(82, 196, 26, 0.15);
 }
 
 .save-status.saving {
   color: #1890ff;
-  background-color: #e6f7ff;
+  background-color: rgba(24, 144, 255, 0.15);
 }
 
 .save-status.unsaved {
   color: #faad14;
-  background-color: #fffbe6;
+  background-color: rgba(250, 173, 20, 0.15);
 } 

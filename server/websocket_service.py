@@ -29,6 +29,15 @@ class WebSocketService:
                 await self.clients[client_id].send_text(json.dumps(message))
             except Exception as e:
                 print(f"Error sending message to client {client_id}: {e}")
+
+    async def broadcast(self, message: Dict[str, Any]) -> None:
+        """向所有在线客户端广播消息。"""
+        payload = json.dumps(message)
+        for client_id in list(self.clients.keys()):
+            try:
+                await self.clients[client_id].send_text(payload)
+            except Exception as e:
+                print(f"Error broadcasting to client {client_id}: {e}")
     
     def send_callback(self, client_id: str, request_uuid: str, callback_data: Dict[str, Any]) -> None:
         message = WebSocketCallback(type="callback", request_uuid=request_uuid, **callback_data)

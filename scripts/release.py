@@ -384,6 +384,40 @@ def _ensure_pr(
     ).strip()
 
 
+def _is_pr_permission_error(exc: CommandError) -> bool:
+    """True when gh cannot create PRs because GitHub Actions lacks the
+    'Allow GitHub Actions to create and approve pull requests' permission."""
+    return "not permitted to create or approve pull requests" in (exc.stderr or "").lower()
+
+
+def _open_pr_or_warn(
+    runner: Runner,
+    *,
+    base: str,
+    head: str,
+    title: str,
+    body: str,
+) -> None:
+    """Open a PR, or warn with manual steps when Actions may not create PRs.
+
+    The repository setting "Allow GitHub Actions to create and approve pull
+    requests" is UI-only and cannot be enabled from a workflow. When it is
+    disabled, finish should still complete (the release is already formal and
+    assets uploaded) and tell the maintainer exactly what to open manually.
+    """
+    try:
+        _ensure_pr(runner, base=base, head=head, title=title, body=body)
+    except CommandError as exc:
+        if not _is_pr_permission_error(exc):
+            raise
+        print(
+            "warning: GitHub Actions is not permitted to create pull requests; "
+            f"open it manually with:\n"
+            f"  gh pr create --base {base} --head {head} --title {title!r}",
+            file=sys.stderr,
+        )
+
+
 def post_check(
     runner: Runner,
     *,
@@ -495,7 +529,7 @@ def _open_promote_pr(runner: Runner, *, branch: str, official: str) -> None:
         f"This PR points at the official release commit. "
         f"Merge it to update the default branch. Do not merge `{DEV_BRANCH}` into `{MAIN_BRANCH}`.\n"
     )
-    _ensure_pr(
+    _open_pr_or_warn(
         runner,
         base=MAIN_BRANCH,
         head=promote,
@@ -530,7 +564,7 @@ def _open_rebase_pr(runner: Runner, *, branch: str, conflict: bool) -> None:
             f"Automatic rebase of `{DEV_BRANCH}` onto `{branch}` succeeded.\n\n"
             f"Merge this PR to update `{DEV_BRANCH}`. Do not merge `{DEV_BRANCH}` into `{MAIN_BRANCH}`.\n"
         )
-    _ensure_pr(
+    _open_pr_or_warn(
         runner,
         base=DEV_BRANCH,
         head=head,

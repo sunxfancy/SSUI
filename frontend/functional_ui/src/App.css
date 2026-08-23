@@ -1,87 +1,86 @@
-.logo.vite:hover {
-  filter: drop-shadow(0 0 2em #747bff);
-}
-
-.logo.react:hover {
-  filter: drop-shadow(0 0 2em #61dafb);
-}
 :root {
   font-family: Inter, Avenir, Helvetica, Arial, sans-serif;
   font-size: 16px;
   line-height: 24px;
   font-weight: 400;
 
-  color: #0f0f0f;
-  background-color: #f6f6f6;
-
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   -webkit-text-size-adjust: 100%;
+
+  /* 浅色主题色板 */
+  --ssui-bg: #f6f6f6;
+  --ssui-fg: #0f0f0f;
+  --ssui-fg-muted: #666666;
+  --ssui-card-bg: #ffffff;
+  --ssui-card-border: #e8e8e8;
+  --ssui-border: #dddddd;
+  --ssui-input-bg: #ffffff;
+  --ssui-item-bg: #f9f9f9;
+  --ssui-hover-bg: #f0f0f0;
+  --ssui-table-header-bg: #f5f5f5;
+  --ssui-primary: #396cd8;
+  --ssui-danger: #ff4d4f;
+  --ssui-scrollbar-track: rgba(234, 234, 234, 0.5);
+  --ssui-scrollbar-thumb: rgb(203, 203, 203);
+  --ssui-scrollbar-corner: rgba(239, 239, 239, 0.5);
 }
 
-.container {
+/* JS 尚未设置 data-theme 时，跟随系统偏好 */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme]) {
+    --ssui-bg: #2f2f2f;
+    --ssui-fg: #f6f6f6;
+    --ssui-fg-muted: #a6a6a6;
+    --ssui-card-bg: #3a3a3a;
+    --ssui-card-border: #4a4a4a;
+    --ssui-border: #555555;
+    --ssui-input-bg: #0f0f0f;
+    --ssui-item-bg: #3a3a3a;
+    --ssui-hover-bg: #444444;
+    --ssui-table-header-bg: #3a3a3a;
+    --ssui-primary: #24c8db;
+    --ssui-danger: #ff7a7a;
+    --ssui-scrollbar-track: rgba(60, 60, 60, 0.5);
+    --ssui-scrollbar-thumb: rgb(120, 120, 120);
+    --ssui-scrollbar-corner: rgba(60, 60, 60, 0.5);
+  }
+}
+
+/* 显式深色主题 */
+:root[data-theme='dark'] {
+  --ssui-bg: #2f2f2f;
+  --ssui-fg: #f6f6f6;
+  --ssui-fg-muted: #a6a6a6;
+  --ssui-card-bg: #3a3a3a;
+  --ssui-card-border: #4a4a4a;
+  --ssui-border: #555555;
+  --ssui-input-bg: #0f0f0f;
+  --ssui-item-bg: #3a3a3a;
+  --ssui-hover-bg: #444444;
+  --ssui-table-header-bg: #3a3a3a;
+  --ssui-primary: #24c8db;
+  --ssui-danger: #ff7a7a;
+  --ssui-scrollbar-track: rgba(60, 60, 60, 0.5);
+  --ssui-scrollbar-thumb: rgb(120, 120, 120);
+  --ssui-scrollbar-corner: rgba(60, 60, 60, 0.5);
+}
+
+html,
+body {
+  color: var(--ssui-fg);
+  background-color: var(--ssui-bg);
+}
+
+body {
   margin: 0;
-  padding-top: 10vh;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  text-align: center;
-}
-
-.logo {
-  height: 6em;
-  padding: 1.5em;
-  will-change: filter;
-  transition: 0.75s;
-}
-
-.logo.tauri:hover {
-  filter: drop-shadow(0 0 2em #24c8db);
-}
-
-.row {
-  display: flex;
-  justify-content: center;
-}
-
-a {
-  font-weight: 500;
-  color: #646cff;
-  text-decoration: inherit;
-}
-
-a:hover {
-  color: #535bf2;
-}
-
-h1 {
-  text-align: center;
-}
-
-input,
-button {
-  border: 1px solid transparent;
-  padding: 0.6em 1.2em;
-  font-size: 1em;
-  font-weight: 500;
-  font-family: inherit;
-  color: #0f0f0f;
-  background-color: #ffffff;
-  transition: border-color 0.25s;
+  min-height: 100vh;
 }
 
 button {
   cursor: pointer;
-}
-
-button:hover {
-  border-color: #396cd8;
-}
-button:active {
-  border-color: #396cd8;
-  background-color: #e8e8e8;
 }
 
 input,
@@ -89,12 +88,8 @@ button {
   outline: none;
 }
 
-#greet-input {
-  margin-right: 5px;
-}
-
 :focus {
-  outline: none!important;
+  outline: none !important;
 }
 
 ::-webkit-scrollbar {
@@ -103,35 +98,14 @@ button {
 }
 
 ::-webkit-scrollbar-track {
-  background-color: rgba(234, 234, 234, 0.5);
+  background-color: var(--ssui-scrollbar-track);
 }
 
 ::-webkit-scrollbar-thumb {
-  background-color: rgb(203, 203, 203);
+  background-color: var(--ssui-scrollbar-thumb);
   border-radius: 2px;
 }
 
 ::-webkit-scrollbar-corner {
-  background-color: rgba(239, 239, 239, 0.5);
-}
-
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    color: #f6f6f6;
-    background-color: #2f2f2f;
-  }
-
-  a:hover {
-    color: #24c8db;
-  }
-
-  input,
-  button {
-    color: #ffffff;
-    background-color: #0f0f0f98;
-  }
-  button:active {
-    background-color: #0f0f0f69;
-  }
+  background-color: var(--ssui-scrollbar-corner);
 }

@@ -1,5 +1,5 @@
 from ssui import workflow, Prompt, Image, Noise
-from ssui_image.Flux import FluxModel, FluxClip, FluxLatent, FluxLora, FluxDenoise, FluxLatentDecode,FluxMergeLora
+from ssui_image.Flux import FluxModel, FluxClip, FluxLatent, FluxLora, FluxControlNet, FluxDenoise, FluxLatentDecode,FluxMergeLora
 from ssui.config import SSUIConfig
 from typing import List, Tuple
 
@@ -10,6 +10,14 @@ def txt2img(model: FluxModel, positive: Prompt, negative: Prompt) -> Image:
     positive, negative = FluxClip(config("Prompt To Condition"), model, positive, negative)
     latent = FluxLatent(config("Create Empty Latent"))
     latent = FluxDenoise(config("Denoise"), model, latent, positive, negative)
+    return FluxLatentDecode(config("Latent to Image"), model, latent)
+
+
+@workflow
+def txt2imgWithControlNet(model: FluxModel, control: FluxControlNet, positive: Prompt, negative: Prompt) -> Image:
+    positive, negative = FluxClip(config("Prompt To Condition"), model, positive, negative)
+    latent = FluxLatent(config("Create Empty Latent"))
+    latent = FluxDenoise(config("Denoise"), model, latent, positive, negative, control)
     return FluxLatentDecode(config("Latent to Image"), model, latent)
 
 

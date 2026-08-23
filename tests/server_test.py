@@ -48,6 +48,11 @@ class TestServer(unittest.TestCase):
         self.assertEqual(response.status_code, 200)
         self.mock_config_service.update_config.assert_called_once_with(test_config)
 
+    def test_get_config(self):
+        response = self.client.get("/config/")
+        self.assertEqual(response.status_code, 200)
+        self.mock_config_service.get_config.assert_called_once()
+
     def test_scan_models(self):
         response = self.client.post(
             f"/config/scan_models/test_client",

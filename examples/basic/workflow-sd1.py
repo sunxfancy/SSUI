@@ -1,6 +1,6 @@
 
 from ssui import workflow, Prompt, Image, Noise
-from ssui_image.SD1 import SD1Model, SD1Clip, SD1Latent, SD1Lora, SD1Denoise, SD1LatentDecode,SD1MergeLora, SD1IPAdapter
+from ssui_image.SD1 import SD1Model, SD1Clip, SD1Latent, SD1Lora, SD1ControlNet, SD1Denoise, SD1LatentDecode,SD1MergeLora, SD1IPAdapter
 from ssui.config import SSUIConfig
 from typing import List, Tuple
 
@@ -11,6 +11,14 @@ def txt2img(model: SD1Model, positive: Prompt, negative: Prompt) -> Image:
     positive, negative = SD1Clip(config("Prompt To Condition"), model, positive, negative)
     latent = SD1Latent(config("Create Empty Latent"))
     latent = SD1Denoise(config("Denoise"), model, latent, positive, negative)
+    return SD1LatentDecode(config("Latent to Image"), model, latent)
+
+
+@workflow
+def txt2imgWithControlNet(model: SD1Model, control: SD1ControlNet, positive: Prompt, negative: Prompt) -> Image:
+    positive, negative = SD1Clip(config("Prompt To Condition"), model, positive, negative)
+    latent = SD1Latent(config("Create Empty Latent"))
+    latent = SD1Denoise(config("Denoise"), model, latent, positive, negative, control)
     return SD1LatentDecode(config("Latent to Image"), model, latent)
 
 

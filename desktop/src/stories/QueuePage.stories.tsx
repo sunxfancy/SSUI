@@ -1,5 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/react';
 import Queue from '../components/Queue';
+import { QueueTask } from '../services/TaskService';
 
 const meta: Meta<typeof Queue> = {
   title: 'Components/Queue',
@@ -14,19 +15,22 @@ type Story = StoryObj<typeof Queue>;
 
 // 生成测试数据
 const generateQueueItems = (count: number) => {
-  const items = [];
-  const statuses: ('waiting' | 'processing' | 'completed' | 'failed')[] = ['waiting', 'processing', 'completed', 'failed'];
+  const items: QueueTask[] = [];
+  const statuses: QueueTask['status'][] = ['waiting', 'processing', 'completed', 'failed', 'cancelled'];
   const types = ['安装', '更新', '卸载', '修复'];
   
   for (let i = 0; i < count; i++) {
     items.push({
       id: `item-${i}`,
       name: `测试任务 ${i + 1}`,
+      kind: i % 2 === 0 ? 'download' : 'generation',
       status: statuses[i % statuses.length],
       progress: Math.floor(Math.random() * 100),
-      createdAt: new Date(Date.now() - Math.random() * 10000000000),
-      type: types[i % types.length],
-      priority: Math.floor(Math.random() * 5) + 1,
+      createdAt: (Date.now() - Math.random() * 10000000000) / 1000,
+      meta: {
+        type: types[i % types.length],
+        priority: Math.floor(Math.random() * 5) + 1,
+      },
     });
   }
   return items;

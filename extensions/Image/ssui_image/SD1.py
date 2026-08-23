@@ -1,8 +1,9 @@
 from typing import Optional,List
 from pathlib import Path
+import PIL
 from ssui.config import SSUIConfig
 from .api.conditioning import BasicConditioningInfo, create_conditioning
-from .api.denoise import decode_latents, denoise_image
+from .api.denoise import ApplyRange, ControlNet, decode_latents, denoise_image
 from .api.model import (
     ModelLoaderService,
     UNetModel,
@@ -10,7 +11,9 @@ from .api.model import (
     VAEModel,
     load_model,
     LoRAModel,
-    load_lora
+    load_lora,
+    ControlNetModel,
+    load_controlnet,
 )
 from ssui.base import Prompt, Image
 from ssui.annotation import param
@@ -114,6 +117,78 @@ class SD1Lora:
             sd1lora.append(SD1Lora(lora=lora_models,weight=lora_weights[i]))
 
         return sd1lora
+
+
+class SD1ControlNet:
+    """SD1.5 ControlNet workflow node.
+
+    Pair a ControlNet model file with a control image (e.g. a pose/canny/depth
+    map) and tuning parameters. ``load()`` is what the frontend invokes when a
+    ControlNet input is provided; the resulting node is passed to ``SD1Denoise``.
+    """
+
+    def __init__(
+        self,
+        path: str = "",
+        image_path: str = "",
+        controlnet: Optional[ControlNetModel] = None,
+        image: Optional[PIL.Image.Image] = None,
+        weight: float = 1.0,
+        control_mode: str = "balanced",
+        resize_mode: str = "just_resize",
+        begin_step_percent: float = 0.0,
+        end_step_percent: float = 1.0,
+    ):
+        self.path = path
+        self.image_path = image_path
+        self.controlnet = controlnet
+        self.image = image
+        self.weight = weight
+        self.control_mode = control_mode
+        self.resize_mode = resize_mode
+        self.begin_step_percent = begin_step_percent
+        self.end_step_percent = end_step_percent
+
+    @staticmethod
+    def load(
+        path: str,
+        image_path: str,
+        weight: float = 1.0,
+        control_mode: str = "balanced",
+        resize_mode: str = "just_resize",
+        begin_step_percent: float = 0.0,
+        end_step_percent: float = 1.0,
+    ) -> "SD1ControlNet":
+        controlnet = load_controlnet(getModelLoader(), Path(path))
+        image = PIL.Image.open(image_path).convert("RGB")
+        return SD1ControlNet(
+            path=path,
+            image_path=image_path,
+            controlnet=controlnet,
+            image=image,
+            weight=weight,
+            control_mode=control_mode,
+            resize_mode=resize_mode,
+            begin_step_percent=begin_step_percent,
+            end_step_percent=end_step_percent,
+        )
+
+    def to_api_field(self) -> ControlNet:
+        if self.controlnet is None or self.image is None:
+            raise ValueError(
+                "SD1ControlNet is not loaded; call SD1ControlNet.load() first."
+            )
+        return ControlNet(
+            image=self.image,
+            control_model=self.controlnet.controlnet,
+            control_weight=self.weight,
+            apply_range=ApplyRange(
+                begin_step_percent=self.begin_step_percent,
+                end_step_percent=self.end_step_percent,
+            ),
+            control_mode=self.control_mode,
+            resize_mode=self.resize_mode,
+        )
     
 def SD1MergeLora(
     config,
@@ -180,6 +255,7 @@ def SD1Denoise(
     latent: SD1Latent,
     positive: SD1Condition,
     negative: SD1Condition,
+    control: Optional[SD1ControlNet] = None,
 ):
     if config.is_prepare():
         return SD1Latent(config("Create Empty Latent"))
@@ -199,6 +275,7 @@ def SD1Denoise(
         scheduler_name=config["scheduler"],
         steps=config["steps"],
         cfg_scale=config["CFG"],
+        control=control.to_api_field() if control is not None else None,
     )
     return SD1Latent(config("Create Empty Latent"), tensor)
 

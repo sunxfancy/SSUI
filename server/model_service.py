@@ -135,6 +135,8 @@ class ModelService:
         tags.append(model_config.base)
         if model_config.type == ModelType.LoRA:
             tags.append("lora")
+        elif model_config.type == ModelType.ControlNet:
+            tags.append("controlnet")
         elif model_config.type == ModelType.T5Encoder:
             tags.append("t5")
         elif model_config.type == ModelType.VAE:
@@ -223,3 +225,142 @@ class ModelService:
         thread.start()
 
         return {"message": "Model scan started"}
+
+    async def download_file(
+        self,
+        url: str,
+        local_dir: str,
+        client_id: str,
+        request_uuid: str,
+        callback: Callable[[str, str, Dict[str, Any]], None],
+        finish_callback: Callable[[str, str, Dict[str, Any]], None],
+    ):
+        """下载任意 URL 文件到本地目录，并通过 websocket 回调整下载进度。
+
+        回调约定与 scan_models 一致：callback(client_id, request_uuid, {name: data})。
+        """
+        loop: asyncio.AbstractEventLoop = asyncio.get_event_loop()
+
+        def download_thread():
+            import urllib.request
+            from urllib.parse import urlparse
+
+            try:
+                os.makedirs(local_dir, exist_ok=True)
+                filename = os.path.basename(urlparse(url).path) or "model.bin"
+                target = os.path.join(local_dir, filename)
+                print(f"downloading {url} -> {target}", flush=True)
+
+                def report(progress: float, current: float, total: float):
+                    loop.call_soon_threadsafe(
+                        callback,
+                        client_id,
+                        request_uuid,
+                        {
+                            "download_progress": {
+                                "progress": progress,
+                                "current": current,
+                                "total": total,
+                            }
+                        },
+                    )
+
+                def hook(blocks: int, block_size: int, total_size: int):
+                    if total_size > 0:
+                        report(
+                            min(blocks * block_size / total_size * 100, 100),
+                            blocks * block_size,
+                            total_size,
+                        )
+
+                urllib.request.urlretrieve(url, target, reporthook=hook)
+                loop.call_soon_threadsafe(
+                    finish_callback,
+                    client_id,
+                    request_uuid,
+                )
+            except Exception as e:
+                print(f"下载失败: {e}", flush=True)
+                loop.call_soon_threadsafe(
+                    callback,
+                    client_id,
+                    request_uuid,
+                    {"download_error": str(e)},
+                )
+                loop.call_soon_threadsafe(
+                    finish_callback,
+                    client_id,
+                    request_uuid,
+                    {"error": str(e)},
+                )
+
+        thread = threading.Thread(target=download_thread)
+        thread.start()
+
+        return {"message": "Download started"}
+
+    async def hf_file_download(
+        self,
+        repo_id: str,
+        filename: str,
+        local_dir: str,
+        client_id: str,
+        request_uuid: str,
+        callback: Callable[[str, str, Dict[str, Any]], None],
+        finish_callback: Callable[[str, str, Dict[str, Any]], None],
+    ):
+        """下载 HuggingFace 仓库中的单个文件（处理 starter model 的 repo::path 来源）。"""
+        loop: asyncio.AbstractEventLoop = asyncio.get_event_loop()
+
+        def safe_call_soon_threadsafe(fn, *args):
+            try:
+                loop.call_soon_threadsafe(fn, *args)
+            except RuntimeError:
+                # 事件循环已关闭（如测试环境或服务退出中），忽略进度上报
+                pass
+
+        def download_thread():
+            from huggingface_hub import hf_hub_download
+            from tqdm.auto import tqdm
+
+            class download_progress_callback(tqdm):
+                def __init__(self, *args, **kwargs):
+                    super().__init__(*args, **kwargs)
+                    self.client_id = client_id
+                    self.request_uuid = request_uuid
+
+                def update(self, n=1):
+                    super().update(n)
+                    safe_call_soon_threadsafe(
+                        callback,
+                        self.client_id,
+                        self.request_uuid,
+                        "download_progress",
+                        {
+                            "progress": self.n / self.total * 100 if self.total else 0,
+                            "current": self.n,
+                            "total": self.total,
+                            "speed": self.format_dict.get("rate", 0),
+                            "eta": self.format_dict.get("eta", 0),
+                        },
+                    )
+
+                def close(self):
+                    super().close()
+                    safe_call_soon_threadsafe(
+                        finish_callback,
+                        self.client_id,
+                        self.request_uuid,
+                    )
+
+            hf_hub_download(
+                repo_id=repo_id,
+                filename=filename,
+                local_dir=local_dir,
+                tqdm_class=download_progress_callback,
+            )
+
+        thread = threading.Thread(target=download_thread)
+        thread.start()
+
+        return {"message": "Download started"}

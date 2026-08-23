@@ -1,8 +1,7 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState } from 'react';
 import { ConfigItem, ConfigGroup } from './types';
 import './ProjectSettings.css';
 import { registerUIProvider, UIProvider } from '../UIProvider';
-import { Message } from 'ssui_components';
 import { useProjectSettings } from './useProjectSettings';
 
 // 布尔类型配置项组件

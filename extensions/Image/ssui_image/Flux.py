@@ -1,10 +1,17 @@
 from typing import Optional,List
 from pathlib import Path
 import torch
+import PIL
 
 from ssui.config import SSUIConfig
 from .api.conditioning import BasicConditioningInfo, create_flux_conditioning
-from .api.denoise import flux_decode_latents, flux_denoise_image, FLuxLatents
+from .api.denoise import (
+    ApplyRange,
+    flux_decode_latents,
+    flux_denoise_image,
+    FluxControlNet as FluxControlNetField,
+    FLuxLatents,
+)
 from .api.model import (
     ModelLoaderService,
     FluxModel as ApiFluxModel,
@@ -13,7 +20,10 @@ from .api.model import (
     VAEModel,
     load_flux_model,
     LoRAModel,
-    load_lora
+    load_lora,
+    ControlNetModel,
+    load_controlnet,
+    load_vae,
 )
 from ssui.base import Prompt, Image
 from ssui.annotation import param
@@ -131,6 +141,86 @@ class FluxLora:
 
         return fluxlora
 
+
+class FluxControlNet:
+    """FLUX ControlNet workflow node (XLabs / InstantX).
+
+    Pairs a FLUX ControlNet model file with a control image and tuning
+    parameters. InstantX union ControlNets additionally need a VAE to encode
+    the control image (pass ``vae_path``); XLabs ControlNets don't.
+    """
+
+    def __init__(
+        self,
+        path: str = "",
+        image_path: str = "",
+        controlnet: Optional[ControlNetModel] = None,
+        image: Optional[PIL.Image.Image] = None,
+        vae: Optional[VAEModel] = None,
+        vae_path: str = "",
+        weight: float = 1.0,
+        resize_mode: str = "just_resize",
+        instantx_control_mode: int = -1,
+        begin_step_percent: float = 0.0,
+        end_step_percent: float = 1.0,
+    ):
+        self.path = path
+        self.image_path = image_path
+        self.controlnet = controlnet
+        self.image = image
+        self.vae = vae
+        self.vae_path = vae_path
+        self.weight = weight
+        self.resize_mode = resize_mode
+        self.instantx_control_mode = instantx_control_mode
+        self.begin_step_percent = begin_step_percent
+        self.end_step_percent = end_step_percent
+
+    @staticmethod
+    def load(
+        path: str,
+        image_path: str,
+        vae_path: str = "",
+        weight: float = 1.0,
+        resize_mode: str = "just_resize",
+        instantx_control_mode: int = -1,
+        begin_step_percent: float = 0.0,
+        end_step_percent: float = 1.0,
+    ) -> "FluxControlNet":
+        controlnet = load_controlnet(getModelLoader(), Path(path))
+        image = PIL.Image.open(image_path).convert("RGB")
+        vae = load_vae(getModelLoader(), Path(vae_path)) if vae_path else None
+        return FluxControlNet(
+            path=path,
+            image_path=image_path,
+            controlnet=controlnet,
+            image=image,
+            vae=vae,
+            vae_path=vae_path,
+            weight=weight,
+            resize_mode=resize_mode,
+            instantx_control_mode=instantx_control_mode,
+            begin_step_percent=begin_step_percent,
+            end_step_percent=end_step_percent,
+        )
+
+    def to_api_field(self) -> FluxControlNetField:
+        if self.controlnet is None or self.image is None:
+            raise ValueError(
+                "FluxControlNet is not loaded; call FluxControlNet.load() first."
+            )
+        return FluxControlNetField(
+            image=self.image,
+            control_model=self.controlnet.controlnet,
+            control_weight=self.weight,
+            apply_range=ApplyRange(
+                begin_step_percent=self.begin_step_percent,
+                end_step_percent=self.end_step_percent,
+            ),
+            resize_mode=self.resize_mode,
+            instantx_control_mode=self.instantx_control_mode,
+        )
+
 @param(
     "steps",
     Slider(1, 100, 1, labels=[1, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100]),
@@ -150,6 +240,7 @@ def FluxDenoise(
     latent: FluxLatent,
     positive: FluxCondition,
     negative: FluxCondition,
+    control: Optional[FluxControlNet] = None,
 ):
     if config.is_prepare():
         return FluxLatent(config("DenoiseToLatents"))
@@ -180,6 +271,8 @@ def FluxDenoise(
         add_noise=config["add_noise"],
         denoising_start=config["denoising_start"],
         denoising_end=config["denoising_end"],
+        control=control.to_api_field() if control is not None else None,
+        controlnet_vae=control.vae if control is not None else None,
     )
     return FluxLatent(config("DenoiseToLatents"), tensor.tensor)
 

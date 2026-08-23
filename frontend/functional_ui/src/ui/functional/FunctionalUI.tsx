@@ -5,6 +5,8 @@ import { MenuItem } from "@blueprintjs/core";
 import { ComponentTabRef } from "ssui_components";
 import { DetailsPanel } from "./Details";
 import { registerUIProvider, UIProvider } from '../UIProvider';
+import { useConfig } from '../../config';
+import { ViewSwitcher } from "../common/ViewSwitcher";
 import './FunctionalUI.css';
 import "normalize.css";
 import "@blueprintjs/core/lib/css/blueprint.css";
@@ -34,6 +36,8 @@ interface ScriptMeta {
 
 interface FunctionalUIProps {
     path: string;
+    /** 页面打开时是否自动展开详细面板（来自用户配置） */
+    autoOpenDetails?: boolean;
 }
 
 interface FunctionalUIState {
@@ -64,6 +68,9 @@ export class FunctionalUI extends Component<FunctionalUIProps, FunctionalUIState
 
     componentDidMount() {
         this.queryScriptMeta();
+        if (this.props.autoOpenDetails) {
+            this.setState({ isOpen: true });
+        }
     }
 
     async queryScriptMeta(): Promise<void> {
@@ -250,7 +257,15 @@ export class FunctionalUI extends Component<FunctionalUIProps, FunctionalUIState
         const { selectedFunc, isOpen } = this.state;
         const { path } = this.props;
 
-        const selected = selectedFunc?.name ?? Object.keys(meta)[0];
+        const keys = Object.keys(meta).filter(key => key !== "error");
+        if (keys.length === 0) {
+            const message = typeof meta["error"] === "string"
+                ? meta["error"]
+                : "该文件不是可用的 Python 脚本";
+            return <p>Error: {message}</p>;
+        }
+
+        const selected = selectedFunc?.name ?? keys[0];
 
         return (
             <div>
@@ -284,8 +299,13 @@ export class FunctionalUI extends Component<FunctionalUIProps, FunctionalUIState
 
         return (
             <div className='functional-ui-root'>
-                <h1>Functional UI</h1>
-                <p>Path: {path}</p>
+                <div className="functional-ui-header">
+                    <div>
+                        <h1>Functional UI</h1>
+                        <p>Path: {path}</p>
+                    </div>
+                    <ViewSwitcher path={path} currentView="functional" />
+                </div>
 
                 {loading ? (
                     <p>Loading...</p>
@@ -299,13 +319,18 @@ export class FunctionalUI extends Component<FunctionalUIProps, FunctionalUIState
     }
 }
 
+const FunctionalUIView: React.FC<FunctionalUIProps> = ({ path }) => {
+    const { config } = useConfig();
+    return <FunctionalUI path={path} autoOpenDetails={config.auto_open_details} />;
+};
+
 export class FunctionalUIProvider implements UIProvider {
     getName(): string {
         return 'functional';
     }
 
     getUI(path: string): JSX.Element {
-        return <FunctionalUI path={path} />;
+        return <FunctionalUIView path={path} />;
     }
 }
 

@@ -1,10 +1,11 @@
 import React, { useEffect, useState } from 'react';
-import {Spinner, Tabs, Tab, Icon, Button, Menu, MenuItem, Popover, Position} from '@blueprintjs/core';
+import {Spinner, Tabs, Tab, Icon, Button, Menu, MenuItem, Popover, Position, InputGroup} from '@blueprintjs/core';
 import axios from 'axios';
 import { CivitaiModel } from '../../../types/civitai';
 import styles from './style.module.css';
 import { TauriDownloaderProvider } from '../../../providers/TauriDownloaderProvider';
 import { DownloadTask } from '../../../providers/IDownloaderProvider';
+import { getApiBaseUrl } from '../../../services/apiBase';
 
 interface CivitaiModelsProps {
     onModelSelect?: (model: CivitaiModel) => void;
@@ -16,6 +17,7 @@ export const CivitaiModels: React.FC<CivitaiModelsProps> = () => {
     const [error, setError] = useState<string | null>(null);
     const [selectedType, setSelectedType] = useState<string>('all');
     const [downloadTasks, setDownloadTasks] = useState<DownloadTask[]>([]);
+    const [searchQuery, setSearchQuery] = useState('');
     const downloader = new TauriDownloaderProvider();
 
     useEffect(() => {
@@ -28,14 +30,14 @@ export const CivitaiModels: React.FC<CivitaiModelsProps> = () => {
         setDownloadTasks(tasks);
     };
 
-    const fetchModels = async () => {
+    const fetchModels = async (query?: string) => {
         try {
             setLoading(true);
-            const response = await axios.get('https://civitai.com/api/v1/models', {
+            const response = await axios.get(`${getApiBaseUrl()}/api/civitai/models`, {
                 params: {
+                    query: query || undefined,
                     page: 1,
                     limit: 100,
-                    sort: 'Newest',
                 }
             });
             setModels(response.data.items);
@@ -46,6 +48,11 @@ export const CivitaiModels: React.FC<CivitaiModelsProps> = () => {
         } finally {
             setLoading(false);
         }
+    };
+
+    const handleSearchSubmit = (event: React.FormEvent) => {
+        event.preventDefault();
+        fetchModels(searchQuery.trim());
     };
 
     const filteredModels = selectedType === 'all'
@@ -106,6 +113,22 @@ export const CivitaiModels: React.FC<CivitaiModelsProps> = () => {
 
     return (
         <div className={styles.civitaiModel}>
+            <form className={styles.searchForm} onSubmit={handleSearchSubmit}>
+                <InputGroup
+                    placeholder="搜索 Civitai 模型..."
+                    leftIcon="search"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    rightElement={
+                        <Button
+                            icon="arrow-right"
+                            minimal
+                            onClick={() => fetchModels(searchQuery.trim())}
+                            disabled={loading}
+                        />
+                    }
+                />
+            </form>
             <Tabs selectedTabId={selectedType} onChange={(newTabId) => changeTab(newTabId as string)}>
                 {modelTypes.map(type => (
                     <Tab key={type} id={type} title={type === 'all' ? '全部' : type} />

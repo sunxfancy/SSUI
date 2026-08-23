@@ -7,7 +7,22 @@
     "tree": {
         "open": "Open",
         "refresh": "Refresh",
-        "copyPath": "Copy Path"
+        "copyPath": "Copy Path",
+        "newFile": "New File",
+        "newCanvas": "New Canvas",
+        "delete": "Delete",
+        "createFileTitle": "New File",
+        "createCanvasTitle": "New Canvas",
+        "name": "Name",
+        "namePlaceholder": "Enter file name",
+        "fileNamePlaceholder": "e.g. script.py",
+        "canvasNamePlaceholder": "e.g. My Canvas",
+        "nameRequired": "Name cannot be empty",
+        "create": "Create",
+        "cancel": "Cancel",
+        "createFailed": "Failed to create. Check the name is valid and does not already exist",
+        "deleteConfirmTitle": "Confirm Delete",
+        "deleteConfirmMessage": "Are you sure you want to delete \"{{name}}\"? This action cannot be undone."
     },
     "tabs": {
         "close": "Close Tab",
@@ -60,8 +75,10 @@
         },
         "actions": {
             "add": "Add Model",
-            "download": "Download"
-        }
+            "download": "Download",
+            "downloading": "Downloading {{progress}}%"
+        },
+        "loading": "Loading..."
     },
     "extensions": {
         "title": "Extensions",
@@ -98,6 +115,17 @@
         "server": "Server",
         "clearCache": "Clear Cache",
         "disableCache": "Disable Cache",
+        "clearCompleted": "Clear Completed",
+        "loadError": "Failed to load tasks",
+        "empty": "No tasks",
+        "actions": {
+            "cancel": "Cancel Task",
+            "remove": "Remove Task"
+        },
+        "kind": {
+            "download": "Download",
+            "generation": "Generation"
+        },
         "restart": {
             "title": "Restart {{type}}",
             "confirm": "Are you sure you want to restart the {{type}}?",
@@ -110,7 +138,8 @@
             "waiting": "Waiting",
             "processing": "Processing",
             "completed": "Completed",
-            "failed": "Failed"
+            "failed": "Failed",
+            "cancelled": "Cancelled"
         }
     }
 }

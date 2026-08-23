@@ -1,9 +1,11 @@
-import React, {useState} from 'react';
-import { Button, InputGroup, Spinner, Tabs, Tab, NonIdealState, Tag, Icon, CompoundTag } from '@blueprintjs/core';
+import React, {useEffect, useRef, useState} from 'react';
+import { Button, InputGroup, Spinner, Tabs, Tab, NonIdealState, Tag, Icon, CompoundTag, ProgressBar } from '@blueprintjs/core';
 import axios from 'axios';
 import HuggingfaceLogo from './logo_huggingface.svg'
 import ModelLogo from './logo_model.svg'
 import styles from './style.module.css'
+import TaskService from '../../../services/TaskService';
+import { getApiBaseUrl } from '../../../services/apiBase';
 
 export interface HuggingfaceModel {
     id: string;
@@ -28,13 +30,38 @@ interface HuggingfaceModelsProps {
     onModelSelect?: (model: HuggingfaceModel) => void;
 }
 
-const HuggingfaceModels: React.FC<HuggingfaceModelsProps> = ({ onModelSelect }) => {
+const HuggingfaceModels: React.FC<HuggingfaceModelsProps> = () => {
     const [models, setModels] = useState<HuggingfaceModel[]>([]);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [inputValue, setInputValue] = useState<string>('');
     const [selectedType, setSelectedType] = useState<string>('all');
     const [hasSearched, setHasSearched] = useState(false);
+    const [downloading, setDownloading] = useState<{ [id: string]: number }>({});
+    const taskService = useRef(TaskService.getInstance());
+    const taskIds = useRef<{ [modelId: string]: string }>({});
+
+    useEffect(() => {
+        // 通过任务队列的 task_update 推送更新下载进度
+        const unsubscribe = taskService.current.subscribe((task) => {
+            if (task.kind !== 'download') return;
+            for (const [modelId, taskId] of Object.entries(taskIds.current)) {
+                if (taskId === task.id) {
+                    if (task.status === 'completed' || task.status === 'failed' || task.status === 'cancelled') {
+                        delete taskIds.current[modelId];
+                        setDownloading(prev => {
+                            const next = { ...prev };
+                            delete next[modelId];
+                            return next;
+                        });
+                    } else {
+                        setDownloading(prev => ({ ...prev, [modelId]: task.progress }));
+                    }
+                }
+            }
+        });
+        return unsubscribe;
+    }, []);
 
     const searchModels = async () => {
         if (!inputValue.trim()) return;
@@ -44,13 +71,10 @@ const HuggingfaceModels: React.FC<HuggingfaceModelsProps> = ({ onModelSelect }) 
             setError(null);
             setHasSearched(true);
 
-            const response = await axios.get('https://huggingface.co/api/models', {
+            const response = await axios.get(`${getApiBaseUrl()}/api/hf/models`, {
                 params: {
                     search: inputValue,
                     limit: 50,
-                    sort: 'downloads',
-                    direction: -1,
-                    full: 'full'
                 }
             });
 
@@ -72,7 +96,7 @@ const HuggingfaceModels: React.FC<HuggingfaceModelsProps> = ({ onModelSelect }) 
             setHasSearched(true);
 
             // 获取单个仓库信息
-            const response = await axios.get(`https://huggingface.co/api/models/${inputValue}`);
+            const response = await axios.get(`${getApiBaseUrl()}/api/hf/models/${encodeURIComponent(inputValue)}`);
 
             // 如果成功获取，添加到模型列表的开头
             if (response.data) {
@@ -89,6 +113,22 @@ const HuggingfaceModels: React.FC<HuggingfaceModelsProps> = ({ onModelSelect }) 
 
     const handleInputChange = (event: React.ChangeEvent<HTMLInputElement>) => {
         setInputValue(event.target.value);
+    };
+
+    const handleDownload = async (model: HuggingfaceModel) => {
+        const modelId = model.modelId || model.id;
+        setDownloading(prev => ({ ...prev, [model.id]: 0 }));
+        try {
+            const taskId = await taskService.current.createDownloadTask(
+                'huggingface',
+                modelId,
+                undefined,
+                modelId
+            );
+            taskIds.current[model.id] = taskId;
+        } catch (error) {
+            console.error('HuggingFace 模型下载失败:', error);
+        }
     };
 
     const handleSearchSubmit = (event: React.FormEvent) => {
@@ -224,17 +264,25 @@ const HuggingfaceModels: React.FC<HuggingfaceModelsProps> = ({ onModelSelect }) 
                                         {formatNumber(model.likes || 0)}
                                     </span>
                                 </div>
-                                <Button
-                                    text="下载"
-                                    intent="primary"
-                                    variant="outlined"
-                                    icon="download"
-                                    onClick={() => {
-                                        if (onModelSelect) {
-                                            onModelSelect(model);
-                                        }
-                                    }}
-                                />
+                                <div>
+                                    {downloading[model.id] !== undefined && (
+                                        <div style={{ width: '120px', marginBottom: '4px' }}>
+                                            <ProgressBar
+                                                value={(downloading[model.id] ?? 0) / 100}
+                                                intent="primary"
+                                                animate={(downloading[model.id] ?? 0) < 100}
+                                            />
+                                        </div>
+                                    )}
+                                    <Button
+                                        text={downloading[model.id] !== undefined ? `${downloading[model.id]}%` : "下载"}
+                                        intent="primary"
+                                        variant="outlined"
+                                        icon="download"
+                                        loading={downloading[model.id] !== undefined}
+                                        onClick={() => handleDownload(model)}
+                                    />
+                                </div>
                             </div>
                         </div>
                     ))}

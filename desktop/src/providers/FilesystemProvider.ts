@@ -1,10 +1,16 @@
 import { TreeNodeInfo } from "@blueprintjs/core";
-import { readDir } from '@tauri-apps/plugin-fs';
+import { readDir, writeTextFile, remove } from '@tauri-apps/plugin-fs';
 import { join } from '@tauri-apps/api/path';
 
 export interface IFilesystemProvider {
     fetchFileTree(directory: string, parent: ExtendTreeNodeInfo | null): Promise<ExtendTreeNodeInfo[]>;
     getPathToRoot(node: TreeNodeInfo): string[];
+    /** 在指定目录下新建空文件，成功返回完整路径，失败返回 null */
+    createFile(parentPath: string, name: string): Promise<string | null>;
+    /** 在指定目录下新建绘图板文件（自动补 .canvas 后缀），成功返回完整路径，失败返回 null */
+    createCanvas(parentPath: string, name: string): Promise<string | null>;
+    /** 删除文件或目录（目录递归删除），成功返回 true */
+    deletePath(path: string): Promise<boolean>;
 }
 
 export interface ExtendTreeNodeInfo extends TreeNodeInfo {
@@ -69,6 +75,35 @@ export class TauriFilesystemProvider implements IFilesystemProvider {
             currentNode = (currentNode.nodeData as any)?.parent as TreeNodeInfo | null;
         }
         return path;
+    }
+
+    async createFile(parentPath: string, name: string): Promise<string | null> {
+        try {
+            if (!name.trim()) {
+                throw new Error('File name is empty');
+            }
+            const fullPath = await join(parentPath, name);
+            await writeTextFile(fullPath, '');
+            return fullPath;
+        } catch (error) {
+            console.error('Error creating file:', error);
+            return null;
+        }
+    }
+
+    async createCanvas(parentPath: string, name: string): Promise<string | null> {
+        const canvasName = name.trim().endsWith('.canvas') ? name.trim() : `${name.trim()}.canvas`;
+        return this.createFile(parentPath, canvasName);
+    }
+
+    async deletePath(path: string): Promise<boolean> {
+        try {
+            await remove(path, { recursive: true });
+            return true;
+        } catch (error) {
+            console.error('Error deleting path:', error);
+            return false;
+        }
     }
 }
 
