@@ -5,10 +5,10 @@
 # 文件后补全。snapshot: true 表示整个仓库快照（如 LLM / TTS 目录型模型）。
 
 sd1:
-  repo: "Lykon/dreamshaper-8"
-  file: "dreamshaper_8.safetensors"
+  repo: "stable-diffusion-v1-5/stable-diffusion-v1-5"
+  file: "v1-5-pruned-emaonly.safetensors"
   revision: "main"
-  size_gb: 2.0
+  size_gb: 4.0
   sha256: ""
 
 sdxl:
@@ -28,17 +28,31 @@ flux:
   t5_encoder:
     repo: "InvokeAI/t5-v1_1-xxl"
     file: "bnb_llm_int8/text_encoder_2/bnb_llm_int8_model.safetensors"
+    extra_files:
+      - "bnb_llm_int8/text_encoder_2/config.json"
+      - "bnb_llm_int8/tokenizer_2/special_tokens_map.json"
+      - "bnb_llm_int8/tokenizer_2/spiece.model"
+      - "bnb_llm_int8/tokenizer_2/tokenizer.json"
+      - "bnb_llm_int8/tokenizer_2/tokenizer_config.json"
+    return_dir: "bnb_llm_int8"
     revision: "main"
     size_gb: 3.0
     sha256: ""
   clip:
     repo: "InvokeAI/clip-vit-large-patch14-text-encoder"
     file: "bfloat16/text_encoder/model.safetensors"
+    extra_files:
+      - "bfloat16/text_encoder/config.json"
+      - "bfloat16/tokenizer/merges.txt"
+      - "bfloat16/tokenizer/special_tokens_map.json"
+      - "bfloat16/tokenizer/tokenizer_config.json"
+      - "bfloat16/tokenizer/vocab.json"
+    return_dir: "bfloat16"
     revision: "main"
     size_gb: 0.3
     sha256: ""
   vae:
-    repo: "InvokeAI/flux-vae"
+    repo: "auroraintech/flux-vae"
     file: "ae.safetensors"
     revision: "main"
     size_gb: 0.3

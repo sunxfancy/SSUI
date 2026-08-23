@@ -110,5 +110,22 @@ def download_if_needed(model_key: str, sub_key: str | None = None) -> Path:
     else:
         print(f"模型已存在: {dest_path}")
 
+    for extra in entry.get("extra_files", []):
+        extra_path = data_dir / extra
+        extra_path.parent.mkdir(parents=True, exist_ok=True)
+        if not extra_path.exists() or extra_path.stat().st_size == 0:
+            url = (
+                f"https://huggingface.co/{entry['repo']}/resolve/"
+                f"{entry.get('revision', 'main')}/{extra}"
+            )
+            response = requests.get(url, stream=True)
+            response.raise_for_status()
+            with open(extra_path, "wb") as f:
+                for chunk in response.iter_content(chunk_size=8192):
+                    if chunk:
+                        f.write(chunk)
+
+    if entry.get("return_dir"):
+        return data_dir / entry["return_dir"]
     return dest_path
 

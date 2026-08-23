@@ -587,8 +587,9 @@ def decode_latents(model: VAEModel, result_latents: Latents) -> PIL.Image.Image 
         result_latents = result_latents.tensor.to(
             device=TorchDevice.choose_torch_device()
         )
-        vae.to(dtype=torch.float16)
-        result_latents = result_latents.half()
+        # 用 fp32 解码：SDXL VAE 在 fp16 下会溢出成 NaN（黑图），fp32 更稳
+        vae.to(dtype=torch.float32)
+        result_latents = result_latents.float()
         vae.disable_tiling()
         TorchDevice.empty_cache()
 

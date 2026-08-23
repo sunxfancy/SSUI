@@ -1,16 +1,16 @@
 einops>=0.8.0
-transformers>=4.51.3
-tokenizers>=0.20.0
-safetensors>=0.4.5
+transformers==4.49.0
+tokenizers==0.21.1
+safetensors==0.5.3
 aiohttp>=3.11.11
 pyyaml>=6.0.2
 pillow>=11.0.0
 virtualenv>=20.28.0
 fastapi[standard]>=0.115.6
 websockets>=14.1
-diffusers[torch]>=0.31.0
+diffusers[torch]==0.32.2
 torchsde==0.2.6
-accelerate>=1.2.1
+accelerate==1.5.2
 pydantic-settings>=2.7.0
 pydantic>=2.10.4
 RestrictedPython>=8.0
@@ -27,7 +27,7 @@ picklescan>=0.0.24
 matplotlib>=3.10.1
 mediapipe>=0.10.21
 aioshutil>=1.5
-huggingface_hub[hf-transfer,hf_xet]>=0.31
+huggingface_hub[hf-transfer,hf_xet]==0.31.4
 
 easydict>=1.13
 rembg>=2.0.65
@@ -42,7 +42,8 @@ igraph>=0.11.8
 kornia>=0.8.0 
 
 # Windows 特定的其他依赖
-bitsandbytes>=0.45.3
+# bitsandbytes ROCm 版（Windows/AMD GPU 专用 wheel，源码仓库: https://github.com/sunxfancy/bitsandbytes-0.49.2.rocm72）
+bitsandbytes @ https://github.com/sunxfancy/bitsandbytes-0.49.2.rocm72/releases/download/v0.49.2%2Brocm72/bitsandbytes-0.49.2%2Brocm72-py3-none-win_amd64.whl
 triton-windows==3.1.0.post17
 kaolin @ https://nvidia-kaolin.s3.us-east-2.amazonaws.com/torch-2.4.0_cu124/kaolin-0.17.0-cp312-cp312-win_amd64.whl
 nvdiffrast @ https://github.com/sunxfancy/nvdiffrast/releases/download/v0.3.3.1/nvdiffrast-0.3.3.1-cp312-cp312-win_amd64.whl
