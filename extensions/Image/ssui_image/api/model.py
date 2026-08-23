@@ -164,6 +164,13 @@ class ControlLoRAModel(LoRAModel):
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
 
+class ControlNetModel(BaseModel):
+    """A loaded ControlNet model (SD1.5 / SD2 / SDXL / Flux)."""
+
+    controlnet: "LoadedModel" = Field(description="The controlnet model", validate=False)
+    model_config = ConfigDict(arbitrary_types_allowed=True)
+
+
 class UNetModel(BaseModel):
     unet: "LoadedModel" = Field(description="The basic unet model", validate=False)
     scheduler: "LoadedModel" = Field(
@@ -402,3 +409,29 @@ def load_lora(
     lora_model = LoRAModel(lora=lora,weight=lora_weight)
   
     return lora_model
+
+
+def load_controlnet(
+    model_loader_service: ModelLoaderService,
+    controlnet_path: Path,
+) -> ControlNetModel:
+    """Load a ControlNet model (SD1.5 / SD2 / SDXL / Flux).
+
+    The model file is probed to determine its base model type and format, then
+    dispatched to the registered ControlNet loader for that family.
+    """
+    controlnet_config = ModelProbe.probe(Path(controlnet_path))
+    controlnet = _load_model_service(
+        model_loader_service, controlnet_config, None
+    )
+    return ControlNetModel(controlnet=controlnet)
+
+
+def load_vae(
+    model_loader_service: ModelLoaderService,
+    vae_path: Path,
+) -> VAEModel:
+    """Load a standalone VAE model (used e.g. by InstantX FLUX ControlNets)."""
+    vae_config = ModelProbe.probe(Path(vae_path))
+    vae = _load_model_service(model_loader_service, vae_config, SubModelType.VAE)
+    return VAEModel(vae=vae)

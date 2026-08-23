@@ -135,6 +135,8 @@ class ModelService:
         tags.append(model_config.base)
         if model_config.type == ModelType.LoRA:
             tags.append("lora")
+        elif model_config.type == ModelType.ControlNet:
+            tags.append("controlnet")
         elif model_config.type == ModelType.T5Encoder:
             tags.append("t5")
         elif model_config.type == ModelType.VAE:
