@@ -1,6 +1,7 @@
 """Compatibility helpers for supported Diffusers/PyTorch combinations."""
 
 import importlib
+from importlib.metadata import PackageNotFoundError, version
 
 import torch
 
@@ -18,6 +19,13 @@ def preload_attention_dispatch_for_torch_24() -> None:
 
     version_parts = torch.__version__.split("+", 1)[0].split(".")
     if tuple(int(part) for part in version_parts[:2]) != (2, 4):
+        return
+
+    try:
+        diffusers_parts = version("diffusers").split(".")
+    except PackageNotFoundError:
+        return
+    if tuple(int(part) for part in diffusers_parts[:2]) < (0, 37):
         return
 
     original_custom_op = torch.library.custom_op
