@@ -37,7 +37,11 @@ from diffusers.models.embeddings import (
     TimestepEmbedding,
     Timesteps,
 )
-from diffusers.models.modeling_utils import ModelMixin, load_state_dict, _load_state_dict_into_model
+from diffusers.models.modeling_utils import ModelMixin
+try:
+    from diffusers.models.model_loading_utils import load_state_dict, _load_state_dict_into_model
+except ImportError:  # diffusers < 0.37
+    from diffusers.models.modeling_utils import load_state_dict, _load_state_dict_into_model
 from diffusers.models.unets.unet_2d_blocks import (
     UNetMidBlock2DCrossAttn,
     UNetMidBlock2DSimpleCrossAttn,
