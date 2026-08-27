@@ -7,7 +7,7 @@ import torch
 
 class DiffusersCompatibilityTest(unittest.TestCase):
     def test_torch_24_preload_disables_and_restores_custom_op_decorators(self):
-        from ssui_image.diffusers_compat import preload_attention_dispatch_for_torch_24
+        from backend.diffusers_compat import preload_attention_dispatch_for_torch_24
 
         original_custom_op = torch.library.custom_op
         original_register_fake = torch.library.register_fake
@@ -29,7 +29,7 @@ class DiffusersCompatibilityTest(unittest.TestCase):
 
         with (
             patch.object(torch, "__version__", "2.4.1+cu124"),
-            patch("ssui_image.diffusers_compat.version", return_value="0.38.0"),
+            patch("backend.diffusers_compat.version", return_value="0.38.0"),
             patch.object(importlib, "import_module", side_effect=load_attention_dispatch) as import_module,
         ):
             preload_attention_dispatch_for_torch_24()
@@ -39,7 +39,7 @@ class DiffusersCompatibilityTest(unittest.TestCase):
         self.assertIs(torch.library.register_fake, original_register_fake)
 
     def test_other_torch_versions_do_not_preload(self):
-        from ssui_image.diffusers_compat import preload_attention_dispatch_for_torch_24
+        from backend.diffusers_compat import preload_attention_dispatch_for_torch_24
 
         with (
             patch.object(torch, "__version__", "2.5.0"),
@@ -50,11 +50,11 @@ class DiffusersCompatibilityTest(unittest.TestCase):
         import_module.assert_not_called()
 
     def test_older_diffusers_versions_do_not_preload(self):
-        from ssui_image.diffusers_compat import preload_attention_dispatch_for_torch_24
+        from backend.diffusers_compat import preload_attention_dispatch_for_torch_24
 
         with (
             patch.object(torch, "__version__", "2.4.1"),
-            patch("ssui_image.diffusers_compat.version", return_value="0.32.2"),
+            patch("backend.diffusers_compat.version", return_value="0.32.2"),
             patch.object(importlib, "import_module") as import_module,
         ):
             preload_attention_dispatch_for_torch_24()
