@@ -17,7 +17,7 @@ torch==2.4.1
 torchvision==0.19.1
 torchaudio==2.4.1
 
-diffusers[torch]>=0.36.0,<0.41
+diffusers[torch]>=0.37.0,<0.41
 torchsde==0.2.6
 accelerate>=1.2.1
 pydantic-settings>=2.7.0

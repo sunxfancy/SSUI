@@ -57,7 +57,7 @@ class Flux2KleinModel:
             from diffusers import Flux2KleinPipeline
         except ImportError as exc:
             raise RuntimeError(
-                "FLUX.2 Klein requires diffusers>=0.36.0 and transformers>=4.51.3."
+                "FLUX.2 Klein requires diffusers>=0.37.0 and transformers>=4.51.3."
             ) from exc
 
         device = _resolve_device()
