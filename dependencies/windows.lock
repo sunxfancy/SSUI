@@ -785,3 +785,4 @@ yarl==1.18.3
     # via aiohttp
 zipp==3.19.2
     # via importlib-metadata
+--extra-index-url https://download.pytorch.org/whl/cu124
