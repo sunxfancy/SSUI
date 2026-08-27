@@ -95,6 +95,13 @@ export class ImagePicker extends IComponent<{ root_path: string, script_path: st
     override onUpdate(data: any): void {
         console.log('ImagePicker onUpdate:', data);
     }
+
+    override onExecute() {
+        return {
+            'function': 'ssui.base.Image.load',
+            'params': { 'path': this.state.selected_image }
+        };
+    }
 }
 
 

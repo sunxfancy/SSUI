@@ -108,6 +108,18 @@ flux_vae = StarterModel(
 
 
 # region: Main
+flux2_klein_4b = StarterModel(
+    name="FLUX.2 Klein 4B",
+    base=BaseModelType.Flux2,
+    source="black-forest-labs/FLUX.2-klein-4B",
+    description=(
+        "Unified four-step text-to-image and multi-reference image editing model. "
+        "Apache 2.0; approximately 13GB VRAM with CPU offload."
+    ),
+    type=ModelType.Main,
+    format=ModelFormat.Diffusers,
+    dependencies=[],
+)
 flux_schnell_quantized = StarterModel(
     name="FLUX Schnell (Quantized)",
     base=BaseModelType.Flux,
@@ -597,6 +609,7 @@ swinir = StarterModel(
 # List of starter models, displayed on the frontend.
 # The order/sort of this list is not changed by the frontend - set it how you want it here.
 STARTER_MODELS: list[StarterModel] = [
+    flux2_klein_4b,
     flux_schnell_quantized,
     flux_dev_quantized,
     flux_schnell,
@@ -710,10 +723,15 @@ flux_bundle: list[StarterModel] = [
     flux_depth_control_lora,
 ]
 
+flux2_bundle: list[StarterModel] = [
+    flux2_klein_4b,
+]
+
 STARTER_BUNDLES: dict[str, list[StarterModel]] = {
     BaseModelType.StableDiffusion1: sd1_bundle,
     BaseModelType.StableDiffusionXL: sdxl_bundle,
     BaseModelType.Flux: flux_bundle,
+    BaseModelType.Flux2: flux2_bundle,
 }
 
 assert len(STARTER_MODELS) == len({m.source for m in STARTER_MODELS}), "Duplicate starter models"

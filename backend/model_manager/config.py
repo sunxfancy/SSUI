@@ -62,6 +62,7 @@ class BaseModelType(str, Enum):
     StableDiffusionXL = "sdxl"
     StableDiffusionXLRefiner = "sdxl-refiner"
     Flux = "flux"
+    Flux2 = "flux-2"
     # Kandinsky2_1 = "kandinsky-2.1"
 
 

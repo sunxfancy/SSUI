@@ -26,8 +26,11 @@ examples/basic/
 ├── workflow-sd1.py
 ├── workflow-sdxl.py
 ├── workflow-flux.py
+├── workflow-flux2-klein.py
 ├── ssproject.yaml
 ```
+
+`workflow-flux2-klein.py` demonstrates unified text-to-image and multi-reference editing with FLUX.2 Klein. The edit entry point accepts up to four reference images.
 
 Stable Scripts must be defined under a project, and the project root directory must contain an `ssproject.yaml` file to define project information.
 
@@ -82,4 +85,4 @@ SD1Clip(config("Prompt To Condition"), model, positive, negative)
 ```
 Here, a configuration group named `Prompt To Condition` will be displayed in the UI, and all configurations related to this API call will be displayed in this configuration group.
 
-![config](images/details.png) 
+![config](images/details.png)

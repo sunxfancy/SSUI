@@ -1,14 +1,14 @@
 einops>=0.8.0
-transformers==4.49.0
+transformers>=4.51.3,<5
 tokenizers==0.21.1
-safetensors==0.5.3
+safetensors>=0.8.0,<0.9
 aiohttp>=3.11.11
 pyyaml>=6.0.2
 pillow>=11.0.0
 virtualenv>=20.28.0
 fastapi[standard]>=0.115.6
 websockets>=14.1
-diffusers[torch]==0.32.2
+diffusers[torch]>=0.36.0,<0.41
 torchsde==0.2.6
 accelerate==1.5.2
 pydantic-settings>=2.7.0
@@ -27,7 +27,7 @@ picklescan>=0.0.24
 matplotlib>=3.10.1
 mediapipe>=0.10.21
 aioshutil>=1.5
-huggingface_hub[hf-transfer,hf_xet]==0.31.4
+huggingface_hub[hf-transfer,hf_xet]>=0.34,<1
 
 easydict>=1.13
 rembg>=2.0.65

@@ -131,6 +131,7 @@ FLUX_PRESET_IMAGE_URL = (
 
 PRESET_IMAGE_URLS = {
     "FLUX Schnell (Quantized)": FLUX_PRESET_IMAGE_URL,
+    "FLUX.2 Klein 4B": FLUX_PRESET_IMAGE_URL,
 }
 
 
@@ -192,12 +193,17 @@ async def preset_models():
     """返回精选的预设模型组列表（每组含主模型与配套依赖）。"""
     from backend.model_manager import starter_models
 
-    # 团队预制的 Flux 模型下载包（含配图），固定置于列表首位
+    # FLUX.2 是新的统一生成/编辑入口；保留原团队预制 FLUX.1 模型包和配图。
+    flux2_group = _starter_to_preset_group(starter_models.flux2_klein_4b)
+    flux2_group["id"] = "001-flux2-klein-preset"
+    flux2_group["name"] = "FLUX.2 Klein 4B"
+    flux2_group["imageUrl"] = FLUX_PRESET_IMAGE_URL
+
     flux_group = _starter_to_preset_group(starter_models.flux_schnell_quantized)
-    flux_group["id"] = "001-flux-preset"
+    flux_group["id"] = "002-flux-preset"
     flux_group["name"] = "Flux Model Preset"
     flux_group["imageUrl"] = FLUX_PRESET_IMAGE_URL
-    items = [flux_group]
+    items = [flux2_group, flux_group]
 
     preset_names = [
         "cyberrealistic_sd1",

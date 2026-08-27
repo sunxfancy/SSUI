@@ -5,6 +5,11 @@ class Image():
     def __init__(self, image: PIL.Image.Image = None):
         self._image = image
 
+    @staticmethod
+    def load(path: str) -> "Image":
+        with PIL.Image.open(path) as image:
+            return Image(image.convert("RGB").copy())
+
 class Mesh():
     def __init__(self, model: trimesh.Trimesh = None):
         self._model = model

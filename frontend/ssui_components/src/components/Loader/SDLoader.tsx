@@ -214,6 +214,88 @@ class FluxModelLoader extends Component {
 
 }
 
+class Flux2KleinModelLoader extends Component {
+    state = {
+        modelPath: '',
+        cpuOffload: true,
+        dtype: 'bfloat16',
+        models: [] as SDModel[],
+        loading: false,
+        error: null as string | null
+    };
+
+    componentDidMount() {
+        this.fetchModels();
+    }
+
+    async fetchModels() {
+        this.setState({ loading: true, error: null });
+        try {
+            const response = await fetch('/api/available_models');
+            if (!response.ok) throw new Error('Failed to fetch model list');
+            const allModels = await response.json();
+            this.setState({
+                models: allModels.filter((model: any) =>
+                    (model.base_model || '').includes('flux-2')
+                ),
+                loading: false
+            });
+        } catch (error) {
+            this.setState({
+                error: error instanceof Error ? error.message : 'Failed to fetch model list',
+                loading: false
+            });
+        }
+    }
+
+    onExecute() {
+        return {
+            'function': 'ssui_image.Flux2.Flux2KleinModel.load',
+            'params': {
+                'model_path': this.state.modelPath,
+                'cpu_offload': this.state.cpuOffload,
+                'dtype': this.state.dtype
+            }
+        };
+    }
+
+    render() {
+        const { models, loading, error } = this.state;
+        if (loading) return <div>Loading...</div>;
+        if (error) return <div style={{ color: 'red' }}>{error}</div>;
+        return (
+            <div>
+                <select
+                    value={this.state.modelPath}
+                    onChange={(event) => this.setState({ modelPath: event.target.value })}
+                    style={{ width: '100%', marginBottom: '10px' }}
+                >
+                    <option value="">Select FLUX.2 Klein model...</option>
+                    {models.map((model, index) => (
+                        <option key={index} value={model.path}>{model.name}</option>
+                    ))}
+                </select>
+                <label style={{ display: 'block', marginBottom: '8px' }}>
+                    <input
+                        type="checkbox"
+                        checked={this.state.cpuOffload}
+                        onChange={(event) => this.setState({ cpuOffload: event.target.checked })}
+                    />{' '}CPU offload (recommended for 12–16 GB VRAM)
+                </label>
+                <select
+                    value={this.state.dtype}
+                    onChange={(event) => this.setState({ dtype: event.target.value })}
+                    style={{ width: '100%' }}
+                >
+                    <option value="bfloat16">bfloat16</option>
+                    <option value="float16">float16</option>
+                    <option value="float32">float32</option>
+                </select>
+            </div>
+        );
+    }
+}
+
 // Register into the component manager
 import { registerComponent, ComponentRegister } from '../ComponentsManager';
 
@@ -221,6 +303,7 @@ import { registerComponent, ComponentRegister } from '../ComponentsManager';
     { 'name': 'SD1ModelLoader', 'type': 'ssui_image.SD1.SD1Model', 'port': 'input', 'component': getModelLoader("sd-1"), } as ComponentRegister,
     { 'name': 'SDXLModelLoader', 'type': 'ssui_image.SDXL.SDXLModel', 'port': 'input', 'component': getModelLoader("sdxl"), } as ComponentRegister,
     { 'name': 'FluxModelLoader', 'type': 'ssui_image.Flux.FluxModel', 'port': 'input', 'component': FluxModelLoader, } as ComponentRegister,
+    { 'name': 'Flux2KleinModelLoader', 'type': 'ssui_image.Flux2.Flux2KleinModel', 'port': 'input', 'component': Flux2KleinModelLoader, } as ComponentRegister,
     { 'name': 'SD1LoraLoader', 'type': 'ssui_image.SD1.SD1Lora', 'port': 'input', 'component': getModelLoader("sd-1", "lora", "ssui_image.SD1.SD1Lora.load"), } as ComponentRegister,
     { 'name': 'SDXLLoraLoader', 'type': 'ssui_image.SDXL.SDXLLora', 'port': 'input', 'component': getModelLoader("sdxl", "lora", "ssui_image.SDXL.SDXLLora.load"), } as ComponentRegister,
 ].forEach(registerComponent);

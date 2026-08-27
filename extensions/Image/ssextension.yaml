@@ -4,6 +4,9 @@ server:
   venv: shared
   dependencies:
     - numpy>=1.21.2
+    - diffusers>=0.36.0,<0.41
+    - transformers>=4.51.3,<5
+    - accelerate>=1.2.1
   packages:
     - ssui_image
   main: extension.py
@@ -13,4 +16,3 @@ web_ui:
   mount: canvas/
   file_opener:
     - Canvas: /canvas/?path=(*.canvas)
-  

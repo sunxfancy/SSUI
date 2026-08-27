@@ -27,8 +27,11 @@ examples/basic/
 ├── workflow-sd1.py
 ├── workflow-sdxl.py
 ├── workflow-flux.py
+├── workflow-flux2-klein.py
 ├── ssproject.yaml
 ```
+
+`workflow-flux2-klein.py` 展示了 FLUX.2 Klein 的统一文生图与多参考图编辑流程；编辑入口最多接受四张参考图。
 
 Stable Scripts脚本必须定义在一个项目下，项目根目录下必须包含`ssproject.yaml`文件，用于定义项目信息。
 

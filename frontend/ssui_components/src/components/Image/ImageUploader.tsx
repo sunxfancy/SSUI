@@ -17,7 +17,10 @@ export class ImageUploader extends IComponent<{ script_path: string }, ImageUplo
     }
 
     override onExecute() {
-        return { 'image': this.state.image };
+        return {
+            'function': 'ssui.base.Image.load',
+            'params': { 'path': this.state.image }
+        };
     }
 
     handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {

@@ -4,6 +4,7 @@ import os
 import tempfile
 import yaml
 from ss_executor.loader import SSLoader, SSProject, search_project_root
+from ss_executor.__main__ import convert_task_param
 from ss_executor.model import Task
 from ss_executor.scheduler import TaskScheduler
 from tests.utils import should_run_model_tests
@@ -27,6 +28,22 @@ class TestSSLoader(unittest.TestCase):
         self.loader.load(path)
         self.loader.Execute()
         self.loader.GetConfig('txt2img')
+
+    def test_convert_nested_list_parameters(self):
+        params = {
+            "items": [
+                {
+                    "function": "ssui.base.Prompt.create",
+                    "params": {"text": "first"},
+                },
+                {
+                    "function": "ssui.base.Prompt.create",
+                    "params": {"text": "second"},
+                },
+            ]
+        }
+        result = convert_task_param(params)
+        self.assertEqual([item.text for item in result], ["first", "second"])
         
 
 class TestSSProject(unittest.TestCase):
