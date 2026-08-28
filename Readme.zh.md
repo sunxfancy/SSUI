@@ -56,6 +56,7 @@ Stable Scripts提供了良好的集成能力，可以让您在不同场景中使
 - SD1
 - SDXL
 - Flux
+- FLUX.2 Klein（文生图、单图及多参考图编辑）
 
 一个Stable Script必须包含3个部分：
 

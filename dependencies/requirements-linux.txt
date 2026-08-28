@@ -1,6 +1,6 @@
 
 einops>=0.8.0
-transformers>=4.46.2
+transformers>=4.51.3,<5
 tokenizers>=0.20.0
 safetensors>=0.4.5
 aiohttp>=3.11.11
@@ -9,7 +9,7 @@ pillow>=11.0.0
 virtualenv>=20.28.0
 fastapi[standard]>=0.115.6
 websockets>=14.1
-diffusers[torch]>=0.31.0
+diffusers[torch]>=0.37.0,<0.41
 torchsde==0.2.6
 accelerate>=1.2.1
 pydantic-settings>=2.7.0

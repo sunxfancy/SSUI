@@ -24,6 +24,12 @@ import time
 from enum import Enum
 from typing import Literal, Optional, Type, TypeAlias, Union
 
+from backend.diffusers_compat import preload_attention_dispatch_for_torch_24
+
+
+preload_attention_dispatch_for_torch_24()
+
+
 import diffusers
 import onnxruntime as ort
 import torch
@@ -62,6 +68,7 @@ class BaseModelType(str, Enum):
     StableDiffusionXL = "sdxl"
     StableDiffusionXLRefiner = "sdxl-refiner"
     Flux = "flux"
+    Flux2 = "flux-2"
     # Kandinsky2_1 = "kandinsky-2.1"
 
 

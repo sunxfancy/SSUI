@@ -19,6 +19,7 @@ describe('Core Functional UI components', () => {
         expect(getComponent('SD1ModelLoader')).toBeDefined();
         expect(getComponent('SDXLModelLoader')).toBeDefined();
         expect(getComponent('FluxModelLoader')).toBeDefined();
+        expect(getComponent('Flux2KleinModelLoader')).toBeDefined();
         expect(getComponent('SD1LoraLoader')).toBeDefined();
         expect(getComponent('SDXLLoraLoader')).toBeDefined();
     });

@@ -124,6 +124,8 @@ class ModelProbe(object):
 
     CLASS2TYPE = {
         "FluxPipeline": ModelType.Main,
+        "Flux2Pipeline": ModelType.Main,
+        "Flux2KleinPipeline": ModelType.Main,
         "StableDiffusionPipeline": ModelType.Main,
         "StableDiffusionInpaintPipeline": ModelType.Main,
         "StableDiffusionXLPipeline": ModelType.Main,
@@ -132,6 +134,7 @@ class ModelProbe(object):
         "StableDiffusion3Pipeline": ModelType.Main,
         "LatentConsistencyModelPipeline": ModelType.Main,
         "AutoencoderKL": ModelType.VAE,
+        "AutoencoderKLFlux2": ModelType.VAE,
         "AutoencoderTiny": ModelType.VAE,
         "ControlNetModel": ModelType.ControlNet,
         "CLIPVisionModelWithProjection": ModelType.CLIPVision,
@@ -801,13 +804,15 @@ class PipelineFolderProbe(FolderProbeBase):
             else:
                 raise InvalidModelConfigException(f"Unknown base model for {self.model_path}")
 
-        # Handle pipelines with a transformer (i.e. SD3).
+        # Handle pipelines with a transformer (i.e. SD3 and FLUX.2).
         config_path = self.model_path / "transformer" / "config.json"
         if config_path.exists():
             with open(config_path) as file:
                 transformer_conf = json.load(file)
             if transformer_conf["_class_name"] == "SD3Transformer2DModel":
                 return BaseModelType.StableDiffusion3
+            elif transformer_conf["_class_name"] == "Flux2Transformer2DModel":
+                return BaseModelType.Flux2
             else:
                 raise InvalidModelConfigException(f"Unknown base model for {self.model_path}")
 
@@ -863,6 +868,13 @@ class PipelineFolderProbe(FolderProbeBase):
 
 class VaeFolderProbe(FolderProbeBase):
     def get_base_type(self) -> BaseModelType:
+        config_file = self.model_path / "config.json"
+        if config_file.exists():
+            with open(config_file, "r") as file:
+                config = json.load(file)
+            if config.get("_class_name") == "AutoencoderKLFlux2":
+                return BaseModelType.Flux2
+
         if self._config_looks_like_sdxl():
             return BaseModelType.StableDiffusionXL
         elif self._name_looks_like_sdxl():

@@ -30,6 +30,29 @@ import traceback
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+
+def convert_task_param(param):
+    """Materialize nested parameter descriptors emitted by UI components."""
+    if isinstance(param, list):
+        return [convert_task_param(item) for item in param]
+    if not isinstance(param, dict):
+        return param
+    if "function" in param:
+        name = param["function"]
+        params = {
+            key: convert_task_param(value)
+            for key, value in param.get("params", {}).items()
+        }
+
+        parts = name.split(".")
+        current = __import__(parts[0])
+        for part in parts[1:]:
+            current = getattr(current, part)
+        return current(**params)
+    if set(param) == {"items"}:
+        return [convert_task_param(item) for item in param["items"]]
+    return {key: convert_task_param(value) for key, value in param.items()}
+
 class Executor:
     def __init__(self, scheduler_url: str = None):
         self.scheduler_url = scheduler_url or os.environ.get(
@@ -117,17 +140,6 @@ class Executor:
                 print(result)
             else:
                 # 执行execute pass
-                def convert_param(param: dict): 
-                    name = param['function']
-                    params = param['params']
-
-                    # 动态导入并获取属性,支持任意层级的包/模块/类/函数访问
-                    parts = name.split('.')
-                    current = __import__(parts[0])
-                    for part in parts[1:]:
-                        current = getattr(current, part)
-                    return current(**params)
-
                 def find_callable(loader: SSLoader, callable: str):
                     for func, param_types, return_type in loader.callables:
                         if func.__name__ == callable:
@@ -139,7 +151,7 @@ class Executor:
                 new_params = {}
                 for name, param in task.params.items():
                     print(name, param)
-                    new_params[name] = convert_param(param)
+                    new_params[name] = convert_task_param(param)
 
                 def convert_return(result):
                     if isinstance(result, tuple):

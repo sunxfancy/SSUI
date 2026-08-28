@@ -60,6 +60,7 @@ Currently supported models:
 - SD1
 - SDXL
 - Flux
+- FLUX.2 Klein (text-to-image and single/multi-reference editing)
 
 A Stable Script must contains 3 parts:
 
