@@ -919,7 +919,7 @@ timm:
   dependents:
     - controlnet-aux
 tokenizers:
-  version: "0.21.1"
+  version: "0.21.4"
   isRoot: true
   dependents:
     - transformers
@@ -986,7 +986,7 @@ trampoline:
   dependents:
     - torchsde
 transformers:
-  version: "4.52.4"
+  version: "4.55.4"
   isRoot: true
   dependents:
     - compel

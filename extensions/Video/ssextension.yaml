@@ -7,6 +7,9 @@ server:
   dependencies:
     - diffsynth>=1.1.9
     - modelscope==1.26.0
+    - transformers>=4.54,<4.56
+  packages:
+    - ssui_video
 
   main: extension.py
 

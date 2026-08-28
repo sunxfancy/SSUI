@@ -1,5 +1,5 @@
 einops>=0.8.0
-transformers>=4.51.3,<5
+transformers>=4.54,<4.56
 tokenizers==0.21.1
 safetensors>=0.8.0,<0.9
 aiohttp>=3.11.11
@@ -27,7 +27,7 @@ picklescan>=0.0.24
 matplotlib>=3.10.1
 mediapipe>=0.10.21
 aioshutil>=1.5
-huggingface_hub[hf-transfer,hf_xet]>=0.34,<1
+huggingface_hub[hf-transfer,hf_xet]>=0.36.2,<1
 
 easydict>=1.13
 rembg>=2.0.65
