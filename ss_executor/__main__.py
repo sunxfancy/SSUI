@@ -7,6 +7,7 @@ import json
 from typing import Dict, Optional, Union
 import logging
 import sys
+import uuid
 
 project_root = os.path.abspath(os.path.dirname(os.path.dirname(__file__)))
 
@@ -22,7 +23,7 @@ for dir in os.listdir(extensions_root):
 
 
 from ss_executor.loader import SSLoader, search_project_root
-from ssui.base import Image
+from ssui.base import Image, SkeletonAnimation, Video
 from ss_executor.sandbox import Sandbox
 from ss_executor.model import KillMessage, TaskStatus, Task, ExecutorRegister, RegisterResponse, UpdateStatus, TaskResult, ExeMessage
 import traceback
@@ -69,6 +70,71 @@ def convert_task_return(result, task_script):
         )
         result._image.save(path)
         return {"type": "image", "path": path}
+    if isinstance(result, Video):
+        if result.path and not result.frames:
+            return {
+                "type": "video",
+                "path": result.path,
+                "metadata": result.metadata,
+            }
+        if not result.frames:
+            raise ValueError("Video result contains neither a path nor frames")
+        import cv2
+        import numpy as np
+
+        task_project_root = search_project_root(os.path.dirname(task_script))
+        output_dir = os.path.join(task_project_root, "output")
+        os.makedirs(output_dir, exist_ok=True)
+        path = os.path.join(output_dir, f"video_{uuid.uuid4().hex}.mp4")
+        width, height = result.frames[0].size
+        writer = cv2.VideoWriter(
+            path,
+            cv2.VideoWriter_fourcc(*"mp4v"),
+            float(result.fps),
+            (width, height),
+        )
+        if not writer.isOpened():
+            raise RuntimeError("Unable to create the pose preview video")
+        try:
+            for frame in result.frames:
+                rgb = np.asarray(frame.convert("RGB"))
+                writer.write(cv2.cvtColor(rgb, cv2.COLOR_RGB2BGR))
+        finally:
+            writer.release()
+        return {
+            "type": "video",
+            "path": path,
+            "fps": result.fps,
+            "metadata": result.metadata,
+        }
+    if isinstance(result, SkeletonAnimation):
+        from ssui_motion import export_bvh
+
+        task_project_root = search_project_root(os.path.dirname(task_script))
+        output_dir = os.path.join(task_project_root, "output")
+        os.makedirs(output_dir, exist_ok=True)
+        stem = os.path.join(output_dir, f"skeleton_{uuid.uuid4().hex}")
+        path = stem + ".json"
+        with open(path, "w", encoding="utf-8") as output:
+            json.dump(result.to_dict(), output, ensure_ascii=False, indent=2)
+        payload = {
+            "type": "skeleton_animation",
+            "path": path,
+            "frames": len(result.frames),
+            "duration": result.duration,
+            "fps": result.fps,
+        }
+        try:
+            bvh_path = stem + ".bvh"
+            bvh = export_bvh(result, bvh_path)
+            payload.update({
+                "bvh_path": bvh_path,
+                "retarget_path": stem + ".retarget.json",
+                "retarget_rmse": bvh.report["rmse"],
+            })
+        except ValueError as export_error:
+            payload["retarget_error"] = str(export_error)
+        return payload
     return result
 
 class Executor:

@@ -1,6 +1,7 @@
 import './Image/ImageUploader';
 import './Image/ImagePicker';
 import './Video/VideoUploader';
+import './Motion/SkeletonPreview';
 import './Loader/SDLoader';
 import './Loader/ControlNetLoader';
 import './Base/ListContainer';

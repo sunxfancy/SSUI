@@ -2,10 +2,14 @@ name: Motion
 version: 0.1.0
 server:
   venv: shared
-  dependencies:
-    - numpy>=1.21.2
   packages:
     - ssui_motion
+  dependencies:
+    - numpy>=1.21.2
+    - mediapipe>=0.10.21
+    - opencv-python-headless>=4.11.0.86
+    - Pillow>=10.0.0
+    - scipy>=1.15.0
   main: extension.py
 
 web_ui:

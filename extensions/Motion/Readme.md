@@ -1,5 +1,8 @@
 # Motion extension
 
+The Motion extension provides both NVIDIA Kimodo text-to-motion generation and
+MediaPipe video pose recognition with BVH/Blender reconstruction.
+
 The Motion extension runs NVIDIA Kimodo in an isolated child environment. This
 keeps Kimodo's pinned `transformers==5.1.0` dependency from replacing the
 versions used by SSUI's Image and Video extensions, while reusing the project's
@@ -71,3 +74,57 @@ blender --background --factory-startup `
 
 The script converts Kimodo's centimeter BVH units to meters and produces a PNG
 preview, an H.264 MP4 animation, and an editable `.blend` scene.
+
+## Video pose recognition
+
+The pose workflow extracts MediaPipe Pose's 33 landmarks from a single-person
+video and returns:
+
+- a `Video` with a skeleton overlay for visual quality checks;
+- a `SkeletonAnimation` containing timestamps, normalized image coordinates,
+  relative 3D/world coordinates, and landmark confidence;
+- JSON, BVH, and retarget reports written by the executor.
+
+```python
+from ssui import SkeletonAnimation, Video, workflow
+from ssui_motion import PoseRecognitionOptions, recognize_pose
+
+@workflow
+def video_to_skeleton(video: Video) -> tuple[Video, SkeletonAnimation]:
+    options = PoseRecognitionOptions(sample_fps=24, smoothing=0.45)
+    return recognize_pose(video, options)
+```
+
+See `examples/advance/workflow-pose.py` for the complete node workflow. The
+node editor exposes sampling FPS, smoothing, detection/tracking confidence,
+missing-frame interpolation, and local MediaPipe model path controls.
+
+MediaPipe Solutions Pose uses its bundled model. MediaPipe Tasks downloads the
+official `pose_landmarker_full.task` once into `~/.cache/ssui/mediapipe/`. Set
+`SSUI_MODEL_CACHE`, or pass `PoseRecognitionOptions(model_path=...)`, for an
+offline model.
+
+## BVH and Blender comparison
+
+Skeleton results are exported as a 21-joint humanoid BVH with fixed median bone
+lengths, local XYZ rotations, continuous Euler angles, and a `.retarget.json`
+forward-kinematics error report. The `video_to_blender_comparison` workflow also
+creates a `.blend` scene, comparison frames/video, and a Blender-side numeric
+report.
+
+To run the complete video-to-Blender pipeline from a script:
+
+```powershell
+./extensions/Motion/blender/video_to_blender.ps1 `
+  -Video D:/videos/person.mp4 `
+  -OutputDir output/person-motion
+```
+
+The script uses a normal Blender executable when available and falls back to
+the official Microsoft Store/MSIX launcher without desktop automation. Use
+`-SkipBlender` to perform recognition and BVH export only.
+
+MediaPipe monocular world coordinates are hip-relative and cannot recover true
+global translation. The extension estimates camera-plane root motion from the
+hip trajectory; robust depth translation, foot locking, and skinned-character
+retargeting require additional constraints.
