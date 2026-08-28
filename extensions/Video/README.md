@@ -84,7 +84,9 @@ SSUI_LTX_VIDEO_VAE / SSUI_LTX_AUDIO_VAE / SSUI_LTX_SPATIAL_UPSAMPLER  单个权�
 | `H3ImageToVideo` | fl2va | 首帧 / 首尾帧视频 + 原生音频，768p |
 
 H3 是 33B 全模态 DiT，效果最接近 Seedance 2.0 的开源模型，但本地推理很吃硬件：
-80GB 单卡用 bf16 + 自动 offload；24-32GB 建议节点参数选 `int8` 量化（需安装 torchao）。
+80GB 单卡可用 bf16 + 自动 offload；24-32GB 可选 `int8`（需 torchao）。
+消费级显卡还可显式选择 `nf4`，使用 DiffSynth-Studio 的 pruned NF4 权重与磁盘卸载；
+官方标称最低 7GB 显存，但仍需约 26GiB 本地权重空间和足够的系统内存/磁盘交换空间。
 H3-Context-IR 与 2K 重生成模块官方未开源，本地只能到 768p；
 想复现官方效果需按 [Prompting Guidance](https://github.com/MiniMax-AI/MiniMax-H3) 自行预处理提示词。
 
@@ -99,11 +101,27 @@ h3-venv/Scripts/pip install -U "diffusers" "transformers" "torchao" "pyav" "Pill
 
 > diffusers 的 `ModularPipeline` / MiniMax-H3 支持是较新特性，请安装最新版。
 
+NF4 使用当前 DiffSynth-Studio，而不是扩展中兼容旧节点的 vendored 1.1.9。可在同一
+H3 venv 中安装 GitHub main，或用 `SSUI_H3_DIFFSYNTH_ROOT` 指向源码 checkout；并安装
+`bitsandbytes`（Windows AMDGPU 使用仓库 AMD requirements 中的 ROCm wheel）。下载
+`DiffSynth-Studio/MiniMax-H3-NF4` 的以下四个文件到 `models/minimax-h3-nf4/`：
+
+```text
+minimax-h3-fl2va-pruned-nf4.safetensors
+minimax-h3-text-encoder-nf4.safetensors
+video_vae_nf4.safetensors
+audio_vae_nf4.safetensors
+```
+
 环境变量：
 
 ```text
 SSUI_H3_PYTHON   H3 venv 的 python（默认探测 h3-venv 与系统 python）
 SSUI_H3_MODEL_ID 模型仓库 id（默认 MiniMaxAI/MiniMax-H3）
+SSUI_H3_NF4_MODEL_ROOT NF4 四个权重文件的目录（默认 models/minimax-h3-nf4）
+SSUI_H3_DIFFSYNTH_ROOT 当前 DiffSynth-Studio 源码目录（已安装到 venv 时可省略）
+SSUI_H3_PROCESSOR_MODEL_ID processor 仓库（默认 MiniMax/MiniMax-H3）
+SSUI_H3_VRAM_RESERVE_GIB 为激活和桌面预留的显存 GiB（默认 2）
 ```
 
 ## 工作流示例

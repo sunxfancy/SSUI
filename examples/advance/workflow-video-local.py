@@ -123,12 +123,10 @@ def img2vid_ltx25(image: Image, prompt: Prompt, negative_prompt: Prompt) -> Vide
 @workflow
 def txt2vid_h3(prompt: Prompt) -> Video:
     """MiniMax H3 文生视频（33B 全模态 DiT，768p + 原生音频，独立 H3 venv）。"""
-    video = H3TextToVideo(config("Generate Video"), prompt)
-    return Video("mp4", video, fps=24)
+    return H3TextToVideo(config("Generate Video"), prompt)
 
 
 @workflow
 def img2vid_h3(image: Image, prompt: Prompt, last_image: Image = None) -> Video:
     """MiniMax H3 图生视频（fl2va，可选尾帧，768p + 原生音频，独立 H3 venv）。"""
-    video = H3ImageToVideo(config("Generate Video"), image, prompt, last_image)
-    return Video("mp4", video, fps=24)
+    return H3ImageToVideo(config("Generate Video"), image, prompt, last_image)
