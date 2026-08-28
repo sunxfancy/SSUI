@@ -35,6 +35,17 @@
       ]
     },
     {
+      "id": "pixel-assets",
+      "title": "像素游戏资产工作流",
+      "description": "使用 Qwen-Image 生成并收尾像素资产，或渲染 AgentPaint / pixelsrc 原生像素源文件",
+      "icon": "media",
+      "fileList": [
+        "ssproject.yaml",
+        "workflow-qwen.py",
+        "workflow-native.py"
+      ]
+    },
+    {
       "id": "speech-synthesis",
       "title": "语音合成工作流",
       "description": "文本转语音与语音合成的工作流",

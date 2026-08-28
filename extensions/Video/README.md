@@ -124,3 +124,32 @@ txt2vid_h3 / img2vid_h3
 - 顶层 `diffsynth.WanVideoPipeline` 仍是旧版（Wan 2.1），Wan 2.2 节点显式导入
   `diffsynth.pipelines.wan_video_new.WanVideoPipeline` 与 `diffsynth.utils.ModelConfig`。
 - 旧节点（Wan2 / Hunyuan / CogVideo）使用的 `from_model_manager`、`download_models` 等 API 在 1.1.9 中原样保留。
+
+## Qwen-Image 节点
+
+本扩展同时拥有仓库 vendored DiffSynth 运行时，因此
+`ssui_video.QwenImage` 在这里提供 Qwen-Image 生成和参考图编辑节点，
+避免在 Image 扩展中重复打包同一套推理实现。
+
+默认生成模型为 `Qwen/Qwen-Image`，参考编辑默认使用当前 vendored
+DiffSynth 支持的多参考图模型 `Qwen/Qwen-Image-Edit-2509`。只有调用
+`QwenImageModel.load()` 或 `QwenImageEditModel.load()` 时才会下载权重。
+
+像素游戏资产可直接使用一体化节点 `QwenPixelArtGenerate` 与
+`QwenPixelArtEdit`。两者默认采用已经在 32 GiB AMD GPU 上实测通过的
+512×512、20 步、CFG 1.0 生成参数，并直接输出 64×64、24 色的像素网格
+（默认以 4 倍 nearest-neighbor 尺寸预览）。通用节点 `QwenImageGenerate`
+与 `QwenImageEdit` 仍保留，用于非像素工作流或自定义后处理。
+
+可用环境变量：
+
+```text
+SSUI_QWEN_IMAGE_MODEL_ROOT       权重目录（默认 models）
+SSUI_QWEN_IMAGE_DOWNLOAD_SOURCE  ModelScope（默认）或 HuggingFace
+SSUI_QWEN_IMAGE_VRAM_LIMIT_GIB   低显存模式的模型常驻显存上限（GiB）
+```
+
+`low_vram=True` 会让各组件在阶段之间驻留 CPU，降低显存占用，但仍需要
+较大的系统内存和磁盘空间；当前 SSUI Qwen-Image 节点要求 CUDA。32 GiB
+显存运行 512×512 时，可在模型加载参数中设置 `vram_limit_gib=24`，为激活
+和 VAE 解码预留空间。设为 `0` 时沿用自动值或上述环境变量。
