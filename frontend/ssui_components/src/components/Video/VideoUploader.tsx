@@ -53,7 +53,7 @@ const VideoUploader = forwardRef((props: VideoUploaderProps, ref) => {
     const preview = () => {
         if (video) {
             return <div>
-                <img src={'/file?path=' + video} alt="preview" style={{ maxWidth: '100%', height: 'auto' }} />
+                <video src={'/file?path=' + encodeURIComponent(video)} controls muted style={{ maxWidth: '100%', height: 'auto' }} />
             </div>
         }
     }
@@ -76,29 +76,49 @@ const VideoUploader = forwardRef((props: VideoUploaderProps, ref) => {
 
 const VideoPreview = forwardRef((props, ref) => {
     const [video, setVideo] = useState<string>('');
+    const [metadata, setMetadata] = useState<Record<string, string | number | null>>({});
 
     useImperativeHandle(ref, () => {
         return {
             onUpdate: (data: any) => {
                 console.log('VideoPreview onUpdate:', data);
                 setVideo(data.path);
+                setMetadata(data.metadata || {});
             }
         }
     }, []);
 
     return (
         <div>
-            {video != '' ? 
-                <img 
-                    src={'/file?path=' + video} 
-                    alt="placeholder" 
-                    style={{ 
-                        maxWidth: '100%', 
-                        height: 'auto', 
+            {video != '' ? <>
+                <video
+                    src={'/file?path=' + encodeURIComponent(video)}
+                    controls
+                    muted
+                    style={{
+                        maxWidth: '100%',
+                        height: 'auto',
                         display: 'block',
                         margin: '0 auto'
-                    }} 
-                /> : 
+                    }}
+                />
+                {metadata.kind === 'blender_comparison' && <div style={{ marginTop: 8, fontSize: 12 }}>
+                    <div>
+                        Blender {metadata.blender_version || 'unknown'}
+                        {typeof metadata.comparison_rmse === 'number' && ` · RMSE ${metadata.comparison_rmse.toFixed(6)}`}
+                    </div>
+                    <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginTop: 4 }}>
+                        {['scene_path', 'report_path', 'bvh_path', 'retarget_path'].map(key => {
+                            const path = metadata[key];
+                            if (typeof path !== 'string' || !path) return null;
+                            const labels: Record<string, string> = {
+                                scene_path: 'BLEND', report_path: '报告', bvh_path: 'BVH', retarget_path: '重定向',
+                            };
+                            return <a key={key} href={'/file?path=' + encodeURIComponent(path)} download>{labels[key]}</a>;
+                        })}
+                    </div>
+                </div>}
+            </> :
                 <p>No video</p>
             }
         </div>

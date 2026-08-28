@@ -1,5 +1,7 @@
 import PIL.Image
 import trimesh
+from dataclasses import asdict, dataclass, field
+from typing import Any
 
 class Image():
     def __init__(self, image: PIL.Image.Image = None):
@@ -15,10 +17,79 @@ class Mesh():
         self._model = model
 
 class Video():
-    def __init__(self, format: str, frames: list[PIL.Image.Image] = None, fps: int = 30):
+    def __init__(self, format: str = "mp4", frames: list[PIL.Image.Image] = None, fps: float = 30, video: str = None, path: str = None, metadata: dict[str, Any] = None):
         self._format = format
         self._frames = frames
         self._fps = fps
+        # Upload components historically send {"video": path}; ``path`` is the
+        # clearer spelling for programmatic callers.  Keep both compatible.
+        self._path = path or video
+        self._metadata = metadata or {}
+
+    @property
+    def path(self):
+        return self._path
+
+    @property
+    def frames(self):
+        return self._frames
+
+    @property
+    def fps(self):
+        return self._fps
+
+    @property
+    def metadata(self):
+        return self._metadata
+
+
+@dataclass
+class PoseLandmark:
+    """One normalized body landmark.
+
+    x/y are normalized image coordinates. z is MediaPipe's relative depth;
+    world_x/y/z are metric model-space coordinates when the detector provides
+    them.
+    """
+
+    name: str
+    x: float
+    y: float
+    z: float = 0.0
+    visibility: float = 0.0
+    presence: float = 0.0
+    world_x: float | None = None
+    world_y: float | None = None
+    world_z: float | None = None
+
+
+@dataclass
+class PoseFrame:
+    frame_index: int
+    timestamp: float
+    landmarks: list[PoseLandmark] = field(default_factory=list)
+    detected: bool = True
+
+
+@dataclass
+class SkeletonAnimation:
+    """Time-indexed pose data suitable for preview, editing, and retargeting."""
+
+    frames: list[PoseFrame] = field(default_factory=list)
+    fps: float = 30.0
+    width: int = 0
+    height: int = 0
+    source: str | None = None
+    model: str = "mediapipe-pose-33"
+    coordinate_system: str = "image-normalized+x-right+y-down; world+x-right+y-up"
+    metadata: dict[str, Any] = field(default_factory=dict)
+
+    @property
+    def duration(self) -> float:
+        return self.frames[-1].timestamp if self.frames else 0.0
+
+    def to_dict(self) -> dict[str, Any]:
+        return asdict(self)
 
 class Audio():
     def __init__(self, format: str, audio: bytes = None, fps: int = 16000):
