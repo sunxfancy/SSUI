@@ -53,6 +53,24 @@ def convert_task_param(param):
         return [convert_task_param(item) for item in param["items"]]
     return {key: convert_task_param(value) for key, value in param.items()}
 
+
+def convert_task_return(result, task_script):
+    """Convert executor results into scheduler-safe values."""
+    if isinstance(result, tuple):
+        return [convert_task_return(item, task_script) for item in result]
+    if isinstance(result, Image):
+        current_time = datetime.datetime.now()
+        task_project_root = search_project_root(os.path.dirname(task_script))
+        output_dir = os.path.join(task_project_root, "output")
+        os.makedirs(output_dir, exist_ok=True)
+        path = os.path.join(
+            output_dir,
+            "image_" + current_time.strftime("%Y%m%d%H%M%S") + ".png",
+        )
+        result._image.save(path)
+        return {"type": "image", "path": path}
+    return result
+
 class Executor:
     def __init__(self, scheduler_url: str = None):
         self.scheduler_url = scheduler_url or os.environ.get(
@@ -153,19 +171,6 @@ class Executor:
                     print(name, param)
                     new_params[name] = convert_task_param(param)
 
-                def convert_return(result):
-                    if isinstance(result, tuple):
-                        return [convert_return(r) for r in result]
-                    
-                    if isinstance(result, Image):
-                        current_time = datetime.datetime.now()
-                        project_root = search_project_root(os.path.dirname(task.script))
-                        output_dir = os.path.join(project_root, "output")
-                        if not os.path.exists(output_dir):
-                            os.makedirs(output_dir)
-                        path = os.path.join(output_dir, "image_" + current_time.strftime("%Y%m%d%H%M%S") + ".png")
-                        result._image.save(path)
-                        return {"type": "image", "path": path}
                 # 注入配置
                 loader.config._update = task.details
                 # 执行
@@ -175,7 +180,7 @@ class Executor:
                 if not isinstance(result, tuple):
                     result = (result,)
 
-                result = convert_return(result)
+                result = convert_task_return(result, task.script)
 
             # 发送任务完成状态和结果
             task_result = TaskResult(
