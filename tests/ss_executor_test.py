@@ -4,7 +4,7 @@ import os
 import tempfile
 import yaml
 from ss_executor.loader import SSLoader, SSProject, search_project_root
-from ss_executor.__main__ import convert_task_param
+from ss_executor.__main__ import convert_task_param, convert_task_return
 from ss_executor.model import Task
 from ss_executor.scheduler import TaskScheduler
 from tests.utils import should_run_model_tests
@@ -44,6 +44,10 @@ class TestSSLoader(unittest.TestCase):
         }
         result = convert_task_param(params)
         self.assertEqual([item.text for item in result], ["first", "second"])
+
+    def test_convert_primitive_task_return(self):
+        result = convert_task_return(("output/motion.npz",), "workflow.py")
+        self.assertEqual(result, ["output/motion.npz"])
         
 
 class TestSSProject(unittest.TestCase):

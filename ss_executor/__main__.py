@@ -54,6 +54,89 @@ def convert_task_param(param):
         return [convert_task_param(item) for item in param["items"]]
     return {key: convert_task_param(value) for key, value in param.items()}
 
+
+def convert_task_return(result, task_script):
+    """Convert executor results into scheduler-safe values."""
+    if isinstance(result, tuple):
+        return [convert_task_return(item, task_script) for item in result]
+    if isinstance(result, Image):
+        current_time = datetime.datetime.now()
+        task_project_root = search_project_root(os.path.dirname(task_script))
+        output_dir = os.path.join(task_project_root, "output")
+        os.makedirs(output_dir, exist_ok=True)
+        path = os.path.join(
+            output_dir,
+            "image_" + current_time.strftime("%Y%m%d%H%M%S") + ".png",
+        )
+        result._image.save(path)
+        return {"type": "image", "path": path}
+    if isinstance(result, Video):
+        if result.path and not result.frames:
+            return {
+                "type": "video",
+                "path": result.path,
+                "metadata": result.metadata,
+            }
+        if not result.frames:
+            raise ValueError("Video result contains neither a path nor frames")
+        import cv2
+        import numpy as np
+
+        task_project_root = search_project_root(os.path.dirname(task_script))
+        output_dir = os.path.join(task_project_root, "output")
+        os.makedirs(output_dir, exist_ok=True)
+        path = os.path.join(output_dir, f"video_{uuid.uuid4().hex}.mp4")
+        width, height = result.frames[0].size
+        writer = cv2.VideoWriter(
+            path,
+            cv2.VideoWriter_fourcc(*"mp4v"),
+            float(result.fps),
+            (width, height),
+        )
+        if not writer.isOpened():
+            raise RuntimeError("Unable to create the pose preview video")
+        try:
+            for frame in result.frames:
+                rgb = np.asarray(frame.convert("RGB"))
+                writer.write(cv2.cvtColor(rgb, cv2.COLOR_RGB2BGR))
+        finally:
+            writer.release()
+        return {
+            "type": "video",
+            "path": path,
+            "fps": result.fps,
+            "metadata": result.metadata,
+        }
+    if isinstance(result, SkeletonAnimation):
+        from ssui_motion import export_bvh
+
+        task_project_root = search_project_root(os.path.dirname(task_script))
+        output_dir = os.path.join(task_project_root, "output")
+        os.makedirs(output_dir, exist_ok=True)
+        stem = os.path.join(output_dir, f"skeleton_{uuid.uuid4().hex}")
+        path = stem + ".json"
+        with open(path, "w", encoding="utf-8") as output:
+            json.dump(result.to_dict(), output, ensure_ascii=False, indent=2)
+        payload = {
+            "type": "skeleton_animation",
+            "path": path,
+            "frames": len(result.frames),
+            "duration": result.duration,
+            "fps": result.fps,
+        }
+        try:
+            bvh_path = stem + ".bvh"
+            bvh = export_bvh(result, bvh_path)
+            payload.update({
+                "bvh_path": bvh_path,
+                "retarget_path": stem + ".retarget.json",
+                "retarget_rmse": bvh.report["rmse"],
+            })
+        except ValueError as export_error:
+            payload["retarget_error"] = str(export_error)
+        return payload
+    return result
+
 class Executor:
     def __init__(self, scheduler_url: str = None):
         self.scheduler_url = scheduler_url or os.environ.get(
@@ -154,71 +237,6 @@ class Executor:
                     print(name, param)
                     new_params[name] = convert_task_param(param)
 
-                def convert_return(result):
-                    if isinstance(result, tuple):
-                        return [convert_return(r) for r in result]
-                    
-                    if isinstance(result, Image):
-                        current_time = datetime.datetime.now()
-                        project_root = search_project_root(os.path.dirname(task.script))
-                        output_dir = os.path.join(project_root, "output")
-                        if not os.path.exists(output_dir):
-                            os.makedirs(output_dir)
-                        path = os.path.join(output_dir, "image_" + current_time.strftime("%Y%m%d%H%M%S") + ".png")
-                        result._image.save(path)
-                        return {"type": "image", "path": path}
-                    if isinstance(result, Video):
-                        if result.path and not result.frames:
-                            return {"type": "video", "path": result.path, "metadata": result.metadata}
-                        if not result.frames:
-                            raise ValueError("Video result contains neither a path nor frames")
-                        import cv2
-                        import numpy as np
-                        project_root = search_project_root(os.path.dirname(task.script))
-                        output_dir = os.path.join(project_root, "output")
-                        os.makedirs(output_dir, exist_ok=True)
-                        path = os.path.join(output_dir, f"video_{uuid.uuid4().hex}.mp4")
-                        width, height = result.frames[0].size
-                        writer = cv2.VideoWriter(
-                            path, cv2.VideoWriter_fourcc(*"mp4v"), float(result.fps), (width, height)
-                        )
-                        if not writer.isOpened():
-                            raise RuntimeError("Unable to create the pose preview video")
-                        try:
-                            for frame in result.frames:
-                                rgb = np.asarray(frame.convert("RGB"))
-                                writer.write(cv2.cvtColor(rgb, cv2.COLOR_RGB2BGR))
-                        finally:
-                            writer.release()
-                        return {
-                            "type": "video", "path": path, "fps": result.fps,
-                            "metadata": result.metadata,
-                        }
-                    if isinstance(result, SkeletonAnimation):
-                        from ssui_motion import export_bvh
-                        project_root = search_project_root(os.path.dirname(task.script))
-                        output_dir = os.path.join(project_root, "output")
-                        os.makedirs(output_dir, exist_ok=True)
-                        stem = os.path.join(output_dir, f"skeleton_{uuid.uuid4().hex}")
-                        path = stem + ".json"
-                        with open(path, "w", encoding="utf-8") as output:
-                            json.dump(result.to_dict(), output, ensure_ascii=False, indent=2)
-                        payload = {
-                            "type": "skeleton_animation", "path": path,
-                            "frames": len(result.frames), "duration": result.duration,
-                            "fps": result.fps,
-                        }
-                        try:
-                            bvh_path = stem + ".bvh"
-                            bvh = export_bvh(result, bvh_path)
-                            payload.update({
-                                "bvh_path": bvh_path,
-                                "retarget_path": stem + ".retarget.json",
-                                "retarget_rmse": bvh.report["rmse"],
-                            })
-                        except ValueError as export_error:
-                            payload["retarget_error"] = str(export_error)
-                        return payload
                 # 注入配置
                 loader.config._update = task.details
                 # 执行
@@ -228,7 +246,7 @@ class Executor:
                 if not isinstance(result, tuple):
                     result = (result,)
 
-                result = convert_return(result)
+                result = convert_task_return(result, task.script)
 
             # 发送任务完成状态和结果
             task_result = TaskResult(
