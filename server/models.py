@@ -25,10 +25,10 @@ class UiSettings(BaseModel):
 
 class Settings(BaseModel):
     host_web_ui: str
-    additional_model_dirs: List[str] = []
-    installed_models: List[ModelInfo] = []
+    additional_model_dirs: List[str] = Field(default_factory=list)
+    installed_models: List[ModelInfo] = Field(default_factory=list)
     resources_dir: Optional[str] = None
-    ui: UiSettings = UiSettings()
+    ui: UiSettings = Field(default_factory=UiSettings)
 
 class ScanModelsRequest(BaseModel):
     scan_dir: str = Field(description="The directory to scan for models")

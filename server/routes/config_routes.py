@@ -2,7 +2,7 @@ import os
 import uuid
 from typing import Any, Dict
 
-from fastapi import APIRouter, Body, Request
+from fastapi import APIRouter, Body, HTTPException, Request
 from fastapi.encoders import jsonable_encoder
 from fastapi.responses import JSONResponse
 from starlette.background import BackgroundTask
@@ -20,7 +20,10 @@ async def get_config(request: Request):
 
 @router.post("/config/")
 async def config(request: Request, config: Dict[str, Any]):
-    return request.app.state.config_service.update_config(config)
+    try:
+        return request.app.state.config_service.update_config(config)
+    except ValueError as error:
+        raise HTTPException(status_code=422, detail=str(error)) from error
 
 
 @router.post("/config/scan_models/{client_id}")

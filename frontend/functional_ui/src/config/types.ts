@@ -20,4 +20,4 @@ export const DEFAULT_UI_CONFIG: UiConfig = {
     civitai_token: '',
 };
 
-export type ConfigSaveStatus = 'saved' | 'saving' | 'unsaved';
+export type ConfigSaveStatus = 'saved' | 'saving' | 'unsaved' | 'error';

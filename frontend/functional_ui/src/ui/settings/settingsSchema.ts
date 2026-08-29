@@ -11,15 +11,18 @@ export const settingsSchema: ConfigGroup[] = [
     items: [
       {
         key: 'civitai_token',
-        name: "Civitai网站Token",
-        type: "string",
-        description: "Civitai网站的Token"
+        name: 'Civitai 访问令牌',
+        type: 'string',
+        description: '用于访问 Civitai API。令牌会保存在本机服务的配置文件中。',
+        placeholder: '输入 API Token',
+        sensitive: true
       },
       {
         key: 'external_code_editor',
-        name: "外部代码编辑器",
-        type: "string",
-        description: "外部代码编辑器路径"
+        name: '外部代码编辑器',
+        type: 'string',
+        description: '打开代码文件时优先使用的编辑器可执行文件路径。留空则使用系统默认应用。',
+        placeholder: '例如 C:\\Program Files\\Microsoft VS Code\\Code.exe'
       }
     ]
   },
@@ -31,7 +34,11 @@ export const settingsSchema: ConfigGroup[] = [
         name: '主题颜色',
         type: 'enum',
         description: '选择界面主题颜色：跟随系统 / 浅色 / 深色',
-        options: ['system', 'light', 'dark']
+        options: [
+          { value: 'system', label: '跟随系统' },
+          { value: 'light', label: '浅色' },
+          { value: 'dark', label: '深色' }
+        ]
       },
       {
         key: 'auto_open_details',
