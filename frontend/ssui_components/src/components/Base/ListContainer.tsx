@@ -60,7 +60,7 @@ export class ListContainer extends IComponent<ListContainerProps, { items: ListI
     };
 
     renderItem(item: ListItem, subType: PythonType): ReactNode {
-        const components = getComponentsByType(subType.type).filter(c => c.port == this.props.port);
+        const components = getComponentsByType(subType.type, this.props.port);
         const commonProps = {
             port: this.props.port,
             root_path: this.props.root_path,
@@ -76,7 +76,7 @@ export class ListContainer extends IComponent<ListContainerProps, { items: ListI
                             key={c.name}
                             id={c.name}
                             title={c.name}
-                            panel={<ComponentRef ref={this.getItemRef(item.key)} name={c.name} type={c.type} {...commonProps} />}
+                            panel={<ComponentRef ref={this.getItemRef(item.key)} name={c.name} type={subType.type} {...commonProps} />}
                         />
                     ))}
                 </Tabs>
@@ -88,7 +88,7 @@ export class ListContainer extends IComponent<ListContainerProps, { items: ListI
                 <ComponentRef
                     ref={this.getItemRef(item.key)}
                     name={component.name}
-                    type={component.type}
+                    type={subType.type}
                     {...commonProps}
                 />
             );
@@ -99,7 +99,7 @@ export class ListContainer extends IComponent<ListContainerProps, { items: ListI
     render(): ReactNode {
         const { items } = this.state;
         const { type_args } = this.props;
-        const subType = type_args[0];
+        const subType = type_args?.[0] ?? { type: 'typing.Any' };
         return (
             <div>
                 <div style={{ marginBottom: '10px' }}>

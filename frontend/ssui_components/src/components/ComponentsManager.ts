@@ -16,7 +16,6 @@ export function registerComponent(component: ComponentRegister) {
     components[component.name] = component;
     if (!component.createComponent)
         component.createComponent = (ref: React.RefObject<IComponent>, params: ComponentRefProps) => {
-            console.log('Creating component', component.name, ref);
             let params_with_ref = { ...params, ref: ref };
             return React.createElement(component.component, params_with_ref);
         }
@@ -30,8 +29,16 @@ export function getComponent(name: string): ComponentRegister | undefined {
     return components[name];
 }
 
-export function getComponentsByType(type: string): ComponentRegister[] {
-    return Object.values(components).filter(c => c.type === type);
+export function getComponentsByType(type: string, port?: string): ComponentRegister[] {
+    const aliases: Record<string, string> = {
+        int: 'builtins.int', float: 'builtins.float', str: 'builtins.str', bool: 'builtins.bool',
+        List: 'typing.List', 'builtins.list': 'typing.List', list: 'typing.List',
+    };
+    const normalized = aliases[type] ?? type;
+    const matches = Object.values(components).filter(c => c.type === normalized && (!port || c.port === port));
+    return matches.length > 0
+        ? matches
+        : Object.values(components).filter(c => c.type === '*' && (!port || c.port === port));
 }
 
 /**

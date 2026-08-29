@@ -1,5 +1,7 @@
 import React, { useState, forwardRef, useImperativeHandle } from 'react';
+import { Callout, FileInput, NonIdealState, Spinner, Tag } from '@blueprintjs/core';
 import { registerComponent, ComponentRegister } from '../ComponentsManager';
+import '../Base/components.css';
 
 type AudioUploaderProps = {
     script_path: string;
@@ -13,7 +15,7 @@ const AudioUploader = forwardRef((props: AudioUploaderProps, ref) => {
     useImperativeHandle(ref, () => {
         return {
             onExecute: () => {
-                return { 'audio': audio };
+                return { 'function': 'ssui.base.Audio.load', 'params': { 'path': audio } };
             }
         }
     }, [audio]);
@@ -46,7 +48,6 @@ const AudioUploader = forwardRef((props: AudioUploaderProps, ref) => {
         } catch (error) {
             setError('上传过程中发生错误');
             setUploading(false);
-            console.error('上传错误:', error);
         }
     };
 
@@ -61,47 +62,44 @@ const AudioUploader = forwardRef((props: AudioUploaderProps, ref) => {
     }
 
     return (
-        <div>
-            <h5>音频上传</h5>
-            <input 
-                type="file" 
-                accept="audio/*"
-                onChange={handleFileChange}
-                disabled={uploading}
-            />
-            {uploading && <p>上传中...</p>}
-            {error && <p style={{ color: 'red' }}>{error}</p>}
+        <div className="component-media-editor">
+            <FileInput fill text={audio ? audio.split(/[\\/]/).pop() : '选择音频文件'}
+                inputProps={{ accept: 'audio/*' }} onInputChange={handleFileChange} disabled={uploading} />
+            {uploading && <div className="component-media-status"><Spinner size={16} /> 正在上传…</div>}
+            {error && <Callout compact intent="danger">{error}</Callout>}
             {preview()}
         </div>
     );
 });
 
-const AudioPreview = forwardRef((props, ref) => {
+const AudioPreview = forwardRef((_props, ref) => {
     const [audio, setAudio] = useState<string>('');
+    const [metadata, setMetadata] = useState<{ format?: string; sample_rate?: number; text?: string }>({});
 
     useImperativeHandle(ref, () => {
         return {
             onUpdate: (data: any) => {
-                console.log('AudioPreview onUpdate:', data);
                 setAudio(data.path);
+                setMetadata(data);
             }
         }
     }, []);
 
     return (
         <div>
-            {audio != '' ? 
-                <audio 
-                    controls 
-                    src={'/file?path=' + audio}
-                    style={{ 
-                        width: '100%',
-                        margin: '0 auto'
-                    }}
+            {audio != '' ? <div className="component-media-preview">
+                <audio
+                    controls
+                    src={'/file?path=' + encodeURIComponent(audio)}
                 >
                     Your browser does not support the audio element.
-                </audio> : 
-                <p>No audio</p>
+                </audio>
+                <div className="component-media-meta">
+                    {metadata.format && <Tag minimal>{metadata.format.toUpperCase()}</Tag>}
+                    {metadata.sample_rate && <Tag minimal>{metadata.sample_rate} Hz</Tag>}
+                </div>
+                {metadata.text && <p>{metadata.text}</p>}
+            </div> : <NonIdealState icon="music" title="等待音频结果" />
             }
         </div>
     );
@@ -110,5 +108,7 @@ const AudioPreview = forwardRef((props, ref) => {
 // Register into the component manager
 [
     { 'name': 'AudioUploader', 'type': 'ssui.base.Audio', 'port': 'input', 'component': AudioUploader } as ComponentRegister,
-    { 'name': 'AudioPreview', 'type': 'ssui.base.Audio', 'port': 'output', 'component': AudioPreview } as ComponentRegister
+    { 'name': 'AudioPreview', 'type': 'ssui.base.Audio', 'port': 'output', 'component': AudioPreview } as ComponentRegister,
+    { 'name': 'VoiceUploader', 'type': 'ssui.base.Voice', 'port': 'input', 'component': AudioUploader } as ComponentRegister,
+    { 'name': 'VoicePreview', 'type': 'ssui.base.Voice', 'port': 'output', 'component': AudioPreview } as ComponentRegister
 ].forEach(registerComponent);

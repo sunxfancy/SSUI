@@ -1,5 +1,27 @@
 import { IController, IControllerProps } from "./IController";
-import { Alignment, Button, MenuItem, Slider, Switch } from "@blueprintjs/core";
+import { Alignment, Button, FormGroup, InputGroup, MenuItem, Slider, Switch } from "@blueprintjs/core";
+
+export class InputController extends IController<{ value: string }> {
+    state = { value: String(this.props.default ?? '') };
+
+    onExecute() {
+        return this.state.value;
+    }
+
+    render() {
+        const placeholder = this.props.params?.hints || '';
+        const sensitive = /token|key|secret|password/i.test(this.props.name || placeholder);
+        return <FormGroup helperText={placeholder}>
+            <InputGroup
+                fill
+                type={sensitive ? 'password' : 'text'}
+                value={this.state.value}
+                placeholder={placeholder}
+                onChange={event => this.setState({ value: event.target.value })}
+            />
+        </FormGroup>;
+    }
+}
 
 export class SliderController extends IController<{ value: number }> {
     constructor(props: IControllerProps) {
@@ -188,6 +210,7 @@ export class RandomController extends IController<{ value: number; userInput: bo
 import { registerController, ControllerRegister } from './IController';
 import { ItemPredicate, ItemRenderer, Select } from "@blueprintjs/select";
 [
+    { 'name': 'Input', 'component': InputController } as ControllerRegister,
     { 'name': 'Slider', 'component': SliderController } as ControllerRegister,
     { 'name': 'Switch', 'component': SwitchController } as ControllerRegister,
     { 'name': 'Select', 'component': SelectController } as ControllerRegister,

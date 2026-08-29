@@ -2,7 +2,7 @@ from typing import Optional, List, Union, Generator
 import torch
 import torchaudio
 from ssui.config import SSUIConfig
-from ssui.base import Audio
+from ssui.base import Audio, Voice
 from ssui.annotation import param
 from ssui.controller import Random, Switch, Slider
 from cosyvoice.cli.cosyvoice import CosyVoice2
@@ -36,7 +36,7 @@ def GenVoice(
     prompt_audio: Optional[Audio] = None,
 ):
     if config.is_prepare():
-        return Audio()
+        return Voice()
 
     print("GenVoice executed")
     print("seed:", config["seed"])
@@ -79,4 +79,4 @@ def GenVoice(
     # Get the first output audio
     output_audio = next(outputs)['tts_speech']
     
-    return Audio(output_audio, sample_rate=model.getModel().sample_rate)
+    return Voice(audio=output_audio, fps=model.getModel().sample_rate, text=text)
