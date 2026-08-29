@@ -1,0 +1,10 @@
+.mesh-artifact { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 14px; min-height: 112px; }
+.mesh-artifact-mark { display: grid; place-items: center; width: 68px; height: 68px; color: #6d77e5; border-radius: 14px; background: color-mix(in srgb, #6d77e5 12%, transparent); }
+.mesh-artifact-copy { display: grid; justify-items: start; gap: 5px; min-width: 0; }
+.mesh-artifact-copy strong, .mesh-artifact-copy span { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.mesh-artifact-copy span { color: var(--ssui-fg-muted, #667085); font-size: 11px; }
+.mesh-artifact-actions { display: flex; gap: 7px; }
+@media (max-width: 620px) {
+    .mesh-artifact { grid-template-columns: auto 1fr; }
+    .mesh-artifact-actions { grid-column: 1 / -1; }
+}

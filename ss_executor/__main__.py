@@ -23,7 +23,7 @@ for dir in os.listdir(extensions_root):
 
 
 from ss_executor.loader import SSLoader, search_project_root
-from ssui.base import Image, SkeletonAnimation, Video
+from ssui.base import Audio, Image, Mesh, SkeletonAnimation, Video
 from ss_executor.sandbox import Sandbox
 from ss_executor.model import KillMessage, TaskStatus, Task, ExecutorRegister, RegisterResponse, UpdateStatus, TaskResult, ExeMessage
 import traceback
@@ -135,6 +135,46 @@ def convert_task_return(result, task_script):
         except ValueError as export_error:
             payload["retarget_error"] = str(export_error)
         return payload
+    if isinstance(result, Audio):
+        task_project_root = search_project_root(os.path.dirname(task_script))
+        output_dir = os.path.join(task_project_root, "output")
+        os.makedirs(output_dir, exist_ok=True)
+        extension = (result._format or "wav").lower().lstrip(".")
+        path = os.path.join(output_dir, f"audio_{uuid.uuid4().hex}.{extension}")
+
+        if result.path:
+            import shutil
+            shutil.copyfile(result.path, path)
+        elif isinstance(result._audio, (bytes, bytearray)):
+            with open(path, "wb") as output:
+                output.write(result._audio)
+        elif result._audio is not None:
+            import torchaudio
+            audio = result._audio.detach().cpu() if hasattr(result._audio, "detach") else result._audio
+            if getattr(audio, "ndim", 0) == 1:
+                audio = audio.unsqueeze(0)
+            torchaudio.save(path, audio, result.sample_rate)
+        else:
+            raise ValueError("Audio result contains neither a path nor audio data")
+
+        payload = {
+            "type": "audio",
+            "path": path,
+            "format": extension,
+            "sample_rate": result.sample_rate,
+        }
+        if getattr(result, "_text", None):
+            payload["text"] = result._text
+        return payload
+    if isinstance(result, Mesh):
+        if result._model is None:
+            raise ValueError("Mesh result contains no model data")
+        task_project_root = search_project_root(os.path.dirname(task_script))
+        output_dir = os.path.join(task_project_root, "output")
+        os.makedirs(output_dir, exist_ok=True)
+        path = os.path.join(output_dir, f"mesh_{uuid.uuid4().hex}.glb")
+        result._model.export(path)
+        return {"type": "mesh", "path": path, "format": "glb"}
     return result
 
 class Executor:

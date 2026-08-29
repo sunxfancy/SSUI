@@ -3,10 +3,12 @@ import unittest
 import os
 import tempfile
 import yaml
+from pathlib import Path
 from ss_executor.loader import SSLoader, SSProject, search_project_root
 from ss_executor.__main__ import convert_task_param, convert_task_return
 from ss_executor.model import Task
 from ss_executor.scheduler import TaskScheduler
+from ssui.base import Audio, Mesh, Voice
 from tests.utils import should_run_model_tests
 
 class TestSSLoader(unittest.TestCase):
@@ -48,6 +50,36 @@ class TestSSLoader(unittest.TestCase):
     def test_convert_primitive_task_return(self):
         result = convert_task_return(("output/motion.npz",), "workflow.py")
         self.assertEqual(result, ["output/motion.npz"])
+
+    def _task_script(self, root):
+        Path(root, "ssproject.yaml").write_text(
+            "ssui_version: 1.0.0\ndependencies: []\n", encoding="utf-8"
+        )
+        script = Path(root, "workflow.py")
+        script.write_text("", encoding="utf-8")
+        return str(script)
+
+    def test_convert_audio_and_voice_returns(self):
+        with tempfile.TemporaryDirectory() as root:
+            script = self._task_script(root)
+            audio = convert_task_return(Audio("wav", audio=b"RIFF-test"), script)
+            self.assertEqual(audio["type"], "audio")
+            self.assertTrue(Path(audio["path"]).is_file())
+
+            voice = convert_task_return(Voice("mp3", audio=b"voice", text="hello"), script)
+            self.assertEqual(voice["text"], "hello")
+            self.assertEqual(Path(voice["path"]).read_bytes(), b"voice")
+
+    def test_convert_mesh_return(self):
+        class FakeMesh:
+            def export(self, path):
+                Path(path).write_bytes(b"glTF")
+
+        with tempfile.TemporaryDirectory() as root:
+            result = convert_task_return(Mesh(FakeMesh()), self._task_script(root))
+            self.assertEqual(result["type"], "mesh")
+            self.assertEqual(result["format"], "glb")
+            self.assertEqual(Path(result["path"]).read_bytes(), b"glTF")
         
 
 class TestSSProject(unittest.TestCase):

@@ -20,11 +20,16 @@ export default defineConfig(async ({ mode }) => {
     clearScreen: false,
     // 2. tauri expects a fixed port, fail if that port is not available
     resolve: {
-      alias: mode === 'development'
-          ? {
-            'ssui_components': path.resolve(__dirname, '../ssui_components/src/index.ts'),
-          }
-          : {}
+      alias: [
+        {
+          find: /^ssui_components\/dist\/style\.css$/,
+          replacement: path.resolve(__dirname, '../ssui_components/dist/style.css'),
+        },
+        {
+          find: /^ssui_components$/,
+          replacement: path.resolve(__dirname, '../ssui_components/src/index.ts'),
+        },
+      ],
     },
     server: {
       port: 7420,

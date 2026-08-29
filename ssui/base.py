@@ -16,6 +16,10 @@ class Mesh():
     def __init__(self, model: trimesh.Trimesh = None):
         self._model = model
 
+    @staticmethod
+    def load(path: str) -> "Mesh":
+        return Mesh(trimesh.load(path, force="scene"))
+
 class Video():
     def __init__(self, format: str = "mp4", frames: list[PIL.Image.Image] = None, fps: float = 30, video: str = None, path: str = None, metadata: dict[str, Any] = None):
         self._format = format
@@ -92,14 +96,35 @@ class SkeletonAnimation:
         return asdict(self)
 
 class Audio():
-    def __init__(self, format: str, audio: bytes = None, fps: int = 16000):
+    def __init__(
+        self,
+        format: str = "wav",
+        audio: Any = None,
+        fps: int = 16000,
+        path: str = None,
+        sample_rate: int = None,
+    ):
         self._format = format
         self._audio = audio
-        self._fps = fps
+        self._fps = sample_rate or fps
+        self._path = path
+
+    @staticmethod
+    def load(path: str) -> "Audio":
+        extension = path.rsplit(".", 1)[-1] if "." in path else "wav"
+        return Audio(format=extension, path=path)
+
+    @property
+    def path(self):
+        return self._path
+
+    @property
+    def sample_rate(self):
+        return self._fps
 
 class Voice(Audio):
-    def __init__(self, format: str, audio: bytes = None, fps: int = 16000, text: str = None):
-        super().__init__(format, audio, fps)
+    def __init__(self, format: str = "wav", audio: Any = None, fps: int = 16000, text: str = None, path: str = None):
+        super().__init__(format=format, audio=audio, fps=fps, path=path)
         self._text = text
 
 

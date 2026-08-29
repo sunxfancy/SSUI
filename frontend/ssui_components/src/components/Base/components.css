@@ -1,0 +1,15 @@
+.component-scalar-preview { display: flex; align-items: center; gap: 10px; min-height: 30px; }
+.component-scalar-preview code { overflow-wrap: anywhere; white-space: pre-wrap; }
+.component-json-preview { display: grid; gap: 8px; }
+.component-json-preview pre {
+    max-height: 260px; margin: 0; padding: 12px; overflow: auto; border: 1px solid var(--ssui-border, #d8d8d8);
+    border-radius: 7px; background: var(--ssui-item-bg, #f6f7f9); font-size: 12px; line-height: 1.5; white-space: pre-wrap;
+}
+.component-media-editor, .component-media-preview { display: grid; gap: 10px; }
+.component-media-editor audio, .component-media-preview audio { width: 100%; }
+.component-media-status, .component-media-meta { display: flex; align-items: center; gap: 7px; color: var(--ssui-fg-muted, #667085); font-size: 12px; }
+.component-media-preview .bp5-non-ideal-state { min-height: 120px; }
+.component-union { display: grid; gap: 10px; }
+.component-union-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.component-union-toolbar .bp5-control { margin: 0; }
+.component-union-empty { color: var(--ssui-fg-muted, #667085); font-size: 12px; }

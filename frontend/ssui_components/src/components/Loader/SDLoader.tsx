@@ -304,6 +304,6 @@ import { registerComponent, ComponentRegister } from '../ComponentsManager';
     { 'name': 'SDXLModelLoader', 'type': 'ssui_image.SDXL.SDXLModel', 'port': 'input', 'component': getModelLoader("sdxl"), } as ComponentRegister,
     { 'name': 'FluxModelLoader', 'type': 'ssui_image.Flux.FluxModel', 'port': 'input', 'component': FluxModelLoader, } as ComponentRegister,
     { 'name': 'Flux2KleinModelLoader', 'type': 'ssui_image.Flux2.Flux2KleinModel', 'port': 'input', 'component': Flux2KleinModelLoader, } as ComponentRegister,
-    { 'name': 'SD1LoraLoader', 'type': 'ssui_image.SD1.SD1Lora', 'port': 'input', 'component': getModelLoader("sd-1", "lora", "ssui_image.SD1.SD1Lora.load"), } as ComponentRegister,
-    { 'name': 'SDXLLoraLoader', 'type': 'ssui_image.SDXL.SDXLLora', 'port': 'input', 'component': getModelLoader("sdxl", "lora", "ssui_image.SDXL.SDXLLora.load"), } as ComponentRegister,
+    { 'name': 'SD1LoraLoader', 'type': 'ssui_image.SD1.SD1Lora', 'port': 'input', 'component': getModelLoader("sd-1", "lora", "ssui_image.SD1.SD1Lora.load_one"), } as ComponentRegister,
+    { 'name': 'SDXLLoraLoader', 'type': 'ssui_image.SDXL.SDXLLora', 'port': 'input', 'component': getModelLoader("sdxl", "lora", "ssui_image.SDXL.SDXLLora.load_one"), } as ComponentRegister,
 ].forEach(registerComponent);
