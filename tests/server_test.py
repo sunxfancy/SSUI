@@ -100,6 +100,14 @@ class TestServer(unittest.TestCase):
         self.assertEqual(response.status_code, 200)
         self.mock_script_service.execute_script.assert_called_once()
 
+    def test_compile_flow(self):
+        response = self.client.post(
+            "/api/flow/compile", params={"flow_path": "test.flow"}
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["script_path"], "test.flow.py")
+        self.mock_script_service.compile_flow.assert_called_once_with("test.flow")
+
     def test_file(self):
         test_file_path = os.path.join(self.tmp_dir, "test.txt")
         with open(test_file_path, "w", encoding="utf-8") as f:

@@ -4,6 +4,7 @@
 input/
 output/
 __pycache__/
+*.flow.py
 *.egg-info/
 node_modules/
 dist/

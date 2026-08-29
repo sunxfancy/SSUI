@@ -25,6 +25,7 @@ class MockScriptService:
         self.execute_script = AsyncMock(return_value={"status": "success"})
         self.get_device_info = MagicMock(return_value="cuda")
         self.get_torch_version = MagicMock(return_value="2.0.0")
+        self.compile_flow = MagicMock(return_value={"success": True, "script_path": "test.flow.py"})
 
 class MockWebSocketService:
     def __init__(self):
