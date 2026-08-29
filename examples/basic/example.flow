@@ -1,0 +1,23 @@
+{
+  "version": 1,
+  "imports": [],
+  "functions": [
+    {
+      "id": "identity",
+      "name": "identity",
+      "inputs": [
+        { "id": "value", "name": "value", "type": "str" }
+      ],
+      "outputs": [
+        { "id": "result", "name": "result", "type": "str" }
+      ],
+      "nodes": [],
+      "connections": [
+        {
+          "from": { "node": "$input", "port": "value" },
+          "to": { "node": "$output", "port": "result" }
+        }
+      ]
+    }
+  ]
+}

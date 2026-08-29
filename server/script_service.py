@@ -5,6 +5,7 @@ from server.models import ScriptFunctionInfo
 from ss_executor import SSLoader, search_project_root
 from ss_executor.scheduler import TaskScheduler
 from ss_executor.model import Task
+from flow_compiler import compile_flow_file
 
 class ScriptService:
     def __init__(self, scheduler: TaskScheduler):
@@ -12,7 +13,7 @@ class ScriptService:
     
     def get_script_functions(self, script_path: str) -> Dict[str, Any]:
         try:
-            script_path = os.path.normpath(script_path)
+            script_path = self.resolve_script_path(script_path)
             if not os.path.exists(script_path):
                 return {"error": "Script path not found"}
             
@@ -51,7 +52,7 @@ class ScriptService:
     
     async def prepare_script(self, script_path: str, callable: str) -> Dict[str, Any]:
         try:
-            script_path = os.path.normpath(script_path)
+            script_path = self.resolve_script_path(script_path)
             if not os.path.exists(script_path):
                 return {"error": "Path not found"}
             
@@ -63,7 +64,7 @@ class ScriptService:
     
     async def execute_script(self, script_path: str, callable: str, params: Dict[str, Any], details: Dict[str, Any]) -> Dict[str, Any]:
         try:
-            script_path = os.path.normpath(script_path)
+            script_path = self.resolve_script_path(script_path)
             return await self.scheduler.run_task(
                 Task(
                     script=script_path,
@@ -76,6 +77,19 @@ class ScriptService:
             )
         except Exception as e:
             return {"error": str(e)}
+
+    def resolve_script_path(self, script_path: str) -> str:
+        """Return an executable script path, compiling ``.flow`` on demand."""
+        normalized = os.path.normpath(script_path)
+        if normalized.lower().endswith(".flow"):
+            return compile_flow_file(normalized)
+        return normalized
+
+    def compile_flow(self, flow_path: str) -> Dict[str, Any]:
+        try:
+            return {"success": True, "script_path": compile_flow_file(flow_path)}
+        except Exception as e:
+            return {"error": str(e)}
     
     def get_torch_version(self) -> str:
         return torch.torch_version.__version__
@@ -84,4 +98,4 @@ class ScriptService:
         if torch.cuda.is_available():
             return torch.cuda.get_device_name(0)
         else:
-            return "cpu" 
+            return "cpu"
