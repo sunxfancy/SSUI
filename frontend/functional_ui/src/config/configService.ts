@@ -53,9 +53,21 @@ export class ConfigService {
         }
     }
 
-    async save(patch: Partial<UiConfig>): Promise<UiConfig> {
-        await this.message.post('config/', { ui: patch });
+    /**
+     * 先同步写入本地缓存，确保用户在自动保存计时结束前关闭页面时也不会丢失修改。
+     */
+    cache(patch: Partial<UiConfig>): UiConfig {
         const config = normalizeUiConfig({ ...readCache(), ...patch });
+        writeCache(config);
+        return config;
+    }
+
+    async save(patch: Partial<UiConfig>): Promise<UiConfig> {
+        const response = await this.message.post('config/', { ui: patch });
+        const serverConfig = response?.ui as Partial<UiConfig> | undefined;
+        const config = normalizeUiConfig(
+            serverConfig ?? { ...readCache(), ...patch }
+        );
         writeCache(config);
         return config;
     }

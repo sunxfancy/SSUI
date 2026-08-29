@@ -65,16 +65,29 @@ async def hf_download(
 
 
 @router.get("/api/civitai/models")
-async def civitai_models(query: str = "", type: str = "", page: int = 1, limit: int = 50):
+async def civitai_models(
+    request: Request,
+    query: str = "",
+    type: str = "",
+    page: int = 1,
+    limit: int = 50,
+):
     """Civitai 模型搜索代理：避免浏览器端 CORS，服务端透传 Civitai API。"""
     params: dict = {"page": page, "limit": min(limit, 100)}
     if query:
         params["query"] = query
     if type:
         params["types"] = type
+    ui_config = request.app.state.config_service.get_config().get("ui", {})
+    token = ui_config.get("civitai_token", "").strip()
+    headers = {"Authorization": f"Bearer {token}"} if token else None
     try:
         async with httpx.AsyncClient(timeout=30) as client:
-            resp = await client.get("https://civitai.com/api/v1/models", params=params)
+            resp = await client.get(
+                "https://civitai.com/api/v1/models",
+                params=params,
+                headers=headers,
+            )
             if resp.status_code != 200:
                 return JSONResponse(
                     {"error": f"Civitai API error: {resp.status_code}"},
