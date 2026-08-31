@@ -4,9 +4,10 @@ server:
   venv: shared
   dependencies:
     - numpy>=1.21.2
+  packages:
+    - ssui_3dmodel
   main: extension.py
 
 web_ui:
   dist: dist/
   main: main.js
-  

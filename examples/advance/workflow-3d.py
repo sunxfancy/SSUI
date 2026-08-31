@@ -2,6 +2,7 @@ from ssui import workflow, Prompt, Image, Mesh
 from ssui_image.Flux import FluxModel, FluxClip, FluxLatent, FluxDenoise, FluxLatentDecode
 from ssui.config import SSUIConfig
 from ssui_3dmodel.Trellis import TrellisModel, GenModel
+from ssui_3dmodel.Pixal3D import Pixal3DModel, GenPixal3DModel
 from typing import List, Tuple
 
 config = SSUIConfig()
@@ -18,4 +19,9 @@ def txt2img(model: FluxModel, positive: Prompt, negative: Prompt) -> Image:
 def img2mesh(image: Image) -> Mesh:
     model = TrellisModel.load("jetx/trellis-image-large")
     return GenModel(config("GenModel"), model, image)
+
+@workflow
+def img2mesh_pixal3d(image: Image) -> Mesh:
+    model = Pixal3DModel.load("TencentARC/Pixal3D", low_vram=True)
+    return GenPixal3DModel(config("Generate Pixal3D Model"), model, image)
 

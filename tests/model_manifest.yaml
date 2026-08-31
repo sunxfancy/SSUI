@@ -79,6 +79,13 @@ trellis:
   size_gb: 10.0
   sha256: ""
 
+pixal3d:
+  repo: "TencentARC/Pixal3D"
+  snapshot: true
+  revision: "main"
+  size_gb: 24.0
+  sha256: ""
+
 diffsynth:
   sd1:
     repo: "Lykon/dreamshaper-8"
