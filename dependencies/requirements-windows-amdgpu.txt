@@ -44,6 +44,10 @@ kornia>=0.8.0
 # Windows 特定的其他依赖
 # bitsandbytes ROCm 版（Windows/AMD GPU 专用 wheel，源码仓库: https://github.com/sunxfancy/bitsandbytes-0.49.2.rocm72）
 bitsandbytes @ https://github.com/sunxfancy/bitsandbytes-0.49.2.rocm72/releases/download/v0.49.2%2Brocm72/bitsandbytes-0.49.2%2Brocm72-py3-none-win_amd64.whl
+# Pixal3D / TRELLIS.2 原生 ROCm 扩展（Windows CPython 3.12）
+cumesh @ https://github.com/sunxfancy/CuMesh.rocm72/releases/download/v0.0.1%2Brocm72/cumesh-0.0.1%2Brocm72-cp312-cp312-win_amd64.whl
+flex-gemm @ https://github.com/sunxfancy/FlexGEMM.rocm72/releases/download/v1.0.0%2Brocm72/flex_gemm-1.0.0%2Brocm72-cp312-cp312-win_amd64.whl
+o-voxel @ https://github.com/sunxfancy/o-voxel.rocm72/releases/download/v0.0.1%2Brocm72/o_voxel-0.0.1%2Brocm72-cp312-cp312-win_amd64.whl
 triton-windows==3.1.0.post17
 kaolin @ https://nvidia-kaolin.s3.us-east-2.amazonaws.com/torch-2.4.0_cu124/kaolin-0.17.0-cp312-cp312-win_amd64.whl
 nvdiffrast @ https://github.com/sunxfancy/nvdiffrast/releases/download/v0.3.3.1/nvdiffrast-0.3.3.1-cp312-cp312-win_amd64.whl
