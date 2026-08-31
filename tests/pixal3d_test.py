@@ -9,12 +9,14 @@ from ssui.config import SSUIConfig
 
 
 def _remove_trellis_test_stubs():
-    """The legacy Trellis test installs a process-global fake SDK package."""
+    """Temporarily remove the process-global fake SDK package from Trellis tests."""
     package = sys.modules.get("ssui_3dmodel")
+    saved = {}
     if package is not None and getattr(package, "__file__", None) is None:
         for name in list(sys.modules):
             if name == "ssui_3dmodel" or name.startswith("ssui_3dmodel."):
-                sys.modules.pop(name, None)
+                saved[name] = sys.modules.pop(name)
+    return saved
 
 
 class _GeneratedMesh:
@@ -50,8 +52,18 @@ class _Pipeline:
 
 
 class Pixal3DWorkflowTest(unittest.TestCase):
+    def setUp(self):
+        self._saved_ssui_3dmodel_modules = _remove_trellis_test_stubs()
+
+    def tearDown(self):
+        if not self._saved_ssui_3dmodel_modules:
+            return
+        for name in list(sys.modules):
+            if name == "ssui_3dmodel" or name.startswith("ssui_3dmodel."):
+                sys.modules.pop(name, None)
+        sys.modules.update(self._saved_ssui_3dmodel_modules)
+
     def test_manual_camera_workflow_exports_pbr_glb(self):
-        _remove_trellis_test_stubs()
         glb = _Glb()
         postprocess = types.SimpleNamespace(to_glb=lambda **kwargs: glb)
         old_o_voxel = sys.modules.get("o_voxel")
@@ -90,7 +102,6 @@ class Pixal3DWorkflowTest(unittest.TestCase):
                 sys.modules["o_voxel"] = old_o_voxel
 
     def test_prepare_does_not_run_pipeline(self):
-        _remove_trellis_test_stubs()
         from ssui_3dmodel.Pixal3D import GenPixal3DModel, Pixal3DModel
 
         pipeline = _Pipeline()
