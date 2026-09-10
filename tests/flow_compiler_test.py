@@ -48,7 +48,7 @@ class TestFlowCompiler(unittest.TestCase):
             ],
         }
         source = compile_flow_data(data)
-        self.assertIn("_create_prompt = Prompt.create(text)", source)
+        self.assertIn("node_create_prompt = Prompt.create(text)", source)
 
     def test_rejects_cycles(self):
         data = identity_flow()
@@ -76,3 +76,33 @@ class TestFlowCompiler(unittest.TestCase):
             loader.load(compile_flow_file(flow_path))
             loader.Execute()
             self.assertEqual([item[0].__name__ for item in loader.callables], ["identity"])
+
+    def test_compiled_flow_calls_typed_sibling_python_function(self):
+        with tempfile.TemporaryDirectory() as directory:
+            with open(os.path.join(directory, "ssproject.yaml"), "w", encoding="utf-8") as project:
+                project.write("ssui_version: 1.1.5\ndependencies: []\n")
+            with open(os.path.join(directory, "helpers.py"), "w", encoding="utf-8") as helper:
+                helper.write(
+                    "from ssui import workflow\n"
+                    "@workflow\n"
+                    "def decorate(value: str) -> str:\n    return '[' + value + ']'\n"
+                )
+            data = identity_flow()
+            data["imports"] = [{"module": "helpers", "names": ["decorate"]}]
+            function = data["functions"][0]
+            function["nodes"] = [{
+                "id": "decorate", "type": "operator", "callable": "decorate",
+                "inputs": ["value"], "outputs": ["result"],
+            }]
+            function["connections"] = [
+                {"from": {"node": "$input", "port": "value"}, "to": {"node": "decorate", "port": "value"}},
+                {"from": {"node": "decorate", "port": "result"}, "to": {"node": "$output", "port": "result"}},
+            ]
+            flow_path = os.path.join(directory, "pipeline.flow")
+            with open(flow_path, "w", encoding="utf-8") as flow:
+                json.dump(data, flow)
+            loader = SSLoader()
+            loader.load(compile_flow_file(flow_path))
+            loader.Execute()
+            self.assertEqual([item[0].__name__ for item in loader.callables], ["identity"])
+            self.assertEqual(loader.callables[0][0]("hello"), "[hello]")

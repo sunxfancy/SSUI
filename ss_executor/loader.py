@@ -16,7 +16,20 @@ class SSLoader:
         """加载模块"""
         self.current_file_path = os.path.abspath(path)
         self._allow_extension_packages()
+        self._allow_sibling_modules()
         self.executor.load(path)
+
+    def _allow_sibling_modules(self):
+        """Allow conventional Python modules beside the active workflow script."""
+        if not hasattr(self.executor, "allow_modules"):
+            return
+        directory = os.path.dirname(self.current_file_path)
+        modules = [
+            filename[:-3] for filename in os.listdir(directory)
+            if filename.endswith(".py") and filename[:-3].isidentifier()
+        ]
+        self.executor.allow_modules(modules)
+        self.executor.add_import_path(directory)
 
     def _allow_extension_packages(self):
         """动态放行扩展提供的 SDK 包与项目声明的 ssui_* 依赖。

@@ -6,43 +6,133 @@
     height: 100vh;
 }
 
-.workflow-toolbar {
+.workflow-palette {
     position: absolute;
     top: 12px;
     left: 12px;
     z-index: 100;
     display: flex;
-    align-items: center;
-    gap: 6px;
-    padding: 6px 8px;
-    background: rgba(28, 31, 48, 0.92);
+    flex-direction: column;
+    width: 224px;
+    max-height: calc(100vh - 24px);
+    padding: 12px;
+    background: rgba(24, 27, 43, 0.96);
     border: 1px solid rgba(255, 255, 255, 0.15);
-    border-radius: 8px;
-    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.35);
+    border-radius: 12px;
+    box-shadow: 0 12px 30px rgba(0, 0, 0, 0.38);
     pointer-events: auto;
-}
-
-.workflow-toolbar-button {
-    border: none;
-    border-radius: 6px;
-    padding: 6px 10px;
-    font-size: 13px;
     color: #e6e9ff;
-    background: #4e58bf;
+    font-family: Arial, sans-serif;
+    box-sizing: border-box;
+}
+
+.workflow-palette-heading {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    margin-bottom: 10px;
+}
+
+.workflow-palette-heading strong { font-size: 15px; }
+.workflow-palette-heading span { color: #9299bd; font-size: 11px; }
+
+.workflow-palette-search {
+    width: 100%;
+    box-sizing: border-box;
+    padding: 8px 10px;
+    border: 1px solid rgba(143, 151, 234, 0.42);
+    border-radius: 7px;
+    outline: none;
+    background: #171a2b;
+    color: #f3f4ff;
+    font-size: 12px;
+}
+
+.workflow-palette-search:focus { border-color: #9da5ff; box-shadow: 0 0 0 2px rgba(122, 134, 255, 0.18); }
+
+.workflow-palette-list {
+    overflow-y: auto;
+    margin: 8px -4px 10px 0;
+    padding-right: 4px;
+}
+
+.workflow-palette-group {
+    margin: 9px 2px 5px;
+    color: #858daf;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+}
+
+.workflow-palette-card {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    width: 100%;
+    margin-bottom: 5px;
+    padding: 8px 9px 8px 13px;
+    overflow: hidden;
+    border: 1px solid rgba(255, 255, 255, 0.09);
+    border-radius: 7px;
+    background: #242840;
+    color: #eef0ff;
+    text-align: left;
     cursor: pointer;
-    white-space: nowrap;
 }
 
-.workflow-toolbar-button:hover {
-    background: #5f69d6;
+.workflow-palette-card::before {
+    content: '';
+    position: absolute;
+    inset: 0 auto 0 0;
+    width: 3px;
+    background: #7a86ff;
 }
 
-.workflow-toolbar-clear {
-    background: #7a3f4d;
+.workflow-palette-card.kind-input::before { background: #39c989; }
+.workflow-palette-card.kind-output::before { background: #f0a858; }
+.workflow-palette-card.kind-definition::before { background: #b77cff; }
+.workflow-palette-card.kind-call::before { background: #55b8e8; }
+.workflow-palette-card.kind-python::before { background: #2ec5ce; }
+.workflow-palette-card.kind-python::before { background: #34c6b3; }
+.workflow-palette-card.kind-python::before { background: #2fd3c8; }
+.workflow-palette-card:hover { border-color: rgba(157, 165, 255, 0.62); background: #2d3250; transform: translateX(2px); }
+.workflow-palette-card:focus-visible { outline: 2px solid #ffd92c; outline-offset: 1px; }
+.workflow-palette-card:disabled { cursor: not-allowed; opacity: 0.42; transform: none; }
+.workflow-palette-card-title { font-size: 12px; font-weight: 700; }
+.workflow-palette-card-description { color: #aeb4d0; font-size: 10px; line-height: 1.35; }
+.workflow-palette-empty { padding: 18px 8px; color: #9299bd; font-size: 12px; text-align: center; }
+
+.workflow-palette-clear {
+    border: 1px solid rgba(255, 125, 151, 0.32);
+    border-radius: 7px;
+    padding: 6px 9px;
+    background: transparent;
+    color: #e9a9b6;
+    font-size: 11px;
+    cursor: pointer;
 }
 
-.workflow-toolbar-clear:hover {
-    background: #93505f;
+.workflow-palette-clear:hover { background: rgba(147, 80, 95, 0.28); }
+
+.workflow-drop-active::after {
+    content: '松开以添加节点';
+    position: absolute;
+    inset: 12px;
+    z-index: 90;
+    display: grid;
+    place-items: center;
+    border: 2px dashed rgba(122, 134, 255, 0.75);
+    border-radius: 16px;
+    background: rgba(78, 88, 191, 0.08);
+    color: #dce0ff;
+    font: 600 13px Arial, sans-serif;
+    pointer-events: none;
+}
+
+@media (max-width: 640px) {
+    .workflow-palette { width: 188px; max-height: 52vh; }
+    .workflow-palette-card-description { display: none; }
 }
 
 /* ============ 函数定义节点（透明大矩形框） ============ */

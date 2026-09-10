@@ -12,6 +12,11 @@ async def compile_flow(request: Request, flow_path: str):
     return request.app.state.script_service.compile_flow(flow_path)
 
 
+@router.get("/api/flow/operators")
+async def flow_operators(request: Request, flow_path: str):
+    return request.app.state.script_service.get_flow_operators(flow_path)
+
+
 @router.get("/api/version")
 async def version(request: Request):
     return request.app.state.script_service.get_torch_version()
