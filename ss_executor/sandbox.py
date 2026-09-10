@@ -5,6 +5,7 @@ import builtins
 from dataclasses import dataclass
 import os
 import importlib.util
+import sys
 from importlib.machinery import SourceFileLoader
 from typing import Any, Dict, List, Literal, Optional, Callable, TYPE_CHECKING
 from RestrictedPython import compile_restricted, safe_builtins, utility_builtins
@@ -57,12 +58,13 @@ class Sandbox(ModuleExecutor):
         Args:
             ssui_api: 包含允许调用的SSUI API函数的字典
         """
-        self.allowed_modules = allowed_modules  # 初始化允许导入的模块集合
+        self.allowed_modules = set(allowed_modules)  # 每个执行器独立维护白名单
         self._setup_restricted_globals()
         self.module_path = None
         self.module_name = None
         self.compiled_code = None
         self.global_vars = None
+        self.import_paths = []
 
     def _setup_restricted_globals(self):
         """设置受限制的全局环境"""
@@ -156,6 +158,11 @@ class Sandbox(ModuleExecutor):
         """
         for module_name in module_names:
             self.allowed_modules.add(module_name)
+
+    def add_import_path(self, path: str) -> None:
+        normalized = os.path.abspath(path)
+        if normalized not in self.import_paths:
+            self.import_paths.append(normalized)
     
     def load(self, path: str) -> None:
         """
@@ -196,7 +203,14 @@ class Sandbox(ModuleExecutor):
 
             # 执行代码
             reset_callables()
-            exec(self.compiled_code, self.global_vars)
+            added_paths = [path for path in self.import_paths if path not in sys.path]
+            sys.path[:0] = added_paths
+            try:
+                exec(self.compiled_code, self.global_vars)
+            finally:
+                for path in added_paths:
+                    if path in sys.path:
+                        sys.path.remove(path)
             return ModuleBundle(
                 callables=get_callables(),
                 config=self.global_vars.get("config")
@@ -224,6 +238,13 @@ class NoSandbox(ModuleExecutor):
     def __init__(self):
         self.module = None
         self.spec = None
+
+    def allow_modules(self, module_names: List[str]) -> None:
+        pass
+
+    def add_import_path(self, path: str) -> None:
+        if path not in sys.path:
+            sys.path.insert(0, path)
     
     def load(self, path: str) -> None:
         """加载模块"""

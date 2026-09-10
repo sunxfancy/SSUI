@@ -154,8 +154,10 @@ def compile_flow_data(data: Any, source_name: str = "<flow>") -> str:
         f"# Generated from {Path(source_name).name}; do not edit by hand.",
         "from typing import Tuple",
         "from ssui import SSUIConfig, workflow",
+        "from ssui.annotation import reset_callables",
         *import_lines,
         "",
+        "reset_callables()",
         "config = SSUIConfig()",
     ]
     for function in functions.values():
@@ -280,7 +282,8 @@ def _compile_function(function: dict[str, Any], functions: dict[str, dict[str, A
         call = f"{callable_name}({', '.join([*args, *keyword_args])})"
         output_variables: list[str] = []
         for port in node_outputs[node_id]:
-            base = f"_{node_id}_{port}"
+            # RestrictedPython reserves leading-underscore names.
+            base = f"node_{node_id}_{port}"
             variable = base
             suffix = 2
             while variable in used_variables:

@@ -79,3 +79,23 @@ POST /api/flow/compile?flow_path=<absolute-or-project-relative-path>
 Normal `/api/script`, `/api/prepare`, and `/api/execute` calls also compile a
 `.flow` path automatically, so callers do not need to manage the generated
 Python file.
+
+## Python operator discovery
+
+The Flow editor discovers callable nodes through:
+
+```text
+GET /api/flow/operators?flow_path=<path>
+```
+
+Discovery parses source with Python's AST and never imports or executes the
+candidate files. It includes public, fully annotated functions from `.py`
+files beside the flow, plus public functions and model `load()` methods from
+installed `ssui_*` extension packages. Parameters named `config` are supplied
+by the SSUI runtime and are not exposed as graph ports.
+
+Sibling filenames must be valid Python module names (for example
+`image_tools.py`, not `image-tools.py`). In the serialized flow, represent a
+discovered callable with an ordinary `imports` entry and operator node. The
+executor permits imports only from valid sibling modules
+and its existing extension allowlist.

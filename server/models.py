@@ -50,6 +50,15 @@ class ScriptFunctionInfo(BaseModel):
     params: Dict[str, str]
     returns: List[str]
 
+
+class FlowOperatorInfo(BaseModel):
+    module: str
+    name: str
+    callable: str
+    params: Dict[str, str]
+    returns: List[str]
+    source: str
+
 # WebSocket相关模型
 class WebSocketMessage(BaseModel):
     type: Literal["uuid", "callback", "finish"]
