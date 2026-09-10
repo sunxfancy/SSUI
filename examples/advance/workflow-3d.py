@@ -3,6 +3,7 @@ from ssui_image.Flux import FluxModel, FluxClip, FluxLatent, FluxDenoise, FluxLa
 from ssui.config import SSUIConfig
 from ssui_3dmodel.Trellis import TrellisModel, GenModel
 from ssui_3dmodel.Pixal3D import Pixal3DModel, GenPixal3DModel
+from ssui_3dmodel.WorldClaw import WorldClawModel, GenWorldClawScene
 from typing import List, Tuple
 
 config = SSUIConfig()
@@ -24,4 +25,11 @@ def img2mesh(image: Image) -> Mesh:
 def img2mesh_pixal3d(image: Image) -> Mesh:
     model = Pixal3DModel.load("TencentARC/Pixal3D", low_vram=True)
     return GenPixal3DModel(config("Generate Pixal3D Model"), model, image)
+
+@workflow
+def text2world_worldclaw(prompt: Prompt) -> Mesh:
+    # Runs as a deterministic local blockout by default. Set
+    # SSUI_WORLDCLAW_PLANNER_URL for an agent planner that returns WorldSpec JSON.
+    model = WorldClawModel.load()
+    return GenWorldClawScene(config("Generate WorldClaw Scene"), model, prompt)
 
