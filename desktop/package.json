@@ -8,10 +8,11 @@
     "build": "tsc && vite build",
     "preview": "vite preview",
     "tauri": "tauri",
-    "storybook": "sb dev -p 6006",
+    "storybook": "yarn --cwd .. storybook",
     "copy-resources": "node scripts/copy-resources.cjs",
     "prebuild": "yarn copy-resources",
-    "predev": "yarn copy-resources"
+    "predev": "yarn copy-resources",
+    "build-storybook": "yarn --cwd .. build:storybook"
   },
   "dependencies": {
     "@blueprintjs/core": "^5.16.2",
@@ -43,15 +44,11 @@
     "ssui_components": "*"
   },
   "devDependencies": {
-    "@storybook/addon-essentials": "^8.6.10",
-    "@storybook/builder-vite": "^8.6.10",
-    "@storybook/react-vite": "^8.6.10",
     "@tauri-apps/cli": "^2",
     "@types/react": "^18.3.1",
     "@types/react-dom": "^18.3.1",
     "@vitejs/plugin-react": "^4.3.4",
     "ignore": "^7.0.3",
-    "storybook": "^8.6.10",
     "tar": "^7.4.3",
     "typescript": "~5.6.2",
     "vite": "^6.0.3"
