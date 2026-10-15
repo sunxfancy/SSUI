@@ -13,6 +13,7 @@ interface SidePanelProps {
     brushSize: number;
     brushStyle: string;
     brushFeather: number;
+    brushColor: string;
     eraserSize: number;
     eraserFeather: number;
     shapeType: 'rectangle' | 'ellipse';
@@ -21,6 +22,7 @@ interface SidePanelProps {
     onBrushSizeChange: (size: number) => void;
     onBrushStyleChange: (style: string) => void;
     onBrushFeatherChange: (feather: number) => void;
+    onBrushColorChange: (color: string) => void;
     onEraserSizeChange: (size: number) => void;
     onEraserFeatherChange: (feather: number) => void;
     onShapeTypeChange: (type: string) => void;
@@ -275,6 +277,14 @@ export class SidePanel extends React.Component<SidePanelProps, SidePanelState> {
                 return (
                     <>
                         <div className="config-item">
+                            <label>颜色</label>
+                            <input
+                                type="color"
+                                value={this.props.brushColor}
+                                onChange={(e) => this.props.onBrushColorChange(e.target.value)}
+                            />
+                        </div>
+                        <div className="config-item">
                             <label>大小：{this.props.brushSize}px</label>
                             <input
                                 type="range"
@@ -305,6 +315,7 @@ export class SidePanel extends React.Component<SidePanelProps, SidePanelState> {
                                 onChange={(e) => this.props.onBrushFeatherChange(Number(e.target.value))}
                             />
                         </div>
+                        <div className="config-hint">支持鼠标、触摸和手写笔压感；笔压会实时控制线宽。</div>
                     </>
                 );
             case 'eraser':

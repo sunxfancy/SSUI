@@ -11,6 +11,18 @@ export interface DrawableObject {
     height?: number;
     rotation?: number;
     image?: ImageBitmap;
+    points?: StrokePoint[];
+    stroke?: string;
+    strokeWidth?: number;
+    strokeStyle?: 'normal' | 'airbrush' | 'texture';
+    feather?: number;
+    compositeOperation?: 'source-over' | 'destination-out';
+}
+
+export interface StrokePoint {
+    x: number;
+    y: number;
+    pressure: number;
 }
 
 export interface Layer {
