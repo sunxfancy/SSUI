@@ -1,4 +1,4 @@
-import workflowData from '../../../src-tauri/workflow/data.json';
+import workflowData from '../../desktop/src-tauri/workflow/data.json';
 
 export async function readTextFile(path: string): Promise<string> {
   if (path.includes('workflow/data.json')) {

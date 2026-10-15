@@ -13,7 +13,7 @@
     "extensions/example"
   ],
   "scripts": {
-    "dev:desktop_sb": "yarn workspace ssui-desktop storybook",
+    "dev:desktop_sb": "yarn storybook",
     "dev:desktop": "yarn build:frontend && yarn workspace ssui-desktop tauri dev",
     "dev:server": "yarn build:frontend && node dependencies/venv.cjs python -m server --dev",
     "dev:server:no_build": "node dependencies/venv.cjs python -m server --dev",
@@ -51,12 +51,22 @@
     "test:components": "yarn workspace ssui_components jest test/ComponentsManager.test.ts",
     "postinstall": "node dependencies/install.cjs",
     "docker": "docker build -t ssui-docker .",
-    "docker-run": "docker run -it --gpus all -p 7422:7422 ssui-docker"
+    "docker-run": "docker run -it --gpus all -p 7422:7422 ssui-docker",
+    "storybook": "storybook dev -p 6006",
+    "build:storybook": "storybook build",
+    "test:storybook": "node --test .storybook/mocks/api.test.mjs"
   },
   "devDependencies": {
     "concurrently": "^9.1.2",
     "extension_builder": "*",
     "js-yaml": "^4.1.0",
-    "semver": "^7.5.4"
+    "semver": "^7.5.4",
+    "@storybook/addon-essentials": "^8.6.10",
+    "@storybook/builder-vite": "^8.6.10",
+    "@storybook/react-vite": "^8.6.10",
+    "storybook": "^8.6.10",
+    "vite": "^6.0.3",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
   }
 }

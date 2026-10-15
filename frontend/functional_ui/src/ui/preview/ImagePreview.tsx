@@ -6,6 +6,7 @@ import './ImagePreview.css';
 
 interface ImagePreviewProps {
     path: string;
+    resolveImageUrl?: (path: string) => string;
 }
 
 interface ImagePreviewState {
@@ -16,6 +17,7 @@ interface ImagePreviewState {
 }
 
 export class ImagePreview extends Component<ImagePreviewProps, ImagePreviewState> {
+    private imageUrl = (path: string) => this.props.resolveImageUrl?.(path) ?? '/file?path=' + encodeURIComponent(path);
     constructor(props: ImagePreviewProps) {
         super(props);
         this.state = {
@@ -54,7 +56,7 @@ export class ImagePreview extends Component<ImagePreviewProps, ImagePreviewState
             });
         };
         
-        img.src = '/file?path=' + this.state.imagePath;
+        img.src = this.imageUrl(this.state.imagePath);
     }
 
     handleContextMenu = (e: React.MouseEvent) => {
@@ -69,7 +71,7 @@ export class ImagePreview extends Component<ImagePreviewProps, ImagePreviewState
     }
 
     copyImageUrl = async () => {
-        const url = '/file?path=' + this.state.imagePath;
+        const url = this.imageUrl(this.state.imagePath);
         try {
             await navigator.clipboard.writeText(url);
         } catch (error) {
@@ -78,7 +80,7 @@ export class ImagePreview extends Component<ImagePreviewProps, ImagePreviewState
     }
 
     openImageInNewWindow = () => {
-        window.open('/file?path=' + this.state.imagePath, '_blank', 'noopener');
+        window.open(this.imageUrl(this.state.imagePath), '_blank', 'noopener');
     }
 
     render() {
@@ -97,7 +99,7 @@ export class ImagePreview extends Component<ImagePreviewProps, ImagePreviewState
                         <div className="error">Error: {error.message}</div>
                     ) : (
                         <img 
-                            src={'/file?path=' + imagePath} 
+                            src={this.imageUrl(imagePath)}
                             alt="Preview" 
                             className="preview-image"
                             onContextMenu={this.handleContextMenu}

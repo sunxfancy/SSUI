@@ -25,11 +25,11 @@ const generateQueueItems = (count: number) => {
       name: `测试任务 ${i + 1}`,
       kind: i % 2 === 0 ? 'download' : 'generation',
       status: statuses[i % statuses.length],
-      progress: Math.floor(Math.random() * 100),
-      createdAt: (Date.now() - Math.random() * 10000000000) / 1000,
+      progress: (i * 23) % 100,
+      createdAt: 1760000000 - i * 3600,
       meta: {
         type: types[i % types.length],
-        priority: Math.floor(Math.random() * 5) + 1,
+        priority: i % 5 + 1,
       },
     });
   }

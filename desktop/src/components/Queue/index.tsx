@@ -7,13 +7,14 @@ import { CommandInfo } from '../../providers/IInstallerProvider';
 import { useTranslation } from 'react-i18next';
 
 interface QueueProps {
+    /** Supplied items enable local preview mode without backend polling or sockets. */
     items?: QueueTask[];
     onRemoveItem?: (id: string) => void;
     onPauseItem?: (id: string) => void;
     onResumeItem?: (id: string) => void;
 }
 
-const Queue: React.FC<QueueProps> = ({ items: initialItems }) => {
+const Queue: React.FC<QueueProps> = ({ items: initialItems, onRemoveItem }) => {
     const { t } = useTranslation();
     const [items, setItems] = useState<QueueTask[]>(initialItems ?? []);
     const [loading, setLoading] = useState(true);
@@ -39,6 +40,12 @@ const Queue: React.FC<QueueProps> = ({ items: initialItems }) => {
     }, []);
 
     useEffect(() => {
+        if (initialItems !== undefined) {
+            setItems(initialItems);
+            setLoading(false);
+            setError(null);
+            return;
+        }
         loadTasks();
 
         // websocket 实时更新
@@ -73,7 +80,7 @@ const Queue: React.FC<QueueProps> = ({ items: initialItems }) => {
             clearInterval(pollId);
             clearInterval(statusId);
         };
-    }, [loadTasks]);
+    }, [loadTasks, initialItems]);
 
     const handleRestartService = async () => {
         if (!restartType) return;
@@ -126,6 +133,11 @@ const Queue: React.FC<QueueProps> = ({ items: initialItems }) => {
     };
 
     const handleRemove = async (id: string) => {
+        if (initialItems !== undefined) {
+            onRemoveItem?.(id);
+            setItems(prev => prev.filter(item => item.id !== id));
+            return;
+        }
         const success = await taskService.current.removeTask(id);
         if (success) {
             setItems(prev => prev.filter(item => item.id !== id));
@@ -133,6 +145,10 @@ const Queue: React.FC<QueueProps> = ({ items: initialItems }) => {
     };
 
     const handleCancel = async (id: string) => {
+        if (initialItems !== undefined) {
+            setItems(prev => prev.map(item => item.id === id ? { ...item, status: 'cancelled' } : item));
+            return;
+        }
         const success = await taskService.current.cancelTask(id);
         if (success) {
             setItems(prev => prev.map(item => item.id === id ? { ...item, status: 'cancelled', progress: 0 } : item));
@@ -140,6 +156,10 @@ const Queue: React.FC<QueueProps> = ({ items: initialItems }) => {
     };
 
     const handleClearCompleted = async () => {
+        if (initialItems !== undefined) {
+            setItems(prev => prev.filter(item => item.status !== 'completed'));
+            return;
+        }
         await taskService.current.clearCompleted();
         await loadTasks();
     };

@@ -57,7 +57,7 @@
 | 命令 | 说明 |
 |------|------|
 | `yarn dev:desktop` | **最常用**。先 `build:frontend`，再 `desktop` 下 `tauri dev`。若 7422 未被占用，会自动启动 server 和 executor |
-| `yarn dev:desktop_sb` | 启动 desktop Storybook（端口 6006），独立开发 React 组件 |
+| `yarn storybook` / `yarn dev:desktop_sb` | 启动全仓库 Storybook（端口 6006），独立开发 UI 与插件 |
 | `yarn dev:server` | 先 `build:frontend`，再启动 FastAPI（`python -m server --dev`，端口 **7422**） |
 | `yarn dev:server:no_build` | 同上但不重新构建前端 |
 | `yarn dev:executor` | 启动 SSExecutor（`python -m ss_executor`） |
@@ -138,7 +138,7 @@ Python 统一入口：`node dependencies/venv.cjs <命令> [参数]`，在 `.ven
 | `yarn build` | **`tsc && vite build`**（验证 desktop 前端改动的标准命令） |
 | `yarn preview` | 预览 Vite 构建产物 |
 | `yarn tauri` | Tauri CLI 透传（如 `yarn tauri dev`、`yarn tauri build`） |
-| `yarn storybook` | Storybook 开发服（`-p 6006`） |
+| `yarn storybook` | 转发到根目录 Storybook 开发服（端口 6006） |
 | `yarn copy-resources` | 复制 lock 文件、打包 backend/server 等到 `src-tauri/resources` |
 
 `predev` / `prebuild` 会自动执行 `copy-resources`。
@@ -225,12 +225,17 @@ yarn dev:functional_ui
 
 示例 URL：`http://localhost:7420/?path=<example_path>/basic/workflow-sd1.py`
 
-### 4. 独立开发 desktop React 组件（Storybook）
+### 4. 独立开发 UI 与插件（Storybook）
 
 ```bash
 yarn dev:desktop_sb
 # 或 cd desktop && yarn storybook
 ```
+
+Storybook 配置位于根目录 `.storybook/`，统一收录 desktop、共享组件、Functional UI 与扩展的 `*.stories.tsx`，
+也可在根目录执行 `yarn storybook`。无需启动后端或预构建组件。
+离线 mock、场景编写、插件接入与验证流程见 [doc/Storybook.md](doc/Storybook.md)。
+静态构建用 `yarn build:storybook`，mock 测试用 `yarn test:storybook`。
 
 ### 5. 开发 Image Canvas 扩展
 
@@ -263,7 +268,7 @@ yarn dev:desktop
 |------|------|
 | 7422 | FastAPI 应用服务器 / API 文档 `/docs` |
 | 7420 | functional_ui Vite 开发服 |
-| 6006 | desktop Storybook |
+| 6006 | 全仓库 Storybook |
 
 ---
 

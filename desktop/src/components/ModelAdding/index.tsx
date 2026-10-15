@@ -5,18 +5,22 @@ import LocalModels from './LocalModels/index.tsx';
 import HuggingfaceModels from './HuggingfaceModels';
 import { TauriModelsProvider } from '../../providers/TauriModelsProvider';
 import { ModelsProvider } from '../../providers/IModelsProvider';
+import type { IDownloaderProvider } from '../../providers/IDownloaderProvider';
 import styles from './style.module.css';
 import PresetModels from './PresetModels/index.tsx';
 import { useTranslation } from 'react-i18next';
 
 interface ModelAddingPageProps {
-    // 可以在这里添加需要的属性
+    initialTab?: 'preset' | 'civitai' | 'huggingface' | 'local';
+    modelsProvider?: ModelsProvider;
+    downloaderProvider?: IDownloaderProvider;
 }
 
-const ModelAddingPage: React.FC<ModelAddingPageProps> = () => {
-    const [selectedTabId, setSelectedTabId] = useState('preset');
+const ModelAddingPage: React.FC<ModelAddingPageProps> = ({ initialTab = 'preset', modelsProvider: suppliedModelsProvider, downloaderProvider }) => {
+    const [selectedTabId, setSelectedTabId] = useState<string>(initialTab);
     const { t } = useTranslation();
-    const modelsProvider: ModelsProvider = new TauriModelsProvider();
+    const [defaultModelsProvider] = useState(() => suppliedModelsProvider ?? new TauriModelsProvider());
+    const modelsProvider = suppliedModelsProvider ?? defaultModelsProvider;
     const handleTabChange = (newTabId: string) => {
         setSelectedTabId(newTabId);
     };
@@ -35,6 +39,7 @@ const ModelAddingPage: React.FC<ModelAddingPageProps> = () => {
         return (
             <Card elevation={Elevation.ZERO}>
                 <CivitaiModels
+                    downloaderProvider={downloaderProvider}
                     onModelSelect={(model) => {
                         console.log('Selected model:', model);
                     }}

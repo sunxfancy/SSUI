@@ -5,20 +5,23 @@ import { CivitaiModel } from '../../../types/civitai';
 import styles from './style.module.css';
 import { TauriDownloaderProvider } from '../../../providers/TauriDownloaderProvider';
 import { DownloadTask } from '../../../providers/IDownloaderProvider';
+import type { IDownloaderProvider } from '../../../providers/IDownloaderProvider';
 import { getApiBaseUrl } from '../../../services/apiBase';
 
 interface CivitaiModelsProps {
+    downloaderProvider?: IDownloaderProvider;
     onModelSelect?: (model: CivitaiModel) => void;
 }
 
-export const CivitaiModels: React.FC<CivitaiModelsProps> = () => {
+export const CivitaiModels: React.FC<CivitaiModelsProps> = ({ downloaderProvider }) => {
     const [models, setModels] = useState<CivitaiModel[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [selectedType, setSelectedType] = useState<string>('all');
     const [downloadTasks, setDownloadTasks] = useState<DownloadTask[]>([]);
     const [searchQuery, setSearchQuery] = useState('');
-    const downloader = new TauriDownloaderProvider();
+    const [defaultDownloader] = useState(() => downloaderProvider ?? new TauriDownloaderProvider());
+    const downloader = downloaderProvider ?? defaultDownloader;
 
     useEffect(() => {
         fetchModels();

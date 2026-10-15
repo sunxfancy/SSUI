@@ -93,6 +93,13 @@ jobs:
         timeout-minutes: 20
         run: yarn install --frozen-lockfile
 
+      - name: Verify offline Storybook
+        if: matrix.platform == 'linux'
+        timeout-minutes: 10
+        run: |
+          yarn test:storybook
+          yarn build:storybook
+
       - name: Setup Python
         id: setup-uv
         timeout-minutes: 5
