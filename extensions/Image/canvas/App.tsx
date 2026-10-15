@@ -1,5 +1,5 @@
 import React from 'react';
-import { Stage, Layer as KonvaLayer, Rect, Group, Circle, Image, Transformer } from 'react-konva';
+import { Stage, Layer as KonvaLayer, Rect, Group, Circle, Image, Transformer, Line } from 'react-konva';
 import { AIDrawingService, SSUIAIDrawingService } from './AIDrawingService';
 import { Viewport } from './Viewport';
 import { Grid } from './Grid';
@@ -37,6 +37,7 @@ interface AIDrawingCanvasState {
     brushSize: number;
     brushStyle: string;
     brushFeather: number;
+    brushColor: string;
     eraserSize: number;
     eraserFeather: number;
     shapeType: 'rectangle' | 'ellipse';
@@ -56,6 +57,8 @@ class AIDrawingCanvas extends React.Component<{path: string}, AIDrawingCanvasSta
     private transformerRef: React.RefObject<any>;
     private imageNodes: Map<string, any> = new Map();
     private idCounter: number = 0;
+    private activeStrokeId: string | null = null;
+    private activePointerId: number | null = null;
 
     constructor(props: {path: string}) {
         super(props);
@@ -81,6 +84,7 @@ class AIDrawingCanvas extends React.Component<{path: string}, AIDrawingCanvasSta
             brushSize: 20,
             brushStyle: 'normal',
             brushFeather: 0,
+            brushColor: '#1f2937',
             eraserSize: 20,
             eraserFeather: 0,
             shapeType: 'rectangle',
@@ -503,6 +507,10 @@ class AIDrawingCanvas extends React.Component<{path: string}, AIDrawingCanvasSta
         this.setState({ brushFeather: feather });
     };
 
+    handleBrushColorChange = (color: string) => {
+        this.setState({ brushColor: color });
+    };
+
     handleEraserSizeChange = (size: number) => {
         this.setState({ eraserSize: size });
     };
@@ -525,26 +533,109 @@ class AIDrawingCanvas extends React.Component<{path: string}, AIDrawingCanvasSta
 
     };
 
+    private getDrawingPoint = (e: any) => {
+        const stage = this.stageRef.current;
+        const pointer = stage?.getRelativePointerPosition();
+        if (!pointer) return null;
+        const nativeEvent = e.evt as PointerEvent;
+        const pressure = nativeEvent.pointerType === 'pen'
+            ? Math.max(0.08, nativeEvent.pressure || 0.5)
+            : 1;
+        return { x: pointer.x, y: pointer.y, pressure };
+    };
+
     handlePointerDown = (e: any) => {
+        if (this.state.selectedTool !== 'brush' && this.state.selectedTool !== 'eraser') return;
+        if (e.evt.button !== undefined && e.evt.button !== 0) return;
+
+        const layer = this.state.layers.find(item => item.id === this.state.activeLayer);
+        const point = this.getDrawingPoint(e);
+        if (!layer || !layer.visible || layer.locked || !point) return;
+
+        e.evt.preventDefault();
+        this.activePointerId = (e.evt as PointerEvent).pointerId ?? null;
+        this.activeStrokeId = this.generateId();
+        const erasing = this.state.selectedTool === 'eraser';
+        this.setState(state => produce(state, draft => {
+            const activeLayer = draft.layers.find(item => item.id === draft.activeLayer);
+            activeLayer?.objects.push({
+                id: this.activeStrokeId!,
+                type: 'stroke',
+                name: erasing ? '橡皮擦笔迹' : '手绘笔迹',
+                x: 0,
+                y: 0,
+                points: [point],
+                stroke: this.state.brushColor,
+                strokeWidth: erasing ? this.state.eraserSize : this.state.brushSize,
+                strokeStyle: erasing ? 'normal' : this.state.brushStyle as 'normal' | 'airbrush' | 'texture',
+                feather: erasing ? this.state.eraserFeather : this.state.brushFeather,
+                compositeOperation: erasing ? 'destination-out' : 'source-over'
+            });
+        }));
     };
 
     handlePointerMove = (e: any) => {
         if (this.state.selectedTool === 'brush' || this.state.selectedTool === 'eraser') {
-            const stage = this.stageRef.current;
-            const pointer = stage.getPointerPosition();
-            if (pointer) {
-                this.setState({
-                    brushPosition: {
-                        x: pointer.x,
-                        y: pointer.y
+            const point = this.getDrawingPoint(e);
+            if (!point) return;
+            const pointerId = (e.evt as PointerEvent).pointerId ?? null;
+            this.setState(state => produce(state, draft => {
+                draft.brushPosition = { x: point.x, y: point.y };
+                if (this.activeStrokeId && (this.activePointerId === null || pointerId === this.activePointerId)) {
+                    const layer = draft.layers.find(item => item.id === draft.activeLayer);
+                    const stroke = layer?.objects.find(item => item.id === this.activeStrokeId);
+                    const previous = stroke?.points?.[stroke.points.length - 1];
+                    if (stroke?.points && (!previous || Math.hypot(point.x - previous.x, point.y - previous.y) >= 0.5)) {
+                        stroke.points.push(point);
                     }
-                });
-            }
+                }
+            }));
         }
     };  
 
     handlePointerUp = (e: any) => {
+        const pointerId = (e.evt as PointerEvent).pointerId ?? null;
+        if (this.activePointerId === null || pointerId === this.activePointerId) {
+            this.activeStrokeId = null;
+            this.activePointerId = null;
+        }
+    };
+
+    handlePointerLeave = () => {
+        this.activeStrokeId = null;
+        this.activePointerId = null;
         this.setState({ brushPosition: null });
+    };
+
+    private renderStroke = (object: Layer['objects'][number]) => {
+        const points = object.points ?? [];
+        if (points.length === 0) return null;
+        const styleOpacity = object.strokeStyle === 'airbrush' ? 0.22 : 1;
+        const dash = object.strokeStyle === 'texture' ? [2, Math.max(2, (object.strokeWidth ?? 1) * 0.35)] : undefined;
+        const segments = points.length === 1 ? [[points[0], points[0]]] : points.slice(1).map((point, index) => [points[index], point]);
+        return (
+            <Group key={object.id} globalCompositeOperation={object.compositeOperation ?? 'source-over'}>
+                {segments.map(([from, to], index) => {
+                    const pressure = (from.pressure + to.pressure) / 2;
+                    return (
+                        <Line
+                            key={`${object.id}-${index}`}
+                            points={[from.x, from.y, to.x, to.y]}
+                            stroke={object.stroke ?? '#1f2937'}
+                            strokeWidth={Math.max(0.5, (object.strokeWidth ?? 1) * pressure)}
+                            opacity={styleOpacity}
+                            lineCap="round"
+                            lineJoin="round"
+                            dash={dash}
+                            shadowColor={object.stroke ?? '#1f2937'}
+                            shadowBlur={object.feather ?? 0}
+                            shadowOpacity={(object.feather ?? 0) > 0 ? 0.35 : 0}
+                            listening={false}
+                        />
+                    );
+                })}
+            </Group>
+        );
     };
 
     handleImageGenerated = async (imageUrl: string) => {
@@ -612,11 +703,13 @@ class AIDrawingCanvas extends React.Component<{path: string}, AIDrawingCanvasSta
                     position: 'fixed',
                     top: 0,
                     left: 0,
-                    cursor: viewport.isDraggingViewport() ? 'grabbing' : 'grab'
+                    cursor: viewport.isDraggingViewport()
+                        ? 'grabbing'
+                        : (this.state.selectedTool === 'brush' || this.state.selectedTool === 'eraser')
+                            ? 'crosshair'
+                            : 'grab',
+                    touchAction: 'none'
                 }}
-                onPointerDown={this.handlePointerDown}
-                onPointerMove={this.handlePointerMove}
-                onPointerUp={this.handlePointerUp}
             >
                 <Toolbar selectedTool={this.state.selectedTool} onToolSelect={this.handleToolSelect} />
                 <Stage
@@ -629,6 +722,11 @@ class AIDrawingCanvas extends React.Component<{path: string}, AIDrawingCanvasSta
                     onMouseUp={this.handleViewportDragEnd}
                     onWheel={this.handleWheel}
                     onContextMenu={this.handleCanvasContextMenu}
+                    onPointerDown={this.handlePointerDown}
+                    onPointerMove={this.handlePointerMove}
+                    onPointerUp={this.handlePointerUp}
+                    onPointerCancel={this.handlePointerUp}
+                    onPointerLeave={this.handlePointerLeave}
                     scaleX={viewport.scale}
                     scaleY={viewport.scale}
                     x={worldPos.x}
@@ -679,6 +777,9 @@ class AIDrawingCanvas extends React.Component<{path: string}, AIDrawingCanvasSta
                                             />
                                         );
                                     }
+                                    if (object.type === 'stroke') {
+                                        return this.renderStroke(object);
+                                    }
                                     return object.obj;
                                 })
                             )}
@@ -725,9 +826,9 @@ class AIDrawingCanvas extends React.Component<{path: string}, AIDrawingCanvasSta
                         {brushPosition && (this.state.selectedTool === 'brush' || this.state.selectedTool === 'eraser') && (
                             <Group>
                                 <Circle
-                                    x={brushPosition.x-worldPos.x}
-                                    y={brushPosition.y-worldPos.y}
-                                    radius={brushSize / 2}
+                                    x={brushPosition.x}
+                                    y={brushPosition.y}
+                                    radius={(this.state.selectedTool === 'eraser' ? this.state.eraserSize : brushSize) / 2}
                                     stroke="black"
                                     strokeWidth={1}
                                     fill="rgba(0, 0, 0, 0.1)"
@@ -752,6 +853,7 @@ class AIDrawingCanvas extends React.Component<{path: string}, AIDrawingCanvasSta
                     brushSize={this.state.brushSize}
                     brushStyle={this.state.brushStyle}
                     brushFeather={this.state.brushFeather}
+                    brushColor={this.state.brushColor}
                     eraserSize={this.state.eraserSize}
                     eraserFeather={this.state.eraserFeather}
                     shapeType={this.state.shapeType}
@@ -760,6 +862,7 @@ class AIDrawingCanvas extends React.Component<{path: string}, AIDrawingCanvasSta
                     onBrushSizeChange={this.handleBrushSizeChange}
                     onBrushStyleChange={this.handleBrushStyleChange}
                     onBrushFeatherChange={this.handleBrushFeatherChange}
+                    onBrushColorChange={this.handleBrushColorChange}
                     onEraserSizeChange={this.handleEraserSizeChange}
                     onEraserFeatherChange={this.handleEraserFeatherChange}
                     onShapeTypeChange={this.handleShapeTypeChange}
