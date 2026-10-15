@@ -130,6 +130,41 @@ jobs:
         uses: actions-rust-lang/setup-rust-toolchain@166cdcfd11aee3cb47222f9ddb555ce30ddb9659 # v1
         with:
           rustflags: ""
+          # Run caching explicitly so its hit status is available to the summary.
+          cache: "false"
+
+      - name: Restore Rust compilation cache
+        id: rust-cache
+        timeout-minutes: 10
+        uses: Swatinem/rust-cache@c19371144df3bb44fab255c43d04cbc2ab54d1c4 # v2.9.1
+        with:
+          workspaces: "desktop/src-tauri -> target"
+          shared-key: "tauri-release-${{ matrix.platform }}"
+          cache-on-failure: "true"
+
+      - name: Report Rust cache status
+        if: always()
+        timeout-minutes: 5
+        shell: bash
+        env:
+          CACHE_HIT: ${{ steps.rust-cache.outputs.cache-hit }}
+          CACHE_OUTCOME: ${{ steps.rust-cache.outcome }}
+          CACHE_PLATFORM: ${{ matrix.platform }}
+        run: |
+          if [ "$CACHE_OUTCOME" != "success" ]; then
+            status="Cache step did not complete successfully ($CACHE_OUTCOME)"
+          elif [ "$CACHE_HIT" = "true" ]; then
+            status="Exact cache hit"
+          else
+            status="No exact hit; see cache step logs for fallback restore or cache miss"
+          fi
+          {
+            echo "### Rust compilation cache ($CACHE_PLATFORM)"
+            echo "$status"
+            echo
+            echo 'Caches Cargo dependencies and their compiled artifacts in desktop/src-tauri/target.'
+            echo 'rust-cache reports exact cache hits, not a per-crate compilation hit percentage.'
+          } | tee -a "$GITHUB_STEP_SUMMARY"
 
       - name: Build Components
         timeout-minutes: 30
