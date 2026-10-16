@@ -15,7 +15,7 @@
   ],
   "scripts": {
     "dev:desktop_sb": "yarn storybook",
-    "dev:desktop": "yarn build:frontend && yarn workspace ssui-desktop tauri dev",
+    "dev:desktop": "yarn build:frontend && node dependencies/dev_run.cjs workspace ssui-desktop tauri dev",
     "dev:server": "yarn build:frontend && node dependencies/venv.cjs python -m server --dev",
     "dev:server:no_build": "node dependencies/venv.cjs python -m server --dev",
     "dev:executor": "node dependencies/venv.cjs python -m ss_executor",
@@ -43,6 +43,8 @@
     "package": "yarn build:frontend && yarn build:extension_builder && yarn ext:package && yarn build:desktop",
     "package:debug": "yarn build:frontend && yarn ext:package && yarn build:desktop:debug",
     "package:vscode": "cd ssui-vscode && yarn package",
+    "dev:paths": "node dependencies/dev_config.cjs",
+    "test:dev-config": "node --test dependencies/dev_config.test.cjs",
     "check_deps": "yarn --version && rustc --version && cargo --version",
     "requirements": "node dependencies/combine_requirements.cjs",
     "install-requirements": "node dependencies/install_requirements.cjs",

@@ -3,6 +3,8 @@
 Base class for model loading in InvokeAI.
 """
 
+import os
+
 from abc import ABC, abstractmethod
 from contextlib import contextmanager
 from logging import Logger
@@ -104,7 +106,7 @@ class LoadedModel(LoadedModelWithoutConfig):
 
 
 class ModelLoaderConfig(BaseModel):
-    models_path: Path = Field(default=Path("models"), description="Path to the models directory.")
+    models_path: Path = Field(default_factory=lambda: Path(os.environ.get("SSUI_MODEL_DIR", "models")).expanduser(), description="Path to the models directory.")
 
 class ModelLoaderBase(ABC):
     """Abstract base class for loading models into RAM/VRAM."""

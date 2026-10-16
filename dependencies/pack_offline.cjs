@@ -30,6 +30,8 @@ const { spawnSync } = require('child_process');
 const fs = require('fs');
 const path = require('path');
 
+const { resolveConfig, executable } = require('./dev_config.cjs');
+const devEnv = resolveConfig();
 const ROOT = path.resolve(__dirname, '..');
 const DEPS_DIR = __dirname;
 const isWin = process.platform === 'win32';
@@ -123,16 +125,14 @@ function resolveTargets(opts) {
 // 定位用于下载的 python 解释器
 function resolvePython(opts) {
   if (opts.python) return opts.python;
-  const venvBin = isWin
-    ? path.join(ROOT, '.venv', 'Scripts', 'python.exe')
-    : path.join(ROOT, '.venv', 'bin', 'python');
+  const venvBin = executable('python', devEnv);
   if (fs.existsSync(venvBin)) return venvBin;
   console.warn(`未找到 .venv 内的 python(${venvBin})，回退到 PATH 中的 ${isWin ? 'python' : 'python3'}`);
   return isWin ? 'python' : 'python3';
 }
 
 function readPyVersion() {
-  const cfg = path.join(ROOT, '.venv', 'pyvenv.cfg');
+  const cfg = path.join(devEnv.SSUI_VENV_PATH, 'pyvenv.cfg');
   try {
     const m = fs.readFileSync(cfg, 'utf8').match(/^version\s*=\s*(.+)$/m);
     if (m) return m[1].trim();

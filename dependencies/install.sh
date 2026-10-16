@@ -1,10 +1,12 @@
 #!/bin/bash
+set -e
+VENV_DIR="${SSUI_VENV_PATH:-.venv}"
 
 # Create .venv folder
-mkdir -p .venv
+mkdir -p "$VENV_DIR"
 
 # Check if Python already exists
-if [ ! -f ".venv/python/bin/python3" ]; then
+if [ ! -f "$VENV_DIR/bin/python" ] && [ ! -f "$VENV_DIR/python/bin/python3" ]; then
     # Set Python version and release date
     PYTHON_VERSION="3.12.8"
     RELEASE_DATE="20241219"
@@ -38,7 +40,6 @@ if [ ! -f ".venv/python/bin/python3" ]; then
         echo "Unsupported operating system: $OS_TYPE"
         exit 1
     fi
-    https://github.com/astral-sh/python-build-standalone/releases/download/20241219/cpython-3.12.8+20241219-${ARCH}-install_only_stripped.tar.gz
     
     # Set download URLs
     DOWNLOAD_URL="https://github.com/astral-sh/python-build-standalone/releases/download/${RELEASE_DATE}/cpython-${PYTHON_VERSION}+${RELEASE_DATE}-${ARCH}-install_only_stripped.tar.gz"
@@ -46,30 +47,30 @@ if [ ! -f ".venv/python/bin/python3" ]; then
 
     # Download and extract Python
     echo "Downloading Python from ${DOWNLOAD_URL}..."
-    if ! curl -L "${DOWNLOAD_URL}" -o .venv/python.tar.gz; then
+    if ! curl -L "${DOWNLOAD_URL}" -o "$VENV_DIR"/python.tar.gz; then
         echo "Failed to download from primary source, trying Chinese mirror..."
-        if ! curl -L "${CHINA_MIRROR}" -o .venv/python.tar.gz; then
+        if ! curl -L "${CHINA_MIRROR}" -o "$VENV_DIR"/python.tar.gz; then
             echo "Failed to download from Chinese mirror as well, please check your network connection or download Python manually."
             exit 1
         fi
     fi
     
     # Extract files
-    tar -xzf .venv/python.tar.gz -C .venv
-    rm .venv/python.tar.gz
+    tar -xzf "$VENV_DIR"/python.tar.gz -C "$VENV_DIR"
+    rm "$VENV_DIR"/python.tar.gz
 fi
 
 # Check if virtual environment already exists
-if [ ! -f ".venv/bin/python" ]; then
+if [ ! -f "$VENV_DIR/bin/python" ]; then
     # Create virtual environment
     echo "Creating virtual environment..."
-    .venv/python/bin/python3 -m venv .venv
+    "$VENV_DIR"/python/bin/python3 -m venv "$VENV_DIR"
 fi
 
 # Check and install uv tool
-if [ ! -f ".venv/bin/uv" ]; then
+if [ ! -f "$VENV_DIR/bin/uv" ]; then
     echo "Installing uv tool..."
-    .venv/bin/python -m pip install uv==0.6.11 packaging==24.1
+    "$VENV_DIR"/bin/python -m pip install uv==0.6.11 packaging==24.1
 fi
 
 echo "Installation completed!" 

@@ -1,0 +1,7 @@
+{
+  "SSUI_VENV_PATH": "../shared-python",
+  "SSUI_MODEL_DIR": "../shared-models",
+  "TEST_DATA_DIR": "../shared-test-models",
+  "HF_HOME": "../shared-cache/huggingface",
+  "TORCH_HOME": "../shared-cache/torch"
+}

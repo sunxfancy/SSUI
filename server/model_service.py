@@ -155,7 +155,9 @@ class ModelService:
             }
         else:
             # 复制文件
-            new_model_path = os.path.join(self.resources_dir, model_config.name)
+            model_dir = os.path.abspath(os.path.expanduser(os.environ.get("SSUI_MODEL_DIR", self.resources_dir)))
+            os.makedirs(model_dir, exist_ok=True)
+            new_model_path = os.path.join(model_dir, model_config.name)
             await aioshutil.copy(model_path, new_model_path)
             ModelInfoCache.set(model_path, model_config)
             return {

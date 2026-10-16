@@ -1,11 +1,12 @@
 @echo off
 @setlocal enabledelayedexpansion
+if not defined SSUI_VENV_PATH set "SSUI_VENV_PATH=%CD%\.venv"
 
 rem Create .build folder and put Python in it
-if not exist ".venv" mkdir .venv
+if not exist "%SSUI_VENV_PATH%" mkdir "%SSUI_VENV_PATH%"
 
 rem Check if Python already exists
-if not exist ".venv\python\python.exe" (
+if not exist "%SSUI_VENV_PATH%\Scripts\python.exe" if not exist "%SSUI_VENV_PATH%\python\python.exe" (
     rem Check operating system type
     set PYTHON_VERSION=3.12.8
     set RELEASE_DATE=20241219
@@ -17,7 +18,7 @@ if not exist ".venv\python\python.exe" (
         set ARCH=x86_64-pc-windows-msvc
     ) else (
         echo Unsupported architecture!
-        exit /b
+        exit /b 1
     )
 
     rem Set download URLs
@@ -26,28 +27,30 @@ if not exist ".venv\python\python.exe" (
 
     rem Try to download Python from GitHub
     echo "Trying to download Python from GitHub..."
-    curl  --ssl-revoke-best-effort -L !DOWNLOAD_URL! -o .venv\python.tar.gz
+    curl  --ssl-revoke-best-effort -L !DOWNLOAD_URL! -o "%SSUI_VENV_PATH%\python.tar.gz"
     if errorlevel 1 (
         echo "GitHub download failed, trying China mirror..."
-        curl  --ssl-revoke-best-effort -L !CHINA_MIRROR! -o .venv\python.tar.gz
+        curl  --ssl-revoke-best-effort -L !CHINA_MIRROR! -o "%SSUI_VENV_PATH%\python.tar.gz"
         if errorlevel 1 (
             echo "Both downloads failed. Please check your internet connection."
             exit /b 1
         )
     )
 
-    powershell -Command "cd .venv; tar -xvzf python.tar.gz"
-    powershell -Command "Remove-Item -Path '.venv\python.tar.gz' -Force"
+    tar -xzf "%SSUI_VENV_PATH%\python.tar.gz" -C "%SSUI_VENV_PATH%"
+    if errorlevel 1 exit /b 1
+    del "%SSUI_VENV_PATH%\python.tar.gz"
 )
 
 rem Check if virtual environment already exists
-if not exist ".venv\Scripts\python.exe" (
+if not exist "%SSUI_VENV_PATH%\Scripts\python.exe" (
     rem Create virtual environment using venv
     echo "Creating virtual environment..."
-    .venv\python\python.exe -m venv .venv
+    "%SSUI_VENV_PATH%\python\python.exe" -m venv "%SSUI_VENV_PATH%"
+    if errorlevel 1 exit /b 1
 )
 
-if not exist ".venv\Scripts\uv.exe" (
+if not exist "%SSUI_VENV_PATH%\Scripts\uv.exe" (
     echo "Install uv tool..."
-    .venv\python\python.exe -m pip install uv==0.6.11 packaging==24.1
+    "%SSUI_VENV_PATH%\Scripts\python.exe" -m pip install uv==0.6.11 packaging==24.1
 )

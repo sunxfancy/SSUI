@@ -1,5 +1,8 @@
 #!/usr/bin/env node
 
+const { resolveConfig } = require('./dev_config.cjs');
+Object.assign(process.env, resolveConfig());
+
 const { execSync } = require('child_process');
 const { platform } = require('os');
 const { join } = require('path');
