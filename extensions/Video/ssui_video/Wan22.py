@@ -22,7 +22,7 @@ WAN22_I2V_MODEL_ID = "Wan-AI/Wan2.2-I2V-A14B"
 # Wan2.2 与 Wan2.1 共享 UMT5-XXL 文本编码器、tokenizer 和 VAE（1.1.9 会自动重定向下载）
 WAN21_T2V_LIGHT_MODEL_ID = "Wan-AI/Wan2.1-T2V-1.3B"
 
-LOCAL_MODEL_PATH = os.environ.get("SSUI_WAN_MODEL_ROOT", "models")
+LOCAL_MODEL_PATH = os.environ.get("SSUI_WAN_MODEL_ROOT", os.environ.get("SSUI_MODEL_DIR", "models"))
 
 # 官方推荐的负面提示词（Wan 官方示例原样）
 WAN22_NEGATIVE_PROMPT = (

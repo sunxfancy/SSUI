@@ -1,7 +1,8 @@
 const { execSync } = require('child_process');
 const fs = require('fs');
 const path = require('path');
-const os = require('os');
+const { resolveConfig, executable } = require('./dev_config.cjs');
+const devEnv = resolveConfig();
 const { getAllTargets, getCurrentPlatformTargets } = require('./platform.cjs');
 
 // 检查命令行参数
@@ -57,15 +58,15 @@ function main() {
       console.log(`正在为目标 ${targetName} 生成锁文件...`);
       
       // 构建uv命令，根据参数决定是否添加--no-upgrade选项
-      const venvPath = os.platform() === 'win32' ? '.venv\\Scripts\\uv.exe' : '.venv/bin/uv';
-      let uvCommand = `${venvPath} pip compile ${requirementsFile} -o ${lockFile}`;
+      const venvPath = executable('uv', devEnv);
+      let uvCommand = `"${venvPath}" pip compile ${requirementsFile} -o ${lockFile}`;
       if (args.noUpgrade) {
         console.log('使用不升级模式: 已存在的包将不会升级到最新版本');
         uvCommand += ' --no-upgrade';
       }
       
       // 使用uv生成锁文件
-      execSync(uvCommand, { stdio: 'inherit' });
+      execSync(uvCommand, { stdio: 'inherit', env: devEnv });
       console.log(`已生成锁文件: ${lockFile}`);
       
       // 如果有index URL，将其添加到锁文件末尾
