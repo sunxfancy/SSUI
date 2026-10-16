@@ -9,6 +9,7 @@ import './Loader/SDLoader';
 import './Loader/ControlNetLoader';
 import './Base/ListContainer';
 import './Base/ScalarComponents';
+import './Base/RandomIntegerEditor';
 import './Base/UnionContainer';
 import './Base/PromptEditor';
 import './Loader/WorkflowLoaders';
