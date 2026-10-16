@@ -10,6 +10,10 @@ import Toolbar from './Toolbar';
 import { produce } from 'immer';
 import { Layer } from './types';
 import { ContextMenu, ContextMenuItem } from 'ssui_components';
+import GpuCanvas from './GpuCanvas';
+import { hitStroke, smoothPoints, strokePoint } from './drawing';
+import { BRUSHES, BrushStyle } from './brushes';
+import { vectorize, strokeSamples, moveNode } from './bezier';
 
 const GRID_SIZE = 64;
 const TARGET_SIZE = 512;
@@ -35,7 +39,7 @@ interface AIDrawingCanvasState {
     focusTarget: 'canvas' | 'tool';
     selectedTool: string;
     brushSize: number;
-    brushStyle: string;
+    brushStyle: BrushStyle;
     brushFeather: number;
     brushColor: string;
     eraserSize: number;
@@ -48,6 +52,10 @@ interface AIDrawingCanvasState {
     } | null;
     worldPosition: WorldPosition;
     viewport: Viewport;
+    backend: string;
+    backendError: string;
+    cacheTiles: number;
+    cacheBytes: number;
 }
 
 class AIDrawingCanvas extends React.Component<{path: string}, AIDrawingCanvasState> {
@@ -59,6 +67,9 @@ class AIDrawingCanvas extends React.Component<{path: string}, AIDrawingCanvasSta
     private idCounter: number = 0;
     private activeStrokeId: string | null = null;
     private activePointerId: number | null = null;
+    private undoLayers: Layer[][] = [];
+    private redoLayers: Layer[][] = [];
+    private fileInput = React.createRef<HTMLInputElement>();
 
     constructor(props: {path: string}) {
         super(props);
@@ -91,7 +102,8 @@ class AIDrawingCanvas extends React.Component<{path: string}, AIDrawingCanvasSta
             shapeFeather: 0,
             brushPosition: null,
             worldPosition: new WorldPosition(0, 0),
-            viewport: new Viewport(window.innerWidth, window.innerHeight)
+            viewport: new Viewport(window.innerWidth, window.innerHeight),
+            backend: '初始化', backendError: '', cacheTiles: 0, cacheBytes: 0
         };
         this.drawingService = new SSUIAIDrawingService();
         this.stageRef = React.createRef();
@@ -102,13 +114,18 @@ class AIDrawingCanvas extends React.Component<{path: string}, AIDrawingCanvasSta
     componentDidMount() {
         this.updateContainerSize();
         window.addEventListener('resize', this.updateContainerSize);
+        window.addEventListener('keydown', this.handleKeyDown);
     }
 
     componentWillUnmount() {
         window.removeEventListener('resize', this.updateContainerSize);
+        window.removeEventListener('keydown', this.handleKeyDown);
     }
 
     componentDidUpdate(prevProps: {path: string}, prevState: AIDrawingCanvasState) {
+        if (this.state.selectedObjectId && !this.state.layers.some(l => l.visible && !l.locked && l.opacity>0 && l.objects.some(o => o.id===this.state.selectedObjectId))) {
+            this.setState({selectedObjectId:null});
+        }
         // 选中对象、图层或工具变化时，重新绑定 8 控制点缩放框
         const selectionChanged = prevState.selectedObjectId !== this.state.selectedObjectId;
         const layersChanged = prevState.layers !== this.state.layers;
@@ -135,6 +152,57 @@ class AIDrawingCanvas extends React.Component<{path: string}, AIDrawingCanvasSta
                 viewport: prevState.viewport.setSize(width, height)
             }));
         }
+    };
+
+    private checkpoint = () => {
+        if (this.undoLayers[this.undoLayers.length-1] !== this.state.layers) {
+            this.undoLayers.push(this.state.layers);
+            if (this.undoLayers.length>64) this.undoLayers.shift();
+        }
+        this.redoLayers=[];
+    };
+    private undo = () => {
+        const layers=this.undoLayers.pop();
+        if (layers) {this.redoLayers.push(this.state.layers);this.setState({layers,selectedObjectId:null,
+            activeLayer:layers.some(l=>l.id===this.state.activeLayer)?this.state.activeLayer:layers[0]?.id ?? ''});}
+    };
+    private redo = () => {
+        const layers=this.redoLayers.pop();
+        if (layers) {this.undoLayers.push(this.state.layers);this.setState({layers,selectedObjectId:null,
+            activeLayer:layers.some(l=>l.id===this.state.activeLayer)?this.state.activeLayer:layers[0]?.id ?? ''});}
+    };
+    private handleKeyDown = (e: KeyboardEvent) => {
+        if ((e.target as HTMLElement)?.closest('input,textarea,select,[contenteditable="true"]')) return;
+        if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase()==='z') {e.preventDefault();e.shiftKey?this.redo():this.undo();}
+        if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase()==='y') {e.preventDefault();this.redo();}
+        if (e.key==='Delete' || e.key==='Backspace') {
+            const layer=this.state.layers.find(l=>l.objects.some(o=>o.id===this.state.selectedObjectId));
+            if (layer && this.state.selectedObjectId) {e.preventDefault();this.deleteObject(layer.id,this.state.selectedObjectId);}
+        }
+    };
+    private handleBackend = (backend: string, backendError='') => this.setState({backend,backendError});
+    private handleCacheStats = (tiles: number, bytes: number) => {
+        if (this.state.cacheTiles!==tiles || this.state.cacheBytes!==bytes) this.setState({cacheTiles:tiles,cacheBytes:bytes});
+    };
+    private editStroke = (change: (o: Layer['objects'][number]) => void) => {
+        this.setState(state=>produce(state,draft=>{
+            const layer=draft.layers.find(l=>l.visible && !l.locked && l.opacity>0 && l.objects.some(o=>o.id===draft.selectedObjectId));
+            const object=layer?.objects.find(o=>o.id===draft.selectedObjectId);
+            if (object?.type==='stroke') change(object);
+        }));
+    };
+    private importImage = async (file: File) => {
+        const image=await createImageBitmap(file);
+        const layer=this.state.layers.find(l=>l.id===this.state.activeLayer && l.visible && !l.locked);
+        if (!layer) {image.close();return;}
+        this.checkpoint();
+        this.setState(state=>produce(state,draft=>{
+            const target=draft.layers.find(l=>l.id===layer.id);
+            if (!target || target.locked) return;
+            const id=this.generateId();
+            target.objects.push({id,type:'image',name:file.name,x:120,y:120,width:image.width,height:image.height,image});
+            draft.selectedObjectId=id;draft.selectedTool='move';
+        }));
     };
 
     // 对齐到网格
@@ -179,6 +247,7 @@ class AIDrawingCanvas extends React.Component<{path: string}, AIDrawingCanvasSta
         if (this.state.selectedTool !== 'move') {
             return;
         }
+        if (this.state.layers.find(l=>l.objects.some(o=>o.id===objectId))?.locked) return;
         e.cancelBubble = true;
         this.setState({ selectedObjectId: objectId });
     };
@@ -250,7 +319,7 @@ class AIDrawingCanvas extends React.Component<{path: string}, AIDrawingCanvasSta
             this.setState(prevState => ({
                 viewport: prevState.viewport.startDragging(pointer)
             }));
-        } else if (e.evt.button === 0 && e.target === this.stageRef.current) {
+        } else if (e.evt.button === 0 && e.target === this.stageRef.current && this.state.selectedTool !== 'edit' && this.state.selectedTool !== 'move') {
             // 左键点击空白处取消选中
             // 焦点切换到画布，侧边属性面板显示画布配置
             this.setState({ selectedObjectId: null, focusTarget: 'canvas' });
@@ -265,8 +334,8 @@ class AIDrawingCanvas extends React.Component<{path: string}, AIDrawingCanvasSta
             this.setState(prevState => ({
                 viewport: newViewport,
                 worldPosition: prevState.worldPosition.setPosition(
-                    -newViewport.position.x / newViewport.scale,
-                    -newViewport.position.y / newViewport.scale
+                    newViewport.position.x,
+                    newViewport.position.y
                 )
             }));
         }
@@ -283,9 +352,10 @@ class AIDrawingCanvas extends React.Component<{path: string}, AIDrawingCanvasSta
         e.evt.preventDefault();
         const stage = this.stageRef.current;
         const pointer = stage.getPointerPosition();
-        this.setState(prevState => ({
-            viewport: prevState.viewport.handleZoom(e.evt.deltaY, pointer)
-        }));
+        this.setState(prevState => {
+            const viewport=prevState.viewport.handleZoom(e.evt.deltaY,pointer);
+            return {viewport,worldPosition:prevState.worldPosition.setPosition(viewport.position.x,viewport.position.y)};
+        });
     };
 
     toggleGrid = () => {
@@ -297,8 +367,8 @@ class AIDrawingCanvas extends React.Component<{path: string}, AIDrawingCanvasSta
         this.setState({
             viewport: newViewport,
             worldPosition: this.state.worldPosition.setPosition(
-                -newViewport.position.x / newViewport.scale,
-                -newViewport.position.y / newViewport.scale
+                newViewport.position.x,
+                newViewport.position.y
             )
         });
     };
@@ -350,6 +420,8 @@ class AIDrawingCanvas extends React.Component<{path: string}, AIDrawingCanvasSta
     };
 
     duplicateObject = (layerId: string, objectId: string) => {
+        if (this.state.layers.find(l=>l.id===layerId)?.locked) return;
+        this.checkpoint();
         this.setState(prevState => produce(prevState, draft => {
             const layer = draft.layers.find(layer => layer.id === layerId);
             if (!layer) return;
@@ -368,6 +440,8 @@ class AIDrawingCanvas extends React.Component<{path: string}, AIDrawingCanvasSta
     };
 
     deleteObject = (layerId: string, objectId: string) => {
+        if (this.state.layers.find(l=>l.id===layerId)?.locked) return;
+        this.checkpoint();
         this.setState(prevState => produce(prevState, draft => {
             const layer = draft.layers.find(layer => layer.id === layerId);
             if (!layer) return;
@@ -382,6 +456,8 @@ class AIDrawingCanvas extends React.Component<{path: string}, AIDrawingCanvasSta
     };
 
     moveObject = (layerId: string, objectId: string, position: 'front' | 'back') => {
+        if (this.state.layers.find(l=>l.id===layerId)?.locked) return;
+        this.checkpoint();
         this.setState(prevState => produce(prevState, draft => {
             const layer = draft.layers.find(layer => layer.id === layerId);
             if (!layer) return;
@@ -397,6 +473,7 @@ class AIDrawingCanvas extends React.Component<{path: string}, AIDrawingCanvasSta
     };
 
     handleLayerChange = (layerId: string, changes: any) => {
+        this.checkpoint();
         this.setState(prevState => ({
             layers: prevState.layers.map(layer => 
                 layer.id === layerId ? { ...layer, ...changes } : layer
@@ -409,9 +486,10 @@ class AIDrawingCanvas extends React.Component<{path: string}, AIDrawingCanvasSta
     };
 
     handleLayerAdd = () => {
+        this.checkpoint();
         this.setState(prevState => {
             const newLayer: Layer = {
-                id: `layer-${Date.now()}`,
+                id: this.generateId(),
                 name: `图层 ${prevState.layers.length + 1}`,
                 visible: true,
                 locked: false,
@@ -426,6 +504,7 @@ class AIDrawingCanvas extends React.Component<{path: string}, AIDrawingCanvasSta
     };
 
     handleLayerDelete = (layerId: string) => {
+        this.checkpoint();
         this.setState(prevState => {
             const index = prevState.layers.findIndex(layer => layer.id === layerId);
             if (index < 0) {
@@ -443,6 +522,7 @@ class AIDrawingCanvas extends React.Component<{path: string}, AIDrawingCanvasSta
     };
 
     handleLayerMove = (layerId: string, direction: 'up' | 'down') => {
+        this.checkpoint();
         this.setState(prevState => {
             const index = prevState.layers.findIndex(layer => layer.id === layerId);
             if (index < 0) {
@@ -465,6 +545,7 @@ class AIDrawingCanvas extends React.Component<{path: string}, AIDrawingCanvasSta
     };
 
     handleLayerDuplicate = (layerId: string) => {
+        this.checkpoint();
         this.setState(prevState => {
             const index = prevState.layers.findIndex(layer => layer.id === layerId);
             if (index < 0) {
@@ -473,7 +554,7 @@ class AIDrawingCanvas extends React.Component<{path: string}, AIDrawingCanvasSta
             const source = prevState.layers[index];
             const duplicate: Layer = {
                 ...source,
-                id: `layer-${Date.now()}`,
+                id: this.generateId(),
                 name: `${source.name} 副本`,
                 objects: source.objects.map(obj => ({ ...obj, id: this.generateId() }))
             };
@@ -500,7 +581,8 @@ class AIDrawingCanvas extends React.Component<{path: string}, AIDrawingCanvasSta
     };
 
     handleBrushStyleChange = (style: string) => {
-        this.setState({ brushStyle: style });
+        const brush=BRUSHES.find(b=>b.id===style);
+        if (brush) this.setState({ brushStyle: brush.id, brushSize: brush.size, brushFeather: 0 });
     };
 
     handleBrushFeatherChange = (feather: number) => {
@@ -535,9 +617,10 @@ class AIDrawingCanvas extends React.Component<{path: string}, AIDrawingCanvasSta
 
     private getDrawingPoint = (e: any) => {
         const stage = this.stageRef.current;
-        const pointer = stage?.getRelativePointerPosition();
-        if (!pointer) return null;
+        if (!stage) return null;
         const nativeEvent = e.evt as PointerEvent;
+        const bounds=stage.container().getBoundingClientRect();
+        const pointer=stage.getAbsoluteTransform().copy().invert().point({x:nativeEvent.clientX-bounds.left,y:nativeEvent.clientY-bounds.top});
         const pressure = nativeEvent.pointerType === 'pen'
             ? Math.max(0.08, nativeEvent.pressure || 0.5)
             : 1;
@@ -545,15 +628,27 @@ class AIDrawingCanvas extends React.Component<{path: string}, AIDrawingCanvasSta
     };
 
     handlePointerDown = (e: any) => {
+        if ((this.state.selectedTool==='edit' || this.state.selectedTool==='move') && e.evt.button===0) {
+            // Control handles and image proxies own their events.
+            if (e.target!==this.stageRef.current) return;
+            const p=this.getDrawingPoint(e);
+            const hit=p ? hitStroke(this.state.layers,p.x,p.y,6/this.state.viewport.scale) : null;
+            this.setState({selectedObjectId:hit?.object.id ?? null,activeLayer:hit?.layer.id ?? this.state.activeLayer});
+            return;
+        }
         if (this.state.selectedTool !== 'brush' && this.state.selectedTool !== 'eraser') return;
+        if (this.activePointerId!==null) return;
         if (e.evt.button !== undefined && e.evt.button !== 0) return;
 
         const layer = this.state.layers.find(item => item.id === this.state.activeLayer);
         const point = this.getDrawingPoint(e);
         if (!layer || !layer.visible || layer.locked || !point) return;
+        this.checkpoint();
 
         e.evt.preventDefault();
         this.activePointerId = (e.evt as PointerEvent).pointerId ?? null;
+        const target=e.evt.target as HTMLElement;
+        if (this.activePointerId!==null && target.setPointerCapture) target.setPointerCapture(this.activePointerId);
         this.activeStrokeId = this.generateId();
         const erasing = this.state.selectedTool === 'eraser';
         this.setState(state => produce(state, draft => {
@@ -567,7 +662,7 @@ class AIDrawingCanvas extends React.Component<{path: string}, AIDrawingCanvasSta
                 points: [point],
                 stroke: this.state.brushColor,
                 strokeWidth: erasing ? this.state.eraserSize : this.state.brushSize,
-                strokeStyle: erasing ? 'normal' : this.state.brushStyle as 'normal' | 'airbrush' | 'texture',
+                strokeStyle: erasing ? 'normal' : this.state.brushStyle,
                 feather: erasing ? this.state.eraserFeather : this.state.brushFeather,
                 compositeOperation: erasing ? 'destination-out' : 'source-over'
             });
@@ -579,14 +674,17 @@ class AIDrawingCanvas extends React.Component<{path: string}, AIDrawingCanvasSta
             const point = this.getDrawingPoint(e);
             if (!point) return;
             const pointerId = (e.evt as PointerEvent).pointerId ?? null;
+            const native=e.evt as PointerEvent;
+            const coalesced=native.getCoalescedEvents?.() ?? [];
+            const samples=(coalesced.length?coalesced:[native]).map(evt=>this.getDrawingPoint({evt})).filter((p):p is NonNullable<typeof p>=>p!==null);
             this.setState(state => produce(state, draft => {
                 draft.brushPosition = { x: point.x, y: point.y };
                 if (this.activeStrokeId && (this.activePointerId === null || pointerId === this.activePointerId)) {
                     const layer = draft.layers.find(item => item.id === draft.activeLayer);
                     const stroke = layer?.objects.find(item => item.id === this.activeStrokeId);
-                    const previous = stroke?.points?.[stroke.points.length - 1];
-                    if (stroke?.points && (!previous || Math.hypot(point.x - previous.x, point.y - previous.y) >= 0.5)) {
-                        stroke.points.push(point);
+                    for (const sample of samples) {
+                        const previous = stroke?.points?.[stroke.points.length - 1];
+                        if (stroke?.points && (!previous || Math.hypot(sample.x - previous.x, sample.y - previous.y) >= 0.5)) stroke.points.push(sample);
                     }
                 }
             }));
@@ -596,46 +694,77 @@ class AIDrawingCanvas extends React.Component<{path: string}, AIDrawingCanvasSta
     handlePointerUp = (e: any) => {
         const pointerId = (e.evt as PointerEvent).pointerId ?? null;
         if (this.activePointerId === null || pointerId === this.activePointerId) {
+            const id=this.activeStrokeId;
+            if(id) this.setState(state=>produce(state,draft=>{
+                const o=draft.layers.flatMap(l=>l.objects).find(o=>o.id===id);
+                if(o?.points?.length)vectorize(o,0.5/Math.max(1,state.viewport.scale*(window.devicePixelRatio || 1)));
+            }));
             this.activeStrokeId = null;
             this.activePointerId = null;
         }
     };
 
     handlePointerLeave = () => {
-        this.activeStrokeId = null;
-        this.activePointerId = null;
+        if (this.activePointerId!==null) return;
         this.setState({ brushPosition: null });
     };
 
-    private renderStroke = (object: Layer['objects'][number]) => {
-        const points = object.points ?? [];
-        if (points.length === 0) return null;
-        const styleOpacity = object.strokeStyle === 'airbrush' ? 0.22 : 1;
-        const dash = object.strokeStyle === 'texture' ? [2, Math.max(2, (object.strokeWidth ?? 1) * 0.35)] : undefined;
-        const segments = points.length === 1 ? [[points[0], points[0]]] : points.slice(1).map((point, index) => [points[index], point]);
-        return (
-            <Group key={object.id} globalCompositeOperation={object.compositeOperation ?? 'source-over'}>
-                {segments.map(([from, to], index) => {
-                    const pressure = (from.pressure + to.pressure) / 2;
-                    return (
-                        <Line
-                            key={`${object.id}-${index}`}
-                            points={[from.x, from.y, to.x, to.y]}
-                            stroke={object.stroke ?? '#1f2937'}
-                            strokeWidth={Math.max(0.5, (object.strokeWidth ?? 1) * pressure)}
-                            opacity={styleOpacity}
-                            lineCap="round"
-                            lineJoin="round"
-                            dash={dash}
-                            shadowColor={object.stroke ?? '#1f2937'}
-                            shadowBlur={object.feather ?? 0}
-                            shadowOpacity={(object.feather ?? 0) > 0 ? 0.35 : 0}
-                            listening={false}
-                        />
-                    );
+    private renderStrokeControls = () => {
+        if (this.state.selectedTool!=='edit' && this.state.selectedTool!=='move') return null;
+        const layer=this.state.layers.find(l=>l.visible && !l.locked && l.objects.some(o=>o.id===this.state.selectedObjectId));
+        const o=layer?.objects.find(o=>o.id===this.state.selectedObjectId);
+        if(o?.curve) {
+            const scale=this.state.viewport.scale,nodes=o.curve.nodes;
+            const world=(x:number,y:number)=>strokePoint(o,{x,y,pressure:1});
+            const local=(x:number,y:number)=>{const r=-(o.rotation ?? 0)*Math.PI/180,dx=x-o.x,dy=y-o.y;
+                return {x:dx*Math.cos(r)-dy*Math.sin(r),y:dx*Math.sin(r)+dy*Math.cos(r)};};
+            return <Group>
+                <Line points={strokeSamples(o,0.3/scale).flatMap(p=>{const w=world(p.x,p.y);return[w.x,w.y];})}
+                    stroke="#0ea5e9" strokeWidth={1/scale} dash={[4/scale,4/scale]} listening={false}/>
+                {nodes.map((n,i)=>{
+                    const anchor=world(n[0],n[1]);
+                    return <Group key={`${o.id}-node-${i}`}>
+                        {([2,4] as const).map(axis=>{
+                            if((axis===2 && i===0) || (axis===4 && i===nodes.length-1))return null;
+                            const h=world(n[axis],n[axis+1]);
+                            return <Group key={axis}>
+                                <Line points={[anchor.x,anchor.y,h.x,h.y]} stroke="#a855f7" strokeWidth={1/scale} listening={false}/>
+                                <Circle name={`bezier-handle-${i}-${axis}`} x={h.x} y={h.y} radius={4/scale}
+                                    fill="#c084fc" stroke="#7e22ce" strokeWidth={1/scale} draggable
+                                    onPointerDown={e=>{e.cancelBubble=true;}} onDragStart={this.checkpoint}
+                                    onDragMove={e=>{const p=local(e.target.x(),e.target.y());this.editStroke(s=>{
+                                        const node=s.curve?.nodes[i];if(node){node[axis]=p.x;node[axis+1]=p.y;}
+                                    });}}/>
+                            </Group>;
+                        })}
+                        <Circle name={`bezier-anchor-${i}`} x={anchor.x} y={anchor.y} radius={5/scale}
+                            fill="white" stroke="#0284c7" strokeWidth={1.5/scale} draggable
+                            onPointerDown={e=>{e.cancelBubble=true;}} onDragStart={this.checkpoint}
+                            onDragMove={e=>{const p=local(e.target.x(),e.target.y());this.editStroke(s=>{
+                                const node=s.curve?.nodes[i];if(node)moveNode(node,p.x,p.y);
+                            });}}/>
+                    </Group>;
                 })}
-            </Group>
-        );
+            </Group>;
+        }
+        if (!o?.points?.length) return null;
+        const stride=Math.max(1,Math.ceil(o.points.length/80)),scale=this.state.viewport.scale;
+        return <Group>
+            <Line points={o.points.flatMap(p=>{const w=strokePoint(o,p);return [w.x,w.y];})}
+                stroke="#0ea5e9" strokeWidth={1.5/scale} dash={[4/scale,4/scale]} listening={false} />
+            {o.points.map((p,i)=> {
+                if (i%stride && i!==o.points!.length-1) return null;
+                const w=strokePoint(o,p);
+                return <Circle key={`${o.id}-${i}`} name={`stroke-handle-${i}`} x={w.x} y={w.y} radius={4/scale}
+                    fill="white" stroke="#0284c7" strokeWidth={1.5/scale} draggable
+                    onPointerDown={e=>{e.cancelBubble=true;}}
+                    onDragStart={this.checkpoint}
+                    onDragMove={e=>{
+                        const x=e.target.x()-o.x,y=e.target.y()-o.y,r=-(o.rotation ?? 0)*Math.PI/180;
+                        this.editStroke(s=>{if(s.points) s.points[i]={...s.points[i],x:x*Math.cos(r)-y*Math.sin(r),y:x*Math.sin(r)+y*Math.cos(r)};});
+                    }} />;
+            })}
+        </Group>;
     };
 
     handleImageGenerated = async (imageUrl: string) => {
@@ -660,11 +789,12 @@ class AIDrawingCanvas extends React.Component<{path: string}, AIDrawingCanvasSta
             
             console.log('开始创建 ImageBitmap');
             const image = await createImageBitmap(img);
+            this.checkpoint();
             console.log('ImageBitmap 创建成功');
             
             this.setState(state => produce(state, draft => {
                 const layer = draft.layers.find(layer => layer.id === draft.activeLayer);
-                if (layer) {
+                if (layer && layer.visible && !layer.locked) {
                     const id = this.generateId();
                     console.log('添加图片', this.state.targetPosition.x, this.state.targetPosition.y);
                     layer.objects.push({
@@ -691,6 +821,8 @@ class AIDrawingCanvas extends React.Component<{path: string}, AIDrawingCanvasSta
         const { targetPosition, isDragging, layers, brushPosition, brushSize, contextMenu } = this.state;
         const viewport = this.state.viewport;
         const worldPos = this.state.worldPosition;
+        const selectedLayer=layers.find(l=>l.id===this.state.activeLayer);
+        const selected=selectedLayer?.objects.find(o=>o.id===this.state.selectedObjectId && o.type==='stroke');
         return (
             <div 
                 ref={this.containerRef}
@@ -708,15 +840,50 @@ class AIDrawingCanvas extends React.Component<{path: string}, AIDrawingCanvasSta
                         : (this.state.selectedTool === 'brush' || this.state.selectedTool === 'eraser')
                             ? 'crosshair'
                             : 'grab',
-                    touchAction: 'none'
+                    touchAction: 'none',
+                    background:'#ffffff'
                 }}
             >
                 <Toolbar selectedTool={this.state.selectedTool} onToolSelect={this.handleToolSelect} />
+                <GpuCanvas layers={layers} width={viewport.size.width} height={viewport.size.height}
+                    x={worldPos.x} y={worldPos.y} scale={viewport.scale} onBackend={this.handleBackend} onStats={this.handleCacheStats} />
+                <div className="drawing-actions">
+                    <span data-testid="render-backend" title={this.state.backendError}>{this.state.backend}</span>
+                    {this.state.backend==='WebGPU' && <span data-testid="drawing-memory" title="GPU 缓存数据量估计，不含驱动开销和原始文档">{this.state.cacheTiles} 块 · {(this.state.cacheBytes/1048576).toFixed(2)} MiB</span>}
+                    <button onClick={()=>this.fileInput.current?.click()}>导入图片</button>
+                    <input ref={this.fileInput} data-testid="image-import" type="file" accept="image/*" hidden
+                        onChange={e=>{const f=e.target.files?.[0];if(f) void this.importImage(f).catch(error=>this.setState({backendError:String(error)}));e.target.value='';}} />
+                    <button onClick={this.undo} title="Ctrl+Z">撤销</button>
+                    <button onClick={this.redo} title="Ctrl+Shift+Z">重做</button>
+                    <select aria-label="笔触列表" value={this.state.selectedObjectId ?? ''}
+                        onChange={e=>this.setState({selectedObjectId:e.target.value || null,selectedTool:'edit'})}>
+                        <option value="">选择笔触</option>
+                        {selectedLayer?.objects.filter(o=>o.type==='stroke').map((o,i)=><option key={o.id} value={o.id}
+                            disabled={selectedLayer.locked || !selectedLayer.visible}>
+                            {o.compositeOperation==='destination-out'?'橡皮擦':'笔触'} {i+1}
+                        </option>)}
+                    </select>
+                    {selected && !selectedLayer?.locked && <>
+                        <span data-testid="selected-stroke">{selected.curve ? `原 ${selected.curve.source_count} 点 · ${selected.curve.nodes.length} 锚点 · ${selected.curve.pressure.length} 压感点` : `已选笔触 · ${selected.points?.length} 点`}</span>
+                        <select aria-label="笔触画笔类型" value={selected.strokeStyle ?? 'normal'}
+                            onChange={e=>{const style=e.target.value as BrushStyle;this.checkpoint();this.editStroke(o=>{o.strokeStyle=style;});}}>
+                            {BRUSHES.map(b=><option key={b.id} value={b.id}>{b.label}</option>)}
+                        </select>
+                        <label>线宽 <input aria-label="笔触线宽" type="number" min="1" max="500" value={selected.strokeWidth ?? 1}
+                            onChange={e=>{const width=Number(e.target.value);if(width>0 && width<=500){this.checkpoint();this.editStroke(o=>{o.strokeWidth=width;});}}} /></label>
+                        <input aria-label="笔触颜色" type="color" value={selected.stroke ?? '#1f2937'}
+                            onChange={e=>{this.checkpoint();this.editStroke(o=>{o.stroke=e.target.value;});}} />
+                        <button onClick={()=>{this.checkpoint();this.editStroke(o=>{vectorize(o);});}}>贝塞尔拟合</button>
+                        <button onClick={()=>{this.checkpoint();this.editStroke(o=>{const sourceCount=o.curve?.source_count;o.points=smoothPoints(strokeSamples(o));delete o.curve;const curve=vectorize(o);if(curve&&sourceCount!==undefined)curve.source_count=sourceCount;});}}>平滑笔触</button>
+                        <button onClick={()=>this.deleteObject(selectedLayer!.id,selected.id)}>删除笔触</button>
+                        <small>白色锚点移动线条，紫色控制柄调整曲率</small>
+                    </>}
+                </div>
                 <Stage
                     ref={this.stageRef}
                     width={viewport.size.width}
                     height={viewport.size.height}
-                    draggable={viewport.isDraggingViewport()}
+                    draggable={false}
                     onMouseDown={this.handleViewportDragStart}
                     onMouseMove={this.handleViewportDragMove}
                     onMouseUp={this.handleViewportDragEnd}
@@ -731,9 +898,11 @@ class AIDrawingCanvas extends React.Component<{path: string}, AIDrawingCanvasSta
                     scaleY={viewport.scale}
                     x={worldPos.x}
                     y={worldPos.y}
+                    style={{position:'relative'}}
                 >
+                    <KonvaLayer>
                     {this.state.layers.map((layer) => (
-                        <KonvaLayer key={layer.id} opacity={layer.opacity}>
+                        <Group key={layer.id}>
                             {/* 移动工具下的放置目标矩形（渲染在图片下方，避免遮挡操作） */}
                             {layer.id === this.state.activeLayer &&
                                 this.state.selectedTool === 'move' &&
@@ -762,6 +931,7 @@ class AIDrawingCanvas extends React.Component<{path: string}, AIDrawingCanvasSta
                                                 id={object.id}
                                                 name={object.name || 'canvas-image'}
                                                 image={object.image}
+                                                opacity={0}
                                                 x={object.x}
                                                 y={object.y}
                                                 width={object.width}
@@ -771,6 +941,12 @@ class AIDrawingCanvas extends React.Component<{path: string}, AIDrawingCanvasSta
                                                 onMouseDown={(e) => this.handleSelectObject(e, object.id)}
                                                 onTap={(e) => this.handleSelectObject(e, object.id)}
                                                 onDragEnd={(e) => this.handleImageDragEnd(e, object.id)}
+                                                onDragStart={this.checkpoint}
+                                                onDragMove={e=>{
+                                                    const x=e.target.x(),y=e.target.y();
+                                                    this.setState(s=>produce(s,d=>{const o=d.layers.find(l=>l.id===layer.id)?.objects.find(o=>o.id===object.id);if(o){o.x=x;o.y=y;}}));
+                                                }}
+                                                onTransformStart={this.checkpoint}
                                                 onTransformEnd={(e) => this.handleTransformEnd(e, object.id)}
                                                 onContextMenu={(e) => this.openObjectMenu(e, layer.id, object.id)}
                                                 ref={(node) => this.registerImageNode(object.id, node)}
@@ -778,7 +954,7 @@ class AIDrawingCanvas extends React.Component<{path: string}, AIDrawingCanvasSta
                                         );
                                     }
                                     if (object.type === 'stroke') {
-                                        return this.renderStroke(object);
+                                        return null;
                                     }
                                     return object.obj;
                                 })
@@ -814,11 +990,13 @@ class AIDrawingCanvas extends React.Component<{path: string}, AIDrawingCanvasSta
                                     />
                                 )
                             }
-                        </KonvaLayer>
+                        </Group>
                     ))}
+                    </KonvaLayer>
                     
 
                     <KonvaLayer>
+                        {this.renderStrokeControls()}
                         {/* 渲染网格 */}
                         {this.state.showGrid && <Grid viewport={viewport} />}
                         

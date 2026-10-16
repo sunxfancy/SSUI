@@ -10,7 +10,8 @@
     "ssui-vscode",
     "extension_builder",
     "extensions/Image",
-    "extensions/example"
+    "extensions/example",
+    "packages/canvas-engine"
   ],
   "scripts": {
     "dev:desktop_sb": "yarn storybook",
@@ -27,6 +28,8 @@
     "build:desktop:debug": "yarn workspace ssui-desktop tauri build --debug",
     "build:components": "yarn workspace ssui_components build",
     "build:canvas": "yarn workspace ssui-image build",
+    "build:canvas-engine": "yarn workspace @ssui/canvas-engine build",
+    "test:canvas-engine": "yarn workspace @ssui/canvas-engine test",
     "build:functional_ui": "yarn workspace ssui-functional_ui build",
     "build:example": "yarn workspace ssui-example-plugin build",
     "build:extension_builder": "yarn workspace extension_builder build",

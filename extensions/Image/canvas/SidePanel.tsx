@@ -2,6 +2,7 @@ import React from 'react';
 import { Card, Elevation, Button, Icon, InputGroup, HTMLSelect, Switch } from "@blueprintjs/core";
 import './SidePanel.css';
 import { Layer } from './types';
+import { BRUSHES } from './brushes';
 import { ContextMenu, ContextMenuItem } from 'ssui_components';
 
 interface SidePanelProps {
@@ -179,6 +180,7 @@ export class SidePanel extends React.Component<SidePanelProps, SidePanelState> {
                     <input
                         type="range"
                         min="0"
+                        aria-label={`${layer.name}不透明度`}
                         max="100"
                         value={Math.round(layer.opacity * 100)}
                         onChange={(e) => this.props.onLayerChange(layer.id, { opacity: parseInt(e.target.value) / 100 })}
@@ -238,6 +240,7 @@ export class SidePanel extends React.Component<SidePanelProps, SidePanelState> {
     getToolLabel = (tool: string): string => {
         const labels: Record<string, string> = {
             move: '移动',
+            edit: '编辑笔触',
             brush: '画笔',
             eraser: '橡皮擦',
             shape: '选区'
@@ -273,6 +276,8 @@ export class SidePanel extends React.Component<SidePanelProps, SidePanelState> {
 
     renderToolConfig = (tool: string) => {
         switch (tool) {
+            case 'edit':
+                return <div className="config-hint">点击线条选中笔触。白色锚点移动线条，紫色控制柄调整曲率。新笔触自动拟合为贝塞尔曲线，压感独立保留；旧笔触可在上方点击“贝塞尔拟合”。</div>;
             case 'brush':
                 return (
                     <>
@@ -295,15 +300,15 @@ export class SidePanel extends React.Component<SidePanelProps, SidePanelState> {
                             />
                         </div>
                         <div className="config-item">
-                            <label>样式</label>
+                            <label>画笔类型</label>
                             <HTMLSelect
+                                aria-label="画笔类型"
                                 value={this.props.brushStyle}
                                 onChange={(e) => this.props.onBrushStyleChange(e.target.value)}
                             >
-                                <option value="normal">常规</option>
-                                <option value="airbrush">喷枪</option>
-                                <option value="texture">纹理</option>
+                                {BRUSHES.map(brush => <option key={brush.id} value={brush.id}>{brush.label}</option>)}
                             </HTMLSelect>
+                            <div className="config-hint">{BRUSHES.find(b => b.id === this.props.brushStyle)?.description}</div>
                         </div>
                         <div className="config-item">
                             <label>羽化半径：{this.props.brushFeather}px</label>
@@ -388,7 +393,7 @@ export class SidePanel extends React.Component<SidePanelProps, SidePanelState> {
                 <div className="panel-header">
                     <h3>{title}</h3>
                 </div>
-                <Card elevation={Elevation.ONE} className="config-card">
+                <Card key={`${focusTarget}-${selectedTool}`} elevation={Elevation.ONE} className="config-card">
                     {focusTarget === 'canvas'
                         ? this.renderCanvasConfig()
                         : this.renderToolConfig(selectedTool)}

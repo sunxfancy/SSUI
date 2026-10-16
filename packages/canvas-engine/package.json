@@ -1,0 +1,15 @@
+{
+  "name": "@ssui/canvas-engine",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "setup": "rustup target add wasm32-unknown-unknown && cargo install wasm-pack --version 0.15.0 --locked",
+    "build": "wasm-pack build --target web --out-dir pkg",
+    "build:wasm": "cargo build --target wasm32-unknown-unknown --release",
+    "check:wasm": "cargo check --target wasm32-unknown-unknown",
+    "test": "cargo test",
+    "test:gpu": "cargo test --test composition -- --ignored --nocapture",
+    "format": "cargo fmt --check",
+    "format:fix": "cargo fmt"
+  }
+}

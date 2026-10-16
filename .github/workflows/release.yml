@@ -139,6 +139,10 @@ jobs:
           # Run caching explicitly so its hit status is available to the summary.
           cache: "false"
 
+      - name: Install Canvas WASM build tools
+        timeout-minutes: 15
+        run: yarn workspace @ssui/canvas-engine setup
+
       - name: Restore Rust compilation cache
         id: rust-cache
         timeout-minutes: 10
