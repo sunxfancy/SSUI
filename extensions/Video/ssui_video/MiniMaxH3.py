@@ -26,7 +26,7 @@ H3_PYTHON = os.environ.get("SSUI_H3_PYTHON", "")
 H3_RUNNER = os.path.join(os.path.dirname(__file__), "h3_runner.py")
 H3_NF4_RUNNER = os.path.join(os.path.dirname(__file__), "h3_nf4_runner.py")
 H3_NF4_MODEL_ROOT = os.environ.get(
-    "SSUI_H3_NF4_MODEL_ROOT", os.path.join("models", "minimax-h3-nf4")
+    "SSUI_H3_NF4_MODEL_ROOT", os.path.join(os.environ.get("SSUI_MODEL_DIR", "models"), "minimax-h3-nf4")
 )
 H3_DIFFSYNTH_ROOT = os.environ.get("SSUI_H3_DIFFSYNTH_ROOT", "")
 H3_PROCESSOR_MODEL_ID = os.environ.get("SSUI_H3_PROCESSOR_MODEL_ID", "MiniMax/MiniMax-H3")

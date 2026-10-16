@@ -10,6 +10,21 @@ use std::process::Command;
 use std::sync::{LazyLock, Mutex, MutexGuard};
 use std::time::{SystemTime, UNIX_EPOCH};
 
+// Development launches inherit the environment resolved by dev_run.cjs.
+// Installed applications continue to use the interpreter selected by the installer.
+fn configured_python(path: &str) -> std::path::PathBuf {
+    if cfg!(debug_assertions) {
+        if let Some(venv) = std::env::var_os("SSUI_VENV_PATH") {
+            return std::path::PathBuf::from(venv).join(if cfg!(windows) {
+                "Scripts/python.exe"
+            } else {
+                "bin/python"
+            });
+        }
+    }
+    std::path::PathBuf::from(path)
+}
+
 pub struct BackgroundProcessesGuard {
     processes: Vec<Child>,
 }
@@ -179,7 +194,7 @@ pub async fn run_python(path: &str, cwd: &str, args: Vec<&str>) -> Result<String
 
     // 创建基本命令
     let create_cmd = |use_proxy: bool| -> Command {
-        let mut cmd = Command::new(path);
+        let mut cmd = Command::new(configured_python(path));
         cmd.args(args.clone())
             .current_dir(cwd)
             .env("PYTHONIOENCODING", "utf-8");
@@ -281,7 +296,7 @@ pub fn run_python_background(
     let error_log_file =
         File::create(&error_log_path).map_err(|e| format!("无法创建错误日志文件: {}", e))?;
 
-    let child = Command::new(path)
+    let child = Command::new(configured_python(path))
         .args(args.clone())
         .current_dir(cwd)
         .stdout(log_file)
@@ -476,7 +491,7 @@ fn spawn_python_process(path: &str, cwd: &str, args: Vec<&str>) -> Result<Child,
     let error_log_file =
         File::create(&error_log_path).map_err(|e| format!("无法创建错误日志文件: {}", e))?;
 
-    let mut cmd = Command::new(path);
+    let mut cmd = Command::new(configured_python(path));
     cmd.args(args.clone())
         .current_dir(cwd)
         .stdout(log_file)

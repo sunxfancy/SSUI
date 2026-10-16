@@ -329,3 +329,5 @@ Actions 均固定 commit SHA（由 dependabot 每周更新）。文档白名单�
 3. **修改了 ssui_components**：先 `yarn build:components`，或根目录 `yarn build:frontend`，再启动依赖它的 dev 服务。
 4. **完整发布前**：`SSUI_RUN_MODEL_TESTS=1 yarn test`，再按 `doc/Package.md` 执行 `yarn package`。
 5. **文档与代码不一致时以 `package.json` 为准**（已知：`dev:components`、`dev:desktop_ui` 在文档/README 中出现但根 scripts 无定义）。
+
+多 worktree 的模型、缓存和 shared/独立 venv 配置见 [doc/DevelopmentEnvironments.md](doc/DevelopmentEnvironments.md)。

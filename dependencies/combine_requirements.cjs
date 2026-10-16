@@ -5,7 +5,7 @@ const semver = require('semver');
 const { getCurrentTarget } = require('./platform.cjs');
 
 // 确保.venv目录存在
-const buildDir = path.join(__dirname, '..', '.venv');
+const buildDir = path.join(__dirname, '..', '.build');
 if (!fs.existsSync(buildDir)) {
   fs.mkdirSync(buildDir, { recursive: true });
 }
