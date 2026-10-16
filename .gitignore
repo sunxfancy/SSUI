@@ -28,6 +28,8 @@ test_env/
 desktop/src-tauri/workflow/txt2img/
 
 .idea
+/.browser-tools/
+/test-artifacts/
 
 # Per-worktree development paths
 .ssui-dev.json
