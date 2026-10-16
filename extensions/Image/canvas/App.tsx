@@ -12,7 +12,7 @@ import { Layer } from './types';
 import { ContextMenu, ContextMenuItem } from 'ssui_components';
 
 const GRID_SIZE = 64;
-const TARGET_SIZE = 512;
+import { CanvasSettings, paddedBounds, alphaBounds } from './CanvasSize';
 const MIN_OBJECT_SIZE = 8;
 
 interface ContextMenuState {
@@ -22,6 +22,7 @@ interface ContextMenuState {
 }
 
 interface AIDrawingCanvasState {
+    canvasSettings: CanvasSettings;
     targetPosition: {
         x: number;
         y: number;
@@ -63,6 +64,7 @@ class AIDrawingCanvas extends React.Component<{path: string}, AIDrawingCanvasSta
     constructor(props: {path: string}) {
         super(props);
         this.state = {
+            canvasSettings: { unbounded: false, width: 512, height: 512, margin: 32 },
             targetPosition: { x: 0, y: 0 },
             isDragging: false,
             showGrid: true,
@@ -100,11 +102,14 @@ class AIDrawingCanvas extends React.Component<{path: string}, AIDrawingCanvasSta
     }
 
     componentDidMount() {
+        this.loadDocument().then(() => window.parent.postMessage({ type: 'ssui-canvas-ready' }, window.location.origin));
+        window.addEventListener('message', this.inputMessage);
         this.updateContainerSize();
         window.addEventListener('resize', this.updateContainerSize);
     }
 
     componentWillUnmount() {
+        window.removeEventListener('message', this.inputMessage);
         window.removeEventListener('resize', this.updateContainerSize);
     }
 
@@ -127,6 +132,71 @@ class AIDrawingCanvas extends React.Component<{path: string}, AIDrawingCanvasSta
             : undefined;
         transformer.nodes(node ? [node] : []);
     }
+
+    private readSettings = (value: any): CanvasSettings | undefined => {
+        if (!value || typeof value.unbounded !== 'boolean' ||
+            !Number.isInteger(value.width) || value.width < 1 ||
+            !Number.isInteger(value.height) || value.height < 1 ||
+            !Number.isInteger(value.margin) || value.margin < 0) return undefined;
+        return value;
+    };
+    private inputMode = new URLSearchParams(window.location.search).has('input');
+    private exportImage = () => {
+        const stage = this.stageRef.current.clone();
+        try {
+            stage.position({ x: 0, y: 0 });
+            stage.scale({ x: 1, y: 1 });
+            stage.find('.editor-overlay').forEach((node: any) => node.destroy());
+            const settings = this.state.canvasSettings;
+            let bounds = { ...this.state.targetPosition, width: settings.width, height: settings.height };
+            if (settings.unbounded) {
+                const rect = stage.getClientRect({ skipTransform: true });
+                const x = Math.floor(rect.x), y = Math.floor(rect.y);
+                const width = Math.max(1, Math.ceil(rect.x + rect.width) - x);
+                const height = Math.max(1, Math.ceil(rect.y + rect.height) - y);
+                const raster = stage.toCanvas({ x, y, width, height, pixelRatio: 1 });
+                const pixels = raster.getContext('2d')!.getImageData(0, 0, width, height);
+                const ink = alphaBounds(pixels.data, width, height);
+                bounds = paddedBounds(ink ? { ...ink, x: ink.x + x, y: ink.y + y } : null, settings.margin);
+            }
+            return { image: stage.toDataURL({ ...bounds, pixelRatio: 1 }), settings, bounds };
+        } finally { stage.destroy(); }
+    };
+    private loadImage = async (source: string, settings?: CanvasSettings) => {
+        if (!source.startsWith('data:image/png;base64,')) throw new Error('不支持的画布图片格式');
+        const image = await createImageBitmap(await (await fetch(source)).blob());
+        this.setState({ layers: [{ id: 'layer1', name: '画布', visible: true, locked: false, opacity: 1,
+            objects: [{ id: this.generateId(), type: 'image', x: 0, y: 0, width: image.width, height: image.height, image }] }],
+            activeLayer: 'layer1', canvasSettings: settings ?? { unbounded: false, width: image.width, height: image.height, margin: 32 }, targetPosition: { x: 0, y: 0 }, selectedObjectId: null });
+    };
+    private loadDocument = async () => {
+        if (!this.props.path.endsWith('.canvas')) return;
+        try {
+            const response = await fetch('/file?' + new URLSearchParams({ path: this.props.path }));
+            if (!response.ok) throw new Error('无法读取画布文件');
+            const text = await response.text();
+            if (!text.trim()) return;
+            const doc = JSON.parse(text);
+            if (doc.version !== 1 || typeof doc.image !== 'string') throw new Error('不支持的画布格式');
+            await this.loadImage(doc.image, this.readSettings(doc.settings));
+        } catch (error) { window.alert(String(error)); }
+    };
+    private saveDocument = async () => {
+        try {
+            const response = await fetch('/files/upload_json', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ path: this.props.path, content: JSON.stringify({ version: 1, ...this.exportImage() }) }) });
+            const result = await response.json();
+            if (!response.ok || !result.success) throw new Error(result.error || '保存失败');
+            window.alert('画布已保存');
+        } catch (error) { window.alert(String(error)); }
+    };
+    private inputMessage = async (event: MessageEvent) => {
+        if (!this.inputMode || event.origin !== window.location.origin || event.source !== window.parent) return;
+        try {
+            if (event.data?.type === 'ssui-canvas-load') await this.loadImage(event.data.image, this.readSettings(event.data.settings));
+            if (event.data?.type === 'ssui-canvas-export') window.parent.postMessage({ type: 'ssui-canvas-result', ...this.exportImage() }, window.location.origin);
+        } catch (error) { window.alert(String(error)); }
+    };
 
     private updateContainerSize = () => {
         if (this.containerRef.current) {
@@ -711,6 +781,19 @@ class AIDrawingCanvas extends React.Component<{path: string}, AIDrawingCanvasSta
                     touchAction: 'none'
                 }}
             >
+                <div style={{ position: 'absolute', bottom: 12, left: 80, zIndex: 10, background: 'white', color: 'black', padding: 8 }}>
+                    <label><input type="checkbox" checked={this.state.canvasSettings.unbounded} onChange={e => this.setState({ canvasSettings: { ...this.state.canvasSettings, unbounded: e.target.checked } })} />无边界</label>
+                    {(['width', 'height', 'margin'] as const).map(key => <label key={key} style={{ marginLeft: 8 }}>
+                        {{ width: '宽', height: '高', margin: 'Margin（每边）' }[key]}
+                        <input type="number" aria-label={key} min={key === 'margin' ? 0 : 1} step={1}
+                            disabled={key !== 'margin' && this.state.canvasSettings.unbounded}
+                            value={this.state.canvasSettings[key]} style={{ width: 80 }} onChange={e => {
+                                const value = Number(e.target.value);
+                                if (Number.isInteger(value) && value >= (key === 'margin' ? 0 : 1)) this.setState({ canvasSettings: { ...this.state.canvasSettings, [key]: value } });
+                            }} />
+                    </label>)}
+                    {this.state.canvasSettings.unbounded && <span> 内容 + Margin，尺寸向上对齐 64</span>}
+                </div>
                 <Toolbar selectedTool={this.state.selectedTool} onToolSelect={this.handleToolSelect} />
                 <Stage
                     ref={this.stageRef}
@@ -735,14 +818,15 @@ class AIDrawingCanvas extends React.Component<{path: string}, AIDrawingCanvasSta
                     {this.state.layers.map((layer) => (
                         <KonvaLayer key={layer.id} opacity={layer.opacity}>
                             {/* 移动工具下的放置目标矩形（渲染在图片下方，避免遮挡操作） */}
-                            {layer.id === this.state.activeLayer &&
+                            {!this.state.canvasSettings.unbounded && layer.id === this.state.activeLayer &&
                                 this.state.selectedTool === 'move' &&
                                 !this.state.selectedObjectId && (
                                     <Rect
+                                        name="editor-overlay"
                                         x={targetPosition.x}
                                         y={targetPosition.y}
-                                        width={TARGET_SIZE}
-                                        height={TARGET_SIZE}
+                                        width={this.state.canvasSettings.width}
+                                        height={this.state.canvasSettings.height}
                                         fill={isDragging ? 'rgba(0, 0, 255, 0.2)' : 'rgba(0, 0, 255, 0.1)'}
                                         stroke="blue"
                                         strokeWidth={2}
@@ -791,6 +875,7 @@ class AIDrawingCanvas extends React.Component<{path: string}, AIDrawingCanvasSta
                                 !layer.locked &&
                                 layer.objects.some(o => o.id === this.state.selectedObjectId) && (
                                     <Transformer
+                                        name="editor-overlay"
                                         ref={this.transformerRef}
                                         rotateEnabled={false}
                                         flipEnabled={false}
@@ -818,7 +903,7 @@ class AIDrawingCanvas extends React.Component<{path: string}, AIDrawingCanvasSta
                     ))}
                     
 
-                    <KonvaLayer>
+                    <KonvaLayer name="editor-overlay">
                         {/* 渲染网格 */}
                         {this.state.showGrid && <Grid viewport={viewport} />}
                         
@@ -839,9 +924,10 @@ class AIDrawingCanvas extends React.Component<{path: string}, AIDrawingCanvasSta
                 </Stage>
 
                 {/* 添加悬浮面板 */}
-                <FloatingPanel path={this.props.path} aiDrawingService={this.drawingService} 
+                {!this.inputMode && <FloatingPanel path={this.props.path} aiDrawingService={this.drawingService}
                 onSelectScript={this.handleSelectScript}
-                onImageGenerated={this.handleImageGenerated}/>
+                onImageGenerated={this.handleImageGenerated}/>}
+                {!this.inputMode && this.props.path.endsWith('.canvas') && <button style={{ position: 'absolute', top: 8, left: '45%' }} onClick={this.saveDocument}>保存画布</button>}
 
                 {/* 添加侧边面板 */}
                 <SidePanel 

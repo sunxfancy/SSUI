@@ -13,6 +13,7 @@ EXT_NAME_MAP = {
     "audio": ("mp3", "wav", "m4a", "ogg"),
     "3dmodel": ("obj", "fbx", "glb", "gltf"),
     "script": ("py",),
+    "canvas": ("canvas",),
 }
 
 

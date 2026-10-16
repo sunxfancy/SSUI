@@ -1,4 +1,5 @@
 import '../controllers/InternalControllers';
+import './Image/CanvasInput';
 import './Image/ImageUploader';
 import './Image/ImagePicker';
 import './Video/VideoUploader';
