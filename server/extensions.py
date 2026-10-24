@@ -104,8 +104,9 @@ class ExtensionManager:
                     spec.loader.exec_module(module)
                     self.modules[name] = module  # 保存模块
 
-                    router = module.app
-                    app.include_router(router, prefix=f"/extension/{name}")  # 添加路由
+                    router = getattr(module, "app", None)
+                    if router is not None:
+                        app.include_router(router, prefix=f"/extension/{name}")
                 except Exception as e:
                     print(e)
                     self.modules[name] = None

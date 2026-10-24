@@ -3,10 +3,13 @@
 const { resolveConfig } = require('./dev_config.cjs');
 Object.assign(process.env, resolveConfig());
 
-const { execSync } = require('child_process');
+const { execSync, execFileSync } = require('child_process');
 const { platform } = require('os');
 const { join } = require('path');
+const { executable } = require('./dev_config.cjs');
 const { existsSync } = require('fs');
+const { getCurrentTarget, getRuntimeTarget } = require('./platform.cjs');
+const { dependencyProfile, pythonDistribution } = require('./runtime_target.cjs');
 
 /**
  * 根据当前平台执行相应的安装脚本
@@ -19,6 +22,14 @@ function runInstallScript() {
   }
 
   try {
+    // Fail before downloading Python when no matching dependency profile exists.
+    getCurrentTarget();
+    const target = getRuntimeTarget();
+    const python = pythonDistribution(target);
+    process.env.SSUI_PYTHON_TRIPLE = python.triple;
+    process.env.SSUI_PYTHON_VERSION = python.version;
+    process.env.SSUI_PYTHON_RELEASE = python.release;
+    process.env.SSUI_UV_VERSION = dependencyProfile(target).uvVersion || '0.6.11';
     // 获取当前工作目录
     const rootDir = process.cwd();
     
@@ -45,6 +56,16 @@ function runInstallScript() {
       // 确保shell脚本有执行权限
       execSync(`chmod +x "${scriptPath}"`, { stdio: 'inherit' });
       execSync(scriptPath, { stdio: 'inherit' });
+    }
+
+    // Existing environments may still contain the older resolver. ARM64 target
+    // parsing requires the profile's newer uv even if uv.exe already exists.
+    const requiredUv = dependencyProfile(target).uvVersion;
+    if (requiredUv) {
+      const currentUv = execFileSync(executable('uv', process.env), ['--version'], { encoding: 'utf8' }).trim().split(/\s+/)[1];
+      if (currentUv !== requiredUv) {
+        execFileSync(executable('python', process.env), ['-m', 'pip', 'install', `uv==${requiredUv}`], { stdio: 'inherit' });
+      }
     }
 
     execSync('yarn requirements', { stdio: 'inherit' });

@@ -1,6 +1,7 @@
 @echo off
 @setlocal enabledelayedexpansion
 if not defined SSUI_VENV_PATH set "SSUI_VENV_PATH=%CD%\.venv"
+if not defined SSUI_UV_VERSION set "SSUI_UV_VERSION=0.6.11"
 
 rem Create .build folder and put Python in it
 if not exist "%SSUI_VENV_PATH%" mkdir "%SSUI_VENV_PATH%"
@@ -10,9 +11,13 @@ if not exist "%SSUI_VENV_PATH%\Scripts\python.exe" if not exist "%SSUI_VENV_PATH
     rem Check operating system type
     set PYTHON_VERSION=3.12.8
     set RELEASE_DATE=20241219
+    if defined SSUI_PYTHON_VERSION set "PYTHON_VERSION=!SSUI_PYTHON_VERSION!"
+    if defined SSUI_PYTHON_RELEASE set "RELEASE_DATE=!SSUI_PYTHON_RELEASE!"
 
     rem Check processor architecture
-    if /I "!PROCESSOR_ARCHITECTURE!"=="x86" (
+    if defined SSUI_PYTHON_TRIPLE (
+        set "ARCH=!SSUI_PYTHON_TRIPLE!"
+    ) else if /I "!PROCESSOR_ARCHITECTURE!"=="x86" (
         set ARCH=i686-pc-windows-msvc
     ) else if /I "!PROCESSOR_ARCHITECTURE!"=="AMD64" (
         set ARCH=x86_64-pc-windows-msvc
@@ -52,5 +57,5 @@ if not exist "%SSUI_VENV_PATH%\Scripts\python.exe" (
 
 if not exist "%SSUI_VENV_PATH%\Scripts\uv.exe" (
     echo "Install uv tool..."
-    "%SSUI_VENV_PATH%\Scripts\python.exe" -m pip install uv==0.6.11 packaging==24.1
+    "%SSUI_VENV_PATH%\Scripts\python.exe" -m pip install "uv==%SSUI_UV_VERSION%" packaging==24.1
 )

@@ -8,15 +8,17 @@ mkdir -p "$VENV_DIR"
 # Check if Python already exists
 if [ ! -f "$VENV_DIR/bin/python" ] && [ ! -f "$VENV_DIR/python/bin/python3" ]; then
     # Set Python version and release date
-    PYTHON_VERSION="3.12.8"
-    RELEASE_DATE="20241219"
-    
+    PYTHON_VERSION="${SSUI_PYTHON_VERSION:-3.12.8}"
+    RELEASE_DATE="${SSUI_PYTHON_RELEASE:-20241219}"
+
     # Check operating system type
     OS_TYPE=$(uname -s)
     ARCHITECTURE=$(uname -m)
-    
+
     # Set download parameters based on OS and architecture
-    if [ "$OS_TYPE" = "Darwin" ]; then
+    if [ -n "${SSUI_PYTHON_TRIPLE:-}" ]; then
+        ARCH="$SSUI_PYTHON_TRIPLE"
+    elif [ "$OS_TYPE" = "Darwin" ]; then
         # macOS
         if [ "$ARCHITECTURE" = "x86_64" ]; then
             ARCH="x86_64-apple-darwin"
@@ -40,7 +42,7 @@ if [ ! -f "$VENV_DIR/bin/python" ] && [ ! -f "$VENV_DIR/python/bin/python3" ]; t
         echo "Unsupported operating system: $OS_TYPE"
         exit 1
     fi
-    
+
     # Set download URLs
     DOWNLOAD_URL="https://github.com/astral-sh/python-build-standalone/releases/download/${RELEASE_DATE}/cpython-${PYTHON_VERSION}+${RELEASE_DATE}-${ARCH}-install_only_stripped.tar.gz"
     CHINA_MIRROR="https://gitee.com/Swordtooth/ssui_assets/releases/download/v0.0.2/cpython-${PYTHON_VERSION}%${RELEASE_DATE}-${ARCH}-install_only_stripped.tar.gz"
@@ -54,7 +56,7 @@ if [ ! -f "$VENV_DIR/bin/python" ] && [ ! -f "$VENV_DIR/python/bin/python3" ]; t
             exit 1
         fi
     fi
-    
+
     # Extract files
     tar -xzf "$VENV_DIR"/python.tar.gz -C "$VENV_DIR"
     rm "$VENV_DIR"/python.tar.gz
@@ -70,7 +72,7 @@ fi
 # Check and install uv tool
 if [ ! -f "$VENV_DIR/bin/uv" ]; then
     echo "Installing uv tool..."
-    "$VENV_DIR"/bin/python -m pip install uv==0.6.11 packaging==24.1
+    "$VENV_DIR"/bin/python -m pip install "uv==${SSUI_UV_VERSION:-0.6.11}" packaging==24.1
 fi
 
-echo "Installation completed!" 
+echo "Installation completed!"

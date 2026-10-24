@@ -93,6 +93,13 @@ jobs:
         timeout-minutes: 20
         run: yarn install --frozen-lockfile
 
+      - name: Verify runtime target selection
+        timeout-minutes: 5
+        run: |
+          yarn test:runtime-target
+          yarn test:dependency-config
+          yarn requirements:check
+
       - name: Setup Rust
         timeout-minutes: 10
         uses: actions-rust-lang/setup-rust-toolchain@166cdcfd11aee3cb47222f9ddb555ce30ddb9659 # v1

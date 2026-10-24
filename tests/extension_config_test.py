@@ -1,13 +1,25 @@
 import os
 import unittest
+import tempfile
+from pathlib import Path
+
+from fastapi import FastAPI
 
 import yaml
 
-from server.extensions import Extension, ExtensionServerConfig, ExtensionWebUIConfig
+from server.extensions import Extension, ExtensionManager, ExtensionServerConfig, ExtensionWebUIConfig
 
 
 class TestExtensionConfigs(unittest.TestCase):
     """校验所有扩展的 ssextension.yaml 都能被 Extension 模型正确解析。"""
+
+    def test_sdk_only_extension_loads_without_http_router(self):
+        with tempfile.TemporaryDirectory() as directory:
+            Path(directory, "extension.py").write_text("SDK_VERSION = '1'\n", encoding="utf-8")
+            manager = ExtensionManager(directory)
+            manager.extensions["SDK"] = Extension(name="SDK", path=directory, version="1")
+            manager.loadPythonScripts(FastAPI())
+            self.assertIsNotNone(manager.modules["SDK"])
 
     def test_all_extension_yamls_are_valid(self):
         extensions_dir = os.path.abspath(

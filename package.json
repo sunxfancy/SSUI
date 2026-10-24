@@ -45,8 +45,14 @@
     "package:vscode": "cd ssui-vscode && yarn package",
     "dev:paths": "node dependencies/dev_config.cjs",
     "test:dev-config": "node --test dependencies/dev_config.test.cjs",
+    "test:runtime-target": "node --test dependencies/runtime_target.test.cjs",
+    "test:dependency-config": "node --test dependencies/dependency_config.test.cjs",
+    "test:wheel-audit": "node dependencies/venv.cjs python -m unittest discover -s dependencies -p audit_wheels_test.py",
+    "audit:wheels": "node dependencies/venv.cjs python dependencies/audit_wheels.py",
     "check_deps": "yarn --version && rustc --version && cargo --version",
     "requirements": "node dependencies/combine_requirements.cjs",
+    "requirements:generate": "node dependencies/generate_requirements.cjs",
+    "requirements:check": "node dependencies/generate_requirements.cjs --check",
     "install-requirements": "node dependencies/install_requirements.cjs",
     "update-lock": "node dependencies/update_lock.cjs",
     "update-lock:all": "node dependencies/update_lock.cjs --all",
@@ -59,7 +65,10 @@
     "docker-run": "docker run -it --gpus all -p 7422:7422 ssui-docker",
     "storybook": "storybook dev -p 6006",
     "build:storybook": "storybook build",
-    "test:storybook": "node --test .storybook/mocks/api.test.mjs"
+    "test:storybook": "node --test .storybook/mocks/api.test.mjs",
+    "probe:arm64": "node dependencies/venv.cjs python dependencies/probe_arm64.py",
+    "test:native-tools": "node dependencies/venv.cjs python -m unittest discover -s tests -p native_tools_test.py",
+    "test:arm64-workflows": "node dependencies/venv.cjs python tests/arm64_cpu_workflows.py"
   },
   "devDependencies": {
     "concurrently": "^9.1.2",

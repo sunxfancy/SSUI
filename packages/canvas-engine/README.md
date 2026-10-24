@@ -25,6 +25,11 @@ This package is independent of Tauri. `yarn build:wasm` emits raw release WASM;
 browser bindings require the normal `build` command. Generated files are ignored
 and included in the Image Vite bundle, not committed as binaries.
 
+Native Windows ARM64 builds skip wasm-pack's optional `wasm-opt` pass because
+its binary downloader does not support that host. Rust release optimization
+still runs. Building wasm-pack/wasm-bindgen from source on this host also needs
+MSVC ARM64 build tools and `clang` on PATH (including ring's assembly step).
+
 ## Editor controls
 
 Import a bitmap with **导入图片**, draw with **画笔**, and erase with **橡皮擦**.
