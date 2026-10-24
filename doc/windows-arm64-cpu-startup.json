@@ -1,0 +1,45 @@
+{
+  "/extension/ExampleExtension/version": {
+    "status": 200,
+    "value": "0.0.1",
+    "bytes": 7
+  },
+  "/functional_ui/index.html": {
+    "bytes": 494,
+    "status": 200
+  },
+  "/api/version": {
+    "status": 200,
+    "value": "2.9.1+cpu",
+    "bytes": 11
+  },
+  "/api/device": {
+    "status": 200,
+    "value": "cpu",
+    "bytes": 5
+  },
+  "/extension/ImageExtension/canvas/index.html": {
+    "bytes": 537,
+    "status": 200
+  },
+  "/api/extensions": {
+    "bytes": 2419,
+    "status": 200
+  },
+  "desktop": {
+    "build": "passed",
+    "target": "aarch64-pc-windows-msvc",
+    "profile": "debug",
+    "machine": "0xaa64",
+    "exe": "desktop/src-tauri/target/aarch64-pc-windows-msvc/debug/ssui.exe",
+    "exe_size": 35562496,
+    "sha256": "4652c5357440cb70770f02a013627e3be02a6a9c7bd8818de3d14a5cb741ede8",
+    "installer": "not tested",
+    "smoke": {
+      "status": "passed",
+      "alive_seconds": 20,
+      "runner": "scripts/smoke_app.cjs"
+    },
+    "full_desktop_interaction": "not verified"
+  }
+}

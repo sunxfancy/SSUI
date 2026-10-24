@@ -1,6 +1,9 @@
 import asyncio
 import datetime
 import os
+from backend.native_tools import configure_native_tools
+
+configure_native_tools()
 from fastapi.encoders import jsonable_encoder
 import websockets
 import json
@@ -94,13 +97,19 @@ def convert_task_return(result, task_script):
             (width, height),
         )
         if not writer.isOpened():
-            raise RuntimeError("Unable to create the pose preview video")
-        try:
-            for frame in result.frames:
-                rgb = np.asarray(frame.convert("RGB"))
-                writer.write(cv2.cvtColor(rgb, cv2.COLOR_RGB2BGR))
-        finally:
             writer.release()
+            import imageio.v2 as imageio
+
+            with imageio.get_writer(path, fps=float(result.fps), codec="libx264", macro_block_size=1) as fallback:
+                for frame in result.frames:
+                    fallback.append_data(np.asarray(frame.convert("RGB")))
+        else:
+            try:
+                for frame in result.frames:
+                    rgb = np.asarray(frame.convert("RGB"))
+                    writer.write(cv2.cvtColor(rgb, cv2.COLOR_RGB2BGR))
+            finally:
+                writer.release()
         return {
             "type": "video",
             "path": path,
@@ -184,7 +193,7 @@ class Executor:
         )
         self.current_task: Optional[Task] = None
         self.is_running = True
-        
+
     async def connect(self):
         """连接到调度器服务器"""
         while self.is_running:
@@ -210,14 +219,14 @@ class Executor:
                             logger.error(f"注册失败: 收到未知消息类型")
                     except Exception as e:
                         logger.error(f"解析注册响应失败: {e}")
-                    
+
                     # 开始接收任务
                     await self._handle_messages(websocket)
-                    
+
             except Exception as e:
                 logger.error(f"连接错误: {e}")
                 await asyncio.sleep(5)  # 等待5秒后重试
-                
+
     async def _handle_messages(self, websocket):
         """处理来自调度器的消息"""
         while self.is_running:
@@ -239,7 +248,46 @@ class Executor:
             except Exception as e:
                 logger.error(f"处理消息时出错: {e} \n{traceback.format_exc()}")
                 break
-                
+
+    def _execute_task(self, task: Task):
+        # 执行任务
+        loader = SSLoader(use_sandbox=task.use_sandbox)
+        loader.load(task.script)
+        loader.Execute()
+
+        if task.is_prepare:
+            # 执行prepare pass
+            result = loader.GetConfig(task.callable)
+            print("执行器结果：")
+            print(result)
+        else:
+            # 执行execute pass
+            def find_callable(loader: SSLoader, callable: str):
+                for func, param_types, return_type in loader.callables:
+                    if func.__name__ == callable:
+                        return func, param_types, return_type
+                raise ValueError(f"未找到可调用函数: {callable}")
+
+            func, param_types, return_type = find_callable(loader, task.callable)
+            print(task.script, task.callable, task.params, task.details)
+            new_params = {}
+            for name, param in task.params.items():
+                print(name, param)
+                new_params[name] = convert_task_param(param)
+
+            # 注入配置
+            loader.config._update = task.details
+            # 执行
+            result = func(**new_params)
+
+            # 确保返回一个数组
+            if not isinstance(result, tuple):
+                result = (result,)
+
+            result = convert_task_return(result, task.script)
+
+        return result
+
     async def _handle_task(self, websocket, task: Task):
         """处理单个任务"""
         logger.info(f"开始执行任务 {task.task_id}")
@@ -251,42 +299,8 @@ class Executor:
                 status=TaskStatus.RUNNING
             )
             await websocket.send(status_update.model_dump_json())
-            
-            # 执行任务
-            loader = SSLoader(use_sandbox=task.use_sandbox)
-            loader.load(task.script)
-            loader.Execute()
 
-            if task.is_prepare:
-                # 执行prepare pass
-                result = loader.GetConfig(task.callable)
-                print("执行器结果：")
-                print(result)
-            else:
-                # 执行execute pass
-                def find_callable(loader: SSLoader, callable: str):
-                    for func, param_types, return_type in loader.callables:
-                        if func.__name__ == callable:
-                            return func, param_types, return_type
-                    raise ValueError(f"未找到可调用函数: {callable}")
-                
-                func, param_types, return_type = find_callable(loader, task.callable)
-                print(task.script, task.callable, task.params, task.details)
-                new_params = {}
-                for name, param in task.params.items():
-                    print(name, param)
-                    new_params[name] = convert_task_param(param)
-
-                # 注入配置
-                loader.config._update = task.details
-                # 执行
-                result = func(**new_params)
-
-                # 确保返回一个数组
-                if not isinstance(result, tuple):
-                    result = (result,)
-
-                result = convert_task_return(result, task.script)
+            result = await asyncio.to_thread(self._execute_task, task)
 
             # 发送任务完成状态和结果
             task_result = TaskResult(
@@ -295,7 +309,7 @@ class Executor:
                 result=jsonable_encoder(result)
             )
             await websocket.send(task_result.model_dump_json())
-            
+
         except Exception as e:
             # 发送任务失败状态
             task_result = TaskResult(
@@ -304,10 +318,10 @@ class Executor:
                 error=str(e) + '\n' + traceback.format_exc()
             )
             await websocket.send(task_result.model_dump_json())
-            
+
         finally:
             self.current_task = None
-            
+
 def main():
     print("executor_main.py 启动")
     import ssui

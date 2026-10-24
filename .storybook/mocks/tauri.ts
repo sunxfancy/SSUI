@@ -5,6 +5,7 @@ export async function invoke(command: string): Promise<unknown> {
     throw new Error(`[Storybook offline] Supply a provider for Tauri command: ${command}`);
 }
 export const platform = () => 'windows';
+export const arch = () => 'x86_64';
 export const listen = async () => () => {};
 export const exit = async () => { throw new Error('Storybook cannot exit the desktop application'); };
 export const relaunch = exit;

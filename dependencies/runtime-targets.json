@@ -1,0 +1,19 @@
+{
+  "oses": ["windows", "linux", "macos"],
+  "architectures": ["x64", "arm64"],
+  "backends": ["cpu", "cuda", "rocm", "mps", "qnn"],
+  "python": { "version": "3.12.8", "release": "20241219" },
+  "triples": {
+    "windows": { "x64": "x86_64-pc-windows-msvc", "arm64": "aarch64-pc-windows-msvc" },
+    "linux": { "x64": "x86_64-unknown-linux-gnu", "arm64": "aarch64-unknown-linux-gnu" },
+    "macos": { "x64": "x86_64-apple-darwin", "arm64": "aarch64-apple-darwin" }
+  },
+  "profiles": [
+    { "os": "windows", "arch": "arm64", "backend": "cpu", "dependencyTarget": "windows-arm64-cpu", "experimental": true, "binaryOnly": true, "uvVersion": "0.13.5", "python": { "version": "3.12.15", "release": "20261021" } },
+    { "os": "windows", "arch": "x64", "backend": "cuda", "dependencyTarget": "windows" },
+    { "os": "windows", "arch": "x64", "backend": "rocm", "dependencyTarget": "windows-amdgpu" },
+    { "os": "linux", "arch": "x64", "backend": "cuda", "dependencyTarget": "linux" },
+    { "os": "linux", "arch": "x64", "backend": "rocm", "dependencyTarget": "linux-amdgpu" },
+    { "os": "macos", "arch": "arm64", "backend": "mps", "dependencyTarget": "macosx" }
+  ]
+}

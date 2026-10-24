@@ -1,58 +1,52 @@
-
-einops>=0.8.0
-transformers>=4.51.3,<5
-tokenizers>=0.20.0
-safetensors>=0.4.5
-aiohttp>=3.11.11
-pyyaml>=6.0.2
-pillow>=11.0.0
-virtualenv>=20.28.0
-fastapi[standard]>=0.115.6
-websockets>=14.1
-diffusers[torch]>=0.37.0,<0.41
-torchsde==0.2.6
+# Generated from dependencies/dependencies.yaml. DO NOT EDIT.
+# Target: linux-x64-rocm
+# Regenerate: yarn requirements:generate
 accelerate>=1.2.1
-pydantic-settings>=2.7.0
-pydantic>=2.10.4
-RestrictedPython>=8.0
-spandrel>=0.4.1
-gguf>=0.14.0
-controlnet-aux>=0.0.7
+aiohttp>=3.11.11
+aioshutil>=1.5
+blake3>=1.0.4
 clip-anytorch>=2.6.0
 compel>=2.0.3
+controlnet-aux>=0.0.7
 deprecated>=1.2.18
-blake3>=1.0.4
-onnxruntime>=1.21.0
-onnx>=1.17.0
-picklescan>=0.0.24
+diffsynth>=1.1.7
+diffusers[torch]>=0.37.0,<0.41
+easydict>=1.13
+einops>=0.8.0
+fastapi[standard]>=0.115.6
+gguf>=0.14.0
+huggingface_hub[hf-transfer,hf_xet]>=0.31
+igraph>=0.11.8
+kornia>=0.8.0
 matplotlib>=3.10.1
 mediapipe>=0.10.21
-aioshutil>=1.5
-huggingface_hub[hf-transfer,hf_xet]>=0.31
-
-easydict>=1.13
-rembg>=2.0.65
-plyfile>=1.1
 moderngl>=5.12.0
-scipy>=1.15.2
-trimesh>=4.6.5
-xatlas>=0.0.9
-pyvista>=0.44.2
+onnx>=1.17.0
+onnxruntime>=1.21.0
+picklescan>=0.0.24
+pillow>=11.0.0
+plyfile>=1.1
+pydantic>=2.10.4
+pydantic-settings>=2.7.0
 pymeshfix>=0.17.0
-igraph>=0.11.8
-kornia>=0.8.0 
-
-
-# ROCm sdk 基础包
+pyvista>=0.44.2
+pyyaml>=6.0.2
+rembg>=2.0.65
+RestrictedPython>=8.0
+rocm @ https://repo.radeon.com/rocm/windows/rocm-rel-7.2.1/rocm-7.2.1.tar.gz
 rocm_sdk_core @ https://repo.radeon.com/rocm/windows/rocm-rel-7.2.1/rocm_sdk_core-7.2.1-py3-none-win_amd64.whl
 rocm_sdk_devel @ https://repo.radeon.com/rocm/windows/rocm-rel-7.2.1/rocm_sdk_devel-7.2.1-py3-none-win_amd64.whl
 rocm_sdk_libraries_custom @ https://repo.radeon.com/rocm/windows/rocm-rel-7.2.1/rocm_sdk_libraries_custom-7.2.1-py3-none-win_amd64.whl
-rocm @ https://repo.radeon.com/rocm/windows/rocm-rel-7.2.1/rocm-7.2.1.tar.gz
-
-# Windows 下使用 ROCm 的 Torch 包
+safetensors>=0.4.5
+scipy>=1.15.2
+spandrel>=0.4.1
+tokenizers>=0.20.0
 torch @ https://repo.radeon.com/rocm/windows/rocm-rel-7.2.1/torch-2.9.1%2Brocm7.2.1-cp312-cp312-win_amd64.whl
 torchaudio @ https://repo.radeon.com/rocm/windows/rocm-rel-7.2.1/torchaudio-2.9.1%2Brocm7.2.1-cp312-cp312-win_amd64.whl
+torchsde==0.2.6
 torchvision @ https://repo.radeon.com/rocm/windows/rocm-rel-7.2.1/torchvision-0.24.1%2Brocm7.2.1-cp312-cp312-win_amd64.whl
-
-
-diffsynth>=1.1.7
+transformers>=4.51.3,<5
+trimesh>=4.6.5
+virtualenv>=20.28.0
+websockets>=14.1
+xatlas>=0.0.9

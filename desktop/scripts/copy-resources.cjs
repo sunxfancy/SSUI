@@ -144,22 +144,12 @@ async function main() {
   // 确保目标目录存在
   ensureDirectoryExists(targetDir);
   
-  // 复制Windows lock文件
-  const windowsLockSource = path.join(sourceDir, 'windows.lock');
-  const windowsLockTarget = path.join(targetDir, 'windows.lock');
-  if (fs.existsSync(windowsLockSource)) {
-    copyFile(windowsLockSource, windowsLockTarget);
-  } else {
-    console.warn(`警告: 源文件不存在 - ${windowsLockSource}`);
-  }
-  
-  // 复制MacOS lock文件
-  const macosLockSource = path.join(sourceDir, 'macosx.lock');
-  const macosLockTarget = path.join(targetDir, 'macosx.lock');
-  if (fs.existsSync(macosLockSource)) {
-    copyFile(macosLockSource, macosLockTarget);
-  } else {
-    console.warn(`警告: 源文件不存在 - ${macosLockSource}`);
+  // All packaged dependency sets come from the same OS / arch / backend registry.
+  const { profiles } = require('../../dependencies/runtime-targets.json');
+  for (const { dependencyTarget } of profiles) {
+    const source = path.join(sourceDir, `${dependencyTarget}.lock`);
+    if (!fs.existsSync(source)) throw new Error(`缺少依赖锁文件: ${source}`);
+    copyFile(source, path.join(targetDir, `${dependencyTarget}.lock`));
   }
 
   // touch 一个文件
