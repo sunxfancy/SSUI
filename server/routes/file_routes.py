@@ -3,7 +3,8 @@ import os
 from fastapi import APIRouter, Body, File, Request, UploadFile
 from fastapi.responses import FileResponse
 
-from ss_executor import search_project_root
+from ss_executor.project import search_project_root
+from server.models import MutationResult, UploadResult
 
 router = APIRouter()
 
@@ -37,7 +38,7 @@ async def files(file_type: str, script_path: str):
     return result_files
 
 
-@router.post("/files/upload")
+@router.post("/files/upload", response_model=UploadResult)
 async def upload_file(script_path: str, file: UploadFile = File(...)):
     project_root = search_project_root(script_path)
     if project_root is None:
@@ -57,7 +58,7 @@ async def upload_file(script_path: str, file: UploadFile = File(...)):
         return {"error": str(e)}
 
 
-@router.post("/files/upload_json")
+@router.post("/files/upload_json", response_model=MutationResult)
 async def file_upload_json(
     path: str = Body(..., embed=True),
     content: str = Body(..., embed=True),

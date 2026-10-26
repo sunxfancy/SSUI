@@ -1,6 +1,7 @@
 import os
 import yaml
 from pydantic import BaseModel, Field
+from ss_executor.project import search_project_root
 
 from ss_executor.sandbox import Sandbox, NoSandbox
 
@@ -148,11 +149,3 @@ class SSProject(BaseModel):
             deps_map[name] = version
             
         return deps_map
-
-def search_project_root(path):
-    while True:
-        if os.path.exists(os.path.join(path, "ssproject.yaml")):
-            return path
-        path = os.path.dirname(path)
-        if path == os.path.dirname(path):
-            return None

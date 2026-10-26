@@ -42,7 +42,7 @@ export class CanvasInput extends IComponent<{ script_path: string }, State> {
     render() {
         const params = new URLSearchParams({ path: this.state.path, input: '1' });
         return <div>
-            <HTMLSelect value={this.state.path} onChange={e => this.setState({ path: e.target.value, draft: '', image: '', settings: undefined })}>
+            <HTMLSelect aria-label="选择画布输入" value={this.state.path} onChange={e => this.setState({ path: e.target.value, draft: '', image: '', settings: undefined })}>
                 <option value="">临时画布</option>
                 {this.state.files.map(path => <option key={path} value={path}>{path}</option>)}
             </HTMLSelect>

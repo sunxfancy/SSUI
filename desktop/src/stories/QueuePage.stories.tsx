@@ -1,6 +1,24 @@
 import type { Meta, StoryObj } from '@storybook/react';
 import Queue from '../components/Queue';
-import { QueueTask } from '../services/TaskService';
+import TaskService, { QueueTask } from '../services/TaskService';
+import { RuntimeAdapters, RuntimeAdaptersProvider } from '../runtime/RuntimeAdapters';
+
+const commandResult = async () => ({ success: true, message: '运行中' });
+const storyRuntime: RuntimeAdapters = {
+  executor: {
+    startExecutor: commandResult,
+    stopExecutor: commandResult,
+    getExecutorStatus: commandResult,
+    restartExecutor: commandResult,
+  },
+  server: {
+    startServer: commandResult,
+    stopServer: commandResult,
+    getServerStatus: commandResult,
+    restartServer: commandResult,
+  },
+  tasks: new TaskService('http://127.0.0.1:7422'),
+};
 
 const meta: Meta<typeof Queue> = {
   title: 'Components/Queue',
@@ -8,6 +26,7 @@ const meta: Meta<typeof Queue> = {
   parameters: {
     layout: 'fullscreen',
   },
+  decorators: [Story => <RuntimeAdaptersProvider value={storyRuntime}><Story /></RuntimeAdaptersProvider>],
 };
 
 export default meta;
@@ -42,6 +61,9 @@ export const Empty: Story = {
     items: [],
   },
 };
+
+// E2E/integration story: no local items means Queue uses the injected HTTP/WebSocket task service.
+export const BackendLifecycle: Story = {};
 
 // 少量任务
 export const FewItems: Story = {

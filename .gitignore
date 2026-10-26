@@ -12,6 +12,7 @@ dist/
 test_env/
 /resources/
 /log/
+/tests/e2e/test-results/
 /models/
 
 *.safetensors
