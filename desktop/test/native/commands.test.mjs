@@ -13,7 +13,7 @@ import { createHash } from 'node:crypto';
 import { remote } from 'webdriverio';
 
 const desktop = fileURLToPath(new URL('../../', import.meta.url));
-const binary = path.join(desktop, 'src-tauri/target/debug', process.platform === 'win32' ? 'ssui-native-test.exe' : 'ssui-native-test');
+const binary = path.join(desktop, 'src-tauri/target/debug/examples', process.platform === 'win32' ? 'ssui-native-test.exe' : 'ssui-native-test');
 const artifacts = path.resolve(desktop, '../native-test-results');
 const pythonProbe = spawnSync(process.env.SSUI_TEST_PYTHON || (process.platform === 'win32' ? 'python' : 'python3'), ['-c', 'import sys; print(sys.executable)'], { encoding: 'utf8' });
 assert.equal(pythonProbe.status, 0, `Python required for lightweight fixtures: ${pythonProbe.stderr}`);
@@ -44,7 +44,7 @@ async function fixture(t) {
 import http.server, json, os
 from pathlib import Path
 server = http.server.HTTPServer(('127.0.0.1', 0), http.server.SimpleHTTPRequestHandler)
-Path('${module}.ready').write_text(json.dumps({'pid': os.getpid(), 'port': server.server_port}))
+Path('${module}.ready').write_text(json.dumps({'pid': os.getpid(), 'parent_pid': os.getppid(), 'port': server.server_port}))
 print('ready', flush=True)
 server.serve_forever()
 `);
@@ -119,16 +119,23 @@ test('real IPC server and executor lifecycle releases processes and ports', { ti
   const app = await fixture(t); const browser = await app.start();
   for (const [kind, module] of [['server', 'server'], ['executor', 'ss_executor']]) {
     await click(browser, `${kind}-start`, '启动成功');
+    const firstManagedPid = Number((await browser.$('#result').getText()).match(/进程 ID: (\d+)/)[1]);
     const first = await eventually(() => app.ready(module), 'child readiness');
+    // Windows venv python.exe may be a launcher; HTTP runs in its child.
+    assert.ok(first.pid === firstManagedPid || first.parent_pid === firstManagedPid, 'worker belongs to managed process');
     assert.equal((await fetch(`http://127.0.0.1:${first.port}/`)).ok, true);
-    await click(browser, `${kind}-status`, String(first.pid));
+    await click(browser, `${kind}-status`, String(firstManagedPid));
     await click(browser, `${kind}-start`, '启动成功');
+    assert.match(await browser.$('#result').getText(), new RegExp(`进程 ID: ${firstManagedPid}$`));
     assert.equal((await app.ready(module)).pid, first.pid, 'duplicate start keeps the same child');
     await click(browser, `${kind}-restart`, '重启成功');
+    const secondManagedPid = Number((await browser.$('#result').getText()).match(/进程 ID: (\d+)/)[1]);
+    assert.notEqual(secondManagedPid, firstManagedPid);
     const second = await eventually(async () => { const value = await app.ready(module); return value.pid !== first.pid && value; }, 'replacement child');
-    await eventually(() => !alive(first.pid), 'old child reaped');
+    assert.ok(second.pid === secondManagedPid || second.parent_pid === secondManagedPid, 'replacement worker belongs to managed process');
+    await eventually(() => !alive(first.pid) && !alive(firstManagedPid), 'old launcher and worker reaped');
     await click(browser, `${kind}-stop`, '已停止');
-    await eventually(() => !alive(second.pid), 'stopped child reaped');
+    await eventually(() => !alive(second.pid) && !alive(secondManagedPid), 'stopped launcher and worker reaped');
     await eventually(async () => { try { await fetch(`http://127.0.0.1:${second.port}/`); return false; } catch { return true; } }, 'listener released');
     await click(browser, `${kind}-status`, '未在运行中');
   }

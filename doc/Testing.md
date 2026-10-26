@@ -74,7 +74,7 @@ Python fixture 只使用标准库，不安装模型或业务后端。可通过 `
 下载测试仅使用回环 HTTP 服务，验证文件字节、SHA256、HTTP 失败、进度/完成/失败/取消事件，
 取消后必须关闭正在传输的 HTTP 请求，不能生成完成文件。
 
-嵌入式 WebDriver 依赖为可选 `native-tests` feature，只在独立 `ssui-native-test` 二进制启用。
+嵌入式 WebDriver 依赖为可选 `native-tests` feature，只在独立 `ssui-native-test` example 目标启用（产物在 `target/debug/examples/`）。
 测试配置通过 build.rs 同时提供给 Tauri 构建和代码生成，保证资源、权限和应用标识一致。
 生产构建不含控制页面与驱动；不要为正式发行开启此 feature。
 驱动依赖要求较新的 Tauri 2，Cargo.lock 已更新相关依赖。

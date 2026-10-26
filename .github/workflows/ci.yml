@@ -98,6 +98,7 @@ jobs:
         uses: astral-sh/setup-uv@d0d8abe699bfb85fec6de9f7adb5ae17292296ff
         with:
           version: "0.6.11"
+          enable-cache: false
           python-version: 3.12.8
           activate-environment: true
       - name: File snapshot and conflict tests
@@ -111,6 +112,12 @@ jobs:
         uses: actions-rust-lang/setup-rust-toolchain@166cdcfd11aee3cb47222f9ddb555ce30ddb9659
         with:
           rustflags: ""
+          cache: "false"
+      - name: Cache native Rust compilation
+        uses: Swatinem/rust-cache@c19371144df3bb44fab255c43d04cbc2ab54d1c4
+        with:
+          workspaces: "desktop/src-tauri -> target"
+          shared-key: "tauri-native-${{ runner.os }}"
       - name: Prepare resources
         run: yarn workspace ssui-desktop copy-resources
       - name: Rust command tests

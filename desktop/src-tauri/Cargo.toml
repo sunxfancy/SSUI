@@ -62,7 +62,7 @@ optional = true
 [dev-dependencies]
 tempfile = "3"
 
-[[bin]]
+[[example]]
 name = "ssui-native-test"
-path = "src/bin/native_test.rs"
+path = "examples/native_test.rs"
 required-features = ["native-tests"]

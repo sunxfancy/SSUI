@@ -2,6 +2,25 @@ use log::{debug, error, info};
 use std::collections::HashMap;
 use std::process::Child;
 
+fn terminate_process_tree(child: &mut Child) -> std::io::Result<()> {
+    if child.try_wait()?.is_some() { return Ok(()); }
+    #[cfg(windows)]
+    {
+        use std::os::windows::process::CommandExt;
+        // venv's python.exe is a launcher; terminating only it leaves Python alive.
+        let output = std::process::Command::new("taskkill")
+            .args(["/PID", &child.id().to_string(), "/T", "/F"])
+            .creation_flags(0x08000000)
+            .output()?;
+        if !output.status.success() && child.try_wait()?.is_none() {
+            return Err(std::io::Error::other(String::from_utf8_lossy(&output.stderr).into_owned()));
+        }
+    }
+    #[cfg(not(windows))]
+    child.kill()?;
+    child.wait().map(|_| ())
+}
+
 pub struct BackgroundProcessesGuard {
     processes: Vec<Child>,
 }
@@ -20,13 +39,13 @@ impl BackgroundProcessesGuard {
 
     pub fn kill_all_processes(&mut self) {
         info!("开始关闭所有后台进程");
-        for child in self.processes.iter_mut() {
-            if let Err(e) = child.kill() {
+        self.processes.retain_mut(|child| {
+            if let Err(e) = terminate_process_tree(child) {
                 error!("无法终止进程: {}", e);
+                return true;
             }
-            let _ = child.wait();
-        }
-        self.processes.clear();
+            false
+        });
         info!("所有后台进程已关闭");
     }
 }
@@ -46,7 +65,7 @@ impl ProcessManager {
     pub fn add_process(&mut self, process_type: &str, mut child: Child) -> Result<(), String> {
         debug!("添加进程: {}", process_type);
         if self.is_process_running(process_type) && !self.kill_process(process_type) {
-            let _ = child.kill(); let _ = child.wait();
+            let _ = terminate_process_tree(&mut child);
             return Err(format!("无法替换进程: {}", process_type));
         }
         self.processes.insert(process_type.to_string(), child);
@@ -81,12 +100,8 @@ impl ProcessManager {
 
     pub fn kill_process(&mut self, process_type: &str) -> bool {
         if let Some(child) = self.processes.get_mut(process_type) {
-            if let Err(e) = child.kill() {
+            if let Err(e) = terminate_process_tree(child) {
                 eprintln!("无法终止进程 {}: {}", process_type, e);
-                return false;
-            }
-            if let Err(e) = child.wait() {
-                error!("无法回收进程 {}: {}", process_type, e);
                 return false;
             }
             self.processes.remove(process_type);
@@ -98,15 +113,15 @@ impl ProcessManager {
 
     pub fn kill_all_processes(&mut self) {
         info!("开始关闭所有特定类型进程");
-        for (process_type, child) in self.processes.iter_mut() {
-            if let Err(e) = child.kill() {
+        self.processes.retain(|process_type, child| {
+            if let Err(e) = terminate_process_tree(child) {
                 error!("无法终止进程 {}: {}", process_type, e);
+                true
             } else {
                 info!("进程 {} 已终止", process_type);
+                false
             }
-            let _ = child.wait();
-        }
-        self.processes.clear();
+        });
         info!("所有特定类型进程已关闭");
     }
 }
