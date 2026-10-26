@@ -2,7 +2,7 @@ use super::*;
 use std::io::{BufRead, BufReader, Read};
 use std::net::{TcpListener, TcpStream};
 use std::sync::atomic::{AtomicBool, Ordering};
-use std::time::Duration;
+use std::time::{Duration, Instant};
 
 struct LocalServer {
     url: String,
@@ -56,11 +56,18 @@ fn local_fixture_waits_for_fragmented_request_headers() {
     let server = LocalServer::new(b"abcdef".to_vec(), false);
     let address = server.url.trim_start_matches("http://").trim_end_matches("/fixture");
     let mut client = TcpStream::connect(address).unwrap();
-    client.set_read_timeout(Some(Duration::from_millis(100))).unwrap();
     client.write_all(b"GET /fixture HTTP/1.1\r\nHost: localhost\r\nRa").unwrap();
+    // A Windows receive timeout leaves the connection unusable; peek without
+    // consuming data or timing out a blocking receive before completing headers.
+    client.set_nonblocking(true).unwrap();
+    let deadline = Instant::now() + Duration::from_millis(100);
     let mut byte = [0];
-    let error = client.read(&mut byte).expect_err("must not reply before headers are complete");
-    assert!(matches!(error.kind(), std::io::ErrorKind::WouldBlock | std::io::ErrorKind::TimedOut));
+    while Instant::now() < deadline {
+        let error = client.peek(&mut byte).expect_err("must not reply before headers are complete");
+        assert_eq!(error.kind(), std::io::ErrorKind::WouldBlock);
+        std::thread::sleep(Duration::from_millis(1));
+    }
+    client.set_nonblocking(false).unwrap();
     client.write_all(b"nge: bytes=1-2\r\n\r\n").unwrap();
     client.set_read_timeout(Some(Duration::from_secs(2))).unwrap();
     let mut response = String::new();
