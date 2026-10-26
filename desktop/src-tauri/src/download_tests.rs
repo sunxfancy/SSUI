@@ -1,5 +1,5 @@
 use super::*;
-use std::io::{BufRead, BufReader};
+use std::io::{BufRead, BufReader, Read};
 use std::net::{TcpListener, TcpStream};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::Duration;
@@ -18,6 +18,9 @@ impl LocalServer {
         let thread = std::thread::spawn(move || {
             while !signal.load(Ordering::SeqCst) {
                 if let Ok((mut stream, _)) = listener.accept() {
+                    // Windows accepts inherit the listening socket's nonblocking mode.
+                    // Read complete headers before replying, even when packets arrive apart.
+                    stream.set_nonblocking(false).unwrap();
                     stream.set_read_timeout(Some(Duration::from_secs(2))).unwrap();
                     let mut request = BufReader::new(stream.try_clone().unwrap());
                     let mut range = None;
@@ -46,6 +49,24 @@ impl Drop for LocalServer {
         let _ = TcpStream::connect(self.url.trim_start_matches("http://").trim_end_matches("/fixture"));
         if let Some(thread) = self.thread.take() { thread.join().unwrap(); }
     }
+}
+
+#[test]
+fn local_fixture_waits_for_fragmented_request_headers() {
+    let server = LocalServer::new(b"abcdef".to_vec(), false);
+    let address = server.url.trim_start_matches("http://").trim_end_matches("/fixture");
+    let mut client = TcpStream::connect(address).unwrap();
+    client.set_read_timeout(Some(Duration::from_millis(100))).unwrap();
+    client.write_all(b"GET /fixture HTTP/1.1\r\nHost: localhost\r\nRa").unwrap();
+    let mut byte = [0];
+    let error = client.read(&mut byte).expect_err("must not reply before headers are complete");
+    assert!(matches!(error.kind(), std::io::ErrorKind::WouldBlock | std::io::ErrorKind::TimedOut));
+    client.write_all(b"nge: bytes=1-2\r\n\r\n").unwrap();
+    client.set_read_timeout(Some(Duration::from_secs(2))).unwrap();
+    let mut response = String::new();
+    client.read_to_string(&mut response).unwrap();
+    assert!(response.starts_with("HTTP/1.1 206"));
+    assert!(response.ends_with("\r\n\r\nbc"));
 }
 
 #[tokio::test]
