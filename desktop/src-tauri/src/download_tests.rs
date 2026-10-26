@@ -70,10 +70,19 @@ fn local_fixture_waits_for_fragmented_request_headers() {
     client.set_nonblocking(false).unwrap();
     client.write_all(b"nge: bytes=1-2\r\n\r\n").unwrap();
     client.set_read_timeout(Some(Duration::from_secs(2))).unwrap();
-    let mut response = String::new();
-    client.read_to_string(&mut response).unwrap();
-    assert!(response.starts_with("HTTP/1.1 206"));
-    assert!(response.ends_with("\r\n\r\nbc"));
+    let mut response = BufReader::new(client);
+    let mut headers = String::new();
+    loop {
+        let mut line = String::new();
+        assert_ne!(response.read_line(&mut line).unwrap(), 0, "response headers must be complete");
+        headers.push_str(&line);
+        if line == "\r\n" { break; }
+    }
+    assert!(headers.starts_with("HTTP/1.1 206 Partial Content\r\n"));
+    assert!(headers.contains("\r\nContent-Length: 2\r\n"));
+    let mut body = [0; 2];
+    response.read_exact(&mut body).unwrap();
+    assert_eq!(&body, b"bc");
 }
 
 #[tokio::test]
