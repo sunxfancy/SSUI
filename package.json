@@ -59,7 +59,7 @@
     "update-lock:no-upgrade": "node dependencies/update_lock.cjs --no-upgrade",
     "pack-offline": "node dependencies/pack_offline.cjs",
     "pack-offline:all": "node dependencies/pack_offline.cjs --all",
-    "test:components": "yarn workspace ssui_components jest test/ComponentsManager.test.ts",
+    "test:components": "yarn workspace ssui_components test --runInBand",
     "postinstall": "node dependencies/install.cjs",
     "docker": "docker build -t ssui-docker .",
     "docker-run": "docker run -it --gpus all -p 7422:7422 ssui-docker",
@@ -68,7 +68,21 @@
     "test:storybook": "node --test .storybook/mocks/api.test.mjs",
     "probe:arm64": "node dependencies/venv.cjs python dependencies/probe_arm64.py",
     "test:native-tools": "node dependencies/venv.cjs python -m unittest discover -s tests -p native_tools_test.py",
-    "test:arm64-workflows": "node dependencies/venv.cjs python tests/arm64_cpu_workflows.py"
+    "test:arm64-workflows": "node dependencies/venv.cjs python tests/arm64_cpu_workflows.py",
+    "test:file-service": "node dependencies/venv.cjs python -m unittest tests.text_file_service_test",
+    "test:functional-ui": "yarn workspace ssui-functional_ui test",
+    "test:frontend": "yarn test:components && yarn test:functional-ui && yarn test:desktop",
+    "test:ui": "playwright test",
+    "test:ui:headed": "playwright test --headed",
+    "test:ui:install": "playwright install chromium",
+    "test:ui:report": "playwright show-report",
+    "test:all": "yarn test:frontend && yarn test:ui && yarn test:desktop-ui && yarn test:rust && yarn test:native:build && yarn test:native && yarn test",
+    "test:desktop": "yarn workspace ssui-desktop test",
+    "test:rust": "yarn workspace ssui-desktop test:rust",
+    "test:native:build": "yarn workspace ssui-desktop test:native:build",
+    "test:native": "yarn workspace ssui-desktop test:native",
+    "test:desktop-ui": "playwright test --config playwright.desktop.config.ts",
+    "test:rust:external": "yarn workspace ssui-desktop test:rust:external"
   },
   "devDependencies": {
     "concurrently": "^9.1.2",
@@ -81,6 +95,9 @@
     "storybook": "^8.6.10",
     "vite": "^6.0.3",
     "react": "^18.3.1",
-    "react-dom": "^18.3.1"
+    "react-dom": "^18.3.1",
+    "@playwright/test": "^1.64.1",
+    "vitest": "^3.2.0",
+    "webdriverio": "^9"
   }
 }

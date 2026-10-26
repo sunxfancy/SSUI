@@ -17,7 +17,22 @@ interface ImagePreviewState {
 }
 
 export class ImagePreview extends Component<ImagePreviewProps, ImagePreviewState> {
-    private imageUrl = (path: string) => this.props.resolveImageUrl?.(path) ?? '/file?path=' + encodeURIComponent(path);
+    private pendingImage: HTMLImageElement | null = null;
+
+    componentWillUnmount() {
+        this.clearImage();
+    }
+
+    private clearImage() {
+        if (this.pendingImage) {
+            this.pendingImage.onload = null;
+            this.pendingImage.onerror = null;
+            this.pendingImage = null;
+        }
+    }
+
+    imageUrl = () => this.props.resolveImageUrl?.(this.state.imagePath) ?? '/file?' + new URLSearchParams({ path: this.state.imagePath });
+
     constructor(props: ImagePreviewProps) {
         super(props);
         this.state = {
@@ -41,22 +56,26 @@ export class ImagePreview extends Component<ImagePreviewProps, ImagePreviewState
     }
 
     loadImage = () => {
-        this.setState({ loading: true, error: null });
+        this.clearImage();
+        this.setState({ loading: true, error: null, contextMenu: null });
         
         // 创建一个新的Image对象来预加载图片
         const img = new Image();
+        this.pendingImage = img;
         img.onload = () => {
+            if (this.pendingImage !== img) return;
             this.setState({ loading: false });
         };
         
         img.onerror = () => {
+            if (this.pendingImage !== img) return;
             this.setState({ 
                 loading: false, 
                 error: new Error('Failed to load image') 
             });
         };
         
-        img.src = this.imageUrl(this.state.imagePath);
+        img.src = this.imageUrl();
     }
 
     handleContextMenu = (e: React.MouseEvent) => {
@@ -71,7 +90,7 @@ export class ImagePreview extends Component<ImagePreviewProps, ImagePreviewState
     }
 
     copyImageUrl = async () => {
-        const url = this.imageUrl(this.state.imagePath);
+        const url = this.imageUrl();
         try {
             await navigator.clipboard.writeText(url);
         } catch (error) {
@@ -80,7 +99,7 @@ export class ImagePreview extends Component<ImagePreviewProps, ImagePreviewState
     }
 
     openImageInNewWindow = () => {
-        window.open(this.imageUrl(this.state.imagePath), '_blank', 'noopener');
+        window.open(this.imageUrl(), '_blank', 'noopener');
     }
 
     render() {
@@ -99,7 +118,7 @@ export class ImagePreview extends Component<ImagePreviewProps, ImagePreviewState
                         <div className="error">Error: {error.message}</div>
                     ) : (
                         <img 
-                            src={this.imageUrl(imagePath)}
+                            src={this.imageUrl()}
                             alt="Preview" 
                             className="preview-image"
                             onContextMenu={this.handleContextMenu}

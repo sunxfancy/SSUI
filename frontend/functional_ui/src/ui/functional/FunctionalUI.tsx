@@ -38,6 +38,7 @@ export class FunctionalUI extends Component<FunctionalUIProps, FunctionalUIState
     private refInputs = new Map<string, React.RefObject<ComponentTabRef>>();
     private refOutputs = new Map<string, React.RefObject<ComponentTabRef>>();
     private details: React.RefObject<DetailsPanel> = React.createRef();
+    private runPending = false;
     private metaRequest?: AbortController;
     private executeRequest?: AbortController;
 
@@ -58,6 +59,7 @@ export class FunctionalUI extends Component<FunctionalUIProps, FunctionalUIState
         this.executeRequest?.abort();
         const request = new AbortController();
         this.metaRequest = request;
+        this.runPending = false;
         this.refInputs.clear();
         this.refOutputs.clear();
         this.setState({ loading: true, error: null, functions: null, selectedFunc: undefined, running: false, runError: null, hasRun: false });
@@ -65,8 +67,17 @@ export class FunctionalUI extends Component<FunctionalUIProps, FunctionalUIState
             const response = await fetch('/api/script?' + new URLSearchParams({ script_path: this.props.path }), { signal: request.signal });
             if (!response.ok) throw new Error(`无法读取脚本信息（${response.status}）`);
             const data = await response.json() as ScriptMeta;
+            if (request !== this.metaRequest || request.signal.aborted) return;
+            if (!data.functions || typeof data.functions !== 'object') throw new Error('Invalid script metadata');
+            for (const meta of Object.values(data.functions)) {
+                if (typeof meta === 'string') continue;
+                if (!meta || typeof meta.params !== 'object' || !meta.params || !Array.isArray(meta.returns) ||
+                    !Object.values(meta.params).every(value => typeof value === 'string') ||
+                    !meta.returns.every(value => typeof value === 'string')) throw new Error('Invalid function metadata');
+            }
             this.setState({ functions: data.functions, loading: false, error: null, root_path: data.root_path });
         } catch (error) {
+            if (request !== this.metaRequest || request.signal.aborted) return;
             if (error instanceof DOMException && error.name === 'AbortError') return;
             this.setState({ loading: false, error: error instanceof Error ? error : new Error('读取脚本时发生未知错误') });
         }
@@ -85,6 +96,7 @@ export class FunctionalUI extends Component<FunctionalUIProps, FunctionalUIState
         .map(([key]) => key);
 
     handleSelectFunc = (func: Callable) => {
+        if (this.runPending) return;
         this.executeRequest?.abort();
         this.refInputs.clear();
         this.refOutputs.clear();
@@ -94,38 +106,46 @@ export class FunctionalUI extends Component<FunctionalUIProps, FunctionalUIState
     toggleDetails = () => this.setState(state => ({ isOpen: !state.isOpen }));
 
     handleRun = async (): Promise<void> => {
-        const { functions, selectedFunc, running } = this.state;
-        if (!functions || running) return;
+        const { functions, selectedFunc, loading } = this.state;
+        if (!functions || loading || this.runPending) return;
         const selected = selectedFunc?.name ?? this.getFunctionNames(functions)[0];
         const meta = functions[selected];
         if (!meta || typeof meta === 'string') return;
-
-        const params: Record<string, unknown> = {};
-        Object.keys(meta.params).forEach(key => { params[key] = this.refInputs.get(key)?.current?.onExecute(); });
-        const details = this.details.current?.onExecute() ?? {};
         this.executeRequest?.abort();
         const request = new AbortController();
         this.executeRequest = request;
+        this.runPending = true;
         this.setState({ running: true, runError: null });
         try {
+            const params: Record<string, unknown> = {};
+            for (const key of Object.keys(meta.params)) {
+                const input = this.refInputs.get(key)?.current;
+                if (!input) throw new Error(`Input is not ready: ${key}`);
+                params[key] = input.onExecute();
+            }
+            const details = this.details.current?.onExecute() ?? {};
             const response = await fetch('/api/execute?' + new URLSearchParams({ script_path: this.props.path, callable: selected }), {
                 method: 'POST', headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ params, details }), signal: request.signal,
             });
-            if (!response.ok) throw new Error((await response.text()) || `执行失败（${response.status}）`);
-            const data = await response.json() as unknown;
-            if (!Array.isArray(data)) {
-                const message = data && typeof data === 'object' && 'error' in data
-                    ? String((data as { error: unknown }).error)
-                    : '执行器返回了无法识别的结果格式';
-                throw new Error(message);
-            }
+            if (!response.ok) throw new Error(`Execution failed (${response.status})`);
+            const data = await response.json();
+            if (request !== this.executeRequest || request.signal.aborted) return;
+            if (data?.error) throw new Error(String(data.error));
+            if (!Array.isArray(data)) throw new Error('Invalid execution response');
             const outputNames = Object.keys(meta.returns);
+            if (data.length !== outputNames.length) throw new Error('Unexpected output count');
             data.forEach((item, index) => this.refOutputs.get(outputNames[index])?.current?.onUpdate(item));
-            this.setState({ running: false, runError: null, hasRun: true });
+            this.setState({ runError: null, hasRun: true });
         } catch (error) {
-            if (error instanceof DOMException && error.name === 'AbortError') return;
-            this.setState({ running: false, runError: error instanceof Error ? error.message : '执行时发生未知错误' });
+            if (request === this.executeRequest && !request.signal.aborted) {
+                this.setState({ runError: error instanceof Error ? error.message : String(error) });
+            }
+        } finally {
+            if (request === this.executeRequest) {
+                this.runPending = false;
+                if (!request.signal.aborted) this.setState({ running: false });
+            }
         }
     };
 
@@ -141,7 +161,7 @@ export class FunctionalUI extends Component<FunctionalUIProps, FunctionalUIState
             <Select<Callable> items={items} itemPredicate={filter} itemRenderer={renderer}
                 noResults={<MenuItem disabled text="没有匹配的函数" roleStructure="listoption" />}
                 onItemSelect={this.handleSelectFunc} popoverProps={{ minimal: true, matchTargetWidth: true }}>
-                <Button className="functional-ui-select" alignText="left" icon="function"
+                <Button disabled={this.state.running} className="functional-ui-select" alignText="left" icon="function"
                     text={this.state.selectedFunc?.name ?? names[0]} rightIcon="chevron-down" />
             </Select>
         );
@@ -189,9 +209,9 @@ export class FunctionalUI extends Component<FunctionalUIProps, FunctionalUIState
                     aria-expanded={this.state.isOpen}>高级参数</Button>
             </section>
             <Collapse isOpen={this.state.isOpen} keepChildrenMounted><div className="functional-ui-details-shell">
-                <DetailsPanel path={this.props.path} selected={selected} ref={this.details} />
+                <DetailsPanel key={`${this.props.path}:${selected}`} path={this.props.path} selected={selected} ref={this.details} />
             </div></Collapse>
-            {this.state.runError && <Callout className="functional-ui-run-error" intent="danger" icon="error" title="运行失败">{this.state.runError}</Callout>}
+            {this.state.runError && <Callout role="alert" className="functional-ui-run-error" intent="danger" icon="error" title="运行失败">{this.state.runError}</Callout>}
             <div className="functional-ui-stage">
                 <section className="functional-ui-column functional-ui-column-input">
                     <header className="functional-ui-column-header"><div><span className="functional-ui-eyebrow">Configure</span><h2>输入</h2></div><span>{inputCount}</span></header>

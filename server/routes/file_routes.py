@@ -1,9 +1,10 @@
 import os
 
-from fastapi import APIRouter, Body, File, Request, UploadFile
-from fastapi.responses import FileResponse
+from fastapi import APIRouter, Body, File, Request, UploadFile, HTTPException
+from fastapi.responses import FileResponse, JSONResponse
 
 from ss_executor import search_project_root
+from server.text_file_service import read_text, save_text, FileConflictError
 
 router = APIRouter()
 
@@ -57,19 +58,28 @@ async def upload_file(script_path: str, file: UploadFile = File(...)):
         return {"error": str(e)}
 
 
+@router.get("/file/text")
+async def text_file(path: str):
+    try:
+        return JSONResponse(read_text(path), headers={"Cache-Control": "no-store"})
+    except FileNotFoundError:
+        raise HTTPException(status_code=404, detail="File not found")
+    except (OSError, UnicodeError) as error:
+        raise HTTPException(status_code=400, detail=str(error))
+
+
 @router.post("/files/upload_json")
 async def file_upload_json(
     path: str = Body(..., embed=True),
     content: str = Body(..., embed=True),
+    expected_version: str | None = Body(None, embed=True),
 ):
     try:
-        if not os.path.exists(path):
-            os.makedirs(os.path.dirname(path), exist_ok=True)
-        with open(path, "w", encoding="utf-8") as f:
-            f.write(content)
-        return {"success": True}
-    except Exception as e:
-        return {"error": str(e)}
+        return save_text(path, content, expected_version)
+    except FileConflictError as error:
+        raise HTTPException(status_code=409, detail=str(error))
+    except (OSError, UnicodeError) as error:
+        raise HTTPException(status_code=400, detail=str(error))
 
 
 @router.get("/file")

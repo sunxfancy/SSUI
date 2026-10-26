@@ -42,6 +42,95 @@ env:
   UV_HTTP_TIMEOUT: 600
 
 jobs:
+  frontend-tests:
+    name: Frontend and browser tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: ${{ inputs.ref || github.ref }}
+      - name: Setup Node
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 22
+          cache: yarn
+      - name: Install dependencies
+        run: yarn install --frozen-lockfile
+      - name: Frontend unit tests
+        run: yarn test:frontend
+      - name: Install Chromium
+        run: yarn test:ui:install --with-deps
+      - name: Browser interaction tests
+        run: yarn test:ui && yarn test:desktop-ui
+      - name: Upload browser evidence
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: browser-test-report
+          path: |
+            playwright-report/
+            test-results/
+          retention-days: 14
+
+  native-tests:
+    name: Native commands on ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 35
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: ${{ inputs.ref || github.ref }}
+      - name: Setup Node
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: 22
+          cache: yarn
+      - name: Install JS dependencies
+        run: yarn install --frozen-lockfile
+      - name: Setup Python fixtures
+        uses: astral-sh/setup-uv@d0d8abe699bfb85fec6de9f7adb5ae17292296ff
+        with:
+          version: "0.6.11"
+          python-version: 3.12.8
+          activate-environment: true
+      - name: File snapshot and conflict tests
+        run: yarn test:file-service
+      - name: Native Linux libraries
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev libdbus-1-dev xvfb
+      - name: Setup Rust
+        uses: actions-rust-lang/setup-rust-toolchain@166cdcfd11aee3cb47222f9ddb555ce30ddb9659
+        with:
+          rustflags: ""
+      - name: Prepare resources
+        run: yarn workspace ssui-desktop copy-resources
+      - name: Rust command tests
+        run: yarn test:rust
+      - name: Build isolated native test app
+        run: yarn test:native:build
+      - name: Native WebView tests (Linux)
+        if: runner.os == 'Linux'
+        run: xvfb-run -a yarn test:native
+      - name: Native WebView tests (Windows and macOS)
+        if: runner.os != 'Linux'
+        run: yarn test:native
+      - name: Upload native logs and failure screenshots
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: native-tests-${{ matrix.os }}
+          path: native-test-results/
+          retention-days: 14
+
   # Fast structural check: no toolchain, no build.
   qc:
     name: Release scripts

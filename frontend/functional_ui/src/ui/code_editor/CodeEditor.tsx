@@ -31,6 +31,9 @@ function currentMonacoTheme(): string {
 export class CodeEditor extends Component<CodeEditorProps, CodeEditorState> {
     private containerRef: React.RefObject<HTMLDivElement>;
     private editor: monaco.editor.IStandaloneCodeEditor | null = null;
+    private version: string | null = null;
+    private generation = 0;
+    private savePending = false;
     private lastSavedContent = "";
     private themeObserver: MutationObserver | null = null;
 
@@ -51,13 +54,22 @@ export class CodeEditor extends Component<CodeEditorProps, CodeEditorState> {
         this.createEditor();
         this.loadContent();
         this.watchTheme();
+        window.addEventListener("beforeunload", this.handleBeforeUnload);
         window.addEventListener("keydown", this.handleKeyDown);
     }
 
+    componentDidUpdate(previous: CodeEditorProps) {
+        if (previous.path !== this.props.path) void this.loadContent();
+    }
+
     componentWillUnmount() {
+        this.generation++;
+        window.removeEventListener("beforeunload", this.handleBeforeUnload);
         window.removeEventListener("keydown", this.handleKeyDown);
         this.themeObserver?.disconnect();
+        const model = this.editor?.getModel();
         this.editor?.dispose();
+        model?.dispose();
         this.editor = null;
     }
 
@@ -67,6 +79,7 @@ export class CodeEditor extends Component<CodeEditorProps, CodeEditorState> {
         }
         this.editor = monaco.editor.create(this.containerRef.current, {
             value: "",
+            readOnly: true,
             language: "python",
             theme: currentMonacoTheme(),
             automaticLayout: true,
@@ -99,22 +112,41 @@ export class CodeEditor extends Component<CodeEditorProps, CodeEditorState> {
     };
 
     loadContent = async (): Promise<void> => {
+        const generation = ++this.generation;
+        this.version = null;
+        this.editor?.updateOptions({ readOnly: true });
+        this.setState({ loading: true, loadError: null, dirty: false, savedAt: null, saveError: null });
         try {
-            const response = await fetch("/file?" + new URLSearchParams({
+            const response = await fetch("/file/text?" + new URLSearchParams({
                 path: this.props.path,
             }));
             if (!response.ok) {
                 throw new Error(`Failed to load file (${response.status})`);
             }
-            const content = await response.text();
+            const snapshot = await response.json();
+            if (typeof snapshot?.content !== "string" || typeof snapshot?.version !== "string") {
+                throw new Error("Invalid file snapshot");
+            }
+            const content = snapshot.content;
+            if (generation !== this.generation) return;
+            this.version = snapshot.version;
+            this.editor?.updateOptions({ readOnly: false });
             this.lastSavedContent = content;
             this.editor?.setValue(content);
             this.setState({ loading: false, loadError: null, dirty: false });
         } catch (error) {
+            if (generation !== this.generation) return;
             this.setState({
                 loading: false,
                 loadError: error instanceof Error ? error : new Error("Unknown error"),
             });
+        }
+    };
+
+    handleBeforeUnload = (event: BeforeUnloadEvent): void => {
+        if (this.state.dirty || this.savePending) {
+            event.preventDefault();
+            event.returnValue = "";
         }
     };
 
@@ -126,10 +158,12 @@ export class CodeEditor extends Component<CodeEditorProps, CodeEditorState> {
     };
 
     handleSave = async (): Promise<void> => {
-        if (this.state.saving) {
+        if (this.savePending || this.state.loading || this.state.loadError || !this.editor || !this.version) {
             return;
         }
-        const content = this.editor?.getValue() ?? "";
+        const generation = this.generation;
+        this.savePending = true;
+        const content = this.editor.getValue();
         this.setState({ saving: true, saveError: null });
         try {
             const response = await fetch("/files/upload_json", {
@@ -140,20 +174,37 @@ export class CodeEditor extends Component<CodeEditorProps, CodeEditorState> {
                 body: JSON.stringify({
                     path: this.props.path,
                     content,
+                    expected_version: this.version,
                 }),
             });
             const data = await response.json().catch(() => null);
-            if (!response.ok || (data && data.error)) {
-                throw new Error((data && data.error) || `Save failed (${response.status})`);
+            if (response.status === 409) {
+                throw new Error("文件已被其他窗口或程序修改。本地修改已保留，请先备份，再重新加载磁盘版本并合并修改。");
             }
+            if (!response.ok || (data && data.error)) {
+                throw new Error((data && (data.error || data.detail)) || `Save failed (${response.status})`);
+            }
+            if (generation !== this.generation) return;
+            if (data?.success !== true || typeof data?.version !== "string") throw new Error("Invalid save response");
+            this.version = data.version;
             this.lastSavedContent = content;
-            this.setState({ saving: false, dirty: false, savedAt: new Date() });
+            this.setState({ dirty: this.editor?.getValue() !== content, savedAt: new Date() });
         } catch (error) {
+            if (generation !== this.generation) return;
             this.setState({
                 saving: false,
                 saveError: error instanceof Error ? error : new Error("Unknown error"),
             });
+        } finally {
+            this.savePending = false;
+            if (this.editor) this.setState({ saving: false });
         }
+    };
+
+    reloadFromDisk = (): void => {
+        if (this.savePending) return;
+        if (this.state.dirty && !window.confirm("重新加载将丢弃本地未保存修改。请先备份需要保留的内容。继续吗？")) return;
+        void this.loadContent();
     };
 
     renderStatus = (): React.ReactNode => {
@@ -192,6 +243,7 @@ export class CodeEditor extends Component<CodeEditorProps, CodeEditorState> {
                     </div>
                     <div className="code-editor-header-actions">
                         <ViewSwitcher path={path} currentView="code_editor" />
+                        <Button disabled={loading || saving} onClick={this.reloadFromDisk}>Reload from disk</Button>
                         <Button
                             intent={Intent.PRIMARY}
                             icon="floppy-disk"
