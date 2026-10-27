@@ -145,6 +145,9 @@ class Pixal3DWorkflowTest(unittest.TestCase):
                 TrellisModel.load("must-not-download")
 
     def test_rgba_preprocessing_does_not_load_background_model(self):
+        module = Path(__file__).resolve().parents[1] / "extensions/3D-Model/vendor/pixal3d/modules/image_feature_extractor.py"
+        with patch.dict(sys.modules, {"transformers": types.SimpleNamespace()}):
+            runpy.run_path(str(module))
         from pixal3d.pipelines import Pixal3DImageTo3DPipeline
         from PIL import ImageDraw
         pipeline = Pixal3DImageTo3DPipeline.__new__(Pixal3DImageTo3DPipeline)
@@ -159,6 +162,10 @@ class Pixal3DWorkflowTest(unittest.TestCase):
         self.assertIsNone(pipeline.rembg_model)
 
     def test_windows_rocm_streamed_checkpoint_preserves_weights(self):
+        from importlib.metadata import version
+        from packaging.version import Version
+        if Version(version("safetensors")) < Version("0.8.0"):
+            self.skipTest("Windows ROCm pread loading requires safetensors >= 0.8.0")
         import json
         import tempfile
         import torch

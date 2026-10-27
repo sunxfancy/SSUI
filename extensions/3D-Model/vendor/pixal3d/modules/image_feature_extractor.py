@@ -2,7 +2,6 @@ from typing import *
 import torch
 import torch.nn.functional as F
 from torchvision import transforms
-from transformers import DINOv3ViTModel
 import numpy as np
 from PIL import Image
 
@@ -62,6 +61,7 @@ class DinoV3FeatureExtractor:
     """
     def __init__(self, model_name: str, image_size=512):
         self.model_name = model_name
+        from transformers import DINOv3ViTModel
         self.model = DINOv3ViTModel.from_pretrained(model_name)
         self.model.eval()
         self.image_size = image_size
