@@ -14,7 +14,14 @@
     "copy-resources": "node scripts/copy-resources.cjs",
     "prebuild": "yarn copy-resources",
     "predev": "yarn copy-resources",
-    "build-storybook": "yarn --cwd .. build:storybook"
+    "build-storybook": "yarn --cwd .. build:storybook",
+    "test": "vitest run",
+    "test:rust": "cargo test --locked --manifest-path src-tauri/Cargo.toml --lib",
+    "test:native:assets": "tsc -p tsconfig.native-test.json && vite build --config vite.native-test.config.ts",
+    "test:native:build": "yarn test:native:assets && cargo build --locked --manifest-path src-tauri/Cargo.toml --features native-tests --example ssui-native-test",
+    "test:native": "node --test --test-concurrency=1 test/native/*.test.mjs",
+    "test:ipc:dev": "vite --config vite.native-test.config.ts --mode ipc-test --host 127.0.0.1 --port 17421 --strictPort",
+    "test:rust:external": "cargo test --locked --manifest-path src-tauri/Cargo.toml --lib -- --ignored"
   },
   "dependencies": {
     "@blueprintjs/core": "^5.16.2",

@@ -104,6 +104,17 @@
             "title": "Content",
             "type": "string"
           },
+          "expected_version": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expected Version"
+          },
           "path": {
             "title": "Path",
             "type": "string"
@@ -224,28 +235,6 @@
           }
         },
         "title": "HTTPValidationError",
-        "type": "object"
-      },
-      "MutationResult": {
-        "properties": {
-          "error": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Error"
-          },
-          "success": {
-            "default": false,
-            "title": "Success",
-            "type": "boolean"
-          }
-        },
-        "title": "MutationResult",
         "type": "object"
       },
       "ScanModelsRequest": {
@@ -447,6 +436,35 @@
           "success"
         ],
         "title": "TaskMutationResult",
+        "type": "object"
+      },
+      "TextSaveResult": {
+        "properties": {
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error"
+          },
+          "success": {
+            "default": false,
+            "title": "Success",
+            "type": "boolean"
+          },
+          "version": {
+            "title": "Version",
+            "type": "string"
+          }
+        },
+        "required": [
+          "version"
+        ],
+        "title": "TextSaveResult",
         "type": "object"
       },
       "UploadResult": {
@@ -1697,6 +1715,43 @@
         "summary": "Root Path"
       }
     },
+    "/file/text": {
+      "get": {
+        "operationId": "text_file_file_text_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "path",
+            "required": true,
+            "schema": {
+              "title": "Path",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Text File"
+      }
+    },
     "/files/upload": {
       "post": {
         "operationId": "upload_file_files_upload_post",
@@ -1764,7 +1819,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/MutationResult"
+                  "$ref": "#/components/schemas/TextSaveResult"
                 }
               }
             },

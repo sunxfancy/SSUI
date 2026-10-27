@@ -34,3 +34,13 @@ desktop/src-tauri/workflow/txt2img/
 
 # Per-worktree development paths
 .ssui-dev.json
+
+# Browser test evidence
+/playwright-report/
+/test-results/
+/.test-tmp/
+/desktop/dist-native-test/
+/native-test-results/
+
+# Native test build cache (directory or local symlink)
+/desktop/src-tauri/target

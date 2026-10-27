@@ -1,4 +1,6 @@
 import unittest
+import tempfile
+from pathlib import Path
 
 from fastapi.testclient import TestClient
 
@@ -8,6 +10,21 @@ from server.contract_app import create_contract_app
 
 
 class MockApiContractTest(unittest.TestCase):
+    def test_production_text_save_preserves_version_and_conflict(self):
+        client = TestClient(create_contract_app())
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "script.py"
+            path.write_text("original", encoding="utf-8")
+            snapshot = client.get("/file/text", params={"path": str(path)})
+            self.assertEqual(snapshot.status_code, 200)
+            payload = {"path": str(path), "content": "updated", "expected_version": snapshot.json()["version"]}
+            saved = client.post("/files/upload_json", json=payload)
+            self.assertEqual(saved.status_code, 200)
+            self.assertTrue(saved.json()["success"])
+            self.assertNotEqual(saved.json()["version"], payload["expected_version"])
+            self.assertEqual(client.post("/files/upload_json", json=payload).status_code, 409)
+            self.assertEqual(path.read_text(encoding="utf-8"), "updated")
+
     def setUp(self):
         self.client = TestClient(app)
         self.client.put("/__test__/scenario", json={"name": "happy-path"})

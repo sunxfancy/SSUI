@@ -562,6 +562,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/file/text": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Text File */
+        get: operations["text_file_file_text_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/files/upload": {
         parameters: {
             query?: never;
@@ -660,6 +677,8 @@ export interface components {
         Body_file_upload_json_files_upload_json_post: {
             /** Content */
             content: string;
+            /** Expected Version */
+            expected_version?: string | null;
             /** Path */
             path: string;
         };
@@ -716,16 +735,6 @@ export interface components {
         HTTPValidationError: {
             /** Detail */
             detail?: components["schemas"]["ValidationError"][];
-        };
-        /** MutationResult */
-        MutationResult: {
-            /** Error */
-            error?: string | null;
-            /**
-             * Success
-             * @default false
-             */
-            success: boolean;
         };
         /** ScanModelsRequest */
         ScanModelsRequest: {
@@ -795,6 +804,18 @@ export interface components {
             success: boolean;
             /** Task Id */
             task_id?: string | null;
+        };
+        /** TextSaveResult */
+        TextSaveResult: {
+            /** Error */
+            error?: string | null;
+            /**
+             * Success
+             * @default false
+             */
+            success: boolean;
+            /** Version */
+            version: string;
         };
         /** UploadResult */
         UploadResult: {
@@ -1765,6 +1786,37 @@ export interface operations {
             };
         };
     };
+    text_file_file_text_get: {
+        parameters: {
+            query: {
+                path: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     upload_file_files_upload_post: {
         parameters: {
             query: {
@@ -1819,7 +1871,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["MutationResult"];
+                    "application/json": components["schemas"]["TextSaveResult"];
                 };
             };
             /** @description Validation Error */

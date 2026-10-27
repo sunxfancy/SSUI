@@ -241,6 +241,7 @@ impl ChunkedDownloader {
             
         match client.get(&self.url).send().await {
             Ok(resp) => {
+                if !resp.status().is_success() { return None; }
                 let size = resp.content_length();
                 
                 // 如果没有获取到文件大小，尝试从Content-Length头获取
@@ -281,8 +282,9 @@ impl ChunkedDownloader {
     async fn download_chunk(&self, index: usize, start: u64, end: u64) -> Result<(), Box<dyn std::error::Error>> {
         let part_file = format!("{}.part{}", &self.output, index);
         
-        if Path::new(&part_file).exists() {
-            return Ok(());
+        let expected_size = end - start + 1;
+        if let Ok(metadata) = tokio_fs::metadata(&part_file).await {
+            if metadata.len() == expected_size { return Ok(()); }
         }
 
         let client = reqwest::Client::new();
@@ -341,7 +343,7 @@ impl ChunkedDownloader {
         // 验证下载的块大小
         if let Ok(metadata) = tokio_fs::metadata(&part_file).await {
             info!("块 {} 大小: {} 字节", index, metadata.len());
-            if metadata.len() == 0 {
+            if metadata.len() != expected_size {
                 error!("块 {} 下载为空", index);
                 return Err("下载的块为空".into());
             }
@@ -433,17 +435,21 @@ impl ChunkedDownloader {
     }
 
     pub async fn download(&self) -> Result<(), Box<dyn std::error::Error>> {
+        if self.chunk_size == 0 || self.max_concurrent == 0 || self.retry_times == 0 {
+            return Err("下载参数必须大于零".into());
+        }
         let total_size = match self.get_file_size().await {
             Some(size) => size,
             None => return Err("无法获取文件大小".into()),
         };
 
         let total_chunks = ((total_size + self.chunk_size - 1) / self.chunk_size) as usize;
-        let progress = self.load_progress().await;
+        let mut progress = self.load_progress().await;
+        progress.completed.retain(|index| *index < total_chunks);
 
         // 创建信号量来控制并发
         let semaphore = Arc::new(Semaphore::new(self.max_concurrent));
-        let mut tasks = vec![];
+        let mut tasks = tokio::task::JoinSet::new();
 
         for i in 0..total_chunks {
             if progress.completed.contains(&i) {
@@ -475,28 +481,25 @@ impl ChunkedDownloader {
                     max_concurrent: 1, // 子下载器不需要并发
                 };
 
-                let success = downloader.retry_download_chunk(i, start, end).await;
-                if success {
-                    let mut updated_progress = downloader.load_progress().await;
-                    updated_progress.completed.insert(i);
-                    downloader.save_progress(&updated_progress).await;
-
-                    if let Some(callback) = &downloader.progress_callback {
-                        callback(updated_progress.completed.len(), total_chunks);
-                    }
-                }
+                (i, downloader.retry_download_chunk(i, start, end).await)
             };
 
-            tasks.push(tokio::spawn(fut));
+            tasks.spawn(fut);
         }
 
-        // 等待所有任务完成
-        for task in tasks {
-            let _ = task.await;
+        // One owner records progress. Concurrent read/modify/write lost completed blocks.
+        // JoinSet also aborts all chunk requests when the enclosing task is cancelled.
+        while let Some(result) = tasks.join_next().await {
+            let (index, success) = result?;
+            if success {
+                progress.completed.insert(index);
+                self.save_progress(&progress).await;
+                if let Some(callback) = &self.progress_callback {
+                    callback(progress.completed.len(), total_chunks);
+                }
+            }
         }
-
-        // 检查是否所有块都完成
-        let final_progress = self.load_progress().await;
+        let final_progress = progress;
         if final_progress.completed.len() == total_chunks {
             self.merge_chunks(total_chunks).await?;
             
@@ -539,14 +542,14 @@ pub enum TaskStatus {
 
 struct DownloadTaskManager {
     tasks: HashMap<String, DownloadTask>,
-    downloaders: HashMap<String, Arc<RwLock<Option<ChunkedDownloader>>>>,
+    cancellations: HashMap<String, tokio_util::sync::CancellationToken>,
 }
 
 impl DownloadTaskManager {
     fn new() -> Self {
         Self {
             tasks: HashMap::new(),
-            downloaders: HashMap::new(),
+            cancellations: HashMap::new(),
         }
     }
 
@@ -584,94 +587,55 @@ static TASK_MANAGER: LazyLock<RwLock<DownloadTaskManager>> = LazyLock::new(|| Rw
 
 #[tauri::command(rename_all = "snake_case")]
 pub async fn create_download_task(app: AppHandle, url: &str, output_path: &str, sha256: &str) -> Result<(), String> {
-    // 检查任务是否已存在
-    {
-        let manager = TASK_MANAGER.read().unwrap();
-        if manager.get_task(url).is_some() {
-            return Err("任务已存在".to_string());
-        }
-    }
-
-    // 检查并创建输出目录
     if let Some(parent) = Path::new(output_path).parent() {
-        if !parent.exists() {
-            info!("创建目录: {}", parent.display());
-            tokio_fs::create_dir_all(parent).await.unwrap();
-        }
+        tokio_fs::create_dir_all(parent).await.map_err(|error| error.to_string())?;
     }
-
-    // 创建下载器
-    let downloader = ChunkedDownloader::new(url, output_path, 1024 * 1024)
-        .with_retry_times(3)
-        .with_max_concurrent(4)
-        .with_progress_callback({
-            let app = app.clone();
-            let url = url.to_string();
-            move |completed, total| {
-                if let Ok(mut manager) = TASK_MANAGER.write() {
-                    manager.update_task_progress(&url, completed as u32, total as u32);
-                }
-                
-                // 发送进度更新事件
-                let _ = app.emit("download-progress", serde_json::json!({
-                    "url": url,
-                    "progress": completed,
-                    "total": total
-                }));
-            }
-        });
-
-    // 添加任务
+    let cancellation = tokio_util::sync::CancellationToken::new();
     {
         let mut manager = TASK_MANAGER.write().unwrap();
+        if manager.get_task(url).is_some() { return Err("任务已存在".into()); }
         manager.add_task(url, output_path, sha256);
-        manager.downloaders.insert(url.to_string(), Arc::new(RwLock::new(Some(downloader))));
-        manager.update_task_status(url, TaskStatus::Pending);
+        manager.cancellations.insert(url.into(), cancellation.clone());
+        manager.update_task_status(url, TaskStatus::Downloading);
     }
-
-    // 启动下载
-    let downloader = {
-        let manager = TASK_MANAGER.read().unwrap();
-        manager.downloaders.get(url).unwrap().clone()
-    };
-    let url = url.to_string();
-    let app = app.clone();
-    
+    let downloader = ChunkedDownloader::new(url, output_path, 1024 * 1024)
+        .with_progress_callback({
+            let app = app.clone(); let url = url.to_string();
+            move |completed, total| {
+                let active = {
+                    let mut manager = TASK_MANAGER.write().unwrap();
+                    let active = manager.get_task(&url).map(|task| task.status != TaskStatus::Cancelled).unwrap_or(false);
+                    if active { manager.update_task_progress(&url, completed as u32, total as u32); }
+                    active
+                };
+                if active { let _ = app.emit("download-progress", serde_json::json!({ "url": url, "progress": completed, "total": total })); }
+            }
+        });
+    let url = url.to_string(); let expected_hash = sha256.to_string();
     tokio::spawn(async move {
-        // 在异步任务中获取下载器
-        let downloader = {
-            let mut guard = downloader.write().unwrap();
-            guard.take()
-        };
-
-        if let Some(downloader) = downloader {
-            {
-                let mut manager = TASK_MANAGER.write().unwrap();
-                manager.update_task_status(&url, TaskStatus::Downloading);
-            }
-            
-            match downloader.download().await {
-                Ok(_) => {
-                    {
-                        let mut manager = TASK_MANAGER.write().unwrap();
-                        manager.update_task_status(&url, TaskStatus::Completed);
-                    }
-                    let _ = app.emit("download-completed", url);
-                },
-                Err(e) => {
-                    {
-                        let mut manager = TASK_MANAGER.write().unwrap();
-                        manager.update_task_status(&url, TaskStatus::Failed);
-                    }
-                    let _ = app.emit("download-failed", serde_json::json!({
-                        "url": url,
-                        "error": e.to_string()
-                    }));
+        let result = tokio::select! {
+            biased;
+            _ = cancellation.cancelled() => return,
+            result = async {
+                downloader.download().await.map_err(|error| error.to_string())?;
+                if !expected_hash.is_empty() {
+                    let actual = downloader.calculate_sha256(&downloader.output).await.map_err(|error| error.to_string())?;
+                    if !actual.eq_ignore_ascii_case(&expected_hash) { return Err("SHA256 mismatch".to_string()); }
                 }
-            }
+                Ok::<(), String>(())
+            } => result,
+        };
+        {
+            let mut manager = TASK_MANAGER.write().unwrap();
+            if cancellation.is_cancelled() { return; }
+            manager.cancellations.remove(&url);
+            manager.update_task_status(&url, if result.is_ok() { TaskStatus::Completed } else { TaskStatus::Failed });
+        }
+        match result {
+            Ok(()) => { let _ = app.emit("download-completed", url); }
+            Err(error) => { let _ = app.emit("download-failed", serde_json::json!({ "url": url, "error": error })); }
         }
     });
-
     Ok(())
 }
 
@@ -716,6 +680,7 @@ pub async fn cancel_download_task(app: AppHandle, url: &str) -> Result<(), Strin
     if let Some(task) = manager.get_task(url) {
         if task.status == TaskStatus::Downloading || task.status == TaskStatus::Paused {
             manager.update_task_status(url, TaskStatus::Cancelled);
+            if let Some(token) = manager.cancellations.remove(url) { token.cancel(); }
             let _ = app.emit("download-cancelled", url);
             Ok(())
         } else {
@@ -746,12 +711,14 @@ mod tests {
     use std::time::Instant;
 
     #[tokio::test]
+    #[ignore = "external Python distribution download; opt in manually"]
     async fn test_download_python() {
         let result = download_python("3.12.8", "20241219", "x86_64-pc-windows-msvc", "C:\\Users\\sunxf\\AppData\\Roaming\\com.ssui.app").await;
         assert!(result.is_ok());
     }
 
     #[tokio::test]
+    #[ignore = "external multi-GB model download; opt in manually"]
     async fn test_download_model() {
         let url = "https://civitai.com/api/download/models/11964?type=Model&format=SafeTensor&size=full&fp=fp16";
         let output = "test_model.safetensors";
@@ -798,3 +765,7 @@ mod tests {
     }
 }
 
+
+#[cfg(test)]
+#[path = "download_tests.rs"]
+mod local_tests;

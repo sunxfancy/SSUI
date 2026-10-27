@@ -107,6 +107,16 @@
 - `extensions/Image`：`yarn test`（Jest）
 - `ssui-vscode`：`yarn test`（vscode-test，会先 lint + compile）
 
+新增统一前端与 Tauri 测试入口（根目录）：
+
+- `yarn test:frontend`：组件 Jest + Functional UI 回归 + desktop Provider Vitest。
+- `yarn test:ui` / `yarn test:desktop-ui`：Functional UI / desktop IPC 模拟浏览器测试。
+- `yarn test:rust`：真实本地命令、子进程、下载及解包测试；硬件/公网测试默认忽略。
+- `yarn test:native:build && yarn test:native`：独立 Tauri WebView 的真实 IPC 端到端测试。
+- Linux 无头环境使用 `xvfb-run -a yarn test:native`；Python fixture 无模型依赖。
+- `yarn test:rust:external`：显式运行硬件和外部大文件下载测试。
+- 详细覆盖范围、证据目录及环境要求见 `doc/Testing.md`。测试驱动只在 `native-tests` feature 下启用，正式发行不要启用。
+
 ### 依赖与环境
 
 | 命令 | 说明 |
