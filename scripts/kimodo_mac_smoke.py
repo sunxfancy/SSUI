@@ -25,7 +25,7 @@ def main():
     if args.workflow:
         sys.path[:0]=[str(ROOT),str(ROOT/'extensions/Motion')]
         from ss_executor.loader import SSLoader
-        from ssui.base import Prompt
+        from ssui.base import MotionClip, Prompt
         import shutil
         import numpy as np
         os.environ['SSUI_KIMODO_MODEL_DIR']=str(args.models.resolve())
@@ -40,7 +40,8 @@ def main():
                               diffusion_steps=args.steps,seed=42,export_bvh=True).items(): config[key]=value
         fn=next(fn for fn,_,_ in loader.callables if fn.__name__=='txt2motion_kimodo')
         started=time.monotonic()
-        result=Path(fn(Prompt(args.prompt)))
+        clip=fn(Prompt(args.prompt))
+        result=Path(clip.npz_path if isinstance(clip,MotionClip) else clip)
         with np.load(result,allow_pickle=False) as data:
             assert data['posed_joints'].shape[0]==round(args.duration*30)
             assert np.isfinite(data['posed_joints']).all()

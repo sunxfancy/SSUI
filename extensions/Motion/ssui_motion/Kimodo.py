@@ -2,10 +2,12 @@ import datetime
 import os
 import subprocess
 import sys
+import json
 from pathlib import Path
+from collections import deque
 
 from ssui.annotation import param
-from ssui.base import Prompt
+from ssui.base import Prompt, MotionClip
 from ssui.config import SSUIConfig
 from ssui.controller import Random, Select, Slider, Switch
 
@@ -25,8 +27,8 @@ def _kimodo_python() -> str:
 
     root = Path(__file__).resolve().parents[3]
     candidates = (
-        str(root / ".venv/kimodo/Scripts/python.exe"),
-        str(root / ".venv/kimodo/bin/python"),
+        root / ".venv/kimodo/Scripts/python.exe",
+        root / ".venv/kimodo/bin/python",
     )
     for candidate in candidates:
         if os.path.isfile(candidate):
@@ -85,8 +87,9 @@ def _run_kimodo(config: SSUIConfig, prompt: Prompt) -> str:
         encoding="utf-8",
         errors="replace",
         env=env,
+        creationflags=subprocess.CREATE_NO_WINDOW if os.name == "nt" else 0,
     )
-    output_lines = []
+    output_lines = deque(maxlen=100)
     assert process.stdout is not None
     for line in process.stdout:
         print(line, end="")
@@ -100,7 +103,11 @@ def _run_kimodo(config: SSUIConfig, prompt: Prompt) -> str:
                 "Kimodo 生成失败：Hugging Face 的 Llama 3 访问申请仍在等待审批。\n"
                 + tail
             )
-        raise RuntimeError("Kimodo 运行失败：\n" + tail)
+        if any(marker in tail for marker in ("GatedRepoError", "401 Client Error", "403 Client Error")):
+            raise RuntimeError("Kimodo 模型访问失败，请检查 Hugging Face 登录和模型访问权限。\n" + tail)
+        raise RuntimeError(
+            "Kimodo 生成失败，请检查隔离环境和下方运行日志。\n" + tail
+        )
 
     output_path = output_stem + ".npz"
     if not os.path.isfile(output_path):
@@ -120,3 +127,26 @@ def KimodoTextToMotion(config: SSUIConfig, prompt: Prompt) -> str:
     if config.is_prepare():
         return ""
     return _run_kimodo(config, prompt)
+
+
+@param("model", Select(*KIMODO_MODELS), default="Kimodo-SOMA-RP-v1.1")
+@param("duration", Slider(1, 20, 0.5), default=5.0)
+@param("diffusion_steps", Slider(1, 200, 1), default=100)
+@param("seed", Random(), default=42)
+@param("device", Select("auto", "mps", "cuda", "cpu"), default="auto")
+@param("text_encoder_device", Select("auto", "mps", "cuda", "cpu"), default="auto")
+@param("export_bvh", Switch(), default=True)
+def GenerateKimodoMotion(config: SSUIConfig, prompt: Prompt) -> MotionClip:
+    """Generate a 3D motion clip with playback data and downloadable NPZ/BVH."""
+    if config.is_prepare():
+        return MotionClip()
+    if not prompt.text.strip():
+        raise ValueError("动作描述不能为空。")
+    path = _run_kimodo(config, prompt)
+    manifest_path = str(Path(path).with_suffix(".motion.json"))
+    with open(manifest_path, encoding="utf-8") as stream:
+        manifest = json.load(stream)
+    bvh_path = str(Path(path).with_suffix(".bvh"))
+    return MotionClip(path=manifest_path, npz_path=path,
+                      bvh_path=bvh_path if os.path.isfile(bvh_path) else None,
+                      model=config["model"], fps=manifest["fps"], frames=len(manifest["positions"]))

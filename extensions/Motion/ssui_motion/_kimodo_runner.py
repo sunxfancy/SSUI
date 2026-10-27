@@ -1,6 +1,26 @@
 """Internal Kimodo CLI wrapper with an opt-in local text-encoder override."""
 
 import os
+import json
+import sys
+
+
+def _write_motion_manifest(output_stem: str, fps: float, metadata: dict) -> None:
+    import numpy as np
+    from kimodo.skeleton import build_skeleton
+
+    with np.load(output_stem + ".npz", allow_pickle=False) as data:
+        positions = data["posed_joints"]
+    if positions.ndim != 3 or not len(positions) or positions.shape[-1] != 3 or not np.isfinite(positions).all():
+        raise ValueError("Kimodo generated invalid 3D joint positions")
+    if not np.isfinite(fps) or fps <= 0:
+        raise ValueError("Kimodo generated an invalid frame rate")
+    skeleton = build_skeleton(positions.shape[1])
+    manifest = {"schema": "ssui.motion.clip/v1", "fps": fps, "units": "meters", "metadata": metadata,
+                "coordinate_system": "Y-up;+Z-forward", "joint_names": skeleton.bone_order_names,
+                "parents": skeleton.joint_parents.tolist(), "positions": positions.tolist()}
+    with open(output_stem + ".motion.json", "w", encoding="utf-8") as stream:
+        json.dump(manifest, stream, allow_nan=False)
 
 
 def _configure_text_encoder_override() -> None:
@@ -43,22 +63,44 @@ def main() -> None:
     if device == 'mps':
         from _kimodo_mps import main as mps_main
         mps_main()
+        if "--output" in sys.argv:
+            stem = sys.argv[sys.argv.index("--output") + 1]
+            with open(stem + "_report.json", encoding="utf-8") as stream:
+                report = json.load(stream)
+            _write_motion_manifest(stem, report["fps"], {
+                "torch": report["torch"], "cuda": torch.version.cuda,
+                "inference_device": report["device"], "postprocessed": False,
+                "text_encoder_base": os.environ.get("SSUI_KIMODO_TEXT_ENCODER_BASE", "layer-streamed"),
+            })
         return
     if requested not in ('auto','cuda','cpu'):
         raise ValueError(f'Unsupported Kimodo device: {requested}')
-    if requested == 'cpu':
-        from kimodo.scripts import generate
-        original_load = generate.load_model
-        def load_cpu(*args, **kwargs):
-            kwargs['device'] = 'cpu'
-            return original_load(*args, **kwargs)
-        generate.load_model = load_cpu
     if os.environ.get('TEXT_ENCODER_DEVICE') == 'auto':
         os.environ['TEXT_ENCODER_DEVICE'] = device
     _configure_text_encoder_override()
-    from kimodo.scripts.generate import main as kimodo_main
+    from kimodo.scripts import generate
+    import torch
 
-    kimodo_main()
+    original_load = generate.load_model
+    metadata = {"torch": torch.__version__, "cuda": torch.version.cuda,
+                "text_encoder_base": os.environ.get("SSUI_KIMODO_TEXT_ENCODER_BASE", "official"),
+                "postprocessed": "--no-postprocess" not in sys.argv}
+    timing = {}
+    def capture_model(*args, **kwargs):
+        if requested == 'cpu':
+            kwargs['device'] = 'cpu'
+        result = original_load(*args, **kwargs)
+        model = result[0] if isinstance(result, tuple) else result
+        timing["fps"] = float(model.fps)
+        metadata["inference_device"] = str(next(model.denoiser.parameters()).device)
+        return result
+    generate.load_model = capture_model
+    try:
+        generate.main()
+    finally:
+        generate.load_model = original_load
+    if "--output" in sys.argv:
+        _write_motion_manifest(sys.argv[sys.argv.index("--output") + 1], timing["fps"], metadata)
 
 
 if __name__ == "__main__":
