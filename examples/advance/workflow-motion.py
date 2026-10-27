@@ -8,5 +8,5 @@ config = SSUIConfig()
 
 @workflow
 def txt2motion_kimodo(prompt: Prompt) -> str:
-    """Generate 3D human or robot motion with NVIDIA Kimodo on Windows AMDGPU."""
+    """Generate 3D human or robot motion with NVIDIA Kimodo on CUDA/ROCm or Apple Silicon MPS."""
     return KimodoTextToMotion(config("Kimodo Text To Motion"), prompt)

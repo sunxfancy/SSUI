@@ -1,3 +1,4 @@
+from ..device_utils import device_memory, empty_device_cache, GIB
 import torch, warnings, glob, os
 import numpy as np
 from PIL import Image
@@ -103,7 +104,7 @@ class BasePipeline(torch.nn.Module):
                                 module.offload()
                     else:
                         model.cpu()
-            torch.cuda.empty_cache()
+            empty_device_cache(self.device)
             # onload models
             for name, model in self.named_children():
                 if name in model_names:
@@ -117,6 +118,7 @@ class BasePipeline(torch.nn.Module):
 
     def generate_noise(self, shape, seed=None, rand_device="cpu", rand_torch_dtype=torch.float32, device=None, torch_dtype=None):
         # Initialize Gaussian noise
+        rand_device = "cpu" if torch.device(rand_device).type == "mps" else rand_device
         generator = None if seed is None else torch.Generator(rand_device).manual_seed(seed)
         noise = torch.randn(shape, generator=generator, device=rand_device, dtype=rand_torch_dtype)
         noise = noise.to(dtype=torch_dtype or self.torch_dtype, device=device or self.device)
@@ -129,7 +131,7 @@ class BasePipeline(torch.nn.Module):
         
         
     def get_vram(self):
-        return torch.cuda.mem_get_info(self.device)[1] / (1024 ** 3)
+        return device_memory(self.device)[0] / GIB
     
     
     def freeze_except(self, model_names):

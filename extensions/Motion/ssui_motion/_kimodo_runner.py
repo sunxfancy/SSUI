@@ -33,6 +33,28 @@ def _configure_text_encoder_override() -> None:
 
 
 def main() -> None:
+    import torch
+    requested = os.environ.get('SSUI_KIMODO_DEVICE','auto')
+    device = requested
+    if device == 'auto':
+        device = 'cuda' if torch.cuda.is_available() else ('mps' if torch.backends.mps.is_available() else 'cpu')
+    if device == 'cuda' and not torch.cuda.is_available():
+        raise RuntimeError('CUDA was requested but is unavailable')
+    if device == 'mps':
+        from _kimodo_mps import main as mps_main
+        mps_main()
+        return
+    if requested not in ('auto','cuda','cpu'):
+        raise ValueError(f'Unsupported Kimodo device: {requested}')
+    if requested == 'cpu':
+        from kimodo.scripts import generate
+        original_load = generate.load_model
+        def load_cpu(*args, **kwargs):
+            kwargs['device'] = 'cpu'
+            return original_load(*args, **kwargs)
+        generate.load_model = load_cpu
+    if os.environ.get('TEXT_ENCODER_DEVICE') == 'auto':
+        os.environ['TEXT_ENCODER_DEVICE'] = device
     _configure_text_encoder_override()
     from kimodo.scripts.generate import main as kimodo_main
 

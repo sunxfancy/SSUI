@@ -8,6 +8,13 @@
 
 ## 依赖
 
+macOS 的基础依赖和锁文件已包含 ModelScope、imageio/FFmpeg、SentencePiece、ftfy、pandas。
+在根目录运行 `yarn install-requirements` 安装到 `.venv`。
+AnimateDiff、CogVideoX、Wan 2.1 和 Wan 2.2 节点已接入设备选择；Wan 在现代 MPS 默认 BF16，
+CPU 或旧版 macOS 使用 float32。AnimateDiff 已通过真实权重的 MPS 完整视频生成（最高实测 512×512、8 帧）；
+Wan 1.3B 已通过下述分阶段完整短视频生成；CogVideo、Wan Fun/14B 和 Wan 2.2 目前仍只通过算子/小型模型测试。
+Wan 2.2、Hunyuan、H3 等的支持边界见 [Mac 模型支持检查](../../doc/MacModelSupport.md)。
+
 Windows 安装环境需要补充 `modelscope==1.26.0`（Wan 系列节点下载权重时使用）。
 已加入 `dependencies/requirements-windows.txt` 与 `requirements-windows-amdgpu.txt`；
 改依赖后请在有 venv 的机器上重新生成锁文件：
@@ -15,6 +22,53 @@ Windows 安装环境需要补充 `modelscope==1.26.0`（Wan 系列节点下载�
 ```bash
 yarn update-lock:no-upgrade
 ```
+
+## Mac 完整 AnimateDiff 流程
+
+当前工作树已有独立 `.venv` 时，在根目录执行：
+
+```bash
+# 首次下载约 3.7GB，固定版本并校验 SHA-256；后续复用本地文件。
+yarn test:video:smoke --download-only
+# 实际经过 SSUI 沙盒工作流、真实模型推理、MP4 编码与解码校验。
+yarn test:video:smoke --local-files-only --workflow --device mps --size 256 --frames 8 --steps 20
+```
+
+产物在 `output/video-smoke/`：`animatediff.mp4`、`preview.png`、`report.json`。
+`--output` 可指定其他输出目录。无 MPS 的机器可用 `--device cpu`，但运行会慢很多。
+普通测试不会自动下载这些权重。真模型回归单独运行：
+
+```bash
+SSUI_RUN_MODEL_TESTS=1 SSUI_VIDEO_MODEL_DIR="$PWD/models/video-smoke" yarn test_on model.diffsynth_model_test
+```
+
+桌面端可打开 `examples/advance/workflow-video-mac.py`，使用 `txt2vid_animatediff`。
+默认 256×256、8 帧、20 步；按内存和耗时再提高尺寸。模型默认读取本仓库
+`models/video-smoke/`，也可用 `SSUI_ANIMATEDIFF_CHECKPOINT` 和
+`SSUI_ANIMATEDIFF_MOTION` 指向其他本地文件。准备/读取节点参数时不加载模型。
+两阶段生成均使用指定 seed；MPS 的随机噪声在 CPU 上生成后传入 GPU。
+
+## Mac 低内存 Wan 1.3B 流程
+
+根目录新增 `yarn test:wan:smoke`，使用固定版本的官方 `Wan-AI/Wan2.1-T2V-1.3B`。
+首次下载约 17.6GB，校验三个权重的 SHA-256。三个独立进程依次执行：
+UMT5 文件映射和逐层 MPS 编码、BF16 DiT 去噪、float32 VAE 解码。
+每阶段退出后释放模型，避免文本编码器、DiT、VAE 同时驻留统一内存。
+
+```bash
+yarn test:wan:smoke --download-only
+yarn test:wan:smoke --local-files-only --size 256 --frames 9 --steps 30
+```
+
+输出目录为 `output/wan-mac/`，包含 `wan.mp4`、`preview.png`、`report.json`，
+以及用于排错的提示词编码和 latent。帧数必须为 `4n+1`，尺寸必须为 16 的倍数。
+报告记录阶段耗时、进程 RSS、系统可用内存和交换空间；系统指标也包含其他应用的影响。
+已在本机 16GB Mac / Torch 2.4.1 实测 256×256、9 帧、30 步成功，约 97 秒，
+生成约 1.1 秒的橘猫行走视频。后续帧有模糊和重影，仅证明低内存完整链路可用。
+128×128 / 8 步虽能编码 MP4，但仅形成色块，不能作为质量通过的样例。
+已验证产物保存在 `output/wan-mac-preview/`。
+
+此脚本为独立低内存入口，已有 Wan 14B / Fun 节点不会自动使用它。
 
 ## 节点一览
 
@@ -31,7 +85,7 @@ yarn update-lock:no-upgrade
 
 权重下载到 `models/`（可用环境变量 `SSUI_WAN_MODEL_ROOT` 覆盖），
 文本编码器 / tokenizer / VAE 与 Wan2.1 共享，会自动重定向下载。
-FP8：把 `Wan22.py` 里三个 `load()` 的 `torch_dtype=torch.bfloat16` 改为 `torch.float8_e4m3fn`。
+Mac 不支持这里的 CUDA FP8 路径。CPU 卸载仍占统一内存，不能据此保证 16GB Mac 可以加载完整 Wan 权重。
 
 ### LTX-2.5（独立 venv + subprocess）
 
@@ -136,7 +190,7 @@ txt2vid_h3 / img2vid_h3
 
 ## 引擎升级说明
 
-- diffsynth 由仓库原 vendored 版本整体替换为 PyPI `diffsynth==1.1.9` 源码（无本地补丁，git 可回滚）。
+- diffsynth 由仓库原 vendored 版本整体替换为 PyPI `diffsynth==1.1.9` 源码（含本仓库的 Mac 兼容性补丁，git 可回滚）。
 - 1.1.9 新增 `pipelines/wan_video_new.py`（Wan 2.2 系列入口，`WanVideoPipeline.from_pretrained`）与
   `models/wan_video_dit_s2v.py`、`wan_video_mot.py`、`wan_video_animate_adapter.py` 等。
 - 顶层 `diffsynth.WanVideoPipeline` 仍是旧版（Wan 2.1），Wan 2.2 节点显式导入

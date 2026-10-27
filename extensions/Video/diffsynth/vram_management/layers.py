@@ -1,3 +1,4 @@
+from ..device_utils import device_memory, GIB
 import torch, copy
 from ..models.utils import init_weights_on_device
 
@@ -13,8 +14,8 @@ class AutoTorchModule(torch.nn.Module):
         super().__init__()
         
     def check_free_vram(self):
-        gpu_mem_state = torch.cuda.mem_get_info(self.computation_device)
-        used_memory = (gpu_mem_state[1] - gpu_mem_state[0]) / (1024 ** 3)
+        _, used_bytes = device_memory(self.computation_device)
+        used_memory = used_bytes / GIB
         return used_memory < self.vram_limit
 
     def offload(self):
@@ -87,6 +88,13 @@ class WanAutoCastLayerNorm(torch.nn.LayerNorm, AutoTorchModule):
             else:
                 weight = None if self.weight is None else cast_to(self.weight, self.computation_dtype, self.computation_device)
                 bias = None if self.bias is None else cast_to(self.bias, self.computation_dtype, self.computation_device)
+        if x.device.type == "mps":
+            # Torch 2.4 supports MPS BF16 operations but not MPS autocast.
+            return torch.nn.functional.layer_norm(
+                x.float(), self.normalized_shape,
+                None if weight is None else weight.float(),
+                None if bias is None else bias.float(), self.eps,
+            ).type_as(x)
         with torch.amp.autocast(device_type=x.device.type):
             x = torch.nn.functional.layer_norm(x.float(), self.normalized_shape, weight, bias, self.eps).type_as(x)
         return x

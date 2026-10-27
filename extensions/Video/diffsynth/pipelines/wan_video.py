@@ -1,6 +1,6 @@
 import types
 from ..models import ModelManager
-from ..models.wan_video_dit import WanModel
+from ..models.wan_video_dit import WanModel, prepare_rope_freqs
 from ..models.wan_video_text_encoder import WanTextEncoder
 from ..models.wan_video_vae import WanVideoVAE
 from ..models.wan_video_image_encoder import WanImageEncoder
@@ -568,7 +568,9 @@ def model_fn_wan_video(
         clip_embdding = dit.img_emb(clip_feature)
         context = torch.cat([clip_embdding, context], dim=1)
     
-    x, (f, h, w) = dit.patchify(x)
+    x = dit.patchify(x)
+    f, h, w = x.shape[2:]
+    x = rearrange(x, 'b c f h w -> b (f h w) c').contiguous()
     
     # Reference image
     if reference_latents is not None:
@@ -580,7 +582,8 @@ def model_fn_wan_video(
         dit.freqs[0][:f].view(f, 1, 1, -1).expand(f, h, w, -1),
         dit.freqs[1][:h].view(1, h, 1, -1).expand(f, h, w, -1),
         dit.freqs[2][:w].view(1, 1, w, -1).expand(f, h, w, -1)
-    ], dim=-1).reshape(f * h * w, 1, -1).to(x.device)
+    ], dim=-1).reshape(f * h * w, 1, -1)
+    freqs = prepare_rope_freqs(freqs, x.device)
     
     # TeaCache
     if tea_cache is not None:

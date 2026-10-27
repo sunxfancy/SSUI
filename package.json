@@ -21,6 +21,7 @@
     "**/@storybook/addon-actions/uuid": "^11.1.1",
     "**/@redocly/openapi-core/js-yaml": "^4.3.2",
     "**/@wdio/*/deepmerge-ts": "^8.0.0",
+    "**/webdriver/deepmerge-ts": "^8.0.0",
     "**/get-uri/basic-ftp": "^6.2.1"
   },
   "scripts": {
@@ -49,6 +50,11 @@
     "ext:package_Video": "cd extensions/Video && ssext package -o ../../desktop/src-tauri/resources/extensions/",
     "ext:package_Audio": "cd extensions/Audio && ssext package -o ../../desktop/src-tauri/resources/extensions/",
     "test": "node dependencies/venv.cjs python tests/run_tests.py",
+    "test:trellis:topology": "node dependencies/venv.cjs python scripts/trellis_topology_benchmark.py",
+    "test:trellis:smoke": "node dependencies/venv.cjs python scripts/trellis_mac_smoke.py",
+    "test:3d:smoke": "node dependencies/venv.cjs python scripts/mesh_smoke.py",
+    "test:wan:smoke": "node dependencies/venv.cjs python scripts/wan_mac_smoke.py",
+    "test:video:smoke": "node dependencies/venv.cjs python scripts/video_smoke.py",
     "test_on": "node dependencies/venv.cjs python tests/run_tests.py --test",
     "test:contract": "node dependencies/venv.cjs python -m unittest tests.contract.test_mock_api_contract -v",
     "test:e2e": "playwright test -c tests/e2e/playwright.config.ts",
@@ -102,7 +108,10 @@
     "test:native:build": "yarn workspace ssui-desktop test:native:build",
     "test:native": "yarn workspace ssui-desktop test:native",
     "test:desktop-ui": "playwright test --config playwright.desktop.config.ts",
-    "test:rust:external": "yarn workspace ssui-desktop test:rust:external"
+    "test:rust:external": "yarn workspace ssui-desktop test:rust:external",
+    "install:kimodo": "node dependencies/venv.cjs python extensions/Motion/install_kimodo.py",
+    "test:kimodo:smoke": "node dependencies/venv.cjs python scripts/kimodo_mac_smoke.py",
+    "test:kimodo:preview": "node dependencies/venv.cjs python scripts/kimodo_preview.py"
   },
   "devDependencies": {
     "@axe-core/playwright": "^4.10.2",
@@ -123,7 +132,7 @@
     "vite": "^6.0.3",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
-    "vitest": "^3.2.4",
+    "vitest": "^4.1.12",
     "webdriverio": "^9.20.0"
   }
 }
