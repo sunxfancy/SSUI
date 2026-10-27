@@ -73,7 +73,15 @@ os:
   linux:
     packages:
       diffsynth: ">=1.1.7"
-  macos: {}
+  macos:
+    packages:
+      modelscope: "==1.26.0"
+      imageio[ffmpeg]: ">=2.37.0"
+      sentencepiece: "==0.2.0"
+      ftfy: ">=6.3"
+      pandas: ">=2.2.3"
+      omegaconf: "==2.3.0"
+      scikit-image: ">=0.25.2"
 arch:
   x64:
     packages:

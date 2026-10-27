@@ -122,6 +122,8 @@ class BasePipeline(torch.nn.Module):
 
     
     def generate_noise(self, shape, seed=None, device="cpu", dtype=torch.float16):
-        generator = None if seed is None else torch.Generator(device).manual_seed(seed)
-        noise = torch.randn(shape, generator=generator, device=device, dtype=dtype)
-        return noise
+        # PyTorch 2.4 has no MPS Generator. Seed noise on CPU and then transfer.
+        noise_device = "cpu" if torch.device(device).type == "mps" else device
+        generator = None if seed is None else torch.Generator(noise_device).manual_seed(seed)
+        noise = torch.randn(shape, generator=generator, device=noise_device, dtype=dtype)
+        return noise.to(device)

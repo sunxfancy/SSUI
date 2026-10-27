@@ -1,36 +1,37 @@
 from typing import *
 
-BACKEND = 'spconv' 
+import torch
+BACKEND = 'spconv' if torch.cuda.is_available() else 'torch'
 DEBUG = False
-ATTN = 'xformers'
+ATTN = 'xformers' if torch.cuda.is_available() else 'sdpa'
 
 def __from_env():
     import os
-    
+
     global BACKEND
     global DEBUG
     global ATTN
-    
+
     env_sparse_backend = os.environ.get('SPARSE_BACKEND')
     env_sparse_debug = os.environ.get('SPARSE_DEBUG')
     env_sparse_attn = os.environ.get('SPARSE_ATTN_BACKEND')
     if env_sparse_attn is None:
         env_sparse_attn = os.environ.get('ATTN_BACKEND')
 
-    if env_sparse_backend is not None and env_sparse_backend in ['spconv', 'torchsparse']:
+    if env_sparse_backend is not None and env_sparse_backend in ['spconv', 'torchsparse', 'torch']:
         BACKEND = env_sparse_backend
     if env_sparse_debug is not None:
         DEBUG = env_sparse_debug == '1'
-    if env_sparse_attn is not None and env_sparse_attn in ['xformers', 'flash_attn']:
+    if env_sparse_attn is not None and env_sparse_attn in ['xformers', 'flash_attn', 'sdpa']:
         ATTN = env_sparse_attn
-        
+
     print(f"[SPARSE] Backend: {BACKEND}, Attention: {ATTN}")
-        
+
 
 __from_env()
-    
 
-def set_backend(backend: Literal['spconv', 'torchsparse']):
+
+def set_backend(backend: Literal['spconv', 'torchsparse', 'torch']):
     global BACKEND
     BACKEND = backend
 
@@ -38,11 +39,11 @@ def set_debug(debug: bool):
     global DEBUG
     DEBUG = debug
 
-def set_attn(attn: Literal['xformers', 'flash_attn']):
+def set_attn(attn: Literal['xformers', 'flash_attn', 'sdpa']):
     global ATTN
     ATTN = attn
-    
-    
+
+
 import importlib
 
 __attributes = {
