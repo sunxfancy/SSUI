@@ -54,7 +54,7 @@ test('run maps output keys and rejects malformed results', async () => {
   let output; ui.refOutputs.set('0', { current: { onUpdate: v => output = v } });
   ctx.request = async () => response(['hello']); await ui.handleRun(); assert.equal(output, 'hello');
   ctx.request = async () => response({ unexpected: true }); await ui.handleRun();
-  assert.match(ui.state.runError, /Invalid execution response/);
+  assert.equal(ui.state.runError, '执行器返回了无法识别的结果格式');
 });
 test('late details cannot overwrite newer selection', async () => {
   const { Type, ctx } = load('functional/Details', 'DetailsPanel');

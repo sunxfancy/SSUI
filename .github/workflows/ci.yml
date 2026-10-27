@@ -158,6 +158,87 @@ jobs:
         timeout-minutes: 5
         run: python3 scripts/release.py check-versions
 
+  frontend-e2e:
+    name: Frontend contracts and Chromium E2E
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - name: Checkout
+        timeout-minutes: 5
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: ${{ inputs.ref || github.ref }}
+
+      - name: Set Node.js 22.x
+        timeout-minutes: 5
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 22
+          cache: 'yarn'
+
+      - name: Install JavaScript dependencies
+        timeout-minutes: 10
+        run: yarn install --frozen-lockfile
+
+      - name: Setup Python
+        timeout-minutes: 5
+        uses: astral-sh/setup-uv@d0d8abe699bfb85fec6de9f7adb5ae17292296ff # v6
+        with:
+          version: "0.6.11"
+          enable-cache: true
+          python-version: 3.12.8
+          activate-environment: true
+
+      - name: Install mock API dependencies
+        timeout-minutes: 5
+        run: uv pip install -r tests/mock_api/requirements.txt
+
+      - name: Install Chromium
+        if: github.event_name != 'schedule'
+        timeout-minutes: 10
+        run: yarn playwright install --with-deps chromium
+
+      - name: Install cross-browser engines
+        if: github.event_name == 'schedule'
+        timeout-minutes: 15
+        run: yarn playwright install --with-deps chromium firefox webkit
+
+      - name: Run API contract tests
+        timeout-minutes: 5
+        run: yarn test:contract
+
+      - name: Check generated API types
+        timeout-minutes: 5
+        run: yarn api:check
+
+      - name: Run Functional UI component tests
+        timeout-minutes: 5
+        run: yarn test:functional_ui
+
+      - name: Run desktop browser-adapter tests
+        timeout-minutes: 5
+        run: yarn test:desktop_ui
+
+      - name: Run Image Canvas behavior tests
+        timeout-minutes: 5
+        run: yarn test:canvas
+
+      - name: Run Chromium E2E
+        timeout-minutes: 10
+        env:
+          SSUI_E2E_CROSS_BROWSER: ${{ github.event_name == 'schedule' && '1' || '0' }}
+        run: yarn test:e2e
+
+      - name: Upload Playwright failure artifacts
+        if: failure()
+        timeout-minutes: 5
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: playwright-results
+          path: tests/e2e/test-results/
+          if-no-files-found: ignore
+          retention-days: 7
+
   build:
     name: Build on ${{ matrix.os }}
     runs-on: ${{ matrix.os }}

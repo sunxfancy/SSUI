@@ -4,7 +4,7 @@
     "type": "module",
     "scripts": {
         "build": "tsc && vite build",
-        "fastapi": "cd test && node ../../../dependencies/venv.cjs fastapi dev server.py",
+        "fastapi": "cd test && node ../../../dependencies/venv.cjs python -m uvicorn server:app --host 127.0.0.1 --port 8000",
         "test": "jest"
     },
     "exports": {

@@ -3,7 +3,8 @@ import os
 from fastapi import APIRouter, Body, File, Request, UploadFile, HTTPException
 from fastapi.responses import FileResponse, JSONResponse
 
-from ss_executor import search_project_root
+from ss_executor.project import search_project_root
+from server.models import TextSaveResult, UploadResult
 from server.text_file_service import read_text, save_text, FileConflictError
 
 router = APIRouter()
@@ -38,7 +39,7 @@ async def files(file_type: str, script_path: str):
     return result_files
 
 
-@router.post("/files/upload")
+@router.post("/files/upload", response_model=UploadResult)
 async def upload_file(script_path: str, file: UploadFile = File(...)):
     project_root = search_project_root(script_path)
     if project_root is None:
@@ -68,7 +69,7 @@ async def text_file(path: str):
         raise HTTPException(status_code=400, detail=str(error))
 
 
-@router.post("/files/upload_json")
+@router.post("/files/upload_json", response_model=TextSaveResult)
 async def file_upload_json(
     path: str = Body(..., embed=True),
     content: str = Body(..., embed=True),

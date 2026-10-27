@@ -2,6 +2,7 @@ import React, { Component } from 'react';
 import { Button, Callout, Collapse, Icon, MenuItem, NonIdealState, Spinner, Tag } from "@blueprintjs/core";
 import { ItemPredicate, ItemRenderer, Select } from "@blueprintjs/select";
 import { ComponentTabRef } from "ssui_components";
+import type { ApiComponents } from "ssui_components";
 import { DetailsPanel } from "./Details";
 import { registerUIProvider, UIProvider } from '../UIProvider';
 import { useConfig } from '../../config';
@@ -12,9 +13,9 @@ import "@blueprintjs/core/lib/css/blueprint.css";
 import "@blueprintjs/icons/lib/css/blueprint-icons.css";
 
 interface Callable { rank: number; name: string; }
-interface Params { params: Record<string, string>; returns: string[]; }
-interface FunctionMeta { [key: string]: Params | string; }
-interface ScriptMeta { root_path: string; functions: FunctionMeta; }
+type Params = ApiComponents['schemas']['ScriptFunctionInfo'];
+type ScriptMeta = ApiComponents['schemas']['ScriptMeta'];
+type FunctionMeta = ScriptMeta['functions'];
 interface FunctionalUIProps { path: string; autoOpenDetails?: boolean; }
 interface FunctionalUIState {
     functions: FunctionMeta | null;
@@ -75,7 +76,7 @@ export class FunctionalUI extends Component<FunctionalUIProps, FunctionalUIState
                     !Object.values(meta.params).every(value => typeof value === 'string') ||
                     !meta.returns.every(value => typeof value === 'string')) throw new Error('Invalid function metadata');
             }
-            this.setState({ functions: data.functions, loading: false, error: null, root_path: data.root_path });
+            this.setState({ functions: data.functions, loading: false, error: null, root_path: data.root_path ?? '' });
         } catch (error) {
             if (request !== this.metaRequest || request.signal.aborted) return;
             if (error instanceof DOMException && error.name === 'AbortError') return;
@@ -128,12 +129,16 @@ export class FunctionalUI extends Component<FunctionalUIProps, FunctionalUIState
                 method: 'POST', headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ params, details }), signal: request.signal,
             });
-            if (!response.ok) throw new Error(`Execution failed (${response.status})`);
-            const data = await response.json();
+            if (!response.ok) throw new Error((await response.text()) || `执行失败（${response.status}）`);
+            const data = await response.json() as unknown;
             if (request !== this.executeRequest || request.signal.aborted) return;
-            if (data?.error) throw new Error(String(data.error));
-            if (!Array.isArray(data)) throw new Error('Invalid execution response');
-            const outputNames = Object.keys(meta.returns);
+            if (!Array.isArray(data)) {
+                const message = data && typeof data === 'object' && 'error' in data
+                    ? String((data as { error: unknown }).error)
+                    : '执行器返回了无法识别的结果格式';
+                throw new Error(message);
+            }
+            const outputNames = meta.returns.map((_type, index) => String(index));
             if (data.length !== outputNames.length) throw new Error('Unexpected output count');
             data.forEach((item, index) => this.refOutputs.get(outputNames[index])?.current?.onUpdate(item));
             this.setState({ runError: null, hasRun: true });
@@ -159,6 +164,7 @@ export class FunctionalUI extends Component<FunctionalUIProps, FunctionalUIState
         ) : null;
         return (
             <Select<Callable> items={items} itemPredicate={filter} itemRenderer={renderer}
+                popoverTargetProps={{ 'aria-label': 'Select function' }}
                 noResults={<MenuItem disabled text="没有匹配的函数" roleStructure="listoption" />}
                 onItemSelect={this.handleSelectFunc} popoverProps={{ minimal: true, matchTargetWidth: true }}>
                 <Button disabled={this.state.running} className="functional-ui-select" alignText="left" icon="function"

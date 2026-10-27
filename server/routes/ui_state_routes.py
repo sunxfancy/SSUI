@@ -5,7 +5,7 @@ from typing import Any, Dict
 
 from fastapi import APIRouter, Body, Request
 
-from ss_executor import search_project_root
+from ss_executor.project import search_project_root
 
 router = APIRouter()
 
