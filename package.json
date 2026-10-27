@@ -13,6 +13,9 @@
     "extensions/example",
     "packages/canvas-engine"
   ],
+  "resolutions": {
+    "vite": "6.3.5"
+  },
   "scripts": {
     "dev:desktop_sb": "yarn storybook",
     "dev:desktop": "yarn build:frontend && node dependencies/dev_run.cjs workspace ssui-desktop tauri dev",
@@ -41,6 +44,13 @@
     "ext:package_Audio": "cd extensions/Audio && ssext package -o ../../desktop/src-tauri/resources/extensions/",
     "test": "node dependencies/venv.cjs python tests/run_tests.py",
     "test_on": "node dependencies/venv.cjs python tests/run_tests.py --test",
+    "test:contract": "node dependencies/venv.cjs python -m unittest tests.contract.test_mock_api_contract -v",
+    "test:e2e": "playwright test -c tests/e2e/playwright.config.ts",
+    "test:e2e:ui": "playwright test -c tests/e2e/playwright.config.ts --ui",
+    "test:tauri-smoke": "wdio run tests/tauri-e2e/wdio.conf.mjs",
+    "api:schema": "node dependencies/venv.cjs python scripts/export_openapi.py",
+    "api:types": "yarn api:schema && openapi-typescript server/openapi.json -o frontend/ssui_components/src/api/generated.ts",
+    "api:check": "yarn api:types && git diff --exit-code -- server/openapi.json frontend/ssui_components/src/api/generated.ts",
     "package": "yarn build:frontend && yarn build:extension_builder && yarn ext:package && yarn build:desktop",
     "package:debug": "yarn build:frontend && yarn ext:package && yarn build:desktop:debug",
     "package:vscode": "cd ssui-vscode && yarn package",
@@ -60,7 +70,10 @@
     "update-lock:no-upgrade": "node dependencies/update_lock.cjs --no-upgrade",
     "pack-offline": "node dependencies/pack_offline.cjs",
     "pack-offline:all": "node dependencies/pack_offline.cjs --all",
-    "test:components": "yarn workspace ssui_components jest test/ComponentsManager.test.ts",
+    "test:components": "yarn workspace ssui_components test --runInBand",
+    "test:functional_ui": "yarn workspace ssui-functional_ui test",
+    "test:desktop_ui": "yarn workspace ssui-desktop test",
+    "test:canvas": "yarn workspace ssui-image test --runInBand",
     "postinstall": "node dependencies/install.cjs",
     "docker": "docker build -t ssui-docker .",
     "docker-run": "docker run -it --gpus all -p 7422:7422 ssui-docker",
@@ -73,12 +86,33 @@
     "test:pixal3d-gpu-workflow": "node dependencies/venv.cjs python tests/pixal3d_gpu_workflow.py",
     "test:3d-gpu-workflow": "node dependencies/venv.cjs python tests/pixal3d_gpu_workflow.py",
     "test:native-tools": "node dependencies/venv.cjs python -m unittest discover -s tests -p native_tools_test.py",
-    "test:arm64-workflows": "node dependencies/venv.cjs python tests/arm64_cpu_workflows.py"
+    "test:arm64-workflows": "node dependencies/venv.cjs python tests/arm64_cpu_workflows.py",
+    "test:file-service": "node dependencies/venv.cjs python -m unittest tests.text_file_service_test",
+    "test:functional-ui": "yarn workspace ssui-functional_ui test",
+    "test:frontend": "yarn test:components && yarn test:functional-ui && yarn test:desktop",
+    "test:ui": "playwright test",
+    "test:ui:headed": "playwright test --headed",
+    "test:ui:install": "playwright install chromium",
+    "test:ui:report": "playwright show-report",
+    "test:all": "yarn test:frontend && yarn test:ui && yarn test:desktop-ui && yarn test:rust && yarn test:native:build && yarn test:native && yarn test",
+    "test:desktop": "yarn workspace ssui-desktop test",
+    "test:rust": "yarn workspace ssui-desktop test:rust",
+    "test:native:build": "yarn workspace ssui-desktop test:native:build",
+    "test:native": "yarn workspace ssui-desktop test:native",
+    "test:desktop-ui": "playwright test --config playwright.desktop.config.ts",
+    "test:rust:external": "yarn workspace ssui-desktop test:rust:external"
   },
   "devDependencies": {
+    "@axe-core/playwright": "^4.10.2",
+    "@playwright/test": "^1.64.1",
+    "@wdio/cli": "^9.20.0",
+    "@wdio/local-runner": "^9.20.0",
+    "@wdio/mocha-framework": "^9.20.0",
+    "@wdio/spec-reporter": "^9.20.0",
     "concurrently": "^9.1.2",
     "extension_builder": "*",
     "js-yaml": "^4.1.0",
+    "openapi-typescript": "^7.9.1",
     "semver": "^7.5.4",
     "@storybook/addon-essentials": "^8.6.10",
     "@storybook/builder-vite": "^8.6.10",
@@ -86,6 +120,8 @@
     "storybook": "^8.6.10",
     "vite": "^6.0.3",
     "react": "^18.3.1",
-    "react-dom": "^18.3.1"
+    "react-dom": "^18.3.1",
+    "vitest": "^3.2.4",
+    "webdriverio": "^9.20.0"
   }
 }

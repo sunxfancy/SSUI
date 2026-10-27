@@ -1,10 +1,9 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Card, Elevation, Button, Tag, Spinner, Icon, Dialog, Intent, NonIdealState } from '@blueprintjs/core';
-import ExecutorService from '../../services/Executor';
-import ServerService from '../../services/Server';
-import TaskService, { QueueTask } from '../../services/TaskService';
+import { QueueTask } from '../../services/TaskService';
 import { CommandInfo } from '../../providers/IInstallerProvider';
 import { useTranslation } from 'react-i18next';
+import { useRuntimeAdapters } from '../../runtime/RuntimeAdapters';
 
 interface QueueProps {
     /** Supplied items enable local preview mode without backend polling or sockets. */
@@ -24,7 +23,8 @@ const Queue: React.FC<QueueProps> = ({ items: initialItems, onRemoveItem }) => {
     const [isRestartDialogOpen, setIsRestartDialogOpen] = useState(false);
     const [restartType, setRestartType] = useState<'server' | 'executor' | null>(null);
     const [isRestarting, setIsRestarting] = useState(false);
-    const taskService = useRef(TaskService.getInstance());
+    const runtime = useRuntimeAdapters();
+    const taskService = useRef(runtime.tasks);
 
     const loadTasks = useCallback(async () => {
         try {
@@ -64,9 +64,9 @@ const Queue: React.FC<QueueProps> = ({ items: initialItems, onRemoveItem }) => {
 
         const fetchStatus = async () => {
             try {
-                const executorResult = await ExecutorService.getInstance().getExecutorStatus();
+                const executorResult = await runtime.executor.getExecutorStatus();
                 setExecutorStatus(executorResult);
-                const serverResult = await ServerService.getInstance().getServerStatus();
+                const serverResult = await runtime.server.getServerStatus();
                 setServerStatus(serverResult);
             } catch (err) {
                 console.error('获取服务状态时出错:', err);
@@ -87,10 +87,10 @@ const Queue: React.FC<QueueProps> = ({ items: initialItems, onRemoveItem }) => {
         setIsRestarting(true);
         try {
             if (restartType === 'server') {
-                const newStatus = await ServerService.getInstance().restartServer();
+                const newStatus = await runtime.server.restartServer();
                 setServerStatus(newStatus);
             } else {
-                const newStatus = await ExecutorService.getInstance().restartExecutor();
+                const newStatus = await runtime.executor.restartExecutor();
                 setExecutorStatus(newStatus);
             }
         } catch (error) {

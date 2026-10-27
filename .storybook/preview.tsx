@@ -11,7 +11,8 @@ import "@blueprintjs/core/lib/css/blueprint.css";
 import "@blueprintjs/icons/lib/css/blueprint-icons.css";
 import "../desktop/src/App.css";
 
-const api = createOfflineApi(window.fetch.bind(window), window.location.origin);
+const allowLocalTestServer = () => new URLSearchParams(window.location.search).get('ssuiE2E') === '1';
+const api = createOfflineApi(window.fetch.bind(window), window.location.origin, allowLocalTestServer);
 enableMapSet();
 window.fetch = api.fetch;
 // Block business sockets, while preserving Vite's HMR connection.
@@ -20,6 +21,9 @@ window.WebSocket = new Proxy(NativeWebSocket, {
   construct(Target, args) {
     const [url] = args;
     const target = new URL(url, window.location.href);
+    if (allowLocalTestServer() && target.origin === 'ws://127.0.0.1:7422') {
+      return Reflect.construct(Target, args);
+    }
     if (target.pathname === '/ws') return new OfflineSocket(target.href);
     if (target.host !== window.location.host) {
       throw new Error(`[Storybook offline] Supply a mock service for WebSocket: ${target.pathname}`);

@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {Spinner, Tabs, Tab, Icon, Button, Menu, MenuItem, Popover, Position, InputGroup} from '@blueprintjs/core';
 import axios from 'axios';
 import { CivitaiModel } from '../../../types/civitai';
@@ -20,17 +20,20 @@ export const CivitaiModels: React.FC<CivitaiModelsProps> = ({ downloaderProvider
     const [selectedType, setSelectedType] = useState<string>('all');
     const [downloadTasks, setDownloadTasks] = useState<DownloadTask[]>([]);
     const [searchQuery, setSearchQuery] = useState('');
-    const [defaultDownloader] = useState(() => downloaderProvider ?? new TauriDownloaderProvider());
-    const downloader = downloaderProvider ?? defaultDownloader;
+    const downloader = useRef<IDownloaderProvider | null>(null);
 
     useEffect(() => {
+        const provider = downloaderProvider ?? new TauriDownloaderProvider(() => { void loadDownloadTasks(); });
+        downloader.current = provider;
         fetchModels();
-        loadDownloadTasks();
-    }, []);
+        void loadDownloadTasks();
+        return () => { if (provider instanceof TauriDownloaderProvider) provider.destroy(); downloader.current = null; };
+    }, [downloaderProvider]);
 
     const loadDownloadTasks = async () => {
-        const tasks = await downloader.getDownloadTasks();
-        setDownloadTasks(tasks);
+        const provider = downloader.current;
+        const tasks = await provider?.getDownloadTasks();
+        if (tasks && provider === downloader.current) setDownloadTasks([...tasks]);
     };
 
     const fetchModels = async (query?: string) => {
@@ -69,8 +72,8 @@ export const CivitaiModels: React.FC<CivitaiModelsProps> = ({ downloaderProvider
     }
 
     const handleDownload = async (model: CivitaiModel, fileId: number) => {
-        const task = await downloader.addDownloadTask(model, fileId);
-        setDownloadTasks(prev => [...prev, task]);
+        await downloader.current?.addDownloadTask(model, fileId);
+        await loadDownloadTasks();
     };
 
     const getDownloadButtonText = (model: CivitaiModel) => {
