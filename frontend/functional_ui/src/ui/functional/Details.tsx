@@ -29,6 +29,7 @@ interface DetailsState {
 export class DetailsPanel extends Component<DetailsProps, DetailsState> {
     private refMap: Map<string, Map<string, React.RefObject<ControllerRef>>> = new Map();
     private detailsRequest?: AbortController;
+    private requestVersion = 0;
 
     constructor(props: DetailsProps) {
         super(props);
@@ -50,10 +51,12 @@ export class DetailsPanel extends Component<DetailsProps, DetailsState> {
     }
 
     componentWillUnmount() {
+        this.requestVersion++;
         this.detailsRequest?.abort();
     }
 
     async fetchDetails(): Promise<void> {
+        const version = ++this.requestVersion;
         const { path, selected } = this.props;
         this.detailsRequest?.abort();
         const request = new AbortController();
@@ -82,6 +85,7 @@ export class DetailsPanel extends Component<DetailsProps, DetailsState> {
             }
 
             const data = await response.json() as PrepareResponse;
+            if (version !== this.requestVersion) return;
             if ('error' in data && typeof data.error === 'string') {
                 throw new Error(data.error);
             }
@@ -90,6 +94,7 @@ export class DetailsPanel extends Component<DetailsProps, DetailsState> {
                 details: data as ScriptDetails
             });
         } catch (error) {
+            if (version !== this.requestVersion) return;
             if (error instanceof DOMException && error.name === 'AbortError') return;
             this.setState({
                 loading: false,
@@ -125,6 +130,8 @@ export class DetailsPanel extends Component<DetailsProps, DetailsState> {
     }
 
     onExecute() {
+        if (this.state.loading) throw new Error("Details are still loading");
+        if (this.state.error) throw this.state.error;
         let result: any = {};
         for (const section of this.refMap.keys()) {
             result[section] = {};

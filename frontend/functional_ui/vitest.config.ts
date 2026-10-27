@@ -10,6 +10,7 @@ export default defineConfig({
     },
   },
   test: {
+    include: ['test/**/*.test.ts', 'test/**/*.test.tsx'],
     environment: 'jsdom',
     environmentOptions: {
       jsdom: { url: 'http://localhost:7420/functional_ui/' },

@@ -1,0 +1,18 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "SSUI Native Tests",
+  "identifier": "com.ssui.native-tests",
+  "build": { "frontendDist": "../dist-native-test", "devUrl": null },
+  "app": {
+    "windows": [{ "label": "native-test", "title": "SSUI Native Tests", "width": 1000, "height": 700 }],
+    "security": {
+      "csp": null,
+      "capabilities": [{
+        "identifier": "native-test",
+        "windows": ["native-test"],
+        "permissions": ["core:default", "core:window:allow-close", "store:default"]
+      }]
+    }
+  },
+  "bundle": { "active": false, "resources": [] }
+}

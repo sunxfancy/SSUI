@@ -80,6 +80,10 @@ class MutationResult(BaseModel):
     error: Optional[str] = None
 
 
+class TextSaveResult(MutationResult):
+    version: str
+
+
 class TaskInfo(BaseModel):
     id: str
     kind: Literal["download", "generation"]
