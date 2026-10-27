@@ -221,10 +221,9 @@ class Pixal3DWorkflowTest(unittest.TestCase):
         from pixal3d.trainers.flow_matching.mixins.image_conditioned_proj import DinoV3ProjFeatureExtractor
         backbone = torch.nn.Linear(8, 8)
         backbone.config = types.SimpleNamespace(patch_size=16, hidden_size=8)
-        with patch("transformers.DINOv3ViTModel.from_pretrained") as download:
+        with patch.dict(sys.modules, {"transformers": types.SimpleNamespace() }):
             first = DinoV3ProjFeatureExtractor("unused", grid_resolution=2, backbone=backbone)
             second = DinoV3ProjFeatureExtractor("unused", grid_resolution=4, backbone=backbone)
-        download.assert_not_called()
         self.assertIs(first.model, second.model)
         self.assertIsNot(first.proj_grid, second.proj_grid)
         self.assertFalse(any(p.requires_grad for p in backbone.parameters()))
