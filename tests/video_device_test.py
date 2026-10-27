@@ -94,7 +94,8 @@ class VideoDeviceTest(unittest.TestCase):
     def test_wan_mps_precision_capability_and_override(self):
         runtime = load_node("_runtime", self.stub())
         with patch.object(TorchDevice, "choose_torch_device", return_value=torch.device("mps")), \
-             patch("torch.backends.mps.is_available", return_value=True):
+             patch("torch.backends.mps.is_available", return_value=True), \
+             patch("torch.backends.mps.is_macos_or_newer", return_value=True):
             for modern, precision, expected in ((False, "auto", torch.float32),
                                                 (True, "auto", torch.bfloat16),
                                                 (True, "float32", torch.float32)):
