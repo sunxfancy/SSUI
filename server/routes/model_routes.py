@@ -302,3 +302,23 @@ async def preset_download(
         ),
         background=background_task,
     )
+
+
+@router.get("/api/modelscope/models")
+async def modelscope_models(search: str = "", limit: int = 50):
+    from server.modelscope import fetch_models
+    try:
+        return await fetch_models(search=search, limit=limit)
+    except Exception as exc:
+        return JSONResponse({"error": f"ModelScope: {exc}"}, status_code=502)
+
+
+@router.get("/api/modelscope/models/{repo_id:path}")
+async def modelscope_model(repo_id: str):
+    from server.modelscope import fetch_models
+    try:
+        return await fetch_models(repo_id=repo_id)
+    except ValueError as exc:
+        return JSONResponse({"error": str(exc)}, status_code=400)
+    except Exception as exc:
+        return JSONResponse({"error": f"ModelScope: {exc}"}, status_code=502)

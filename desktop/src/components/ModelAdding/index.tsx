@@ -11,7 +11,7 @@ import PresetModels from './PresetModels/index.tsx';
 import { useTranslation } from 'react-i18next';
 
 interface ModelAddingPageProps {
-    initialTab?: 'preset' | 'civitai' | 'huggingface' | 'local';
+    initialTab?: 'preset' | 'civitai' | 'huggingface' | 'modelscope' | 'local';
     modelsProvider?: ModelsProvider;
     downloaderProvider?: IDownloaderProvider;
 }
@@ -91,6 +91,11 @@ const ModelAddingPage: React.FC<ModelAddingPageProps> = ({ initialTab = 'preset'
                     id="huggingface"
                     title="Huggingface"
                     panel={renderHuggingfaceTab()}
+                />
+                <Tab
+                    id="modelscope"
+                    title="ModelScope 魔搭"
+                    panel={<Card elevation={Elevation.ZERO}><HuggingfaceModels source="modelscope" /></Card>}
                 />
                 <Tab
                     id="local"
