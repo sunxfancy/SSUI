@@ -18,6 +18,7 @@
     "dev:desktop": "yarn build:frontend && node dependencies/dev_run.cjs workspace ssui-desktop tauri dev",
     "dev:server": "yarn build:frontend && node dependencies/venv.cjs python -m server --dev",
     "dev:server:no_build": "node dependencies/venv.cjs python -m server --dev",
+    "start:server": "node dependencies/venv.cjs python -m server",
     "dev:executor": "node dependencies/venv.cjs python -m ss_executor",
     "dev:functional_ui": "yarn workspace ssui-functional_ui dev",
     "dev:canvas": "yarn workspace ssui-image dev",
@@ -67,6 +68,10 @@
     "build:storybook": "storybook build",
     "test:storybook": "node --test .storybook/mocks/api.test.mjs",
     "probe:arm64": "node dependencies/venv.cjs python dependencies/probe_arm64.py",
+    "probe:pixal3d-gpu": "node dependencies/venv.cjs python dependencies/probe_pixal3d_gpu.py",
+    "probe:trellis-gpu": "node dependencies/venv.cjs python dependencies/probe_trellis_gpu.py",
+    "test:pixal3d-gpu-workflow": "node dependencies/venv.cjs python tests/pixal3d_gpu_workflow.py",
+    "test:3d-gpu-workflow": "node dependencies/venv.cjs python tests/pixal3d_gpu_workflow.py",
     "test:native-tools": "node dependencies/venv.cjs python -m unittest discover -s tests -p native_tools_test.py",
     "test:arm64-workflows": "node dependencies/venv.cjs python tests/arm64_cpu_workflows.py"
   },

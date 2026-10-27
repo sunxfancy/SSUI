@@ -11,6 +11,7 @@ from typing import Dict, Optional, Union
 import logging
 import sys
 import uuid
+import importlib
 
 project_root = os.path.abspath(os.path.dirname(os.path.dirname(__file__)))
 
@@ -50,8 +51,11 @@ def convert_task_param(param):
 
         parts = name.split(".")
         current = __import__(parts[0])
+        prefix = parts[0]
         for part in parts[1:]:
-            current = getattr(current, part)
+            prefix += "." + part
+            # UI descriptors may refer to an SDK submodule the workflow did not import.
+            current = getattr(current, part) if hasattr(current, part) else importlib.import_module(prefix)
         return current(**params)
     if set(param) == {"items"}:
         return [convert_task_param(item) for item in param["items"]]
@@ -198,7 +202,8 @@ class Executor:
         """连接到调度器服务器"""
         while self.is_running:
             try:
-                async with websockets.connect(self.scheduler_url) as websocket:
+                # Long native GPU/mesh calls may delay this process's event loop.
+                async with websockets.connect(self.scheduler_url, ping_timeout=None) as websocket:
                     # 发送注册消息
                     register_message = ExecutorRegister(
                         host="localhost",  # 这里应该使用实际的host

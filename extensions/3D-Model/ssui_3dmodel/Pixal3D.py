@@ -1,6 +1,7 @@
 """SSUI nodes for TencentARC Pixal3D image-to-3D generation."""
 
 import math
+import os
 from typing import Any, Optional
 
 import numpy as np
@@ -15,6 +16,15 @@ from ssui.controller import Random, Slider, Switch
 DEFAULT_MODEL_PATH = "TencentARC/Pixal3D"
 DEFAULT_DINO_MODEL = "camenduru/dinov3-vitl16-pretrain-lvd1689m"
 DEFAULT_MOGE_MODEL = "Ruicheng/moge-2-vitl"
+
+
+def LoadPixal3DImage(path: str) -> Image:
+    """Load an object image without discarding its foreground alpha mask."""
+    from PIL import Image as PILImage
+
+    with PILImage.open(path) as source:
+        mode = "RGBA" if source.mode == "RGBA" or "transparency" in source.info else "RGB"
+        return Image(source.convert(mode).copy())
 
 IMAGE_COND_CONFIGS = {
     "ss": {"model_name": DEFAULT_DINO_MODEL, "image_size": 512, "grid_resolution": 16},
@@ -82,6 +92,10 @@ class Pixal3DModel:
     @staticmethod
     def load(model_path: str = DEFAULT_MODEL_PATH, low_vram: bool = True) -> "Pixal3DModel":
         _require_accelerator()
+        # PyTorch SDPA runs on CUDA/ROCm without a separate FlashAttention wheel.
+        # Respect explicit choices made by the operator before importing Pixal3D.
+        os.environ.setdefault("ATTN_BACKEND", "sdpa")
+        os.environ.setdefault("SPARSE_ATTN_BACKEND", os.environ["ATTN_BACKEND"])
         try:
             from pixal3d.pipelines import Pixal3DImageTo3DPipeline
         except ImportError as exc:
@@ -164,7 +178,8 @@ def GenPixal3DModel(config: SSUIConfig, model: Pixal3DModel, image: Image) -> Me
     if source is None:
         raise ValueError("Pixal3D requires a non-empty input image.")
 
-    processed = pipeline.preprocess_image(source.convert("RGB"))
+    # Preserve a supplied foreground mask; the pipeline handles RGB background removal.
+    processed = pipeline.preprocess_image(source)
     mesh_scale = 1.0
     image_resolution = 512
     if config["auto_camera"]:

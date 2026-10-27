@@ -17,13 +17,11 @@ def txt2img(model: FluxModel, positive: Prompt, negative: Prompt) -> Image:
     return FluxLatentDecode(config("Latent to Image"), model, latent)
 
 @workflow
-def img2mesh(image: Image) -> Mesh:
-    model = TrellisModel.load("jetx/trellis-image-large")
+def img2mesh(model: TrellisModel, image: Image) -> Mesh:
     return GenModel(config("GenModel"), model, image)
 
 @workflow
-def img2mesh_pixal3d(image: Image) -> Mesh:
-    model = Pixal3DModel.load("TencentARC/Pixal3D", low_vram=True)
+def img2mesh_pixal3d(model: Pixal3DModel, image: Image) -> Mesh:
     return GenPixal3DModel(config("Generate Pixal3D Model"), model, image)
 
 @workflow

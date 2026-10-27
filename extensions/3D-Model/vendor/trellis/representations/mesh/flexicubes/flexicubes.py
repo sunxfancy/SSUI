@@ -8,7 +8,14 @@
 
 import torch
 from .tables import *
-from kaolin.utils.testing import check_tensor
+
+def check_tensor(tensor, shape, throw=True):
+    """FlexiCubes only needs Kaolin's shape check, not its native operators."""
+    valid = isinstance(tensor, torch.Tensor) and tensor.ndim == len(shape) and all(
+        expected is None or actual == expected for actual, expected in zip(tensor.shape, shape))
+    if not valid and throw:
+        raise ValueError(f"Expected tensor shape {shape}, got {getattr(tensor, 'shape', None)}")
+    return valid
 
 __all__ = [
     'FlexiCubes'

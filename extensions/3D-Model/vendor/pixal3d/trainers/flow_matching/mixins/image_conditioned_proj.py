@@ -418,7 +418,11 @@ class DinoV3ProjFeatureExtractor(nn.Module):
             import torch.hub
             device = next(self.model.parameters()).device
             self.naf_model = torch.hub.load(
-                "valeoai/NAF", "naf", pretrained=True, device=device, trust_repo=True
+                "valeoai/NAF:37f2dfc180f2de53d98bd601109c0da0dd6b0f43",
+                "naf", pretrained=True, device=device, trust_repo=True,
+                # A fixed official commit needs no branch/fork API lookup.
+                # This also avoids anonymous GitHub API rate limits at startup.
+                skip_validation=True,
             )
             self.naf_model.eval()
             self.naf_model.requires_grad_(False)

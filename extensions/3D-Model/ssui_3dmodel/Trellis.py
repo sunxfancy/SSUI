@@ -1,11 +1,13 @@
 from typing import Optional, List
+import os
+import platform
 import torch
 from ssui.config import SSUIConfig
 from ssui.base import Mesh, Image
 from ssui.annotation import param
-from ssui.controller import Random, Switch, Slider
-from trellis.pipelines.trellis_image_to_3d import TrellisImageTo3DPipeline
-from trellis.utils import postprocessing_utils
+from ssui.controller import Random, Switch, Slider, Select
+
+WINDOWS_ARM64 = platform.system() == "Windows" and platform.machine().lower() in ("arm64", "aarch64")
 
 class TrellisModel:
     def __init__(
@@ -21,6 +23,14 @@ class TrellisModel:
 
     @staticmethod
     def load(model_path: str):
+        if not torch.cuda.is_available():
+            raise RuntimeError("TRELLIS requires a CUDA or ROCm GPU.")
+        os.environ.setdefault("ATTN_BACKEND", "sdpa")
+        os.environ.setdefault("SPARSE_ATTN_BACKEND", os.environ["ATTN_BACKEND"])
+        if WINDOWS_ARM64:
+            os.environ.setdefault("SPARSE_BACKEND", "flex_gemm")
+        from trellis.pipelines.trellis_image_to_3d import TrellisImageTo3DPipeline
+
         model = TrellisImageTo3DPipeline.from_pretrained(model_path)
         model.cuda()
         return TrellisModel(model_path, model)
@@ -32,11 +42,12 @@ class TrellisModel:
 @param("sparse_structure_cfg", Slider(0, 15, 0.1), default=7.5)
 @param("slat_steps", Slider(1, 50, 1), default=12)
 @param("slat_cfg", Slider(0, 15, 0.1), default=3.0)
+@param("export_mode", Select("vertex_colors", "gaussian_texture"), default="vertex_colors" if WINDOWS_ARM64 else "gaussian_texture")
 def GenModel(
     config: SSUIConfig,
     model: TrellisModel,
     image: Image,
-):
+) -> Mesh:
     if config.is_prepare():
         return Mesh()
 
@@ -59,14 +70,33 @@ def GenModel(
         "cfg_strength": config["slat_cfg"],
     }
 
+    source = image._image if isinstance(image, Image) else image
+    if source is None:
+        raise ValueError("TRELLIS requires a non-empty input image.")
+    if config["export_mode"] not in ("vertex_colors", "gaussian_texture"):
+        raise ValueError("Unknown TRELLIS export mode.")
     outputs = model.getModel().run(
-        image=image,
+        image=source,
         sparse_structure_sampler_params=sparse_structure_sampler_params,
         slat_sampler_params=slat_sampler_params,
-        formats=["mesh", "gaussian"],
+        formats=["mesh", "gaussian"] if config["export_mode"] == "gaussian_texture" else ["mesh"],
         seed=config["seed"],
         preprocess_image=config["preprocess_image"],
     ) 
+
+    if config["export_mode"] == "vertex_colors":
+        import numpy as np
+        import trimesh
+
+        mesh = outputs["mesh"][0]
+        if not mesh.success:
+            raise RuntimeError("TRELLIS generated an empty mesh.")
+        colors = None
+        if mesh.vertex_attrs is not None:
+            colors = (mesh.vertex_attrs[:, :3].clamp(0, 1) * 255).to(torch.uint8).cpu().numpy()
+        vertices = mesh.vertices.cpu().numpy() @ np.array([[1, 0, 0], [0, 0, -1], [0, 1, 0]])
+        return Mesh(trimesh.Trimesh(vertices, mesh.faces.cpu().numpy(), vertex_colors=colors, process=False))
+    from trellis.utils import postprocessing_utils
 
     glb = postprocessing_utils.to_glb(
         outputs['gaussian'][0],

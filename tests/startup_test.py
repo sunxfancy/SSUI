@@ -9,6 +9,25 @@ from ss_executor.scheduler import TaskScheduler
 
 
 class StartupTest(unittest.TestCase):
+    def test_optional_download_acceleration_is_not_required(self):
+        import os
+        from server.__main__ import main
+
+        with patch.dict(os.environ), patch("server.__main__.importlib.util.find_spec", return_value=None), \
+             patch("sys.argv", ["server", "--dev"]), patch("uvicorn.run"):
+            os.environ.pop("HF_HUB_ENABLE_HF_TRANSFER", None)
+            main()
+            self.assertEqual(os.environ["HF_HUB_ENABLE_HF_TRANSFER"], "0")
+
+    def test_download_acceleration_respects_explicit_setting(self):
+        import os
+        from server.__main__ import main
+
+        with patch.dict(os.environ, {"HF_HUB_ENABLE_HF_TRANSFER": "0"}), \
+             patch("sys.argv", ["server", "--dev"]), patch("uvicorn.run"):
+            main()
+            self.assertEqual(os.environ["HF_HUB_ENABLE_HF_TRANSFER"], "0")
+
     def test_scheduler_accepts_ipv4_and_ipv6(self):
         scheduler = TaskScheduler()
         for address in [("127.0.0.1", 1234), ("::1", 1234, 0, 0)]:

@@ -389,6 +389,11 @@ class SparseTensor:
         return cur_scale_cache.get(key, None)
 
 
+if BACKEND == 'flex_gemm':
+    # Same feature/coordinate contract, without a dependency on spconv storage.
+    from pixal3d.modules.sparse.basic import SparseTensor
+
+
 def sparse_batch_broadcast(input: SparseTensor, other: torch.Tensor) -> torch.Tensor:
     """
     Broadcast a 1D tensor to a sparse tensor along the batch dimension then perform an operation.

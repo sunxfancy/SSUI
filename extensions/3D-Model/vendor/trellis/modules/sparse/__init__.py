@@ -17,11 +17,11 @@ def __from_env():
     if env_sparse_attn is None:
         env_sparse_attn = os.environ.get('ATTN_BACKEND')
 
-    if env_sparse_backend is not None and env_sparse_backend in ['spconv', 'torchsparse']:
+    if env_sparse_backend is not None and env_sparse_backend in ['spconv', 'torchsparse', 'flex_gemm']:
         BACKEND = env_sparse_backend
     if env_sparse_debug is not None:
         DEBUG = env_sparse_debug == '1'
-    if env_sparse_attn is not None and env_sparse_attn in ['xformers', 'flash_attn']:
+    if env_sparse_attn is not None and env_sparse_attn in ['xformers', 'flash_attn', 'sdpa']:
         ATTN = env_sparse_attn
         
     print(f"[SPARSE] Backend: {BACKEND}, Attention: {ATTN}")
@@ -30,7 +30,7 @@ def __from_env():
 __from_env()
     
 
-def set_backend(backend: Literal['spconv', 'torchsparse']):
+def set_backend(backend: Literal['spconv', 'torchsparse', 'flex_gemm']):
     global BACKEND
     BACKEND = backend
 
@@ -38,7 +38,7 @@ def set_debug(debug: bool):
     global DEBUG
     DEBUG = debug
 
-def set_attn(attn: Literal['xformers', 'flash_attn']):
+def set_attn(attn: Literal['xformers', 'flash_attn', 'sdpa']):
     global ATTN
     ATTN = attn
     

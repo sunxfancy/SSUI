@@ -8,6 +8,8 @@ if ATTN == 'xformers':
     import xformers.ops as xops
 elif ATTN == 'flash_attn':
     import flash_attn
+elif ATTN == 'sdpa':
+    pass
 else:
     raise ValueError(f"Unknown attention module: {ATTN}")
 
@@ -100,6 +102,10 @@ def sparse_windowed_scaled_dot_product_self_attention(
             assert (seq_coords[:, 1:].max(dim=0).values - seq_coords[:, 1:].min(dim=0).values < window_size).all(), \
                     f"SparseWindowedScaledDotProductSelfAttention: window size exceeded"
             start += seq_lens[i]
+
+    if ATTN == 'sdpa':
+        from .sdpa import packed_attention
+        return qkv.replace(packed_attention(qkv_feats, seq_lens)[bwd_indices])
 
     if all([seq_len == window_size for seq_len in seq_lens]):
         B = len(seq_lens)
