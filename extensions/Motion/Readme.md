@@ -6,7 +6,33 @@ MediaPipe video pose recognition with BVH/Blender reconstruction.
 The Motion extension runs NVIDIA Kimodo in an isolated child environment. This
 keeps Kimodo's pinned `transformers==5.1.0` dependency from replacing the
 versions used by SSUI's Image and Video extensions, while reusing the project's
-ROCm-enabled PyTorch installation.
+verified CUDA/ROCm PyTorch installation. The installer only installs Kimodo's
+inference/export dependencies; its optional demo and native motion correction
+are separate.
+
+## Windows ARM64 CUDA workflow
+
+The native ARM64 CUDA path is validated with SOMA-RP-v1.1. Select the parent GPU
+environment explicitly when installing:
+
+```powershell
+./extensions/Motion/install_kimodo.ps1 `
+  -ProjectPython .build/cuda-arm64-venv/Scripts/python.exe `
+  -EnvironmentPath .build/motion-gpu/installed-venv
+$env:SSUI_KIMODO_PYTHON = "$PWD/.build/motion-gpu/installed-venv/Scripts/python.exe"
+```
+
+Open `examples/advance/workflow-motion.py`, enter a motion description, and run.
+The `MotionClip` output supports playback, scrubbing, camera rotation, zoom,
+following the moving character, and NPZ/BVH/JSON downloads. Generated motion uses
+its actual skeleton hierarchy and Y-up world coordinates in meters, independently
+of the MediaPipe pose-recognition format.
+
+The original `KimodoTextToMotion` function still returns the NPZ path for existing
+Python callers. The workflow uses `GenerateKimodoMotion` to return the typed clip.
+
+See [native GPU validation](../../doc/KimodoGpu.md) for the actual model sources,
+acceptance command, BVH roundtrip results, and remaining limitations.
 
 ## Windows AMDGPU setup
 

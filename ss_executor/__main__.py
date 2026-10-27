@@ -26,7 +26,7 @@ for dir in os.listdir(extensions_root):
 
 
 from ss_executor.loader import SSLoader, search_project_root
-from ssui.base import Audio, Image, Mesh, SkeletonAnimation, Video
+from ssui.base import Audio, Image, Mesh, MotionClip, SkeletonAnimation, Video
 from ss_executor.sandbox import Sandbox
 from ss_executor.model import KillMessage, TaskStatus, Task, ExecutorRegister, RegisterResponse, UpdateStatus, TaskResult, ExeMessage
 import traceback
@@ -116,6 +116,12 @@ def convert_task_return(result, task_script):
             "fps": result.fps,
             "metadata": result.metadata,
         }
+    if isinstance(result, MotionClip):
+        if not result.path or not os.path.isfile(result.path):
+            raise ValueError("Generated motion has no preview manifest")
+        return {"type": "motion_clip", "path": result.path, "npz_path": result.npz_path,
+                "bvh_path": result.bvh_path, "model": result.model, "fps": result.fps,
+                "frames": result.frames, "duration": result.frames / result.fps}
     if isinstance(result, SkeletonAnimation):
         from ssui_motion import export_bvh
 

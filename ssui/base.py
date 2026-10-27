@@ -12,6 +12,17 @@ class Image():
         with PIL.Image.open(path) as image:
             return Image(image.convert("RGB").copy())
 
+@dataclass
+class MotionClip:
+    """Generated 3D joint motion and its native animation artifacts."""
+    path: str | None = None
+    npz_path: str | None = None
+    bvh_path: str | None = None
+    model: str = ""
+    fps: float = 30.0
+    frames: int = 0
+
+
 class Mesh():
     def __init__(self, model: trimesh.Trimesh = None):
         self._model = model
