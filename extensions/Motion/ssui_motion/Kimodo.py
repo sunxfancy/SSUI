@@ -2,6 +2,7 @@ import datetime
 import os
 import subprocess
 import sys
+from pathlib import Path
 
 from ssui.annotation import param
 from ssui.base import Prompt
@@ -22,9 +23,10 @@ def _kimodo_python() -> str:
     if configured:
         return configured
 
+    root = Path(__file__).resolve().parents[3]
     candidates = (
-        os.path.join(".venv", "kimodo", "Scripts", "python.exe"),
-        os.path.join(".venv", "kimodo", "bin", "python"),
+        str(root / ".venv/kimodo/Scripts/python.exe"),
+        str(root / ".venv/kimodo/bin/python"),
     )
     for candidate in candidates:
         if os.path.isfile(candidate):
@@ -32,7 +34,7 @@ def _kimodo_python() -> str:
 
     raise RuntimeError(
         "Kimodo 隔离环境不存在。请先运行 "
-        "extensions/Motion/install_kimodo.ps1。"
+        "yarn install:kimodo（Mac/Linux）或 extensions/Motion/install_kimodo.ps1（Windows）。"
     )
 
 
@@ -73,6 +75,7 @@ def _run_kimodo(config: SSUIConfig, prompt: Prompt) -> str:
     env.setdefault("LOCAL_CACHE", "True")
     env.setdefault("TEXT_ENCODER_MODE", "local")
     env["TEXT_ENCODER_DEVICE"] = config["text_encoder_device"]
+    env["SSUI_KIMODO_DEVICE"] = config["device"]
 
     process = subprocess.Popen(
         command,
@@ -97,11 +100,7 @@ def _run_kimodo(config: SSUIConfig, prompt: Prompt) -> str:
                 "Kimodo 生成失败：Hugging Face 的 Llama 3 访问申请仍在等待审批。\n"
                 + tail
             )
-        raise RuntimeError(
-            "Kimodo 生成失败。首次运行前需要在 Kimodo 子环境执行 "
-            "`.venv\\kimodo\\Scripts\\hf.exe auth login`，并确保 Hugging Face "
-            "账号已获准访问 meta-llama/Meta-Llama-3-8B-Instruct。\n" + tail
-        )
+        raise RuntimeError("Kimodo 运行失败：\n" + tail)
 
     output_path = output_stem + ".npz"
     if not os.path.isfile(output_path):
@@ -113,7 +112,8 @@ def _run_kimodo(config: SSUIConfig, prompt: Prompt) -> str:
 @param("duration", Slider(1, 20, 0.5), default=5.0)
 @param("diffusion_steps", Slider(1, 200, 1), default=100)
 @param("seed", Random(), default=42)
-@param("text_encoder_device", Select("cuda", "cpu"), default="cuda")
+@param("device", Select("auto", "mps", "cuda", "cpu"), default="auto")
+@param("text_encoder_device", Select("auto", "mps", "cuda", "cpu"), default="auto")
 @param("export_bvh", Switch(), default=False)
 def KimodoTextToMotion(config: SSUIConfig, prompt: Prompt) -> str:
     """使用 NVIDIA Kimodo 从文本生成动作，返回生成的 NPZ 文件路径。"""

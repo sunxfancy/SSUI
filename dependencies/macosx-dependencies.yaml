@@ -26,6 +26,10 @@ annotated-types:
   version: "0.7.0"
   dependents:
     - pydantic
+antlr4-python3-runtime:
+  version: "4.9.3"
+  dependents:
+    - omegaconf
 anyio:
   version: "4.9.0"
   dependents:
@@ -65,12 +69,6 @@ click:
 clip-anytorch:
   version: "2.6.0"
   isRoot: true
-colorama:
-  version: "0.4.6"
-  dependents:
-    - click
-    - tqdm
-    - uvicorn
 coloredlogs:
   version: "15.0.1"
   dependents:
@@ -155,6 +153,7 @@ fsspec:
     - torch
 ftfy:
   version: "6.3.1"
+  isRoot: true
   dependents:
     - clip-anytorch
 gguf:
@@ -215,8 +214,13 @@ igraph:
   isRoot: true
 imageio:
   version: "2.37.0"
+  isRoot: true
   dependents:
     - scikit-image
+imageio-ffmpeg:
+  version: "0.6.0"
+  dependents:
+    - imageio
 importlib-metadata:
   version: "8.6.1"
   dependents:
@@ -290,6 +294,9 @@ ml-dtypes:
   dependents:
     - jax
     - jaxlib
+modelscope:
+  version: "1.26.0"
+  isRoot: true
 moderngl:
   version: "5.12.0"
   isRoot: true
@@ -331,6 +338,7 @@ numpy:
     - opencv-contrib-python
     - opencv-python
     - opencv-python-headless
+    - pandas
     - plyfile
     - pymatting
     - pymeshfix
@@ -344,6 +352,9 @@ numpy:
     - torchvision
     - transformers
     - trimesh
+omegaconf:
+  version: "2.3.0"
+  isRoot: true
 onnx:
   version: "1.17.0"
   isRoot: true
@@ -378,6 +389,9 @@ packaging:
     - pooch
     - scikit-image
     - transformers
+pandas:
+  version: "3.0.6"
+  isRoot: true
 picklescan:
   version: "0.0.24"
   isRoot: true
@@ -422,6 +436,7 @@ psutil:
   version: "7.0.0"
   dependents:
     - accelerate
+    - imageio
 pycparser:
   version: "2.22"
   dependents:
@@ -455,14 +470,11 @@ pyparsing:
   dependents:
     - compel
     - matplotlib
-pyreadline3:
-  version: "3.5.6"
-  dependents:
-    - humanfriendly
 python-dateutil:
   version: "2.9.0.post0"
   dependents:
     - matplotlib
+    - pandas
 python-dotenv:
   version: "1.1.0"
   dependents:
@@ -484,6 +496,7 @@ pyyaml:
     - accelerate
     - gguf
     - huggingface-hub
+    - omegaconf
     - transformers
     - uvicorn
 referencing:
@@ -506,6 +519,7 @@ requests:
   dependents:
     - diffusers
     - huggingface-hub
+    - modelscope
     - pooch
     - tiktoken
     - transformers
@@ -536,6 +550,7 @@ safetensors:
     - transformers
 scikit-image:
   version: "0.25.2"
+  isRoot: true
   dependents:
     - controlnet-aux
     - rembg
@@ -556,6 +571,7 @@ scooby:
     - pyvista
 sentencepiece:
   version: "0.2.0"
+  isRoot: true
   dependents:
     - gguf
     - mediapipe
@@ -646,6 +662,7 @@ tqdm:
     - clip-anytorch
     - gguf
     - huggingface-hub
+    - modelscope
     - rembg
     - transformers
 trampoline:
@@ -690,12 +707,17 @@ typing-inspection:
 urllib3:
   version: "2.3.0"
   dependents:
+    - modelscope
     - requests
 uvicorn:
   version: "0.34.0"
   dependents:
     - fastapi
     - fastapi-cli
+uvloop:
+  version: "0.23.0"
+  dependents:
+    - uvicorn
 virtualenv:
   version: "20.29.3"
   isRoot: true

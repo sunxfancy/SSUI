@@ -1,4 +1,3 @@
-from transformers import Qwen2_5_VLModel
 import torch
 from typing import Optional, Union
 
@@ -6,7 +5,15 @@ from typing import Optional, Union
 class QwenImageTextEncoder(torch.nn.Module):
     def __init__(self):
         super().__init__()
-        from transformers import Qwen2_5_VLConfig
+        # Older SSUI environments can still run the other DiffSynth models.
+        # Only require the optional Qwen2.5-VL classes when this encoder is used.
+        try:
+            from transformers import Qwen2_5_VLConfig, Qwen2_5_VLModel
+        except ImportError as exc:
+            raise ImportError(
+                "QwenImageTextEncoder requires Transformers with Qwen2.5-VL support. "
+                "Install a compatible Transformers version to use Qwen Image."
+            ) from exc
         config = Qwen2_5_VLConfig(**{
             "architectures": [
                 "Qwen2_5_VLForConditionalGeneration"

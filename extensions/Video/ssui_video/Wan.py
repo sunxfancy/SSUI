@@ -1,3 +1,4 @@
+from ._runtime import wan_runtime
 import torch
 from diffsynth import ModelManager, WanVideoPipeline
 from modelscope import snapshot_download
@@ -14,7 +15,7 @@ class WanVideoModel:
 
     @staticmethod
     def load() -> "WanVideoModel":
-        model_manager = ModelManager()
+        model_manager = ModelManager(device="cpu", torch_dtype=wan_runtime()["torch_dtype"])
         snapshot_download("PAI/Wan2.1-Fun-1.3B-InP", local_dir="models/PAI/Wan2.1-Fun-1.3B-InP")
 
         # Load models
@@ -25,7 +26,7 @@ class WanVideoModel:
                 "models/PAI/Wan2.1-Fun-1.3B-InP/Wan2.1_VAE.pth",
                 "models/PAI/Wan2.1-Fun-1.3B-InP/models_clip_open-clip-xlm-roberta-large-vit-huge-14.pth",
             ],
-            torch_dtype=torch.bfloat16, # You can set `torch_dtype=torch.float8_e4m3fn` to enable FP8 quantization.
+            torch_dtype=wan_runtime()["torch_dtype"],
         )
         return WanVideoModel(model_manager)
 
@@ -36,7 +37,7 @@ def WanImageTextToVideo(config: SSUIConfig, base_model: WanVideoModel, image: Im
     if config.is_prepare():
         return [Image()]
     
-    pipe = WanVideoPipeline.from_model_manager(base_model.model_manager, torch_dtype=torch.bfloat16, device="cuda")
+    pipe = WanVideoPipeline.from_model_manager(base_model.model_manager, **wan_runtime())
     pipe.enable_vram_management(num_persistent_param_in_dit=None)
 
     # Image-to-video
