@@ -1,11 +1,14 @@
 /** Storybook-only transport. Routes are METHOD + pathname (query is available to handlers). */
-export function createOfflineApi(nativeFetch, origin) {
+export function createOfflineApi(nativeFetch, origin, allowLocalTestServer = () => false) {
     let scenario = {};
     return {
         configure(value = {}) { scenario = value; },
         async fetch(input, init = {}) {
             const url = new URL(typeof input === 'string' ? input : input.url ?? input.href, origin);
             if (url.protocol === 'data:' || url.protocol === 'blob:') return nativeFetch(input, init);
+            if (allowLocalTestServer() && url.origin === 'http://127.0.0.1:7422') {
+                return nativeFetch(input, init);
+            }
             const method = (init.method ?? input.method ?? 'GET').toUpperCase();
             const business = /^\/(api(?:\/|$)|files?(?:\/|$)|config(?:\/|$)|extension(?:\/|$))/.test(url.pathname);
             const key = `${method} ${url.pathname}`;

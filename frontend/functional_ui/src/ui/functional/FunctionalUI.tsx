@@ -2,6 +2,7 @@ import React, { Component } from 'react';
 import { Button, Callout, Collapse, Icon, MenuItem, NonIdealState, Spinner, Tag } from "@blueprintjs/core";
 import { ItemPredicate, ItemRenderer, Select } from "@blueprintjs/select";
 import { ComponentTabRef } from "ssui_components";
+import type { ApiComponents } from "ssui_components";
 import { DetailsPanel } from "./Details";
 import { registerUIProvider, UIProvider } from '../UIProvider';
 import { useConfig } from '../../config';
@@ -12,9 +13,9 @@ import "@blueprintjs/core/lib/css/blueprint.css";
 import "@blueprintjs/icons/lib/css/blueprint-icons.css";
 
 interface Callable { rank: number; name: string; }
-interface Params { params: Record<string, string>; returns: string[]; }
-interface FunctionMeta { [key: string]: Params | string; }
-interface ScriptMeta { root_path: string; functions: FunctionMeta; }
+type Params = ApiComponents['schemas']['ScriptFunctionInfo'];
+type ScriptMeta = ApiComponents['schemas']['ScriptMeta'];
+type FunctionMeta = ScriptMeta['functions'];
 interface FunctionalUIProps { path: string; autoOpenDetails?: boolean; }
 interface FunctionalUIState {
     functions: FunctionMeta | null;
@@ -65,7 +66,7 @@ export class FunctionalUI extends Component<FunctionalUIProps, FunctionalUIState
             const response = await fetch('/api/script?' + new URLSearchParams({ script_path: this.props.path }), { signal: request.signal });
             if (!response.ok) throw new Error(`无法读取脚本信息（${response.status}）`);
             const data = await response.json() as ScriptMeta;
-            this.setState({ functions: data.functions, loading: false, error: null, root_path: data.root_path });
+            this.setState({ functions: data.functions, loading: false, error: null, root_path: data.root_path ?? '' });
         } catch (error) {
             if (error instanceof DOMException && error.name === 'AbortError') return;
             this.setState({ loading: false, error: error instanceof Error ? error : new Error('读取脚本时发生未知错误') });
@@ -120,7 +121,7 @@ export class FunctionalUI extends Component<FunctionalUIProps, FunctionalUIState
                     : '执行器返回了无法识别的结果格式';
                 throw new Error(message);
             }
-            const outputNames = Object.keys(meta.returns);
+            const outputNames = meta.returns.map((_type, index) => String(index));
             data.forEach((item, index) => this.refOutputs.get(outputNames[index])?.current?.onUpdate(item));
             this.setState({ running: false, runError: null, hasRun: true });
         } catch (error) {
@@ -139,6 +140,7 @@ export class FunctionalUI extends Component<FunctionalUIProps, FunctionalUIState
         ) : null;
         return (
             <Select<Callable> items={items} itemPredicate={filter} itemRenderer={renderer}
+                popoverTargetProps={{ 'aria-label': 'Select function' }}
                 noResults={<MenuItem disabled text="没有匹配的函数" roleStructure="listoption" />}
                 onItemSelect={this.handleSelectFunc} popoverProps={{ minimal: true, matchTargetWidth: true }}>
                 <Button className="functional-ui-select" alignText="left" icon="function"
@@ -191,7 +193,7 @@ export class FunctionalUI extends Component<FunctionalUIProps, FunctionalUIState
             <Collapse isOpen={this.state.isOpen} keepChildrenMounted><div className="functional-ui-details-shell">
                 <DetailsPanel path={this.props.path} selected={selected} ref={this.details} />
             </div></Collapse>
-            {this.state.runError && <Callout className="functional-ui-run-error" intent="danger" icon="error" title="运行失败">{this.state.runError}</Callout>}
+            {this.state.runError && <Callout role="alert" className="functional-ui-run-error" intent="danger" icon="error" title="运行失败">{this.state.runError}</Callout>}
             <div className="functional-ui-stage">
                 <section className="functional-ui-column functional-ui-column-input">
                     <header className="functional-ui-column-header"><div><span className="functional-ui-eyebrow">Configure</span><h2>输入</h2></div><span>{inputCount}</span></header>

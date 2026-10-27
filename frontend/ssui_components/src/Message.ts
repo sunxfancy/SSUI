@@ -2,6 +2,7 @@ export class Message {
     host: string;
     port: number;
     ws?: WebSocket;
+    private connectionPromise?: Promise<string | undefined>;
     active_requests: number = 0;
     uuid?: string;
     message_cache: {
@@ -25,15 +26,19 @@ export class Message {
 
     async connect(): Promise<string | undefined> {
         this.active_requests++;
-        if (this.ws) { return; }
-        return new Promise((resolve, reject) => {
+        if (this.ws && this.uuid) { return this.uuid; }
+        if (this.connectionPromise) { return this.connectionPromise; }
+        this.connectionPromise = new Promise((resolve, reject) => {
             let ws = new WebSocket(`ws://${this.host}:${this.port}/ws`);
             ws.onopen = () => {
                 console.log("connected to server!");
             }
             ws.onclose = () => {
-                console.log("disconnected from server!");
+                this.ws = undefined;
+                this.uuid = undefined;
+                this.connectionPromise = undefined;
                 if (this.active_requests > 0) {
+                    console.log("disconnected from server!");
                     console.log("WebSocket disconnected, retrying...");
                     setTimeout(this.connect.bind(this), 200); // 0.2秒后自动重连
                 }
@@ -45,6 +50,7 @@ export class Message {
                 if (data.type === 'uuid') {
                     console.log("uuid received: ", data.uuid);
                     this.uuid = data.uuid;
+                    this.connectionPromise = undefined;
                     resolve(this.uuid);
                 }
         
@@ -77,10 +83,12 @@ export class Message {
             ws.onerror = (err) => {
                 console.error("WebSocket error", err);
                 ws.close(); // 确保触发 onclose
+                this.connectionPromise = undefined;
                 reject(err);
             };
             this.ws = ws;
         });
+        return this.connectionPromise;
     }
 
     disconnect() {
@@ -96,13 +104,12 @@ export class Message {
     async post(api_path: string, data?: any, callbacks?: {
         [key: string]: (data: any) => void;
     }) {
-        if (!this.uuid) {
-            await new Promise(resolve => setTimeout(resolve, 1000));
-        }
-
         let address = `http://${this.host}:${this.port}/${api_path}`;
         if (callbacks) {
             await this.connect();
+            if (!this.uuid) {
+                throw new Error('WebSocket connected without a client UUID');
+            }
             address += `/${this.uuid}`;
         }
         const response = await fetch(address, {

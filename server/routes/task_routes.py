@@ -6,6 +6,7 @@ from typing import Any, Dict, Optional
 
 from fastapi import APIRouter, Body, Request
 from fastapi.responses import JSONResponse
+from server.models import AsyncStart, TaskList, TaskMutationResult
 
 router = APIRouter()
 
@@ -157,7 +158,7 @@ async def _notify_task_started(task_service, websocket_service, record_id: str) 
         await websocket_service.broadcast({"type": "task_update", "task": record.to_dict()})
 
 
-@router.get("/api/tasks")
+@router.get("/api/tasks", response_model=TaskList)
 async def list_tasks(
     request: Request,
     kind: Optional[str] = None,
@@ -178,7 +179,7 @@ async def list_tasks(
     return {"items": items}
 
 
-@router.post("/api/tasks/download")
+@router.post("/api/tasks/download", response_model=AsyncStart)
 async def create_download_task(
     request: Request,
     kind: str = Body("url", embed=True),
@@ -197,7 +198,7 @@ async def create_download_task(
     }
 
 
-@router.delete("/api/tasks/{task_id}")
+@router.delete("/api/tasks/{task_id}", response_model=TaskMutationResult)
 async def remove_task(request: Request, task_id: str):
     """移除任务：优先移除下载任务，其次移除调度器中已结束的生图任务。"""
     task_service = request.app.state.task_service
@@ -210,7 +211,7 @@ async def remove_task(request: Request, task_id: str):
     return {"success": removed}
 
 
-@router.post("/api/tasks/clear")
+@router.post("/api/tasks/clear", response_model=TaskMutationResult)
 async def clear_completed_tasks(request: Request):
     """清除所有已结束任务（下载任务 + 生图任务）。"""
     task_service = request.app.state.task_service
@@ -223,7 +224,7 @@ async def clear_completed_tasks(request: Request):
     return {"success": True, "removed": count, "scheduler_removed": scheduler_removed}
 
 
-@router.post("/api/tasks/{task_id}/cancel")
+@router.post("/api/tasks/{task_id}/cancel", response_model=TaskMutationResult)
 async def cancel_task(request: Request, task_id: str):
     task_service = request.app.state.task_service
     websocket_service = request.app.state.websocket_service
@@ -235,7 +236,7 @@ async def cancel_task(request: Request, task_id: str):
     return {"success": cancelled}
 
 
-@router.post("/api/tasks/{task_id}/retry")
+@router.post("/api/tasks/{task_id}/retry", response_model=TaskMutationResult)
 async def retry_task(request: Request, task_id: str):
     """重试失败的下载任务：按原 meta 重新创建任务。"""
     task_service = request.app.state.task_service
