@@ -4,8 +4,6 @@ from ssui.config import SSUIConfig
 from ssui.base import Mesh, Image
 from ssui.annotation import param
 from ssui.controller import Random, Switch, Slider
-from trellis.pipelines.trellis_image_to_3d import TrellisImageTo3DPipeline
-from trellis.utils import postprocessing_utils
 
 class TrellisModel:
     def __init__(
@@ -21,6 +19,14 @@ class TrellisModel:
 
     @staticmethod
     def load(model_path: str):
+        # Keep unrelated workflows importable without TRELLIS CUDA extensions.
+        if torch.version.hip:
+            raise RuntimeError(
+                "Legacy TRELLIS requires CUDA-only extensions in SSUI. "
+                "Use the Pixal3D workflow for ROCm and run yarn probe:3d first."
+            )
+        from trellis.pipelines.trellis_image_to_3d import TrellisImageTo3DPipeline
+
         model = TrellisImageTo3DPipeline.from_pretrained(model_path)
         model.cuda()
         return TrellisModel(model_path, model)
@@ -39,6 +45,8 @@ def GenModel(
 ):
     if config.is_prepare():
         return Mesh()
+
+    from trellis.utils import postprocessing_utils
 
     print("GenModel executed")
     print("seed:", config["seed"])

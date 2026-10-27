@@ -62,8 +62,31 @@ def from_pretrained(path: str, **kwargs):
 
     with open(config_file, 'r') as f:
         config = json.load(f)
-    model = __getattr__(config['name'])(**config['args'], **kwargs)
-    model.load_state_dict(load_file(model_file), strict=False)
+    import sys
+    import torch
+    if sys.platform == 'win32' and torch.version.hip:
+        from accelerate import init_empty_weights
+        # Allocate only the checkpoint tensors, not a complete random FP32
+        # model followed by another converted copy. Keep ordinary constants
+        # on CPU (a global meta-device context would also erase RoPE freqs).
+        with init_empty_weights():
+            model = __getattr__(config['name'])(**config['args'], **kwargs)
+        expected = model.state_dict()
+        # The Windows ROCm torch storage mmap path can access-violate under
+        # full-pipeline memory pressure. Stream one tensor at a time with
+        # safetensors 0.8's pread backend instead of retaining a second model.
+        from safetensors import safe_open
+        with safe_open(model_file, framework='pt', device='cpu', backend='pread') as checkpoint:
+            for name in checkpoint.keys():
+                if name in expected:
+                    tensor = checkpoint.get_tensor(name).to(dtype=expected[name].dtype)
+                    model.load_state_dict({name: tensor}, strict=False, assign=True)
+        missing = [name for name, tensor in model.state_dict().items() if tensor.is_meta]
+        if missing:
+            raise ValueError(f'Checkpoint is missing model tensors: {missing}')
+    else:
+        model = __getattr__(config['name'])(**config['args'], **kwargs)
+        model.load_state_dict(load_file(model_file), strict=False)
 
     return model
 

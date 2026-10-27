@@ -76,7 +76,8 @@ test('migration retains OS/backend-specific versions, URLs, extras and multiple 
   assert.ok(windows.requirements.includes('scipy>=1.15'));
   assert.ok(windows.requirements.includes('diffusers[torch]>=0.37.0,<0.41'));
   assert.ok(rocm.requirements.some(r => r.startsWith('torch @ https://repo.radeon.com/')));
-  assert.ok(rocm.requirements.includes('tokenizers==0.21.1'));
+  assert.ok(rocm.requirements.includes('tokenizers==0.22.2'));
+  assert.ok(rocm.requirements.includes('transformers==4.57.6'));
   assert.ok(macos.requirements.includes('torch==2.4.1'));
   assert.ok(!macos.requirements.some(r => r.includes('win_amd64')));
   assert.ok(!macos.requirements.some(r => r.startsWith('xatlas')));

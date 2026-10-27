@@ -368,6 +368,7 @@ class DinoV3ProjFeatureExtractor(nn.Module):
         grid_resolution: int = 16,
         use_naf_upsample: bool = False,
         naf_target_size: Optional[List[int]] = None,
+        backbone: Optional[nn.Module] = None,
     ):
         super().__init__()
         self.model_name = model_name
@@ -382,7 +383,7 @@ class DinoV3ProjFeatureExtractor(nn.Module):
             self.naf_target_size = tuple(naf_target_size)
         
         # Load DINOv3 model (frozen, no trainable params in this module)
-        self.model = DINOv3ViTModel.from_pretrained(model_name)
+        self.model = backbone if backbone is not None else DINOv3ViTModel.from_pretrained(model_name)
         self.model.eval()
         self.model.requires_grad_(False)
         
@@ -416,9 +417,13 @@ class DinoV3ProjFeatureExtractor(nn.Module):
         """Lazy-load pretrained NAF model."""
         if self.naf_model is None:
             import torch.hub
+            import os
             device = next(self.model.parameters()).device
+            local_source = os.environ.get("PIXAL3D_NAF_SOURCE")
             self.naf_model = torch.hub.load(
-                "valeoai/NAF", "naf", pretrained=True, device=device, trust_repo=True
+                local_source or "valeoai/NAF", "naf", pretrained=True,
+                device=device, trust_repo=True,
+                source="local" if local_source else "github",
             )
             self.naf_model.eval()
             self.naf_model.requires_grad_(False)
