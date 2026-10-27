@@ -19,6 +19,7 @@
 | TripoSR（新增） | **完整图像转彩色 GLB 已通过**，MPS float32 推理 + CPU 网格提取 | 16GB Mac、64³、真实椅子图片；不含 UV 烘焙，复杂背景需预处理 |
 | TRELLIS image-large | **真实权重的 MPS 网格生成已跑通**：稀疏卷积、池化、SDPA 和 FlexiCubes 适配 | 整数邻接映射使用 Metal，去重/计数使用 MPS；顶点颜色 GLB 已导出；UV 烘焙、Gaussian/RF 渲染和其他实验分支尚未移植 |
 | StdGEN（vendor） | **未移植**：`RasterizeCudaContext` 等 CUDA 渲染路径 | 需要替代渲染后端；没有发现对应正式 SSUI 节点 |
+| NVIDIA Kimodo | **SOMA-RP-v1.1 文本转动作已跑通**：逐层 MPS LLM2Vec + MPS 动作网络 | 16GB Mac，2 秒 / 60 帧 / 20 步，NPZ/BVH；文本基座使用固定社区合并版，未验证全部 G1/约束/原生后处理路径 |
 | CosyVoice | vendor 有无 CUDA 时回退 CPU 的逻辑 | CPU 路径不代表 MPS 加速，TensorRT 路径仍需 CUDA |
 | Qwen | 节点使用 Transformers `device_map="auto"`，未强制 CUDA | 需验证具体权重的远程模型代码、精度及设备映射；不能直接归类为 CUDA-only |
 
