@@ -16,7 +16,8 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Set model test data directory
+      - name: Configure model cache directory
+        shell: bash
         run: echo "TEST_DATA_DIR=$RUNNER_TEMP/ssui_test_models" >> "$GITHUB_ENV"
 
       - name: Set up Python
