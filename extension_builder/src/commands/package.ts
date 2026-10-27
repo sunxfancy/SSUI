@@ -2,7 +2,7 @@ import fs from 'fs-extra';
 import path from 'path';
 import { execSync } from 'child_process';
 import chalk from 'chalk';
-import tar from 'tar';
+import * as tar from 'tar';
 import YAML from 'yaml';
 
 export async function packageExtension(outputDir?: string): Promise<void> {
