@@ -94,8 +94,9 @@ yarn probe:3d --output test-artifacts/amd-3d-probe.json
 Preparation refuses to overwrite existing source checkouts. For a new build use
 `--directory` on the prepare command, then pass matching `-Source` and
 `-DevelInclude` paths to the build command. The default build folder is ignored
-by Git. The wheel is local: reinstalling the dependency lock restores the old
-wheel until a validated ROCm wheel is published and the dependency profile updated.
+by Git. Published wheels and SHA256 checksums are available in the
+[ROCm wheel release](https://github.com/sunxfancy/SSUI/releases/tag/rocm-wheels-20261027).
+The Windows AMD dependency profile pins these artifacts, including NATTEN and CuMesh.
 
 Sources are pinned in `dependencies/prepare_nvdiffrast_rocm.py`: NVIDIA nvdiffrast
 `253ac4f`, plus selected source patches from
@@ -133,8 +134,7 @@ yarn probe:large-sparse
 
 The preparation script pins the existing CuMesh ROCm port and Eigen source,
 then applies `dependencies/patches/cumesh-rocm.patch`. A fresh preparation and
-wheel build were verified. These are local wheels; reinstalling the dependency
-lock can restore the old build, which the startup check will reject.
+wheel build were verified. The Windows AMD lock pins this repaired wheel with a SHA256 checksum.
 
 For future CUDA-to-ROCm ports, validate native arithmetic and memory transfers
 at production sizes and boundary sizes, not only imports or tiny meshes.
