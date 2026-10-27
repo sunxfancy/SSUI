@@ -1,4 +1,5 @@
 import React from 'react';
+import { PersistentComponent } from '../UIState';
 
 export type IControllerProps = {
     name: string,
@@ -6,8 +7,8 @@ export type IControllerProps = {
     default: any;
 };
 
-export interface IController<S = {}> extends React.Component<IControllerProps, S> {}
-export class IController<S> extends React.Component<IControllerProps, S> {
+export class IController<S = {}> extends PersistentComponent<IControllerProps, S> {
+    protected persistedFields = ['value', 'userInput'] as (keyof S)[];
     onExecute(): any {}
 }
 

@@ -15,6 +15,7 @@ type UploadLoaderProps = {
 };
 
 class UploadLoader extends IComponent<UploadLoaderProps, { path: string; executable: string; uploading: boolean; error?: string }> {
+    protected persistedFields: ('path' | 'executable')[] = ['path', 'executable'];
     state = { path: '', executable: this.props.executable ?? '', uploading: false, error: undefined as string | undefined };
 
     private upload = async (event: React.FormEvent<HTMLInputElement>) => {
@@ -60,6 +61,7 @@ class UploadLoader extends IComponent<UploadLoaderProps, { path: string; executa
 
 type QwenProps = { edit?: boolean };
 class QwenModelLoader extends IComponent<QwenProps, { modelId: string; lowVram: boolean; vramLimit: number }> {
+    protected persistedFields: ('modelId' | 'lowVram' | 'vramLimit')[] = ['modelId', 'lowVram', 'vramLimit'];
     state = {
         modelId: this.props.edit ? 'Qwen/Qwen-Image-Edit-2509' : 'Qwen/Qwen-Image',
         lowVram: true,
@@ -88,6 +90,7 @@ class QwenModelLoader extends IComponent<QwenProps, { modelId: string; lowVram: 
 }
 
 class FluxLoraLoader extends IComponent<{}, { path: string; weight: number }> {
+    protected persistedFields: ('path' | 'weight')[] = ['path', 'weight'];
     state = { path: '', weight: 0.75 };
     override onExecute(): Descriptor {
         return { function: 'ssui_image.Flux.FluxLora.load_one', params: { path: this.state.path, weight: this.state.weight } };

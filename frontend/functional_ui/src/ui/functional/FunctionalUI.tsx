@@ -1,7 +1,7 @@
-import React, { Component } from 'react';
+import React from 'react';
 import { Button, Callout, Collapse, Icon, MenuItem, NonIdealState, Spinner, Tag } from "@blueprintjs/core";
 import { ItemPredicate, ItemRenderer, Select } from "@blueprintjs/select";
-import { ComponentTabRef } from "ssui_components";
+import { ComponentTabRef, PersistentComponent, UIStateScope } from "ssui_components";
 import { DetailsPanel } from "./Details";
 import { registerUIProvider, UIProvider } from '../UIProvider';
 import { useConfig } from '../../config';
@@ -28,7 +28,8 @@ interface FunctionalUIState {
     hasRun: boolean;
 }
 
-export class FunctionalUI extends Component<FunctionalUIProps, FunctionalUIState> {
+export class FunctionalUI extends PersistentComponent<FunctionalUIProps, FunctionalUIState> {
+    protected persistedFields: (keyof FunctionalUIState)[] = ['selectedFunc', 'isOpen'];
     state: FunctionalUIState = {
         functions: null, loading: true, error: null, selectedFunc: undefined,
         isOpen: Boolean(this.props.autoOpenDetails), root_path: '', running: false,
@@ -41,9 +42,10 @@ export class FunctionalUI extends Component<FunctionalUIProps, FunctionalUIState
     private metaRequest?: AbortController;
     private executeRequest?: AbortController;
 
-    componentDidMount() { this.queryScriptMeta(); }
+    componentDidMount() { super.componentDidMount(); this.queryScriptMeta(); }
 
     componentDidUpdate(prevProps: FunctionalUIProps) {
+        super.componentDidUpdate();
         if (prevProps.path !== this.props.path) this.queryScriptMeta();
         if (!prevProps.autoOpenDetails && this.props.autoOpenDetails) this.setState({ isOpen: true });
     }
@@ -60,11 +62,13 @@ export class FunctionalUI extends Component<FunctionalUIProps, FunctionalUIState
         this.metaRequest = request;
         this.refInputs.clear();
         this.refOutputs.clear();
-        this.setState({ loading: true, error: null, functions: null, selectedFunc: undefined, running: false, runError: null, hasRun: false });
+        this.setState({ loading: true, error: null, functions: null, running: false, runError: null, hasRun: false });
         try {
             const response = await fetch('/api/script?' + new URLSearchParams({ script_path: this.props.path }), { signal: request.signal });
             if (!response.ok) throw new Error(`无法读取脚本信息（${response.status}）`);
             const data = await response.json() as ScriptMeta;
+            const names = this.getFunctionNames(data.functions);
+            if (this.state.selectedFunc && !names.includes(this.state.selectedFunc.name)) this.setState({ selectedFunc: undefined });
             this.setState({ functions: data.functions, loading: false, error: null, root_path: data.root_path });
         } catch (error) {
             if (error instanceof DOMException && error.name === 'AbortError') return;
@@ -159,8 +163,8 @@ export class FunctionalUI extends Component<FunctionalUIProps, FunctionalUIState
         return <div className="functional-ui-port-list">{entries.map(([name, type], index) => (
             <section className="functional-ui-card" key={`${functionName}-${port}-${name}`}>
                 <div className="functional-ui-card-index">{String(index + 1).padStart(2, '0')}</div>
-                <ComponentTabRef name={port === 'output' ? `output_${name}` : name} root_path={this.state.root_path}
-                    script_path={this.props.path} type={type} port={port} ref={this.getRef(name, refs)} />
+                <UIStateScope name={`${functionName}/${port}/${name}`}><ComponentTabRef name={port === 'output' ? `output_${name}` : name} root_path={this.state.root_path}
+                    script_path={this.props.path} type={type} port={port} ref={this.getRef(name, refs)} /></UIStateScope>
             </section>
         ))}</div>;
     };
@@ -189,7 +193,7 @@ export class FunctionalUI extends Component<FunctionalUIProps, FunctionalUIState
                     aria-expanded={this.state.isOpen}>高级参数</Button>
             </section>
             <Collapse isOpen={this.state.isOpen} keepChildrenMounted><div className="functional-ui-details-shell">
-                <DetailsPanel path={this.props.path} selected={selected} ref={this.details} />
+                <UIStateScope name={`details/${selected}`}><DetailsPanel key={selected} path={this.props.path} selected={selected} ref={this.details} /></UIStateScope>
             </div></Collapse>
             {this.state.runError && <Callout className="functional-ui-run-error" intent="danger" icon="error" title="运行失败">{this.state.runError}</Callout>}
             <div className="functional-ui-stage">

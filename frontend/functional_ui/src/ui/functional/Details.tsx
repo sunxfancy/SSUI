@@ -1,6 +1,6 @@
 import React, { Component } from "react";
 import { Callout, NonIdealState, Section, SectionCard, Spinner } from "@blueprintjs/core";
-import { ControllerRef } from "ssui_components";
+import { ControllerRef, UIStateScope } from "ssui_components";
 import './Details.css';
 
 interface ScriptDetails {
@@ -145,13 +145,13 @@ export class DetailsPanel extends Component<DetailsProps, DetailsState> {
             >
                 {Object.entries(controls).map(([name, control]) => (
                     <SectionCard key={name}>
-                        <ControllerRef
+                        <UIStateScope name={`${section}/${name}/${control.controller}`}><ControllerRef
                             name={name}
                             type={control.controller}
                             params={control.args}
                             default={control.default}
                             ref={this.getRef(section, name)}
-                        />
+                        /></UIStateScope>
                     </SectionCard>
                 ))}
             </Section>

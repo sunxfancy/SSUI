@@ -83,15 +83,19 @@ export class Message {
         });
     }
 
-    disconnect() {
-        this.active_requests--;
-        if (this.active_requests === 0 && this.ws) {
-            this.ws.close();
-            this.ws = undefined;
-        }
+    async disconnect(): Promise<void> {
+        this.active_requests = Math.max(0, this.active_requests - 1);
+        if (this.active_requests !== 0 || !this.ws) return;
+        const socket = this.ws;
+        this.ws = undefined;
+        this.uuid = undefined;
+        if (socket.readyState === WebSocket.CLOSED) return;
+        await new Promise<void>(resolve => {
+            socket.addEventListener('close', () => resolve(), { once: true });
+            socket.close();
+        });
     }
 
-    
 
     async post(api_path: string, data?: any, callbacks?: {
         [key: string]: (data: any) => void;
@@ -114,7 +118,7 @@ export class Message {
         });
 
         if (!response.ok) {
-            if (callbacks) { this.disconnect(); }
+            if (callbacks) { await this.disconnect(); }
             throw new Error(`HTTP error! status: ${response.status}`);
         }
 
@@ -125,15 +129,15 @@ export class Message {
         let result = await response.json();
         console.log("result: ", result);
         return await new Promise((resolve, reject) => {
-            let finish_callback = (data: any) => {
+            let finish_callback = async (data: any) => {
+                await this.disconnect();
                 resolve(data);
-                this.disconnect();
             };
             this.listening_callbacks[result.request_uuid] = {};
             for (const key in callbacks) {
                 if (!(result.callbacks.includes(key))) {
-                    reject(new Error(`Callback ${key} not found in result`));
-                    this.disconnect();
+                    void this.disconnect().then(() => reject(new Error(`Callback ${key} not found in result`)));
+                    return;
                 }
                 this.listening_callbacks[result.request_uuid][key] = callbacks[key];
             }

@@ -9,7 +9,7 @@ import { SidePanel } from './SidePanel';
 import Toolbar from './Toolbar';
 import { produce } from 'immer';
 import { Layer } from './types';
-import { ContextMenu, ContextMenuItem } from 'ssui_components';
+import { ContextMenu, ContextMenuItem, UIStateContext, UIStateScope } from 'ssui_components';
 
 const GRID_SIZE = 64;
 const TARGET_SIZE = 512;
@@ -22,6 +22,9 @@ interface ContextMenuState {
 }
 
 interface AIDrawingCanvasState {
+    restoring?: boolean;
+    restoreError?: string;
+    assetError?: string;
     targetPosition: {
         x: number;
         y: number;
@@ -50,16 +53,21 @@ interface AIDrawingCanvasState {
 }
 
 class AIDrawingCanvas extends React.Component<{path: string}, AIDrawingCanvasState> {
+    static contextType = UIStateContext;
+    declare context: React.ContextType<typeof UIStateContext>;
+    private durableFields: (keyof AIDrawingCanvasState)[] = ['targetPosition', 'showGrid', 'selectedObjectId', 'layers', 'activeLayer', 'focusTarget', 'selectedTool', 'brushSize', 'brushStyle', 'brushFeather', 'eraserSize', 'eraserFeather', 'shapeType', 'shapeFeather'];
     private drawingService: AIDrawingService;
     private stageRef: React.RefObject<any>;
     private containerRef: React.RefObject<HTMLDivElement>;
     private transformerRef: React.RefObject<any>;
     private imageNodes: Map<string, any> = new Map();
     private idCounter: number = 0;
+    private restoreGeneration = 0;
 
     constructor(props: {path: string}) {
         super(props);
         this.state = {
+            restoring: true,
             targetPosition: { x: 0, y: 0 },
             isDragging: false,
             showGrid: true,
@@ -96,15 +104,19 @@ class AIDrawingCanvas extends React.Component<{path: string}, AIDrawingCanvasSta
     }
 
     componentDidMount() {
+        void this.restoreCanvas();
         this.updateContainerSize();
         window.addEventListener('resize', this.updateContainerSize);
     }
 
     componentWillUnmount() {
+        this.restoreGeneration++;
         window.removeEventListener('resize', this.updateContainerSize);
+        this.saveCanvas();
     }
 
     componentDidUpdate(prevProps: {path: string}, prevState: AIDrawingCanvasState) {
+        this.saveCanvas();
         // 选中对象、图层或工具变化时，重新绑定 8 控制点缩放框
         const selectionChanged = prevState.selectedObjectId !== this.state.selectedObjectId;
         const layersChanged = prevState.layers !== this.state.layers;
@@ -123,6 +135,45 @@ class AIDrawingCanvas extends React.Component<{path: string}, AIDrawingCanvasSta
             : undefined;
         transformer.nodes(node ? [node] : []);
     }
+
+    private saveCanvas = () => {
+        if (!this.context || this.state.restoring || this.state.restoreError) return;
+        const snapshot: Record<string, unknown> = {};
+        for (const field of this.durableFields) snapshot[field] = this.state[field];
+        snapshot.layers = this.state.layers.map(layer => ({ ...layer,
+            objects: layer.objects.map(({ image, obj, ...object }) => object) }));
+        snapshot.worldPosition = { x: this.state.worldPosition.x, y: this.state.worldPosition.y };
+        snapshot.viewport = { position: this.state.viewport.position, scale: this.state.viewport.scale };
+        this.context.store.set('/canvas', snapshot);
+    };
+
+    private restoreCanvas = async () => {
+        const generation = ++this.restoreGeneration;
+        const saved = this.context?.store.values['/canvas'] as AIDrawingCanvasState | undefined;
+        if (!saved) { this.setState({ restoring: false }, this.updateContainerSize); return; }
+        try {
+            const next: Partial<AIDrawingCanvasState> = {};
+            for (const field of this.durableFields) {
+                if (field in saved) (next as Record<string, unknown>)[field] = saved[field];
+            }
+            next.layers = await Promise.all(saved.layers.map(async layer => ({ ...layer,
+                objects: await Promise.all(layer.objects.map(async object => {
+                    if (!object.imagePath) return object;
+                    const response = await fetch('/file?' + new URLSearchParams({ path: object.imagePath }));
+                    if (!response.ok) throw new Error('无法读取画布图像');
+                    return { ...object, image: await createImageBitmap(await response.blob()) };
+                })) })));
+            if (generation !== this.restoreGeneration) return;
+            next.worldPosition = new WorldPosition(saved.worldPosition.x, saved.worldPosition.y);
+            next.viewport = new Viewport(window.innerWidth, window.innerHeight);
+            next.viewport.position = saved.viewport.position;
+            next.viewport.scale = saved.viewport.scale;
+            this.setState({ ...next, restoring: false } as AIDrawingCanvasState, this.updateContainerSize);
+        } catch {
+            if (generation !== this.restoreGeneration) return;
+            this.setState({ restoring: false, restoreError: '画布状态恢复失败，已保留原始数据。请检查项目文件后重新打开。' });
+        }
+    };
 
     private updateContainerSize = () => {
         if (this.containerRef.current) {
@@ -548,29 +599,17 @@ class AIDrawingCanvas extends React.Component<{path: string}, AIDrawingCanvasSta
     };
 
     handleImageGenerated = async (imageUrl: string) => {
+        this.setState({ assetError: undefined });
         try {
-            console.log('开始加载图片:', imageUrl);
-            const img = new window.Image();
-            
-            // 添加图片加载事件监听
-            img.onload = () => console.log('图片加载成功');
-            img.onerror = (e) => console.error('图片加载失败:', e);
-            
-            // 设置跨域属性
-            img.crossOrigin = 'anonymous';
-            
-            img.src = imageUrl;
-            
-            // 等待图片加载完成
-            await new Promise((resolve, reject) => {
-                img.onload = resolve;
-                img.onerror = reject;
-            });
-            
-            console.log('开始创建 ImageBitmap');
-            const image = await createImageBitmap(img);
-            console.log('ImageBitmap 创建成功');
-            
+            const response = await fetch(imageUrl);
+            if (!response.ok) throw new Error('无法读取生成图像');
+            const blob = await response.blob();
+            const body = new FormData();
+            body.append('file', blob, 'canvas-image');
+            const uploaded = await fetch('/api/ui_state_asset?' + new URLSearchParams({ script_path: this.props.path }), { method: 'POST', body });
+            if (!uploaded.ok) throw new Error('无法保存画布图像');
+            const asset = await uploaded.json();
+            const image = await createImageBitmap(blob);
             this.setState(state => produce(state, draft => {
                 const layer = draft.layers.find(layer => layer.id === draft.activeLayer);
                 if (layer) {
@@ -585,18 +624,21 @@ class AIDrawingCanvas extends React.Component<{path: string}, AIDrawingCanvasSta
                         width: image.width,
                         height: image.height,
                         rotation: 0,
-                        image
+                        image,
+                        imagePath: asset.path
                     });
                     draft.selectedObjectId = id;
                 }
             }));
         } catch (error) {
             console.error('图片处理失败:', error);
-            // 这里可以添加用户提示
+            this.setState({ assetError: error instanceof Error ? error.message : '图像保存失败' });
         }
     };
 
     render() {
+        if (this.state.restoring) return <div>正在恢复画布…</div>;
+        if (this.state.restoreError) return <div role="alert">{this.state.restoreError}</div>;
         const { targetPosition, isDragging, layers, brushPosition, brushSize, contextMenu } = this.state;
         const viewport = this.state.viewport;
         const worldPos = this.state.worldPosition;
@@ -619,6 +661,7 @@ class AIDrawingCanvas extends React.Component<{path: string}, AIDrawingCanvasSta
                 onPointerUp={this.handlePointerUp}
             >
                 <Toolbar selectedTool={this.state.selectedTool} onToolSelect={this.handleToolSelect} />
+                {this.state.assetError && <div role="alert" style={{ position: 'absolute', top: 8, left: 8, zIndex: 1000 }}>{this.state.assetError}</div>}
                 <Stage
                     ref={this.stageRef}
                     width={viewport.size.width}
@@ -738,9 +781,9 @@ class AIDrawingCanvas extends React.Component<{path: string}, AIDrawingCanvasSta
                 </Stage>
 
                 {/* 添加悬浮面板 */}
-                <FloatingPanel path={this.props.path} aiDrawingService={this.drawingService} 
+                <UIStateScope name="generation"><FloatingPanel path={this.props.path} aiDrawingService={this.drawingService}
                 onSelectScript={this.handleSelectScript}
-                onImageGenerated={this.handleImageGenerated}/>
+                onImageGenerated={this.handleImageGenerated}/></UIStateScope>
 
                 {/* 添加侧边面板 */}
                 <SidePanel 

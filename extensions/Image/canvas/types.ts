@@ -11,6 +11,7 @@ export interface DrawableObject {
     height?: number;
     rotation?: number;
     image?: ImageBitmap;
+    imagePath?: string;
 }
 
 export interface Layer {

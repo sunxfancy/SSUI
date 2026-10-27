@@ -1,5 +1,5 @@
 import './App.css';
-import 'ssui_components';
+import { UIStateProvider } from 'ssui_components';
 import { getUIProvider } from './ui/UIProvider';
 
 
@@ -25,7 +25,9 @@ function App() {
     }
 
     if (provider) {
-      return provider.getUI(path);
+      const view = provider.getName();
+      if (!path || view === 'project_settings') return provider.getUI(path);
+      return <UIStateProvider key={path + ':' + view} path={path} view={view}>{provider.getUI(path)}</UIStateProvider>;
     }
   }
 
