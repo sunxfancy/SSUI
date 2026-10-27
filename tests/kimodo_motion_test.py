@@ -61,3 +61,29 @@ class KimodoMotionTest(unittest.TestCase):
                 runner.main()
                 self.assertEqual(write.call_args.args[:2], (stem, 60))
                 self.assertEqual(write.call_args.args[2]['inference_device'], 'mps')
+
+    def test_cpu_runner_overrides_device_without_recursive_loader(self):
+        import types
+        import torch
+        from unittest.mock import Mock
+        from ssui_motion import _kimodo_runner as runner
+
+        generate = types.ModuleType('kimodo.scripts.generate')
+        original = Mock(return_value=(types.SimpleNamespace(fps=24, denoiser=torch.nn.Linear(1, 1)), 'test'))
+        generate.load_model = original
+        generate.main = lambda: generate.load_model('test', device='cuda:0')
+        scripts = types.ModuleType('kimodo.scripts')
+        scripts.generate = generate
+        package = types.ModuleType('kimodo')
+        package.__path__ = []
+        modules = {'kimodo': package, 'kimodo.scripts': scripts, 'kimodo.scripts.generate': generate}
+        with patch.dict('sys.modules', modules), \
+             patch.dict('os.environ', {'SSUI_KIMODO_DEVICE': 'cpu', 'TEXT_ENCODER_DEVICE': 'auto'}), \
+             patch('sys.argv', ['runner', 'walk', '--output', 'motion']), \
+             patch.object(runner, '_configure_text_encoder_override'), \
+             patch.object(runner, '_write_motion_manifest') as write:
+            runner.main()
+            original.assert_called_once_with('test', device='cpu')
+            self.assertIs(generate.load_model, original)
+            self.assertEqual(write.call_args.args[1], 24)
+            self.assertEqual(write.call_args.args[2]['inference_device'], 'cpu')
