@@ -47,3 +47,17 @@ class KimodoMotionTest(unittest.TestCase):
     def test_explicit_interpreter_is_preserved(self):
         with patch.dict('os.environ', {'SSUI_KIMODO_PYTHON': 'C:/models/kimodo/python.exe'}):
             self.assertEqual(_kimodo_python(), 'C:/models/kimodo/python.exe')
+
+    def test_mps_runner_writes_typed_manifest_with_actual_frame_rate(self):
+        import types
+        from ssui_motion import _kimodo_runner as runner
+        with tempfile.TemporaryDirectory() as directory:
+            stem = str(Path(directory) / 'motion')
+            Path(stem + '_report.json').write_text(json.dumps({'fps': 60, 'torch': 'test', 'device': 'mps'}), encoding='utf-8')
+            with patch.dict('os.environ', {'SSUI_KIMODO_DEVICE': 'mps'}), \
+                 patch.dict('sys.modules', {'_kimodo_mps': types.SimpleNamespace(main=lambda: None)}), \
+                 patch('sys.argv', ['runner', 'walk', '--output', stem]), \
+                 patch.object(runner, '_write_motion_manifest') as write:
+                runner.main()
+                self.assertEqual(write.call_args.args[:2], (stem, 60))
+                self.assertEqual(write.call_args.args[2]['inference_device'], 'mps')

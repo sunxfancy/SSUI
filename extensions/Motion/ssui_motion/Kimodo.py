@@ -36,7 +36,7 @@ def _kimodo_python() -> str:
 
     raise RuntimeError(
         "Kimodo 隔离环境不存在。请先运行 "
-        "extensions/Motion/install_kimodo.ps1。"
+        "yarn install:kimodo（Mac/Linux）或 extensions/Motion/install_kimodo.ps1（Windows）。"
     )
 
 
@@ -77,6 +77,7 @@ def _run_kimodo(config: SSUIConfig, prompt: Prompt) -> str:
     env.setdefault("LOCAL_CACHE", "True")
     env.setdefault("TEXT_ENCODER_MODE", "local")
     env["TEXT_ENCODER_DEVICE"] = config["text_encoder_device"]
+    env["SSUI_KIMODO_DEVICE"] = config["device"]
 
     process = subprocess.Popen(
         command,
@@ -118,7 +119,8 @@ def _run_kimodo(config: SSUIConfig, prompt: Prompt) -> str:
 @param("duration", Slider(1, 20, 0.5), default=5.0)
 @param("diffusion_steps", Slider(1, 200, 1), default=100)
 @param("seed", Random(), default=42)
-@param("text_encoder_device", Select("cuda", "cpu"), default="cuda")
+@param("device", Select("auto", "mps", "cuda", "cpu"), default="auto")
+@param("text_encoder_device", Select("auto", "mps", "cuda", "cpu"), default="auto")
 @param("export_bvh", Switch(), default=False)
 def KimodoTextToMotion(config: SSUIConfig, prompt: Prompt) -> str:
     """使用 NVIDIA Kimodo 从文本生成动作，返回生成的 NPZ 文件路径。"""
@@ -131,7 +133,8 @@ def KimodoTextToMotion(config: SSUIConfig, prompt: Prompt) -> str:
 @param("duration", Slider(1, 20, 0.5), default=5.0)
 @param("diffusion_steps", Slider(1, 200, 1), default=100)
 @param("seed", Random(), default=42)
-@param("text_encoder_device", Select("cuda", "cpu"), default="cuda")
+@param("device", Select("auto", "mps", "cuda", "cpu"), default="auto")
+@param("text_encoder_device", Select("auto", "mps", "cuda", "cpu"), default="auto")
 @param("export_bvh", Switch(), default=True)
 def GenerateKimodoMotion(config: SSUIConfig, prompt: Prompt) -> MotionClip:
     """Generate a 3D motion clip with playback data and downloadable NPZ/BVH."""

@@ -53,6 +53,30 @@ def _configure_text_encoder_override() -> None:
 
 
 def main() -> None:
+    import torch
+    requested = os.environ.get('SSUI_KIMODO_DEVICE','auto')
+    device = requested
+    if device == 'auto':
+        device = 'cuda' if torch.cuda.is_available() else ('mps' if torch.backends.mps.is_available() else 'cpu')
+    if device == 'cuda' and not torch.cuda.is_available():
+        raise RuntimeError('CUDA was requested but is unavailable')
+    if device == 'mps':
+        from _kimodo_mps import main as mps_main
+        mps_main()
+        if "--output" in sys.argv:
+            stem = sys.argv[sys.argv.index("--output") + 1]
+            with open(stem + "_report.json", encoding="utf-8") as stream:
+                report = json.load(stream)
+            _write_motion_manifest(stem, report["fps"], {
+                "torch": report["torch"], "cuda": torch.version.cuda,
+                "inference_device": report["device"], "postprocessed": False,
+                "text_encoder_base": os.environ.get("SSUI_KIMODO_TEXT_ENCODER_BASE", "layer-streamed"),
+            })
+        return
+    if requested not in ('auto','cuda','cpu'):
+        raise ValueError(f'Unsupported Kimodo device: {requested}')
+    if os.environ.get('TEXT_ENCODER_DEVICE') == 'auto':
+        os.environ['TEXT_ENCODER_DEVICE'] = device
     _configure_text_encoder_override()
     from kimodo.scripts import generate
     import torch
@@ -63,6 +87,8 @@ def main() -> None:
                 "postprocessed": "--no-postprocess" not in sys.argv}
     timing = {}
     def capture_model(*args, **kwargs):
+        if requested == 'cpu':
+            kwargs['device'] = 'cpu'
         result = original_load(*args, **kwargs)
         model = result[0] if isinstance(result, tuple) else result
         timing["fps"] = float(model.fps)

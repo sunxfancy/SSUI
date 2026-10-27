@@ -14,7 +14,7 @@ from typing_extensions import Literal
 
 from ..utils import BasePipeline, ModelConfig, PipelineUnit, PipelineUnitRunner
 from ..models import ModelManager, load_state_dict
-from ..models.wan_video_dit import WanModel, RMSNorm, sinusoidal_embedding_1d
+from ..models.wan_video_dit import WanModel, RMSNorm, sinusoidal_embedding_1d, prepare_rope_freqs
 from ..models.wan_video_dit_s2v import rope_precompute
 from ..models.wan_video_text_encoder import WanTextEncoder, T5RelativeEmbedding, T5LayerNorm
 from ..models.wan_video_vae import WanVideoVAE, RMS_norm, CausalConv3d, Upsample
@@ -40,6 +40,7 @@ class WanVideoPipeline(BasePipeline):
         )
         self.scheduler = FlowMatchScheduler(shift=5, sigma_min=0.0, extra_one_step=True)
         self.prompter = WanPrompter(tokenizer_path=tokenizer_path)
+        self.audio_encoder: WanS2VAudioEncoder = None
         self.text_encoder: WanTextEncoder = None
         self.image_encoder: WanImageEncoder = None
         self.dit: WanModel = None
@@ -1510,7 +1511,8 @@ def model_fn_wan_video(
         dit.freqs[0][:f].view(f, 1, 1, -1).expand(f, h, w, -1),
         dit.freqs[1][:h].view(1, h, 1, -1).expand(f, h, w, -1),
         dit.freqs[2][:w].view(1, 1, w, -1).expand(f, h, w, -1)
-    ], dim=-1).reshape(f * h * w, 1, -1).to(x.device)
+    ], dim=-1).reshape(f * h * w, 1, -1)
+    freqs = prepare_rope_freqs(freqs, x.device)
 
     # VAP 
     if vap is not None:

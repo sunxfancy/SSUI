@@ -34,6 +34,76 @@ Python callers. The workflow uses `GenerateKimodoMotion` to return the typed cli
 See [native GPU validation](../../doc/KimodoGpu.md) for the actual model sources,
 acceptance command, BVH roundtrip results, and remaining limitations.
 
+## Apple Silicon / 16GB Mac
+
+The existing `txt2motion_kimodo` workflow now supports `device=auto|mps|cuda|cpu`
+and `text_encoder_device=auto|mps|cuda|cpu`. Auto selects CUDA first, then MPS,
+then CPU. On MPS, text encoding and motion inference run sequentially on GPU.
+The original CUDA/ROCm CLI path is retained.
+
+```bash
+yarn install:kimodo
+yarn test:kimodo:smoke --download-only
+yarn test:kimodo:smoke --workflow --duration 2 --steps 20 --output output/kimodo-mac-workflow
+yarn test:kimodo:preview
+SSUI_RUN_MOTION_RUNTIME_TESTS=1 yarn test
+```
+
+The Python installer creates `.venv/kimodo` using the current interpreter;
+Python 3.12 / macOS arm64 is verified. Core versions are constrained in
+`kimodo-macos-constraints.txt` (PyTorch 2.14.1, Transformers 5.1.0). It installs
+Kimodo source `1aece8c124d73d255ceff5086d983b844c9f4e94` and omits optional native
+motion correction. It does not update SSUI's main PyTorch 2.4.1 environment.
+
+The default small-memory model files need approximately 16.3GB of disk space:
+
+- Official `nvidia/Kimodo-SOMA-RP-v1.1`, revision `6c9233af1180b8151e3c4703477104af5dce9dd5`.
+- Community `raducius/Llama-3-8B-Instruct-LLM2Vec-mntp-merged`, revision
+  `61c9d7b02d40b7a770807c0a4e17a3ece59ccd27`. This is a community distribution of
+  the Llama-3 Instruct + MNTP text base, not an NVIDIA-supported checkpoint;
+  the Llama license still applies. Official gated Meta weights were unavailable
+  to this machine, so the actual Mac run used this explicitly pinned artifact.
+- Official McGill supervised LLM2Vec adapter, revision
+  `baa8ebf04a1c2500e61288e7dad65e8ae42601a7`.
+
+`--download-only` downloads these public artifacts, verifies LFS SHA-256 hashes,
+and writes `models/kimodo-mac/provenance.json`. The downloaded licenses remain
+alongside the files. `SSUI_KIMODO_MODEL_DIR` changes the root folder;
+`SSUI_KIMODO_TEXT_ENCODER_BASE` and `SSUI_KIMODO_TEXT_ENCODER_ADAPTER` can select
+compatible local safetensors directories. The streaming reader currently
+expects a single `model.safetensors` base file; arbitrary sharded/raw gated
+checkpoints require preparation before use.
+
+The text encoder uses the upstream LlamaBiModel and PEFT forward implementations.
+Weights are memory mapped and only one transformer block plus its LoRA weights
+is resident on GPU at a time. Blocks return to meta storage immediately after
+execution; text weights are released before loading the motion network. No
+quantization or fabricated embeddings are used. Model construction converts
+float64 statistics/schedule buffers to float32 before MPS placement; learned
+motion inference stays on MPS. CPU fallback is disabled in runtime tests.
+
+Verified result on this 16GB Mac: a walking prompt, 2 seconds, 30 FPS, 60 frames,
+77 joints, 20 denoising steps. Text encoding took about 14 seconds; a full SSUI
+sandbox workflow call took 18.85 seconds, including approximately 3.51 seconds
+for motion model loading, inference and export (single runs, not performance
+benchmarks). Outputs include `motion.npz`, `motion.bvh`, metadata, and optional
+`preview.gif` / `preview.mp4`. NPZ coordinates are in meters; the preview follows
+the root horizontally to keep the character visible. This is a skeleton preview,
+not a skinned character render.
+
+Validation includes a tiny same-code LLM2Vec/LoRA fixture: streamed FP32 differs
+from ordinary MPS by at most 2.38e-7 and BF16 matches exactly. An official trained
+Kimodo root-stage transformer matches CPU within a maximum absolute error of
+2.56e-6. These tests do not claim an in-memory 8B CPU comparison. Combined tests:
+156 total, 144 passed and 12 skipped, with real motion/video/TRELLIS MPS enabled.
+
+For debugging, use `--stage encode`, `--stage motion`, or `--stage check`.
+Motion-only execution verifies that `text.pt` belongs to the requested prompt.
+Only the SOMA-RP-v1.1 short text-to-motion path is verified on Mac; G1, constraints,
+multiple prompts and native motion correction are not claimed as validated.
+The MPS node currently handles one prompt/sample and disables native correction;
+foot sliding/contact cleanup may still be needed for production animation.
+
 ## Windows AMDGPU setup
 
 From the repository root, after the normal `yarn` installation:

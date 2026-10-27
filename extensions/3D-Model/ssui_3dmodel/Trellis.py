@@ -4,8 +4,6 @@ from ssui.config import SSUIConfig
 from ssui.base import Mesh, Image
 from ssui.annotation import param
 from ssui.controller import Random, Switch, Slider
-from trellis.pipelines.trellis_image_to_3d import TrellisImageTo3DPipeline
-from trellis.utils import postprocessing_utils
 
 class TrellisModel:
     def __init__(
@@ -21,6 +19,16 @@ class TrellisModel:
 
     @staticmethod
     def load(model_path: str):
+        from backend.util.devices import TorchDevice
+        if TorchDevice.choose_torch_device().type == 'mps':
+            from pathlib import Path
+            import os
+            root = Path(__file__).resolve().parents[3] / 'models/trellis-mac' if model_path == 'microsoft/TRELLIS-image-large' else Path(model_path)
+            root = Path(os.environ.get('SSUI_TRELLIS_MODEL_DIR', root))
+            if not (root / 'pipeline.json').is_file():
+                raise FileNotFoundError('Mac TRELLIS requires local official weights: yarn test:trellis:smoke --download-only')
+            return TrellisModel(str(root), None)
+        from trellis.pipelines.trellis_image_to_3d import TrellisImageTo3DPipeline
         model = TrellisImageTo3DPipeline.from_pretrained(model_path)
         model.cuda()
         return TrellisModel(model_path, model)
@@ -40,6 +48,28 @@ def GenModel(
     if config.is_prepare():
         return Mesh()
 
+    if model.model is None:
+        import subprocess
+        import sys
+        import tempfile
+        from pathlib import Path
+        import trimesh
+        if image is None or image._image is None:
+            raise ValueError('An input image is required')
+        with tempfile.TemporaryDirectory(prefix='ssui-trellis-') as folder:
+            root = Path(folder)
+            image._image.save(root / 'input.png')
+            command = [sys.executable, str(Path(__file__).with_name('trellis_mps_runner.py')),
+                       '--model-dir', model.model_path, '--image', str(root / 'input.png'), '--output', str(root),
+                       '--seed', str(config['seed']), '--structure-steps', str(config['sparse_structure_steps']),
+                       '--slat-steps', str(config['slat_steps']), '--structure-cfg', str(config['sparse_structure_cfg']),
+                       '--slat-cfg', str(config['slat_cfg'])]
+            if not config['preprocess_image']:
+                command.append('--no-preprocess')
+            subprocess.run(command, check=True)
+            return Mesh(trimesh.load(root / 'mesh.glb', force='mesh', process=False))
+
+    from trellis.utils import postprocessing_utils
     print("GenModel executed")
     print("seed:", config["seed"])
     print("preprocess_image:", config["preprocess_image"])
@@ -60,7 +90,7 @@ def GenModel(
     }
 
     outputs = model.getModel().run(
-        image=image,
+        image=image._image,
         sparse_structure_sampler_params=sparse_structure_sampler_params,
         slat_sampler_params=slat_sampler_params,
         formats=["mesh", "gaussian"],
