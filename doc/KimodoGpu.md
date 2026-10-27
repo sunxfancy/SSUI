@@ -86,7 +86,8 @@ run does not validate foot-skating correction. G1 and other offered checkpoints,
 longer/multiple-prompt clips and official gated-encoder generation are not part
 of this acceptance. No character mesh skinning or retargeting is performed.
 
-Regression checks: 154 Python tests (142 passed, 12 skipped), four frontend motion
+Regression checks on the standalone motion branch: 143 Python tests (131 passed,
+12 skipped), four frontend motion
 tests, shared-component and functional-UI production builds passed. The installer
 was tested against the native CUDA parent; its final probe confirmed the child
 GPU and Transformers versions. It intentionally omits optional web-demo packages;
