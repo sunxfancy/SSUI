@@ -93,6 +93,9 @@ server.serve_forever()
     app.stdout.pipe(log); app.stderr.pipe(log);
     await eventually(async () => {
       if (launchError) throw launchError;
+      if (app.exitCode !== null || app.signalCode !== null) {
+        throw new Error(`Native app exited before WebDriver startup: code=${app.exitCode}, signal=${app.signalCode}`);
+      }
       return (await fetch(`http://127.0.0.1:${port}/status`)).ok;
     }, 'embedded WebDriver startup', 30_000);
     browser = await remote({ hostname: '127.0.0.1', port, logLevel: 'error',
