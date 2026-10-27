@@ -1,3 +1,4 @@
+from ._runtime import wan_runtime
 import torch
 
 from ssui.annotation import param
@@ -27,7 +28,7 @@ class Wan2T2VModel:
 
     @staticmethod
     def load() -> "Wan2T2VModel":
-        model_manager = ModelManager()
+        model_manager = ModelManager(device="cpu", torch_dtype=wan_runtime()["torch_dtype"])
         snapshot_download(WAN2_T2V_MODEL_ID, local_dir="models/" + WAN2_T2V_MODEL_ID)
         snapshot_download(WAN2_T2V_LIGHT_MODEL_ID, local_dir="models/" + WAN2_T2V_LIGHT_MODEL_ID)
         model_manager.load_models(
@@ -36,7 +37,7 @@ class Wan2T2VModel:
                 "models/" + WAN2_T2V_LIGHT_MODEL_ID + "/models_t5_umt5-xxl-enc-bf16.pth",
                 "models/" + WAN2_T2V_LIGHT_MODEL_ID + "/Wan2.1_VAE.pth",
             ],
-            torch_dtype=torch.bfloat16,  # 可改为 torch.float8_e4m3fn 启用 FP8 量化
+            torch_dtype=wan_runtime()["torch_dtype"],
             device="cpu",
         )
         return Wan2T2VModel(model_manager)
@@ -50,7 +51,7 @@ class Wan2I2VModel:
 
     @staticmethod
     def load() -> "Wan2I2VModel":
-        model_manager = ModelManager()
+        model_manager = ModelManager(device="cpu", torch_dtype=wan_runtime()["torch_dtype"])
         snapshot_download(WAN2_I2V_MODEL_ID, local_dir="models/" + WAN2_I2V_MODEL_ID)
         snapshot_download(WAN2_T2V_LIGHT_MODEL_ID, local_dir="models/" + WAN2_T2V_LIGHT_MODEL_ID)
         snapshot_download(WAN2_I2V_CLIP_MODEL_ID, local_dir="models/" + WAN2_I2V_CLIP_MODEL_ID)
@@ -61,7 +62,7 @@ class Wan2I2VModel:
                 "models/" + WAN2_T2V_LIGHT_MODEL_ID + "/Wan2.1_VAE.pth",
                 "models/" + WAN2_I2V_CLIP_MODEL_ID + "/models_clip_open-clip-xlm-roberta-large-vit-huge-14.pth",
             ],
-            torch_dtype=torch.bfloat16,  # 可改为 torch.float8_e4m3fn 启用 FP8 量化
+            torch_dtype=wan_runtime()["torch_dtype"],
             device="cpu",
         )
         return Wan2I2VModel(model_manager)
@@ -80,7 +81,7 @@ def Wan2TextToVideo(
         return [Image()]
 
     pipe = WanVideoPipeline.from_model_manager(
-        base_model.model_manager, torch_dtype=torch.bfloat16, device="cuda"
+        base_model.model_manager, **wan_runtime()
     )
     pipe.enable_vram_management(num_persistent_param_in_dit=None)
     video = pipe(
@@ -114,7 +115,7 @@ def Wan2ImageToVideo(
         return [Image()]
 
     pipe = WanVideoPipeline.from_model_manager(
-        base_model.model_manager, torch_dtype=torch.bfloat16, device="cuda"
+        base_model.model_manager, **wan_runtime()
     )
     pipe.enable_vram_management(num_persistent_param_in_dit=None)
     video = pipe(

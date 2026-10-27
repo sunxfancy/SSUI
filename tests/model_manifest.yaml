@@ -88,17 +88,17 @@ pixal3d:
 
 diffsynth:
   sd1:
-    repo: "Lykon/dreamshaper-8"
+    repo: "Yntec/Dreamshaper8"
     file: "dreamshaper_8.safetensors"
-    revision: "main"
+    revision: "9b7fee79ae78b56b182d03bc17ab5f73446c8f97"
     size_gb: 2.0
-    sha256: ""
+    sha256: "879db523c30d3b9017143d56705015e15a2cb5628762c11d086fed9538abd7fd"
   animatediff:
     repo: "guoyww/animatediff"
     file: "mm_sd_v15_v2.ckpt"
-    revision: "main"
+    revision: "fdfe36afa161e51b3e9c24022b0e368d59e7345e"
     size_gb: 1.7
-    sha256: ""
+    sha256: "69ed0f5fef82b110aca51bcab73b21104242bc65d6ab4b8b2a2a94d31cad1bf0"
 
 stdgen:
   canonicalize:
@@ -107,3 +107,10 @@ stdgen:
   multiview:
     local: "StdGEN/StdGEN-multiview-1024"
     note: "上游模型位置待确认，请手动放入 TEST_DATA_DIR"
+
+triposr:
+  repo: "stabilityai/TripoSR"
+  file: "model.ckpt"
+  revision: "5b521936b01fbe1890f6f9baed0254ab6351c04a"
+  size_gb: 1.68
+  sha256: "429e2c6b22a0923967459de24d67f05962b235f79cde6b032aa7ed2ffcd970ee"
