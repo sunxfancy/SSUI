@@ -47,6 +47,11 @@ def inspect(payload_file):
             'limitation': ('Degenerate export faces require cleanup' if report['degenerate_glb_triangles'] else
                 'Input cuts are preserved; inspect boundary proximity details in the per-part report'),
             'quality_repair': data.get('quality_repair')}
+        if 'completed' in data:
+            summary['completion'] = json.loads(Path(data['completed']['artifacts']['completion.json']).read_text(encoding='utf-8'))
+            summary['preparation'] = json.loads(Path(data['completed']['artifacts']['preparation.json']).read_text(encoding='utf-8'))
+            summary['completion_artifacts'] = data['completed']['artifacts']
+            summary['limitation'] = 'Generated amodal geometry changes the input shape; open boundaries remain and require review'
         (payload_file.parent / 'verification.json').write_text(json.dumps(summary, indent=2), encoding='utf-8')
     print(json.dumps(report, indent=2))
 

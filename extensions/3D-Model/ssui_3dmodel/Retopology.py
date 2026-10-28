@@ -121,7 +121,7 @@ def _scene_parts(model):
     return parts
 
 
-def quad_remesh(mesh: Mesh, target_faces=5000) -> Mesh:
+def quad_remesh(mesh: Mesh, target_faces=5000, split_components=False) -> Mesh:
     if isinstance(target_faces, bool) or int(target_faces) != target_faces or not 100 <= target_faces <= 200000:
         raise ValueError("Target face count must be an integer between 100 and 200000")
     configured = os.environ.get("SSUI_QUADRIFLOW_EXECUTABLE")
@@ -142,15 +142,37 @@ def quad_remesh(mesh: Mesh, target_faces=5000) -> Mesh:
         master.write("# SSUI QuadriFlow polygon master; quads preserved\n")
         offset = 0
         for index, (name, part) in enumerate(parts):
-            source, target = root / f"input_{index}.obj", root / f"quad_{index}.obj"
-            part.export(str(source))
             requested = max(4, round(int(target_faces) * len(part.faces) / total))
-            command = [executable, "-i", str(source), "-o", str(target), "-f", str(requested),
-                       "-sharp", "-boundary", "-seed", "42"]
-            _run(_wsl(command, distro) if distro else command)
-            if not target.is_file():
-                raise RuntimeError(f"QuadriFlow produced no mesh for {name}; inspect {root}")
-            vertices, faces = _read_polygons(target)
+            components = part.split(only_watertight=False, repair=False) if split_components else [part]
+            vertices, faces, component_reports = [], [], []
+            area = sum(component.area for component in components)
+            for component_index, component in enumerate(components):
+                suffix = f'{index}_{component_index}' if split_components else str(index)
+                source, target = root / f'input_{suffix}.obj', root / f'quad_{suffix}.obj'
+                component.export(str(source))
+                budget = max(32, round(requested * component.area / area)) if split_components else requested
+                attempts = []
+                settings = [(budget, 42), (max(64, budget * 2), 43), (max(128, budget * 4), 44)] if split_components else [(budget, 42)]
+                for attempt_budget, seed in settings:
+                    command = [executable, '-i', str(source), '-o', str(target), '-f', str(attempt_budget),
+                               *([] if split_components else ['-sharp']), '-boundary', '-seed', str(seed)]
+                    try:
+                        _run(_wsl(command, distro) if distro else command)
+                        attempts.append({'faces': attempt_budget, 'seed': seed, 'success': True})
+                        break
+                    except RuntimeError as error:
+                        attempts.append({'faces': attempt_budget, 'seed': seed, 'success': False, 'error': str(error)[-2000:]})
+                        if (attempt_budget, seed) == settings[-1]:
+                            raise
+                if not target.is_file():
+                    raise RuntimeError(f'QuadriFlow produced no mesh for {name}; inspect {root}')
+                points, polygons = _read_polygons(target)
+                start = len(vertices)
+                vertices.extend(points)
+                faces.extend([[vertex + start for vertex in face] for face in polygons])
+                component_reports.append({'input_faces': len(component.faces), 'requested_faces': budget,
+                                          'output_faces': len(polygons), 'preserve_sharp': not split_components,
+                                          'attempts': attempts})
             raw_faces = len(faces)
             vertices, faces, triangles, cleanup = repair_polygons(vertices, faces)
             boundary = inspect_boundaries(vertices, faces, part)
@@ -171,7 +193,7 @@ def quad_remesh(mesh: Mesh, target_faces=5000) -> Mesh:
             preview.append({"name": name, "vertices": vertices, "faces": faces})
             reports.append({"name": name, "input_faces": len(part.faces), "requested_faces": requested,
                             "raw_faces": raw_faces, "faces": len(faces), "quads": quads,
-                            "cleanup": cleanup, "boundary": boundary})
+                            "cleanup": cleanup, "boundary": boundary, "components": component_reports})
     scene.export(str(files["retopology.glb"]))
     exported_degenerate = validate_glb(files["retopology.glb"])
     files["preview.json"].write_text(json.dumps(preview), encoding="utf-8")

@@ -23,6 +23,18 @@ test('retopology settings preserve WSL paths and environment overrides', t => {
   assert.equal(config.SSUI_P3SAM_DEVICE, 'cuda');
   assert.equal(config.SSUI_QUADRIFLOW_EXECUTABLE, '/opt/quadriflow');
 });
+
+test('HoloPart settings use local paths and explicit environment precedence', t => {
+  const repo = fixture(t);
+  fs.writeFileSync(path.join(repo, '.ssui-dev.json'), JSON.stringify({
+    SSUI_HOLOPART_ROOT: 'C:/Holo Part/source', SSUI_HOLOPART_WEIGHTS: 'D:/models/HoloPart',
+    SSUI_HOLOPART_PYTHON: 'C:/Holo Part/env/Scripts/python.exe',
+  }));
+  const config = resolveConfig({SSUI_HOLOPART_WEIGHTS: 'E:/models/HoloPart'}, repo);
+  assert.equal(config.SSUI_HOLOPART_ROOT, 'C:/Holo Part/source');
+  assert.equal(config.SSUI_HOLOPART_PYTHON, 'C:/Holo Part/env/Scripts/python.exe');
+  assert.equal(config.SSUI_HOLOPART_WEIGHTS, 'E:/models/HoloPart');
+});
 test('unconfigured checkout keeps its own venv', t => {
   const repo = fixture(t);
   assert.equal(resolveConfig({}, repo, path.join(repo, 'empty-home')).SSUI_VENV_PATH, path.join(repo, '.venv'));
