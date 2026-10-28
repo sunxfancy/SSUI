@@ -1,5 +1,34 @@
 # SSUI 3D Model extension
 
+## TRELLIS and TRELLIS.2 GPU workflows
+
+Use `examples/advance/workflow-trellis.py` for the original TRELLIS model, or
+`examples/advance/workflow-trellis2.py` for TRELLIS.2. Both expose model and image
+inputs, defer weights until execution, and return a GLB through the Mesh output.
+Use an RGBA object PNG to supply a foreground mask without an additional
+background-removal model.
+
+On Windows ARM64, TRELLIS defaults to the official mesh decoder's vertex colors.
+Other platforms retain the existing Gaussian-texture default. Its optional
+`gaussian_texture` mode retains the older Gaussian-rendering/UV-baking path and
+needs its additional native dependencies. TRELLIS.2 also defaults to vertex colors;
+its optional `pbr_texture` mode offers texture-size and remeshing controls, but
+still has visual-quality/performance issues on the tested Windows ARM64 build.
+
+See [TRELLIS GPU validation](../../doc/TrellisGpu.md) for the native Windows ARM64
+CUDA environment, commands, results and remaining limitations.
+
+## Pixal3D GPU image-to-3D
+
+Open `examples/advance/workflow-pixal3d.py`, enter the local Pixal3D snapshot path
+in the model input, and choose `ImageUploader` for an object PNG with a foreground
+alpha mask. The workflow returns a textured GLB through the standard Mesh output.
+Model loading happens during execution, so preparing the workflow does not download
+or initialize model weights.
+
+The Windows ARM64 CUDA development setup, operator checks, real-model acceptance
+command, and auxiliary model access requirements are documented in
+[Pixal3D GPU](../../doc/Pixal3DGpu.md).
 ## AMD / Pixal3D status
 
 The AMD path is Pixal3D. Use `examples/advance/workflow-pixal3d.py` to

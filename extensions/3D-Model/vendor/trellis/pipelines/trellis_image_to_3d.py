@@ -8,7 +8,6 @@ from tqdm import tqdm
 from easydict import EasyDict as edict
 from torchvision import transforms
 from PIL import Image
-import rembg
 from .base import Pipeline
 from . import samplers
 from ..modules import sparse as sp
@@ -74,7 +73,9 @@ class TrellisImageTo3DPipeline(Pipeline):
         """
         Initialize the image conditioning model.
         """
-        dinov2_model = torch.hub.load('facebookresearch/dinov2', name, pretrained=True)
+        dinov2_model = torch.hub.load(
+            'facebookresearch/dinov2:7764ea0f912e53c92e82eb78a2a1631e92725fc8', name,
+            pretrained=True, trust_repo=True, skip_validation=True)
         dinov2_model.eval()
         self.models['image_cond_model'] = dinov2_model
         transform = transforms.Compose([
@@ -101,11 +102,15 @@ class TrellisImageTo3DPipeline(Pipeline):
             if scale < 1:
                 input = input.resize((int(input.width * scale), int(input.height * scale)), Image.Resampling.LANCZOS)
             if getattr(self, 'rembg_session', None) is None:
+                import rembg
                 self.rembg_session = rembg.new_session('u2net')
+            import rembg
             output = rembg.remove(input, session=self.rembg_session)
         output_np = np.array(output)
         alpha = output_np[:, :, 3]
         bbox = np.argwhere(alpha > 0.8 * 255)
+        if bbox.size == 0:
+            raise ValueError("TRELLIS input has no visible foreground after background removal.")
         bbox = np.min(bbox[:, 1]), np.min(bbox[:, 0]), np.max(bbox[:, 1]), np.max(bbox[:, 0])
         center = (bbox[0] + bbox[2]) / 2, (bbox[1] + bbox[3]) / 2
         size = max(bbox[2] - bbox[0], bbox[3] - bbox[1])

@@ -2,6 +2,7 @@ from typing import *
 import torch
 import torch.nn as nn
 from . import SparseTensor
+from . import BACKEND
 from .topology import unique_rows, count_indices
 
 __all__ = [
@@ -103,8 +104,12 @@ class SparseSubdivide(nn.Module):
         new_coords = new_coords.unsqueeze(1) + n_coords.unsqueeze(0).to(new_coords.dtype)
         
         new_feats = input.feats.unsqueeze(1).expand(input.feats.shape[0], factor, *input.feats.shape[1:])
-        out = SparseTensor(new_feats.flatten(0, 1), new_coords.flatten(0, 1), input.shape)
-        out._scale = tuple(s * 2 for s in input._scale)
+        out = SparseTensor(new_feats.flatten(0, 1), new_coords.flatten(0, 1), shape=input.shape)
+        out._scale = tuple(s / 2 for s in input._scale) if BACKEND == 'flex_gemm' else tuple(s * 2 for s in input._scale)
         out._spatial_cache = input._spatial_cache
         return out
+
+
+if BACKEND == 'flex_gemm':
+    from pixal3d.modules.sparse.spatial import SparseDownsample, SparseUpsample
 

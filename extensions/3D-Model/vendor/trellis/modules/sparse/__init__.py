@@ -18,7 +18,7 @@ def __from_env():
     if env_sparse_attn is None:
         env_sparse_attn = os.environ.get('ATTN_BACKEND')
 
-    if env_sparse_backend is not None and env_sparse_backend in ['spconv', 'torchsparse', 'torch']:
+    if env_sparse_backend is not None and env_sparse_backend in ['spconv', 'torchsparse', 'flex_gemm', 'torch']:
         BACKEND = env_sparse_backend
     if env_sparse_debug is not None:
         DEBUG = env_sparse_debug == '1'
@@ -30,8 +30,7 @@ def __from_env():
 
 __from_env()
 
-
-def set_backend(backend: Literal['spconv', 'torchsparse', 'torch']):
+def set_backend(backend: Literal['spconv', 'torchsparse', 'flex_gemm', 'torch']):
     global BACKEND
     BACKEND = backend
 

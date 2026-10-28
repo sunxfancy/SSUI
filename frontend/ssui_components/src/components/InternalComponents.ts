@@ -15,3 +15,4 @@ import './Base/RandomIntegerEditor';
 import './Base/UnionContainer';
 import './Base/PromptEditor';
 import './Loader/WorkflowLoaders';
+import './Loader/Pixal3DLoader';

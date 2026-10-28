@@ -122,10 +122,10 @@ class Pixal3DImageTo3DPipeline(Pipeline):
         pipeline.image_cond_model_shape_1024 = None
         pipeline.image_cond_model_tex_1024 = None
 
-        # RGBA inputs already carry a foreground mask. Load the optional gated
-        # background remover only if preprocessing actually requires it.
-        pipeline._rembg_config = args['rembg_model']
+        # Masked RGBA inputs already contain the foreground. Do not download
+        # a separate (potentially gated) segmentation model until RGB needs it.
         pipeline.rembg_model = None
+        pipeline._rembg_config = args['rembg_model']
         
         pipeline.low_vram = args.get('low_vram', True)
         pipeline.default_pipeline_type = args.get('default_pipeline_type', '1024_cascade')
@@ -171,7 +171,8 @@ class Pixal3DImageTo3DPipeline(Pipeline):
             if self.rembg_model is None:
                 config = self._rembg_config
                 self.rembg_model = getattr(rembg, config['name'])(**config['args'])
-                self.rembg_model.to(self.device)
+                if not self.low_vram:
+                    self.rembg_model.to(self.device)
             if self.low_vram:
                 self.rembg_model.to(self.device)
             output = self.rembg_model(input)
@@ -180,6 +181,8 @@ class Pixal3DImageTo3DPipeline(Pipeline):
         output_np = np.array(output)
         alpha = output_np[:, :, 3]
         bbox = np.argwhere(alpha > 0.8 * 255)
+        if bbox.size == 0:
+            raise ValueError("Pixal3D input has no visible foreground after background removal.")
         bbox = np.min(bbox[:, 1]), np.min(bbox[:, 0]), np.max(bbox[:, 1]), np.max(bbox[:, 0])
         center = (bbox[0] + bbox[2]) / 2, (bbox[1] + bbox[3]) / 2
         size = max(bbox[2] - bbox[0], bbox[3] - bbox[1])

@@ -9,11 +9,13 @@
 import torch
 from ....modules.sparse.topology import unique_rows
 from .tables import *
-def check_tensor(value, shape, throw=True):
-    valid = isinstance(value, torch.Tensor) and value.ndim == len(shape) and all(
-        expected is None or actual == expected for actual, expected in zip(value.shape, shape))
-    if throw and not valid:
-        raise ValueError(f'Expected tensor shape {shape}')
+
+def check_tensor(tensor, shape, throw=True):
+    """FlexiCubes only needs Kaolin's shape check, not its native operators."""
+    valid = isinstance(tensor, torch.Tensor) and tensor.ndim == len(shape) and all(
+        expected is None or actual == expected for actual, expected in zip(tensor.shape, shape))
+    if not valid and throw:
+        raise ValueError(f"Expected tensor shape {shape}, got {getattr(tensor, 'shape', None)}")
     return valid
 
 __all__ = [

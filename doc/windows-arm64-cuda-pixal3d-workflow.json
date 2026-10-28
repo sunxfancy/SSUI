@@ -1,0 +1,45 @@
+{
+  "status": "passed",
+  "device": "NVIDIA RTX Spark N1X (6144-core Blackwell RTX GPU)",
+  "version": "2.16.0.dev20261026+cu134",
+  "seconds": 378.929,
+  "vertices": 669038,
+  "faces": 933746,
+  "bytes": 73797760,
+  "sha256": "94fdaf826b1026df5301c17c6df0995a228e8b92b645692cc1fec0602ee294ad",
+  "input_sha256": "6959e517ee4bc6852791f69bd6ece696a435abcda8321727c07db8daf7f457cf",
+  "date": "2026-10-27",
+  "workflow": "examples/advance/workflow-pixal3d.py",
+  "model": "TencentARC/Pixal3D",
+  "model_revision": "b0cb2e1b794cab9aa0ac38a95d794a4d9337437f",
+  "parameters": {
+    "resolution": 1024,
+    "texture_steps": 12,
+    "fov_degrees": 30,
+    "seed": 42,
+    "sparse_structure_steps": 12,
+    "auto_camera": false,
+    "decimation_target": 1000000,
+    "low_vram": true,
+    "texture_size": 4096,
+    "shape_steps": 12,
+    "remesh": true
+  },
+  "material": {
+    "multi_view_render_checked": true,
+    "base_color_texture_size": [
+      4096,
+      4096
+    ],
+    "type": "PBRMaterial"
+  },
+  "verification": [
+    "HTTP discovery",
+    "HTTP prepare",
+    "HTTP execute through scheduler and CUDA executor",
+    "HTTP file download",
+    "GLB reload with trimesh",
+    "Non-empty geometry",
+    "Textured multi-view render"
+  ]
+}

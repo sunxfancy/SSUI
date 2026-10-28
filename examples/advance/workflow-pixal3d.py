@@ -1,13 +1,11 @@
-"""Image-to-3D entry point; check native dependencies with yarn probe:3d first."""
-
-from ssui import Image, Mesh, workflow
+"""GPU image-to-3D workflow; select a Pixal3D model and upload an object image."""
+from ssui import workflow, Image, Mesh
 from ssui.config import SSUIConfig
-from ssui_3dmodel.Pixal3D import GenPixal3DModel, Pixal3DModel
+from ssui_3dmodel.Pixal3D import Pixal3DModel, GenPixal3DModel
 
 config = SSUIConfig()
 
 
 @workflow
-def img2mesh_pixal3d(image: Image) -> Mesh:
-    model = Pixal3DModel.load(low_vram=True)
+def img2mesh_pixal3d(model: Pixal3DModel, image: Image) -> Mesh:
     return GenPixal3DModel(config("Generate Pixal3D Model"), model, image)

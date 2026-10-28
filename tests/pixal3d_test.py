@@ -50,8 +50,10 @@ class _Pipeline:
 
     def __init__(self):
         self.run_kwargs = None
+        self.input_image = None
 
     def preprocess_image(self, image):
+        self.input_image = image
         return image
 
     def run(self, image, **kwargs):
@@ -92,11 +94,11 @@ class Pixal3DWorkflowTest(unittest.TestCase):
             node_config["shape_steps"] = 9
             node_config["texture_steps"] = 10
 
-            result = GenPixal3DModel(
-                node_config, model, Image(PILImage.new("RGB", (64, 64), "white"))
-            )
+            source = PILImage.new("RGBA", (64, 64), (255, 255, 255, 128))
+            result = GenPixal3DModel(node_config, model, Image(source))
 
             self.assertIs(result._model, glb)
+            self.assertIs(pipeline.input_image, source)
             self.assertIsNotNone(glb.transform)
             self.assertEqual(pipeline.run_kwargs["pipeline_type"], "1024_cascade")
             self.assertEqual(pipeline.run_kwargs["seed"], 7)
@@ -123,6 +125,37 @@ class Pixal3DWorkflowTest(unittest.TestCase):
         self.assertIsNone(result._model)
         self.assertIsNone(pipeline.run_kwargs)
 
+    def test_image_loader_preserves_alpha_mask(self):
+        from pathlib import Path
+        from tempfile import TemporaryDirectory
+        from ssui_3dmodel.Pixal3D import LoadPixal3DImage
+
+        with TemporaryDirectory() as directory:
+            path = Path(directory) / "object.png"
+            PILImage.new("RGBA", (8, 8), (10, 20, 30, 128)).save(path)
+            loaded = LoadPixal3DImage(str(path))._image
+        self.assertEqual(loaded.mode, "RGBA")
+        self.assertEqual(loaded.getpixel((0, 0)), (10, 20, 30, 128))
+
+    def test_workflow_discovery_and_prepare_do_not_load_gpu_models(self):
+        from pathlib import Path
+        from unittest.mock import patch
+        from tests.utils import add_extension_paths
+        from ss_executor.loader import SSLoader
+        from server.script_service import ScriptService
+        from ssui_3dmodel.Pixal3D import Pixal3DModel
+
+        add_extension_paths()
+        script = str(Path(__file__).resolve().parents[1] / "examples/advance/workflow-3d.py")
+        with patch.object(Pixal3DModel, "load", side_effect=AssertionError("weights loaded during prepare")):
+            functions = ScriptService(None).get_script_functions(script)
+            self.assertNotIn("error", functions)
+            self.assertEqual(functions["img2mesh_pixal3d"].params["model"], "ssui_3dmodel.Pixal3D.Pixal3DModel")
+            loader = SSLoader()
+            loader.load(script)
+            loader.Execute()
+            controls = loader.GetConfig("img2mesh_pixal3d")
+            self.assertIn("resolution", controls["Generate Pixal3D Model"])
     def test_load_stops_before_weights_when_native_export_is_broken(self):
         from ssui_3dmodel.Pixal3D import Pixal3DModel
 

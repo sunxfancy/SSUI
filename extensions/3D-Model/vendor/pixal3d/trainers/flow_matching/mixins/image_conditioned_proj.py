@@ -424,9 +424,12 @@ class DinoV3ProjFeatureExtractor(nn.Module):
             device = next(self.model.parameters()).device
             local_source = os.environ.get("PIXAL3D_NAF_SOURCE")
             self.naf_model = torch.hub.load(
-                local_source or "valeoai/NAF", "naf", pretrained=True,
-                device=device, trust_repo=True,
+                local_source or "valeoai/NAF:37f2dfc180f2de53d98bd601109c0da0dd6b0f43",
+                "naf", pretrained=True, device=device, trust_repo=True,
                 source="local" if local_source else "github",
+                # A fixed official commit needs no branch/fork API lookup.
+                # This also avoids anonymous GitHub API rate limits at startup.
+                skip_validation=True,
             )
             self.naf_model.eval()
             self.naf_model.requires_grad_(False)
