@@ -16,7 +16,9 @@ class UIStateTest(unittest.TestCase):
     def setUp(self):
         self.temporary = tempfile.TemporaryDirectory()
         self.addCleanup(self.temporary.cleanup)
-        self.root = Path(self.temporary.name) / 'project'
+        # Match the canonical project paths returned by the server (Windows 8.3 aliases
+        # and macOS /var symlinks can otherwise name the same directory differently).
+        self.root = Path(self.temporary.name).resolve() / 'project'
         self.root.mkdir()
         (self.root / 'ssproject.yaml').write_text('name: test')
         self.script = self.root / 'scripts' / 'example.py'
