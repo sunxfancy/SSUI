@@ -25,7 +25,8 @@ function resolveConfig(env = process.env, repo = root, home = os.homedir()) {
   for (const key of ['SSUI_QUADRIFLOW_EXECUTABLE', 'SSUI_QUADRIFLOW_WSL_DISTRO',
     'SSUI_P3SAM_ROOT', 'SSUI_P3SAM_PYTHON', 'SSUI_P3SAM_WSL_DISTRO',
     'SSUI_P3SAM_CHECKPOINT', 'SSUI_SONATA_CHECKPOINT', 'SSUI_P3SAM_BACKEND', 'SSUI_P3SAM_DEVICE', 'SSUI_P3SAM_POINT_NUM',
-    'SSUI_P3SAM_PROMPT_NUM', 'SSUI_P3SAM_PROMPT_BATCH', 'SSUI_3D_OUTPUT']) {
+    'SSUI_P3SAM_PROMPT_NUM', 'SSUI_P3SAM_PROMPT_BATCH', 'SSUI_3D_OUTPUT',
+    'SSUI_HOLOPART_ROOT', 'SSUI_HOLOPART_PYTHON', 'SSUI_HOLOPART_WEIGHTS']) {
     const value = env[key] || config[key];
     if (value !== undefined) {
       if (typeof value !== 'string' || !value.trim()) throw new Error(`Invalid setting: ${key}`);

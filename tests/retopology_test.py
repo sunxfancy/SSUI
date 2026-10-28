@@ -15,6 +15,28 @@ from ssui_3dmodel.p3sam_worker import split_parts
 
 
 class RetopologyTest(unittest.TestCase):
+    def test_component_mode_retries_and_preserves_part_grouping(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            executable=Path(tmp)/'quadriflow.exe'; executable.touch()
+            a=trimesh.creation.box(); b=a.copy(); b.apply_translation([3,0,0])
+            commands=[]
+            def run(command, cwd=None):
+                commands.append(command)
+                if len(commands)==1:
+                    raise RuntimeError('singular small-component solve')
+                source=trimesh.load(command[command.index('-i')+1],force='mesh')
+                x=source.bounds[0,0]
+                Path(command[command.index('-o')+1]).write_text(f'v {x} 0 0\nv {x+1} 0 0\nv {x+1} 1 0\nv {x} 1 0\nf 1 2 3 4\n')
+            env={'SSUI_QUADRIFLOW_EXECUTABLE':str(executable),'SSUI_QUADRIFLOW_WSL_DISTRO':'','SSUI_3D_OUTPUT':tmp}
+            with patch.dict(os.environ,env),patch('ssui_3dmodel.Retopology._run',side_effect=run):
+                result=quad_remesh(Mesh(trimesh.util.concatenate([a,b])),100,split_components=True)
+            report=json.loads(Path(result.artifacts['report.json']).read_text())
+            self.assertEqual(len(commands),3)
+            self.assertEqual(report['quality']['parts'],1)
+            self.assertEqual(len(report['parts'][0]['components']),2)
+            self.assertFalse(report['parts'][0]['components'][0]['attempts'][0]['success'])
+            self.assertEqual(len(result._model.geometry),1)
+
     def test_wsl_bridge_keeps_spaces_and_translates_file_paths(self):
         command = _wsl(['/home/user/python', r'C:\models with spaces\worker.py',
                         r'D:\input\model.glb', '/home/user/weights.safetensors'],

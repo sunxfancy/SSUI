@@ -302,3 +302,7 @@ SSUI 沙盒工作流复测：两阶段各 8 步，节点执行约 176 秒，完�
 `examples/basic/workflow-retopology.py` 提供模型导入 → P3-SAM 部件分割 → 独立
 QuadriFlow → 可旋转预览与 GLB / 四边面 OBJ 导出。配置与限制见
 [自动重拓扑说明](../../doc/Retopology.md)。
+
+`examples/basic/workflow-holopart.py` 在分割和重拓扑之间增加可选 HoloPart 部件补全。
+使用 Windows 原生 ROCm 与源码 HIP 编译的依赖，配置、验证和 diso 非商业许可限制见
+[HoloPart 说明](../../doc/HoloPart.md)。
