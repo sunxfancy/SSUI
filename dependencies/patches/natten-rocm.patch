@@ -1,0 +1,192 @@
+diff --git a/csrc/include/natten/cpu/naive/pointwise_neighborhood_2d.hpp b/csrc/include/natten/cpu/naive/pointwise_neighborhood_2d.hpp
+index 4505065..6eb340b 100644
+--- a/csrc/include/natten/cpu/naive/pointwise_neighborhood_2d.hpp
++++ b/csrc/include/natten/cpu/naive/pointwise_neighborhood_2d.hpp
+@@ -225,7 +225,7 @@ struct PointwiseNeighborhood2D {
+                 neighborhood_size_1,
+                 dilation_1,
+                 is_causal_1);
+-            auto ni = get_window_end(
++            auto ei = get_window_end(
+                 i,
+                 ni,
+                 height,
+@@ -233,7 +233,7 @@ struct PointwiseNeighborhood2D {
+                 neighborhood_size_0,
+                 dilation_0,
+                 is_causal_0);
+-            auto nj = get_window_end(
++            auto ej = get_window_end(
+                 j,
+                 nj,
+                 width,
+diff --git a/csrc/include/natten/cuda/naive/natten_commons.cuh b/csrc/include/natten/cuda/naive/natten_commons.cuh
+index 7b00532..237638c 100644
+--- a/csrc/include/natten/cuda/naive/natten_commons.cuh
++++ b/csrc/include/natten/cuda/naive/natten_commons.cuh
+@@ -58,7 +58,10 @@ struct LaunchParams {
+ 
+ template <typename KernelTemplate>
+ __global__ void launch_cuda_kernel(typename KernelTemplate::Params params) {
+-#if (__CUDACC_VER_MAJOR__ >= 11) && (__CUDA_ARCH__ > 300)
++#if defined(__HIPCC__)
++  KernelTemplate kernel;
++  kernel.launch(params);
++#elif (__CUDACC_VER_MAJOR__ >= 11) && (__CUDA_ARCH__ > 300)
+ #if (__CUDA_ARCH__ < 600)
+   // Half kernels are not supported in CC < 60,
+   // Partial FP16 support was added in SM50, but ours need the half2 type
+@@ -82,7 +85,7 @@ __global__ void launch_cuda_kernel(typename KernelTemplate::Params params) {
+ #endif
+ #else
+   printf("Kernel not supported on this device / CUDA version.\n");
+-  asm volatile("brkpt;\n");
++  __builtin_trap();
+ #endif
+ }
+ 
+@@ -102,7 +105,7 @@ struct HalfArray;
+ template <typename ElementScalar_, typename ElementVector_>
+ struct HalfArrayBase;
+ 
+-#if (__CUDACC_VER_MAJOR__ >= 11) && (__CUDA_ARCH__ >= 600)
++#if defined(__HIPCC__) || ((__CUDACC_VER_MAJOR__ >= 11) && (__CUDA_ARCH__ >= 600))
+ 
+ template <>
+ struct HalfArrayBase<natten::float16, __half2> {
+@@ -175,7 +178,7 @@ struct HalfArray<natten::float16> {
+ };
+ #endif
+ 
+-#if (__CUDACC_VER_MAJOR__ >= 11) && (__CUDA_ARCH__ >= 800)
++#if defined(__HIPCC__) || ((__CUDACC_VER_MAJOR__ >= 11) && (__CUDA_ARCH__ >= 800))
+ template <>
+ struct HalfArrayBase<natten::bfloat16, __nv_bfloat162> {
+   using ElementNatten = natten::bfloat16;
+@@ -205,7 +208,7 @@ struct HalfArrayBase<natten::bfloat16, __nv_bfloat162> {
+   }
+ 
+   __device__ __inline__ static ElementVector zeros() {
+-    return __float2bfloat162_rn(0.f);
++    return __float22bfloat162_rn(make_float2(0.f, 0.f));
+   }
+ 
+   __device__ __inline__ static ElementVector fma(
+@@ -333,7 +336,7 @@ struct NeighborhoodMask {
+     } else {
+       printf(
+           "FATAL: RPB kernels do not support causal masking. Please open an issue.");
+-      asm volatile("brkpt;\n");
++      __builtin_trap();
+     }
+   }
+ };
+@@ -383,7 +386,7 @@ inline __device__ int32_t get_pb_start(
+ template <typename T>
+ struct AttnMask;
+ 
+-#ifdef __CUDA_ARCH__
++#if defined(__HIPCC__) || defined(__CUDA_ARCH__)
+ 
+ // TODO: bitcast into a constexpr instead of evaluating at runtime
+ 
+@@ -401,7 +404,7 @@ struct AttnMask<float> {
+   }
+ };
+ 
+-#if (__CUDACC_VER_MAJOR__ >= 11) && (__CUDA_ARCH__ >= 600)
++#if defined(__HIPCC__) || ((__CUDACC_VER_MAJOR__ >= 11) && (__CUDA_ARCH__ >= 600))
+ template <>
+ struct AttnMask<natten::float16> {
+   static __device__ auto value(bool is_grad) {
+@@ -411,7 +414,7 @@ struct AttnMask<natten::float16> {
+ };
+ #endif
+ 
+-#if (__CUDACC_VER_MAJOR__ >= 11) && (__CUDA_ARCH__ >= 800)
++#if defined(__HIPCC__) || ((__CUDACC_VER_MAJOR__ >= 11) && (__CUDA_ARCH__ >= 800))
+ template <>
+ struct AttnMask<natten::bfloat16> {
+   static __device__ auto value(bool is_grad) {
+@@ -427,7 +430,7 @@ struct AttnMask<natten::bfloat16> {
+ /// Atomics for older architectures
+ //////////////////////////////////////////////////
+ 
+-#if defined(__CUDA_ARCH__)
++#if defined(__HIPCC__) || (defined(__CUDA_ARCH__))
+ 
+ static inline __device__ float floatOrDoubleAtomicAdd(
+     float* address,
+@@ -438,7 +441,7 @@ static inline __device__ float floatOrDoubleAtomicAdd(
+ static inline __device__ double floatOrDoubleAtomicAdd(
+     double* address,
+     double val) {
+-#if (__CUDA_ARCH__ >= 600)
++#if defined(__HIPCC__) || ((__CUDA_ARCH__ >= 600))
+   return atomicAdd(address, val);
+ #else
+     // Taken from pytorch;
+diff --git a/csrc/include/natten/natten.h b/csrc/include/natten/natten.h
+index 6ceddfd..00adc4a 100644
+--- a/csrc/include/natten/natten.h
++++ b/csrc/include/natten/natten.h
+@@ -1,3 +1,6 @@
++#if defined(NATTEN_WITH_HIP) && !defined(NATTEN_WITH_CUDA)
++#define NATTEN_WITH_CUDA 1
++#endif
+ /***************************************************************************************************
+  * Copyright (c) 2022-2024 Ali Hassani.
+  *
+diff --git a/csrc/src/config.cpp b/csrc/src/config.cpp
+index d5ec9a1..22403c2 100644
+--- a/csrc/src/config.cpp
++++ b/csrc/src/config.cpp
+@@ -1,3 +1,6 @@
++#if defined(NATTEN_WITH_HIP) && !defined(NATTEN_WITH_CUDA)
++#define NATTEN_WITH_CUDA 1
++#endif
+ /***************************************************************************************************
+  * Copyright (c) 2022-2024 Ali Hassani.
+  *
+diff --git a/src/natten/autotuner/misc.py b/src/natten/autotuner/misc.py
+index 371f471..d24050e 100644
+--- a/src/natten/autotuner/misc.py
++++ b/src/natten/autotuner/misc.py
+@@ -24,7 +24,8 @@
+ from typing import Optional
+ 
+ import torch
+-from torch.cuda import _device_t
++from typing import Union
++_device_t = Union[torch.device, str, int]
+ 
+ from ..types import DimensionType
+ 
+diff --git a/src/natten/context.py b/src/natten/context.py
+index fc27a35..2d52412 100644
+--- a/src/natten/context.py
++++ b/src/natten/context.py
+@@ -24,7 +24,8 @@ from enum import Enum
+ from typing import Any, Dict, Optional
+ 
+ import torch
+-from torch.cuda import _device_t
++from typing import Union
++_device_t = Union[torch.device, str, int]
+ 
+ from .utils import log
+ from .utils.misc import get_device_cc
+diff --git a/src/natten/utils/misc.py b/src/natten/utils/misc.py
+index aa10440..21beca8 100644
+--- a/src/natten/utils/misc.py
++++ b/src/natten/utils/misc.py
+@@ -24,7 +24,8 @@
+ from typing import Optional
+ 
+ import torch
+-from torch.cuda import _device_t
++from typing import Union
++_device_t = Union[torch.device, str, int]
+ 
+ 
+ def get_device_cc(device_index: Optional[_device_t] = None) -> int:

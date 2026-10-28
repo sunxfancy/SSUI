@@ -19,6 +19,11 @@ class TrellisModel:
 
     @staticmethod
     def load(model_path: str):
+        if torch.version.hip:
+            raise RuntimeError(
+                "Legacy TRELLIS requires CUDA-only extensions in SSUI. "
+                "Use the Pixal3D workflow for ROCm and run yarn probe:3d first."
+            )
         from backend.util.devices import TorchDevice
         if TorchDevice.choose_torch_device().type == 'mps':
             from pathlib import Path

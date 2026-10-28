@@ -11,7 +11,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from torchvision import transforms
-from transformers import DINOv3ViTModel
+
 import numpy as np
 from PIL import Image, ImageDraw
 
@@ -368,6 +368,7 @@ class DinoV3ProjFeatureExtractor(nn.Module):
         grid_resolution: int = 16,
         use_naf_upsample: bool = False,
         naf_target_size: Optional[List[int]] = None,
+        backbone: Optional[nn.Module] = None,
     ):
         super().__init__()
         self.model_name = model_name
@@ -382,7 +383,10 @@ class DinoV3ProjFeatureExtractor(nn.Module):
             self.naf_target_size = tuple(naf_target_size)
         
         # Load DINOv3 model (frozen, no trainable params in this module)
-        self.model = DINOv3ViTModel.from_pretrained(model_name)
+        if backbone is None:
+            from transformers import DINOv3ViTModel
+            backbone = DINOv3ViTModel.from_pretrained(model_name)
+        self.model = backbone
         self.model.eval()
         self.model.requires_grad_(False)
         
@@ -416,9 +420,13 @@ class DinoV3ProjFeatureExtractor(nn.Module):
         """Lazy-load pretrained NAF model."""
         if self.naf_model is None:
             import torch.hub
+            import os
             device = next(self.model.parameters()).device
+            local_source = os.environ.get("PIXAL3D_NAF_SOURCE")
             self.naf_model = torch.hub.load(
-                "valeoai/NAF", "naf", pretrained=True, device=device, trust_repo=True
+                local_source or "valeoai/NAF", "naf", pretrained=True,
+                device=device, trust_repo=True,
+                source="local" if local_source else "github",
             )
             self.naf_model.eval()
             self.naf_model.requires_grad_(False)
@@ -638,6 +646,7 @@ class DinoV3VaeProjFeatureExtractor(nn.Module):
         self.grid_resolution = grid_resolution
         
         # --- DINOv3 backbone (frozen) ---
+        from transformers import DINOv3ViTModel
         self.dino_model = DINOv3ViTModel.from_pretrained(dino_model_name)
         self.dino_model.eval()
         self.dino_model.requires_grad_(False)

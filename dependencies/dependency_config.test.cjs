@@ -76,7 +76,8 @@ test('migration retains OS/backend-specific versions, URLs, extras and multiple 
   assert.ok(windows.requirements.includes('scipy>=1.15'));
   assert.ok(windows.requirements.includes('diffusers[torch]>=0.37.0,<0.41'));
   assert.ok(rocm.requirements.some(r => r.startsWith('torch @ https://repo.radeon.com/')));
-  assert.ok(rocm.requirements.includes('tokenizers==0.21.1'));
+  assert.ok(rocm.requirements.includes('tokenizers==0.22.2'));
+  assert.ok(rocm.requirements.includes('transformers==4.57.6'));
   assert.ok(macos.requirements.includes('torch==2.4.1'));
   assert.ok(!macos.requirements.some(r => r.includes('win_amd64')));
   assert.ok(!macos.requirements.some(r => r.startsWith('xatlas')));
@@ -168,4 +169,16 @@ test('generated lock graph preserves uv root and reverse-dependency annotations'
   assert.equal(parsed.accelerate.isRoot, true);
   assert.deepEqual(parsed.accelerate.dependents, ['diffusers']);
   assert.deepEqual(parsed.numpy.dependents, ['accelerate']);
+});
+
+ test('Windows ROCm pins validated native wheels with hashes without changing CUDA', () => {
+  const amd = resolveDependencies(profileFromName('windows-amdgpu'));
+  for (const name of ['cumesh', 'nvdiffrast', 'natten']) {
+    const requirement = amd.requirements.find(line => line.startsWith(name + ' @ '));
+    assert.match(requirement, /SSUI\/releases\/download\/rocm-wheels-20261027\//);
+    assert.match(requirement, /%2Bssui\.rocm72-cp312-cp312-win_amd64\.whl#sha256=[a-f0-9]{64}$/);
+  }
+  const cuda = resolveDependencies(profileFromName('windows'));
+  assert.ok(cuda.requirements.some(line => line.startsWith('nvdiffrast @ ') && line.includes('/v0.3.3.1/')));
+  assert.ok(!cuda.requirements.some(line => line.startsWith('natten ')));
 });
