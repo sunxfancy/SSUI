@@ -21,6 +21,25 @@ def load_node(name, diffsynth):
 
 
 class VideoDeviceTest(unittest.TestCase):
+    def test_wan_blas_workaround_is_limited_to_windows_rocm_72_gpu(self):
+        runtime = load_node("_runtime", self.stub())
+        for platform, hip, device, applied in (
+            ("win32", "7.2.53211", "cuda:0", True),
+            ("win32", "7.2.53211", "cpu", False),
+            ("linux", "7.2.53211", "cuda", False),
+            ("win32", None, "cuda", False),
+            ("win32", "7.3.0", "cuda", False),
+        ):
+            with self.subTest(platform=platform, hip=hip, device=device), \
+                 patch.object(runtime.sys, "platform", platform), \
+                 patch.object(torch.version, "hip", hip), \
+                 patch("torch.backends.cuda.preferred_blas_library") as blas:
+                runtime.configure_wan_blas(device)
+                if applied:
+                    blas.assert_called_once_with("cublas")
+                else:
+                    blas.assert_not_called()
+
     def stub(self):
         mod = types.ModuleType("diffsynth")
         for name in ("ModelManager", "SDImagePipeline", "SDVideoPipeline",

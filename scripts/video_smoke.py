@@ -31,7 +31,7 @@ def main():
 
     from huggingface_hub import hf_hub_download
     import yaml
-    manifest = yaml.safe_load((ROOT / "tests/model_manifest.yaml").read_text())["diffsynth"]
+    manifest = yaml.safe_load((ROOT / "tests/model_manifest.yaml").read_text(encoding="utf-8"))["diffsynth"]
     paths = []
     for key in ("sd1", "animatediff"):
         entry = manifest[key]
@@ -60,6 +60,8 @@ def main():
     TorchDevice.config.device = args.device
     device = TorchDevice.choose_torch_device()
     print(f"Loading real models on {device}", flush=True)
+    if device.type == "cuda":
+        torch.cuda.reset_peak_memory_stats(device)
     started = time.monotonic()
     parameters = {"width": args.size, "height": args.size, "num_frames": args.frames,
                   "num_inference_steps": args.steps, "seed": args.seed, "cfg_scale": 7.5,
@@ -105,8 +107,9 @@ def main():
     if len(decoded) != args.frames or decoded[0].shape != arrays[0].shape:
         raise RuntimeError("Encoded video failed frame count/dimension validation")
     preview = Image.new("RGB", (args.size * min(args.frames, 4), args.size))
-    for i, frame in enumerate(frames[:4]):
-        preview.paste(frame, (i * args.size, 0))
+    preview_indices = np.linspace(0, len(frames) - 1, min(args.frames, 4), dtype=int).tolist()
+    for i, frame_index in enumerate(preview_indices):
+        preview.paste(frames[frame_index], (i * args.size, 0))
     preview.save(args.output / "preview.png")
     report = {"device": str(device), "torch": torch.__version__, "dtype": str(dtype),
               "seed": args.seed, "prompt": args.prompt, "frames": len(frames), "size": args.size,
@@ -114,6 +117,11 @@ def main():
               "generation_seconds": generated - loaded, "video": str(video_path),
               "frame_std": [float(a.std()) for a in arrays],
               "mean_frame_difference": float(np.abs(arrays[-1].astype(float) - arrays[0]).mean())}
+    if device.type == "cuda":
+        report.update(hip=torch.version.hip, gpu=torch.cuda.get_device_name(device),
+                      peak_vram_bytes=torch.cuda.max_memory_allocated(device))
+    import psutil
+    report["peak_rss_bytes"] = getattr(psutil.Process().memory_info(), "peak_wset", None)
     (args.output / "report.json").write_text(json.dumps(report, indent=2) + "\n")
     print(json.dumps(report, indent=2), flush=True)
 
