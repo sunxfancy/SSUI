@@ -122,7 +122,7 @@ const QwenImageEditModelLoader = React.forwardRef<QwenModelLoader, object>((prop
     { name: 'PixelSrcAssetLoader', type: 'ssui_image.PixelArt.PixelSrcAsset', port: 'input',
         component: uploadComponent({ functionName: 'ssui_image.PixelArt.PixelSrcAsset.load', accept: '.pxl', label: 'pixelsrc 源文件', executable: 'pxl' }) },
     { name: 'MeshLoader', type: 'ssui.base.Mesh', port: 'input',
-        component: uploadComponent({ functionName: 'ssui.base.Mesh.load', accept: '.glb,.gltf,.obj,.fbx', label: '3D 模型文件' }) },
+        component: uploadComponent({ functionName: 'ssui.base.Mesh.load', accept: '.glb,.obj,.ply,.stl', label: '3D 模型文件（GLB / OBJ / PLY / STL）' }) },
     { name: 'QwenImageModelLoader', type: 'ssui_video.QwenImage.QwenImageModel', port: 'input', component: QwenModelLoader },
     { name: 'QwenImageEditModelLoader', type: 'ssui_video.QwenImage.QwenImageEditModel', port: 'input', component: QwenImageEditModelLoader },
     { name: 'FluxLoraLoader', type: 'ssui_image.Flux.FluxLora', port: 'input', component: FluxLoraLoader },
