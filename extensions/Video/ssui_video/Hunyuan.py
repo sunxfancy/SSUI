@@ -5,7 +5,6 @@ from ssui.base import Prompt, Image
 from ssui.config import SSUIConfig
 from ssui.controller import Random, Slider
 
-torch.cuda.set_per_process_memory_fraction(1.0, 0)
 from diffsynth import (
     ModelManager,
     HunyuanVideoPipeline,

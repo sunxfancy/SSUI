@@ -1,3 +1,4 @@
+import { useUIState } from '../../UIState';
 import React, { useState, forwardRef, useImperativeHandle } from 'react';
 import { registerComponent, ComponentRegister } from '../ComponentsManager';
 
@@ -6,7 +7,7 @@ type VideoUploaderProps = {
 }
 
 const VideoUploader = forwardRef((props: VideoUploaderProps, ref) => {
-    const [video, setVideo] = useState<string>('');
+    const [video, setVideo] = useUIState<string>('video', '');
     const [uploading, setUploading] = useState<boolean>(false);
     const [error, setError] = useState<string | null>(null);
 
@@ -75,8 +76,8 @@ const VideoUploader = forwardRef((props: VideoUploaderProps, ref) => {
 });
 
 const VideoPreview = forwardRef((props, ref) => {
-    const [video, setVideo] = useState<string>('');
-    const [metadata, setMetadata] = useState<Record<string, string | number | null>>({});
+    const [video, setVideo] = useUIState<string>('video', '');
+    const [metadata, setMetadata] = useUIState<Record<string, string | number | null>>('metadata', {});
 
     useImperativeHandle(ref, () => {
         return {

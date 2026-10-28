@@ -5,6 +5,7 @@ import './Image/ImagePicker';
 import './Video/VideoUploader';
 import './Audio/AudioUploader';
 import './Motion/SkeletonPreview';
+import './Motion/MotionClipPreview';
 import './Mesh/MeshArtifact';
 import './Loader/SDLoader';
 import './Loader/ControlNetLoader';

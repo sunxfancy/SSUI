@@ -1,3 +1,4 @@
+from ._runtime import wan_runtime
 import os
 
 import torch
@@ -42,8 +43,7 @@ class Wan22TI2VModel:
     @staticmethod
     def load() -> "Wan22TI2VModel":
         pipe = WanVideoPipeline.from_pretrained(
-            torch_dtype=torch.bfloat16,  # 可改为 torch.float8_e4m3fn 启用 FP8 量化
-            device="cuda",
+            **wan_runtime(),
             model_configs=[
                 ModelConfig(
                     model_id=WAN22_TI2V_MODEL_ID,
@@ -83,8 +83,7 @@ class Wan22T2VA14BModel:
     @staticmethod
     def load() -> "Wan22T2VA14BModel":
         pipe = WanVideoPipeline.from_pretrained(
-            torch_dtype=torch.bfloat16,
-            device="cuda",
+            **wan_runtime(),
             model_configs=[
                 ModelConfig(
                     model_id=WAN22_T2V_MODEL_ID,
@@ -130,8 +129,7 @@ class Wan22I2VA14BModel:
     @staticmethod
     def load() -> "Wan22I2VA14BModel":
         pipe = WanVideoPipeline.from_pretrained(
-            torch_dtype=torch.bfloat16,
-            device="cuda",
+            **wan_runtime(),
             model_configs=[
                 ModelConfig(
                     model_id=WAN22_I2V_MODEL_ID,

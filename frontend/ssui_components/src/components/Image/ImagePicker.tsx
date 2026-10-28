@@ -9,6 +9,7 @@ type ImagePickerState = {
 }
 
 export class ImagePicker extends IComponent<{ root_path: string, script_path: string }, ImagePickerState> {
+    protected persistedFields: ('selected_image')[] = ['selected_image'];
     constructor(props: { root_path: string, script_path: string }) {
         super(props);
         this.state = {
@@ -19,6 +20,7 @@ export class ImagePicker extends IComponent<{ root_path: string, script_path: st
     message: Message = new Message();
 
     componentDidMount() {
+        super.componentDidMount();
         this.fetchAvailableImages();
     }
 

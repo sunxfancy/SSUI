@@ -27,7 +27,7 @@ for dir in os.listdir(extensions_root):
 
 
 from ss_executor.loader import SSLoader, search_project_root
-from ssui.base import Audio, Image, Mesh, SkeletonAnimation, Video
+from ssui.base import Audio, Image, Mesh, MotionClip, SkeletonAnimation, Video
 from ss_executor.sandbox import Sandbox
 from ss_executor.model import KillMessage, TaskStatus, Task, ExecutorRegister, RegisterResponse, UpdateStatus, TaskResult, ExeMessage
 import traceback
@@ -120,6 +120,12 @@ def convert_task_return(result, task_script):
             "fps": result.fps,
             "metadata": result.metadata,
         }
+    if isinstance(result, MotionClip):
+        if not result.path or not os.path.isfile(result.path):
+            raise ValueError("Generated motion has no preview manifest")
+        return {"type": "motion_clip", "path": result.path, "npz_path": result.npz_path,
+                "bvh_path": result.bvh_path, "model": result.model, "fps": result.fps,
+                "frames": result.frames, "duration": result.frames / result.fps}
     if isinstance(result, SkeletonAnimation):
         from ssui_motion import export_bvh
 
@@ -187,7 +193,28 @@ def convert_task_return(result, task_script):
         os.makedirs(output_dir, exist_ok=True)
         path = os.path.join(output_dir, f"mesh_{uuid.uuid4().hex}.glb")
         result._model.export(path)
-        return {"type": "mesh", "path": path, "format": "glb"}
+        artifacts = getattr(result, "artifacts", {})
+        preview_path = getattr(result, "preview_path", None)
+        if not preview_path:
+            import json
+            import numpy as np
+            import trimesh
+            geometries = result._model.dump() if isinstance(result._model, trimesh.Scene) else [result._model]
+            preview = []
+            budget = max(1, 30000 // max(1, len(geometries)))
+            for index, geometry in enumerate(geometries):
+                if not isinstance(geometry, trimesh.Trimesh) or not len(geometry.faces):
+                    continue
+                indices = np.linspace(0, len(geometry.faces) - 1, min(budget, len(geometry.faces)), dtype=int)
+                sample = geometry.submesh([indices], append=True)
+                preview.append({"name": geometry.metadata.get("name", f"part_{index}"),
+                                "vertices": sample.vertices.tolist(), "faces": sample.faces.tolist()})
+            preview_path = path + ".preview.json"
+            with open(preview_path, "w", encoding="utf-8") as stream:
+                json.dump(preview, stream)
+        return {"type": "mesh", "path": path, "format": "glb",
+                "preview_path": preview_path, "artifacts": artifacts,
+                "quality": getattr(result, "quality", None)}
     return result
 
 class Executor:

@@ -6,6 +6,12 @@ describe('Message transport', () => {
     const originalWindow = Object.getOwnPropertyDescriptor(globalThis, 'window');
     const originalSocket = globalThis.WebSocket;
     class FakeSocket {
+        static CLOSED = 3;
+        readyState = 1;
+        private closeListeners: (() => void)[] = [];
+        addEventListener(type: string, listener: () => void) {
+            if (type === 'close') this.closeListeners.push(listener);
+        }
         onclose?: () => void;
         onmessage?: (event: { data: string }) => void;
         constructor(public url: string) {
@@ -13,7 +19,13 @@ describe('Message transport', () => {
             queueMicrotask(() => this.send({ type: 'uuid', uuid: 'client' }));
         }
         send(data: unknown) { this.onmessage?.({ data: JSON.stringify(data) }); }
-        close = jest.fn(() => this.onclose?.());
+        close = jest.fn(() => {
+            queueMicrotask(() => {
+                this.readyState = FakeSocket.CLOSED;
+                this.onclose?.();
+                this.closeListeners.splice(0).forEach(listener => listener());
+            });
+        });
     }
     beforeEach(() => {
         Object.defineProperty(globalThis, 'window', { configurable: true, value: { location: { href: 'http://localhost:8000' } } });
@@ -38,6 +50,7 @@ describe('Message transport', () => {
         expect(callback).toHaveBeenCalledWith(42);
         expect(socket.close).toHaveBeenCalledTimes(1);
         expect(message.active_requests).toBe(0);
+        expect(socket.readyState).toBe(FakeSocket.CLOSED);
         expect(message.message_cache).toEqual({});
         expect(message.listening_callbacks).toEqual({});
     });
@@ -47,6 +60,7 @@ describe('Message transport', () => {
         await expect(message.post('task', undefined, {})).rejects.toThrow('503');
         expect(socket.close).toHaveBeenCalledTimes(1);
         expect(message.active_requests).toBe(0);
+        expect(socket.readyState).toBe(FakeSocket.CLOSED);
     });
     it('returns JSON without opening callback connection', async () => {
         const message = new Message(); message.uuid = 'client';

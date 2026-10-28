@@ -200,6 +200,40 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/modelscope/models": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Modelscope Models */
+        get: operations["modelscope_models_api_modelscope_models_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/modelscope/models/{repo_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Modelscope Model */
+        get: operations["modelscope_model_api_modelscope_models__repo_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/prepare": {
         parameters: {
             query?: never;
@@ -385,6 +419,23 @@ export interface paths {
          * @description 重试失败的下载任务：按原 meta 重新创建任务。
          */
         post: operations["retry_task_api_tasks__task_id__retry_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/ui_state_asset": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Ui State Asset */
+        post: operations["ui_state_asset_api_ui_state_asset_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -711,8 +762,26 @@ export interface components {
             /** Source */
             source: string;
         };
+        /** Body_ui_state_asset_api_ui_state_asset_post */
+        Body_ui_state_asset_api_ui_state_asset_post: {
+            /**
+             * File
+             * Format: binary
+             */
+            file: string;
+        };
         /** Body_ui_state_store_api_ui_state_store_post */
         Body_ui_state_store_api_ui_state_store_post: {
+            /**
+             * Client Id
+             * @default
+             */
+            client_id: string;
+            /**
+             * Revision
+             * @default 0
+             */
+            revision: number;
             /** State Data */
             state_data: {
                 [key: string]: unknown;
@@ -1168,6 +1237,69 @@ export interface operations {
             };
         };
     };
+    modelscope_models_api_modelscope_models_get: {
+        parameters: {
+            query?: {
+                search?: string;
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    modelscope_model_api_modelscope_models__repo_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                repo_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     prepare_api_prepare_post: {
         parameters: {
             query: {
@@ -1464,10 +1596,46 @@ export interface operations {
             };
         };
     };
+    ui_state_asset_api_ui_state_asset_post: {
+        parameters: {
+            query: {
+                script_path: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": components["schemas"]["Body_ui_state_asset_api_ui_state_asset_post"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     ui_state_load_api_ui_state_load_get: {
         parameters: {
             query: {
                 script_path: string;
+                view?: string;
             };
             header?: never;
             path?: never;
@@ -1499,6 +1667,7 @@ export interface operations {
         parameters: {
             query: {
                 script_path: string;
+                view?: string;
             };
             header?: never;
             path?: never;

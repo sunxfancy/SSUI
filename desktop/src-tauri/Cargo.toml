@@ -26,7 +26,7 @@ serde_json = "1"
 tauri-plugin-upload = "2"
 tauri-plugin-http = "2"
 tauri-plugin-fs = "2"
-tauri-plugin-shell = "2"
+tauri-plugin-shell = "2.2.1"
 tauri-plugin-websocket = "2"
 tauri-plugin-store = "2"
 tauri-plugin-process = "2"
@@ -48,7 +48,6 @@ sysinfo = "0.39.6"
 windows = { version = "0.60.0", features = ["Win32_Graphics_Dxgi"] }
 
 [target.'cfg(not(any(target_os = "android", target_os = "ios")))'.dependencies]
-tauri-plugin-updater = "2"
 tauri-plugin-window-state = "2"
 
 

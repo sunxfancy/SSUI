@@ -75,6 +75,26 @@ async def save_config(request: Request, payload: Dict[str, Any]) -> Dict[str, st
     return {"status": "success"}
 
 
+@app.get("/api/ui_state_load")
+async def ui_state_load(request: Request, script_path: str, view: str = ""):
+    await record(request)
+    return deepcopy(app.state.test_state.setdefault("ui_states", {}).get((script_path, view), {}))
+
+
+@app.post("/api/ui_state_store")
+async def ui_state_store(request: Request, script_path: str, view: str = "", payload: Dict[str, Any] = Body(...)):
+    await record(request, payload)
+    app.state.test_state.setdefault("ui_states", {})[(script_path, view)] = deepcopy(payload["state_data"])
+    return {"success": True}
+
+
+@app.post("/api/ui_state_asset")
+async def ui_state_asset(request: Request, script_path: str, file: UploadFile = File(...)):
+    await record(request, {"filename": file.filename, "content_type": file.content_type})
+    await file.close()
+    return {"success": True, "path": "/fixtures/canvas-asset.png"}
+
+
 @app.get("/api/script", response_model=ScriptMeta)
 async def script(request: Request, script_path: str):
     await record(request)

@@ -21,3 +21,6 @@ elif BACKEND == 'spconv':
     from .conv_spconv import *
 elif BACKEND == 'flex_gemm':
     from .conv_flex_gemm import *
+
+elif BACKEND == 'torch':
+    from .conv_torch import *

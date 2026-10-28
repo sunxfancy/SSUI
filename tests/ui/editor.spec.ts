@@ -37,3 +37,29 @@ test('missing file disables save; view switch preserves special path', async ({ 
   await expect(page.getByRole('heading', { name: '测试 & #1.py' })).toBeVisible();
   expect(new URL(page.url()).searchParams.get('path')).toBe('测试 & #1.py');
 });
+
+test('restores a saved draft and explicitly reloads a changed disk version', async ({ page }) => {
+  let disk = { content: 'disk = 1', version: 'v1' };
+  await page.route('**/file/text?*', route => route.fulfill({ json: disk }));
+  page.on('dialog', dialog => dialog.accept());
+  await page.goto(view('code_editor'));
+  await expect(page.locator('.code-editor-status')).toHaveText('Ready');
+  const editor = page.locator('.monaco-editor textarea').first();
+  await editor.focus();
+  await page.keyboard.press('ControlOrMeta+a');
+  const saved = page.waitForResponse(response => {
+    const request = response.request();
+    return response.url().includes('/api/ui_state_store?') && request.method() === 'POST'
+      && request.postDataJSON().state_data['/draft']?.content === 'local_draft = 2';
+  });
+  await page.keyboard.insertText('local_draft = 2');
+  await saved;
+  disk = { content: 'disk = 3', version: 'v2' };
+  await page.reload();
+  await expect(page.locator('.view-lines')).toContainText('local_draft = 2');
+  await expect(page.locator('.code-editor-status')).toHaveText('Unsaved changes');
+  await expect(page.getByRole('alert').filter({ hasText: '磁盘文件已发生变化' })).toBeVisible();
+  await page.getByRole('button', { name: 'Reload from disk' }).click();
+  await expect(page.locator('.view-lines')).toContainText('disk = 3');
+  await expect(page.locator('.code-editor-status')).toHaveText('Ready');
+});

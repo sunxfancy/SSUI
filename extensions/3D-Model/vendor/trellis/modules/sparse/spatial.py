@@ -3,6 +3,7 @@ import torch
 import torch.nn as nn
 from . import SparseTensor
 from . import BACKEND
+from .topology import unique_rows, count_indices
 
 __all__ = [
     'SparseDownsample',
@@ -29,23 +30,22 @@ class SparseDownsample(nn.Module):
         for i, f in enumerate(factor):
             coord[i+1] = coord[i+1] // f
 
-        MAX = [coord[i+1].max().item() + 1 for i in range(DIM)]
-        OFFSET = torch.cumprod(torch.tensor(MAX[::-1]), 0).tolist()[::-1] + [1]
-        code = sum([c * o for c, o in zip(coord, OFFSET)])
-        code, idx = code.unique(return_inverse=True)
+        new_coords, idx, counts = unique_rows(torch.stack(coord, dim=-1))
 
-        new_feats = torch.scatter_reduce(
-            torch.zeros(code.shape[0], input.feats.shape[1], device=input.feats.device, dtype=input.feats.dtype),
-            dim=0,
-            index=idx.unsqueeze(1).expand(-1, input.feats.shape[1]),
-            src=input.feats,
-            reduce='mean'
-        )
-        new_coords = torch.stack(
-            [code // OFFSET[0]] +
-            [(code // OFFSET[i+1]) % MAX[i] for i in range(DIM)],
-            dim=-1
-        )
+        if input.device.type == 'mps':
+            # Match scatter_reduce(mean, include_self=True), including its zero
+            # initial value, while keeping feature accumulation on the GPU.
+            new_feats = input.feats.new_zeros((new_coords.shape[0], input.feats.shape[1]))
+            new_feats.index_add_(0, idx.long(), input.feats)
+            new_feats = new_feats / (counts + 1).to(input.dtype).unsqueeze(1)
+        else:
+            new_feats = torch.scatter_reduce(
+                torch.zeros(new_coords.shape[0], input.feats.shape[1], device=input.feats.device, dtype=input.feats.dtype),
+                dim=0,
+                index=idx.unsqueeze(1).expand(-1, input.feats.shape[1]),
+                src=input.feats,
+                reduce='mean'
+            )
         out = SparseTensor(new_feats, new_coords, input.shape,)
         out._scale = tuple([s // f for s, f in zip(input._scale, factor)])
         out._spatial_cache = input._spatial_cache

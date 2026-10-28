@@ -12,7 +12,7 @@ function load(file, name, globals = {}) {
   const react = { Component, createRef: () => ({ current: null }) };
   const ctx = { exports: {}, console, URLSearchParams, self: {}, Date, AbortController, DOMException, ...globals,
     fetch: (...args) => ctx.request(...args),
-    require: id => id === 'react' ? { ...react, default: react } : {} };
+    require: id => id === 'react' ? { ...react, default: react } : id === 'ssui_components' ? { PersistentComponent: Component } : {} };
   vm.runInNewContext(ts.transpileModule(fs.readFileSync(`${__dirname}/../src/ui/${file}.tsx`, 'utf8'), {
     compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2020, jsx: ts.JsxEmit.ReactJSX }
   }).outputText, ctx);

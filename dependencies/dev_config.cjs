@@ -20,6 +20,18 @@ function resolveConfig(env = process.env, repo = root, home = os.homedir()) {
     }
   }
   result.SSUI_VENV_PATH ||= path.join(repo, '.venv');
+  // Retopology can run in WSL; preserve Linux paths rather than resolving them
+  // with the Windows path module. These settings are local machine resources.
+  for (const key of ['SSUI_QUADRIFLOW_EXECUTABLE', 'SSUI_QUADRIFLOW_WSL_DISTRO',
+    'SSUI_P3SAM_ROOT', 'SSUI_P3SAM_PYTHON', 'SSUI_P3SAM_WSL_DISTRO',
+    'SSUI_P3SAM_CHECKPOINT', 'SSUI_SONATA_CHECKPOINT', 'SSUI_P3SAM_BACKEND', 'SSUI_P3SAM_DEVICE', 'SSUI_P3SAM_POINT_NUM',
+    'SSUI_P3SAM_PROMPT_NUM', 'SSUI_P3SAM_PROMPT_BATCH', 'SSUI_3D_OUTPUT']) {
+    const value = env[key] || config[key];
+    if (value !== undefined) {
+      if (typeof value !== 'string' || !value.trim()) throw new Error(`Invalid setting: ${key}`);
+      result[key] = value;
+    }
+  }
   // Resolve source imports against this checkout even with a shared environment.
   result.PYTHONPATH = [repo, env.PYTHONPATH].filter(Boolean).join(path.delimiter);
   result.VIRTUAL_ENV = result.SSUI_VENV_PATH;

@@ -9,9 +9,7 @@ if ATTN == 'xformers':
     import xformers.ops as xops
 elif ATTN == 'flash_attn':
     import flash_attn
-elif ATTN == 'sdpa':
-    pass
-else:
+elif ATTN != 'sdpa':
     raise ValueError(f"Unknown attention module: {ATTN}")
 
 
@@ -154,16 +152,18 @@ def sparse_serialized_scaled_dot_product_self_attention(
     
     qkv_feats = qkv.feats[fwd_indices]      # [M, 3, H, C]
 
+    if ATTN == 'sdpa':
+        from .sdpa import packed_attention
+        q, k, v = qkv_feats.unbind(1)
+        out = packed_attention(q, k, v, seq_lens, seq_lens)
+        return qkv.replace(out[bwd_indices])
+
     if DEBUG:
         start = 0
         qkv_coords = qkv.coords[fwd_indices]
         for i in range(len(seq_lens)):
             assert (qkv_coords[start:start+seq_lens[i], 0] == seq_batch_indices[i]).all(), f"SparseWindowedScaledDotProductSelfAttention: batch index mismatch"
             start += seq_lens[i]
-
-    if ATTN == 'sdpa':
-        from .sdpa import packed_attention
-        return qkv.replace(packed_attention(qkv_feats, seq_lens)[bwd_indices])
 
     if all([seq_len == window_size for seq_len in seq_lens]):
         B = len(seq_lens)

@@ -170,6 +170,26 @@ class ModelService:
                 "tags": tags,
             }
 
+    async def modelscope_download(self, repo_id, local_dir, client_id,
+                                  request_uuid, callback, finish_callback):
+        from server.modelscope import download_repository
+        loop = asyncio.get_running_loop()
+
+        def worker():
+            try:
+                download_repository(repo_id, local_dir, lambda data:
+                    loop.call_soon_threadsafe(callback, client_id, request_uuid,
+                                              "download_progress", data))
+            except Exception as exc:
+                loop.call_soon_threadsafe(finish_callback, client_id,
+                                          request_uuid, {"error": str(exc)})
+            else:
+                loop.call_soon_threadsafe(finish_callback, client_id,
+                                          request_uuid, {"path": local_dir})
+
+        threading.Thread(target=worker, daemon=True).start()
+        return {"message": "Download started"}
+
     async def hf_download(
         self,
         repo_id: str,

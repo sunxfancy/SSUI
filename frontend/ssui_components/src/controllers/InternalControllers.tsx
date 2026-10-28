@@ -154,7 +154,8 @@ export class RandomController extends IController<{ value: number; userInput: bo
     };
 
     componentDidMount() {
-        if (this.props.params && this.props.params.default !== undefined) {
+        super.componentDidMount();
+        if (!this.context?.store.values[this.context.key] && this.props.params && this.props.params.default !== undefined) {
             this.setState({ value: this.props.params.default });
         }
     }

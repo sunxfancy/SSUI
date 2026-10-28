@@ -4,6 +4,11 @@
 .mesh-artifact-copy strong, .mesh-artifact-copy span { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .mesh-artifact-copy span { color: var(--ssui-fg-muted, #667085); font-size: 11px; }
 .mesh-artifact-actions { display: flex; gap: 7px; }
+.mesh-preview { grid-column: 1 / -1; min-width: 0; }
+.mesh-preview canvas { width: 100%; max-height: 420px; touch-action: none; border-radius: 8px; }
+.mesh-preview span { display: block; font-size: 11px; opacity: .7; }
+.mesh-artifact-actions { flex-wrap: wrap; }
+.mesh-quality { grid-column: 1 / -1; display: grid; gap: 8px; font-size: 12px; }
 @media (max-width: 620px) {
     .mesh-artifact { grid-template-columns: auto 1fr; }
     .mesh-artifact-actions { grid-column: 1 / -1; }

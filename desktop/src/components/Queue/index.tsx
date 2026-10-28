@@ -155,6 +155,16 @@ const Queue: React.FC<QueueProps> = ({ items: initialItems, onRemoveItem }) => {
         }
     };
 
+    const handleRetry = async (id: string) => {
+        if (initialItems !== undefined) return;
+        try {
+            await taskService.current.retryTask(id);
+            await loadTasks();
+        } catch (err) {
+            setError(err instanceof Error ? err.message : '重试下载失败');
+        }
+    };
+
     const handleClearCompleted = async () => {
         if (initialItems !== undefined) {
             setItems(prev => prev.filter(item => item.status !== 'completed'));
@@ -233,7 +243,7 @@ const Queue: React.FC<QueueProps> = ({ items: initialItems, onRemoveItem }) => {
                                             {getStatusText(item.status)}
                                         </Tag>
                                         <span style={{ fontSize: '0.9em', color: '#666' }}>
-                                            {t(`queue.kind.${item.kind}`)}
+                                            {t(`queue.kind.${item.kind}`)}{item.meta?.kind === 'modelscope' ? ' · ModelScope' : ''}
                                         </span>
                                         <span style={{ fontSize: '0.9em', color: '#666' }}>
                                             {new Date(item.createdAt * 1000).toLocaleString()}
@@ -241,6 +251,11 @@ const Queue: React.FC<QueueProps> = ({ items: initialItems, onRemoveItem }) => {
                                     </div>
                                 </div>
                                 <div style={{ display: 'flex', gap: '5px' }}>
+                                    {initialItems === undefined && item.kind === 'download' &&
+                                        (item.status === 'failed' || item.status === 'cancelled') && (
+                                        <Button small icon="repeat" variant="minimal"
+                                            title="重试下载" onClick={() => handleRetry(item.id)} />
+                                    )}
                                     {(item.status === 'waiting' || item.status === 'processing') && (
                                         <Button
                                             small

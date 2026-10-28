@@ -28,9 +28,12 @@ export interface HuggingfaceModel {
 
 interface HuggingfaceModelsProps {
     onModelSelect?: (model: HuggingfaceModel) => void;
+    source?: 'huggingface' | 'modelscope';
 }
 
-const HuggingfaceModels: React.FC<HuggingfaceModelsProps> = () => {
+const HuggingfaceModels: React.FC<HuggingfaceModelsProps> = ({ source = 'huggingface' }) => {
+    const label = source === 'modelscope' ? 'ModelScope' : 'HuggingFace';
+    const api = source === 'modelscope' ? 'modelscope' : 'hf';
     const [models, setModels] = useState<HuggingfaceModel[]>([]);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
@@ -39,29 +42,30 @@ const HuggingfaceModels: React.FC<HuggingfaceModelsProps> = () => {
     const [hasSearched, setHasSearched] = useState(false);
     const [downloading, setDownloading] = useState<{ [id: string]: number }>({});
     const taskService = useRef(TaskService.getInstance());
-    const taskIds = useRef<{ [modelId: string]: string }>({});
-
     useEffect(() => {
-        // 通过任务队列的 task_update 推送更新下载进度
-        const unsubscribe = taskService.current.subscribe((task) => {
-            if (task.kind !== 'download') return;
-            for (const [modelId, taskId] of Object.entries(taskIds.current)) {
-                if (taskId === task.id) {
-                    if (task.status === 'completed' || task.status === 'failed' || task.status === 'cancelled') {
-                        delete taskIds.current[modelId];
-                        setDownloading(prev => {
-                            const next = { ...prev };
-                            delete next[modelId];
-                            return next;
-                        });
-                    } else {
-                        setDownloading(prev => ({ ...prev, [modelId]: task.progress }));
+        let disposed = false;
+        const syncTasks = async () => {
+            try {
+                const tasks = await taskService.current.fetchTasks();
+                if (disposed) return;
+                const progress: Record<string, number> = {};
+                for (const task of tasks) {
+                    if (task.kind === 'download' && task.meta?.kind === source &&
+                        typeof task.meta.repo_id === 'string' &&
+                        (task.status === 'waiting' || task.status === 'processing')) {
+                        progress[task.meta.repo_id] = task.progress;
                     }
                 }
+                setDownloading(progress);
+            } catch (error) {
+                console.error('同步下载队列失败:', error);
             }
-        });
-        return unsubscribe;
-    }, []);
+        };
+        const unsubscribe = taskService.current.subscribe(() => { void syncTasks(); });
+        void syncTasks();
+        const timer = setInterval(syncTasks, 5000);
+        return () => { disposed = true; unsubscribe(); clearInterval(timer); };
+    }, [source]);
 
     const searchModels = async () => {
         if (!inputValue.trim()) return;
@@ -71,7 +75,7 @@ const HuggingfaceModels: React.FC<HuggingfaceModelsProps> = () => {
             setError(null);
             setHasSearched(true);
 
-            const response = await axios.get(`${getApiBaseUrl()}/api/hf/models`, {
+            const response = await axios.get(`${getApiBaseUrl()}/api/${api}/models`, {
                 params: {
                     search: inputValue,
                     limit: 50,
@@ -96,7 +100,7 @@ const HuggingfaceModels: React.FC<HuggingfaceModelsProps> = () => {
             setHasSearched(true);
 
             // 获取单个仓库信息
-            const response = await axios.get(`${getApiBaseUrl()}/api/hf/models/${encodeURIComponent(inputValue)}`);
+            const response = await axios.get(`${getApiBaseUrl()}/api/${api}/models/${encodeURIComponent(inputValue)}`);
 
             // 如果成功获取，添加到模型列表的开头
             if (response.data) {
@@ -119,15 +123,26 @@ const HuggingfaceModels: React.FC<HuggingfaceModelsProps> = () => {
         const modelId = model.modelId || model.id;
         setDownloading(prev => ({ ...prev, [model.id]: 0 }));
         try {
-            const taskId = await taskService.current.createDownloadTask(
-                'huggingface',
+            await taskService.current.createDownloadTask(
+                source,
                 modelId,
                 undefined,
                 modelId
             );
-            taskIds.current[model.id] = taskId;
+            const tasks = await taskService.current.fetchTasks();
+            const active = tasks.find(task => task.kind === 'download' &&
+                task.meta?.kind === source && task.meta?.repo_id === modelId &&
+                (task.status === 'waiting' || task.status === 'processing'));
+            setDownloading(prev => {
+                const next = { ...prev };
+                if (active) next[model.id] = active.progress;
+                else delete next[model.id];
+                return next;
+            });
         } catch (error) {
-            console.error('HuggingFace 模型下载失败:', error);
+            setError(`${label} 模型下载失败，请重试`);
+            setDownloading(prev => { const next = { ...prev }; delete next[model.id]; return next; });
+            console.error(`${label} 模型下载失败:`, error);
         }
     };
 
@@ -162,7 +177,7 @@ const HuggingfaceModels: React.FC<HuggingfaceModelsProps> = () => {
                     <InputGroup
                         className={styles.searchInput}
                         placeholder="搜索模型或输入仓库ID..."
-                        leftElement={<div className={styles.logo}><img src={HuggingfaceLogo} alt=""/></div>}
+                        leftElement={<div className={styles.logo}>{source === 'modelscope' ? <Icon icon="cloud" /> : <img src={HuggingfaceLogo} alt=""/>}</div>}
                         value={inputValue}
                         size="large"
                         onChange={handleInputChange}
@@ -187,7 +202,7 @@ const HuggingfaceModels: React.FC<HuggingfaceModelsProps> = () => {
                     </Button>
                 </div>
                 <div className={styles.tip}>
-                    * 搜索模型或输入仓库ID (例如: 'runwayml/stable-diffusion-v1-5')
+                    * 搜索模型或输入仓库ID（{source === 'modelscope' ? '例如：Qwen/Qwen2.5-0.5B-Instruct' : '例如：runwayml/stable-diffusion-v1-5'}）
                 </div>
             </form>
 
@@ -221,7 +236,7 @@ const HuggingfaceModels: React.FC<HuggingfaceModelsProps> = () => {
             ) : !hasSearched ? (
                 <NonIdealState
                     icon="search"
-                    title="搜索Huggingface模型"
+                    title={`搜索${label}模型`}
                     description="输入关键词搜索模型或直接添加仓库ID"
                 />
             ) : filteredModels.length === 0 ? (
@@ -233,7 +248,7 @@ const HuggingfaceModels: React.FC<HuggingfaceModelsProps> = () => {
             ) : (
                 <div className={styles.cardList} id="#huggingfaceCardList">
                     {filteredModels.map(model => (
-                        <div className={styles.huggingFaceModelCard}>
+                        <div key={model.id} className={styles.huggingFaceModelCard}>
                             <div className={styles.topArea}>
                                 <div className={styles.name}>{model.id}</div>
                                 {
