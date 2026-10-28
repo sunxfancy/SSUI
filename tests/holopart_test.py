@@ -7,10 +7,21 @@ from unittest.mock import patch
 import trimesh
 from ssui import Mesh
 from ssui.config import SSUIConfig
-from ssui_3dmodel.HoloPart import CompleteParts, complete_parts
+from ssui_3dmodel.HoloPart import CompleteParts, complete_parts, QuadRemeshCompleted, remesh_completed
 
 
 class HoloPartTest(unittest.TestCase):
+    def test_closed_remesh_prepare_and_native_configuration(self):
+        config=SSUIConfig(); config.set_prepared()
+        with patch('subprocess.run',side_effect=AssertionError('process started')):
+            self.assertIsNone(QuadRemeshCompleted(config('closed'),Mesh())._model)
+        with patch.dict(os.environ,{'SSUI_HOLOPART_PYTHON':''}):
+            with self.assertRaisesRegex(RuntimeError,'SSUI_HOLOPART_PYTHON'):
+                remesh_completed(Mesh())
+        with patch.dict(os.environ,{'SSUI_HOLOPART_PYTHON':'native-python','SSUI_QUADRIFLOW_WSL_DISTRO':'Ubuntu'}):
+            with self.assertRaisesRegex(RuntimeError,'native QuadriFlow'):
+                remesh_completed(Mesh())
+
     def test_worker_failure_keeps_diagnostic_log(self):
         import sys
         from ssui_3dmodel.HoloPart import _run

@@ -62,9 +62,20 @@ seed 42、octree depth 8，逐部件 batch 1。整场景先统一归一化，生
 原始生成保存在 `completed.glb`。`prepared.glb` 显式移除重复/非流形面、拆分奇异顶点，
 并清理小于部件总面积 0.1% 或少于 8 面的生成碎片；如果总移除面积超过任一部件的
 2.5%，任务失败并保留原始结果。`preparation.json` 记录实际损失和剩余边界。
-不会自动封口。QuadriFlow 对保留的连通曲面分别求解，再恢复部件分组；
+准备阶段不封口。QuadriFlow 对保留的连通曲面分别求解，再恢复部件分组；
 每曲面至少请求 32 个面，困难曲面最多采用三个固定面预算/seed 重试，记录每次结果。
 这一可选路径关闭锐边约束并保留边界约束，原有重拓扑节点的设置保持不变。
+
+`QuadRemeshCompleted` 随后显式闭合输出边界，逐部件保留原始 QuadriFlow 报告和网格。
+已闭合部件保持原网格；开放部件先拆分奇异顶点，逐连通曲面执行 MeshLab 局部相交检查补洞。
+不安全、零面积或近乎零体积的封盖被拒绝，改为保留原曲面的薄壳闭合：
+原顶点沿单位法线向两侧各偏移部件对角线的 0.002%，边界连接成侧壁。
+不删除失败曲面，不跨部件连接；薄壳代表闭合表面，不代表实心体重建。
+开放部件的每个三角曲面以共享边中点细分为三个四边面，处理奇数边孔环并避免 T 接缝。
+因此实际四边面数可能明显超过 QuadriFlow 的目标面预算。
+最终 OBJ、float32 GLB 及 SSUI 序列化导出均检查闭合性、退化面和分组；`closure.json`
+记录封盖面积、薄壳厚度、保留曲面数、修复前后边界和面数。
+局部封盖检查不等于整个模型已通过全局自交检测。
 
 ## 验证
 
@@ -79,7 +90,7 @@ node dependencies/venv.cjs python scripts/validate_holopart.py --steps 50 --dept
 GPU 算子数值检查包含 dense GPU 近邻参考、贪心 FPS 参考和球面 SDF 曲面提取。
 本地证据位于 `output/holopart-rocm-validation/`，源码与权重、机器配置不纳入 Git。
 
-### 2026-10-28 实测
+### 2026-10-28 初版实测（闭合修复前）
 
 原始模型 499,588 个三角面，复用之前原生 ROCm P3-SAM 的 23 部件分割。
 R9700 上 HoloPart 50 步、depth 8 完成全部 23 部件约 504 秒，峰值显存约 4.70 GiB。
@@ -94,6 +105,34 @@ R9700 上 HoloPart 50 步、depth 8 完成全部 23 部件约 504 秒，峰值�
 证据包括 `pipeline-browser.png`、`browser-validation.json`、`geometry-validation.json`、
 `verification.json`，以及 `browser-downloads/` 内的原始补全、准备网格、OBJ、GLB 和报告。
 `--completed-job <任务目录>` 可复用已完成的真实 GPU 补全，单独重跑后续重拓扑与导出。
+
+### 边界闭合验证
+
+对初版同一批原始 QuadriFlow 输出验证：288 条开放边界降到 0，23 个部件名称与分组
+全部保留，退化三角面和非流形边为 0；四边面从 4,597 增至 17,288。
+原始输出与之前验收证据保留在 `output/holopart-rocm-validation/`。
+新一轮完整 ROCm 补全、重拓扑、闭合和浏览器导出证据保存到
+`output/holopart-closed-validation/`。
+
+完整重跑复用原 P3-SAM GPU 分割，但重新执行 HoloPart 50 步、depth 8，
+用时约 487 秒，R9700 峰值显存约 4.69 GiB；重拓扑、闭合及导出约 8.6 秒。
+本批次原始 QuadriFlow 有 262 条边界，闭合后为 0，输出 16,289 个四边面。
+23/23 个 GLB 部件及 SSUI 序列化副本均为 watertight，非流形边、退化三角面为 0。
+其中 17 个已闭合部件的坐标和四边面索引逐项未变，6 个部件加密，9 个曲面使用薄壳。
+相对本轮闭合前输出的采样距离 P95 约 0.66% 包围盒对角线；相对原始输入模型约 3.78%。
+两者都是独立表面点近邻近似值，不能当作精确 Hausdorff 距离。
+上游条件点采样使用未固定的 NumPy generator，相同扩散 seed 不保证相同生成网格，
+因此原批次 288→0 与完整重跑 262→0 分开记录。
+
+新版浏览器验收通过四阶段预览、原生上传、旋转、部件选择、缩放和 9 个导出文件的
+独立 SHA256 校验。`closure-comparison.json` 记录分组保持和已闭合部件不变的独立复核。
+补洞回归覆盖已闭合网格不变、普通孔洞、奇数边孔环、有界薄片厚度、奇异接触点拆分、
+非流形拒绝和 23 分组实际 GLB 导出。在含 MeshLab 的隔离环境执行：
+
+```powershell
+$env:SSUI_VENV_PATH = (Resolve-Path .build/holopart/env).Path
+yarn test_on holopart_closure_test
+```
 
 ## 许可证
 

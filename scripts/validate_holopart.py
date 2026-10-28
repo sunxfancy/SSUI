@@ -10,8 +10,7 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 sys.path.insert(0, str(ROOT / 'extensions/3D-Model'))
 from ssui import Mesh
-from ssui_3dmodel.HoloPart import complete_parts
-from ssui_3dmodel.Retopology import quad_remesh
+from ssui_3dmodel.HoloPart import complete_parts, remesh_completed
 from ss_executor.__main__ import convert_task_return
 
 
@@ -46,7 +45,7 @@ def main():
     print('Completion finished; running standalone QuadriFlow', flush=True)
     completion_report = json.loads(Path(completed.artifacts['completion.json']).read_text(encoding='utf-8'))
     remesh_start = time.monotonic()
-    result = quad_remesh(completed, 5000, split_components=True)
+    result = remesh_completed(completed, 5000)
     script = str(ROOT / 'examples/basic/workflow-holopart.py')
     data['completed'] = convert_task_return(completed, script)
     data['retopology'] = convert_task_return(result, script)
