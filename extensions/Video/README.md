@@ -244,11 +244,29 @@ yarn test:video:smoke --device cuda --size 512 --frames 16 --steps 20 --workflow
 `cuda` is also PyTorch's device name on ROCm. Reports include HIP version,
 GPU name, peak allocated VRAM and (on Windows) peak process working set.
 The preview samples the entire clip instead of only its first frames.
-The Wan staged smoke entry now accepts `--device cuda` and uses Windows-safe
-memory reporting; its full-generation validation is tracked separately.
+Wan 2.1 T2V-1.3B also passed full staged generation on this host: 512x512,
+17 frames at 8 FPS, seed 42, 30 steps and CFG 5. All three pinned checkpoints
+passed SHA256 verification. Text encoding took 14.6 seconds, denoising 26.9
+seconds and FP32 VAE decoding 178.8 seconds (237.4 seconds including checkpoint
+verification and subprocess startup). Peak allocated VRAM was 14.86 GiB during
+decode; peak process working set was 9.90 GiB during text encoding. The system
+retained at least 5.75 GiB available RAM. MP4 round-trip checks passed, and sampled
+frames show a coherent orange cat taking steps. The 256x256 trial had visible
+ghosting; this short 512px sample does not certify long-video quality or larger
+Wan variants. This verifies the staged model runner, not the Wan UI workflow.
 
-Wan's Windows full-model run remains unverified: downloading the UMT5/DiT
-checkpoints exhausted the validation host's disk. Temporary range chunks were
-removed, and the download entry now checks space before fetching missing weights.
-The CPU BF16 LayerNorm offload regression and the opt-in real-dependency video
-runtime suite pass; those tests do not certify a full Wan video on ROCm.
+```powershell
+yarn test:wan:smoke --device cuda --size 512 --frames 17 --steps 30
+```
+
+Windows ROCm 7.2's hipBLASLt crashed natively while selecting a BF16 matrix
+multiplication algorithm in Wan denoising. Wan node loaders and the staged smoke
+entry now select regular hipBLAS through PyTorch's `preferred_blas_library` API.
+This preference is process-wide and limited to Windows ROCm 7.2 GPU runs; it is
+not applied on CPU, MPS, NVIDIA CUDA or other ROCm versions. The installed Torch
+build warns that this API is experimental/unsupported on Windows, but the full
+generation above validates its effect on this host. Revalidate on SDK upgrades.
+
+The download entry checks disk space before fetching missing weights. The CPU
+BF16 LayerNorm offload regression, opt-in real-dependency runtime suite and eight
+device-policy tests pass; these small tests are separate from the real-model run.

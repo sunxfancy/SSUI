@@ -1,4 +1,4 @@
-"""Wan 1.3B short video: isolated text, denoise and decode processes for 16GB Macs."""
+"""Wan 1.3B short video: isolated stages for low-memory MPS/CPU/ROCm runs."""
 import argparse
 import hashlib
 import json
@@ -157,6 +157,8 @@ def main():
     if args.stage:
         import psutil
         import torch
+        from ssui_video._runtime import configure_wan_blas
+        configure_wan_blas(args.device)
         torch.set_num_threads(4)
         if args.device == "cuda":
             torch.cuda.reset_peak_memory_stats()
