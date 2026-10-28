@@ -12,6 +12,7 @@ export interface DrawableObject {
     height?: number;
     rotation?: number;
     image?: ImageBitmap;
+    imagePath?: string;
     points?: StrokePoint[];
     curve?: CurvePath;
     stroke?: string;

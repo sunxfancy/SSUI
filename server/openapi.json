@@ -192,8 +192,32 @@
         "title": "Body_preset_download_api_preset_download__client_id__post",
         "type": "object"
       },
+      "Body_ui_state_asset_api_ui_state_asset_post": {
+        "properties": {
+          "file": {
+            "format": "binary",
+            "title": "File",
+            "type": "string"
+          }
+        },
+        "required": [
+          "file"
+        ],
+        "title": "Body_ui_state_asset_api_ui_state_asset_post",
+        "type": "object"
+      },
       "Body_ui_state_store_api_ui_state_store_post": {
         "properties": {
+          "client_id": {
+            "default": "",
+            "title": "Client Id",
+            "type": "string"
+          },
+          "revision": {
+            "default": 0,
+            "title": "Revision",
+            "type": "integer"
+          },
           "state_data": {
             "additionalProperties": true,
             "title": "State Data",
@@ -1438,6 +1462,53 @@
         "summary": "Retry Task"
       }
     },
+    "/api/ui_state_asset": {
+      "post": {
+        "operationId": "ui_state_asset_api_ui_state_asset_post",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "script_path",
+            "required": true,
+            "schema": {
+              "title": "Script Path",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/Body_ui_state_asset_api_ui_state_asset_post"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Ui State Asset"
+      }
+    },
     "/api/ui_state_load": {
       "get": {
         "operationId": "ui_state_load_api_ui_state_load_get",
@@ -1448,6 +1519,16 @@
             "required": true,
             "schema": {
               "title": "Script Path",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "view",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "View",
               "type": "string"
             }
           }
@@ -1485,6 +1566,16 @@
             "required": true,
             "schema": {
               "title": "Script Path",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "view",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "View",
               "type": "string"
             }
           }

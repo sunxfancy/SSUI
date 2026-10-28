@@ -425,6 +425,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/ui_state_asset": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Ui State Asset */
+        post: operations["ui_state_asset_api_ui_state_asset_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/ui_state_load": {
         parameters: {
             query?: never;
@@ -745,8 +762,26 @@ export interface components {
             /** Source */
             source: string;
         };
+        /** Body_ui_state_asset_api_ui_state_asset_post */
+        Body_ui_state_asset_api_ui_state_asset_post: {
+            /**
+             * File
+             * Format: binary
+             */
+            file: string;
+        };
         /** Body_ui_state_store_api_ui_state_store_post */
         Body_ui_state_store_api_ui_state_store_post: {
+            /**
+             * Client Id
+             * @default
+             */
+            client_id: string;
+            /**
+             * Revision
+             * @default 0
+             */
+            revision: number;
             /** State Data */
             state_data: {
                 [key: string]: unknown;
@@ -1561,10 +1596,46 @@ export interface operations {
             };
         };
     };
+    ui_state_asset_api_ui_state_asset_post: {
+        parameters: {
+            query: {
+                script_path: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": components["schemas"]["Body_ui_state_asset_api_ui_state_asset_post"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     ui_state_load_api_ui_state_load_get: {
         parameters: {
             query: {
                 script_path: string;
+                view?: string;
             };
             header?: never;
             path?: never;
@@ -1596,6 +1667,7 @@ export interface operations {
         parameters: {
             query: {
                 script_path: string;
+                view?: string;
             };
             header?: never;
             path?: never;

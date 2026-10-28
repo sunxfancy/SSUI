@@ -7,9 +7,10 @@ import { registerComponent, ComponentRegister } from '../ComponentsManager';
 type State = { files: string[]; path: string; image: string; draft: string; settings?: unknown; open: boolean; error: string; busy: boolean };
 
 export class CanvasInput extends IComponent<{ script_path: string }, State> {
+    protected persistedFields: (keyof State)[] = ['path', 'image', 'settings'];
     state: State = { files: [], path: '', image: '', draft: '', open: false, error: '', busy: false };
     private frame = React.createRef<HTMLIFrameElement>();
-    componentDidMount() { window.addEventListener('message', this.receive); this.refresh(); }
+    componentDidMount() { super.componentDidMount(); window.addEventListener('message', this.receive); this.refresh(); }
     componentWillUnmount() { window.removeEventListener('message', this.receive); }
     onExecute() { return { function: 'ssui.base.Image.load', params: { path: this.state.image } }; }
     private refresh = async () => {
@@ -23,7 +24,21 @@ export class CanvasInput extends IComponent<{ script_path: string }, State> {
     private receive = async (event: MessageEvent) => {
         if (event.origin !== window.location.origin || event.source !== this.frame.current?.contentWindow) return;
         if (event.data?.type === 'ssui-canvas-ready') {
-            if (this.state.draft) this.frame.current?.contentWindow?.postMessage({ type: 'ssui-canvas-load', image: this.state.draft, settings: this.state.settings }, window.location.origin);
+            let image = this.state.draft;
+            if (!image && this.state.image) {
+                try {
+                    const response = await fetch('/file?' + new URLSearchParams({ path: this.state.image }));
+                    if (!response.ok) throw new Error('无法读取画布输入');
+                    const blob = await response.blob();
+                    image = await new Promise<string>((resolve, reject) => {
+                        const reader = new FileReader();
+                        reader.onload = () => resolve(String(reader.result));
+                        reader.onerror = () => reject(reader.error);
+                        reader.readAsDataURL(blob);
+                    });
+                } catch (error) { this.setState({ error: String(error) }); return; }
+            }
+            if (image) this.frame.current?.contentWindow?.postMessage({ type: 'ssui-canvas-load', image, settings: this.state.settings }, window.location.origin);
             return;
         }
         if (event.data?.type !== 'ssui-canvas-result' || typeof event.data.image !== 'string') return;

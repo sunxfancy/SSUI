@@ -1,6 +1,6 @@
 import React from 'react';
 import { Card, Elevation, HTMLSelect, Button, Icon } from "@blueprintjs/core";
-import { ComponentTabRef, Message } from "ssui_components";
+import { ComponentTabRef, Message, PersistentComponent, UIStateScope } from "ssui_components";
 import './FloatingPanel.css';
 import { DetailsPanel } from './Details';
 import { AIDrawingService } from './AIDrawingService';
@@ -61,6 +61,7 @@ interface FloatingPanelState {
     selectedFunction: string | null;
     scripts: string[];
     isInputsCollapsed: boolean;
+    positive: string;
 }
 
 interface FloatingPanelProps {
@@ -70,7 +71,8 @@ interface FloatingPanelProps {
     onImageGenerated?: (imageUrl: string) => void;
 }
 
-export class FloatingPanel extends React.Component<FloatingPanelProps, FloatingPanelState> {
+export class FloatingPanel extends PersistentComponent<FloatingPanelProps, FloatingPanelState> {
+    protected persistedFields: (keyof FloatingPanelState)[] = ['selectedScript', 'selectedFunction', 'selectedFunc', 'isInputsCollapsed', 'positive'];
     constructor(props: FloatingPanelProps) {
         super(props);
         this.state = {
@@ -82,6 +84,7 @@ export class FloatingPanel extends React.Component<FloatingPanelProps, FloatingP
             selectedScript: null,
             selectedFunction: null,
             scripts: [],
+            positive: '',
             isInputsCollapsed: false
         };
     }
@@ -91,7 +94,10 @@ export class FloatingPanel extends React.Component<FloatingPanelProps, FloatingP
     refInputs: Map<string, React.RefObject<ComponentTabRef>> = new Map();
 
     componentDidMount() {
-        this.query_scripts();
+        super.componentDidMount();
+        this.query_scripts().then(() => {
+            if (this.state.selectedScript) void this.queryScriptMeta(this.state.selectedScript);
+        });
     }
 
     private query_scripts = async () => {
@@ -161,14 +167,14 @@ export class FloatingPanel extends React.Component<FloatingPanelProps, FloatingP
             {Object.entries(meta.params).map(([key, value]) => {
                 if (key !== 'positive') {
                     return <Card key={key} elevation={Elevation.TWO} className="input-card">
-                        <ComponentTabRef
+                        <UIStateScope name={`${this.relativeScript()}/${this.state.selectedFunction}/${key}`}><ComponentTabRef
                             name={key}
                             root_path={this.state.root_path}
                             script_path={this.state.selectedScript ?? ''}
                             type={value}
                             port='input'
                             ref={this.getRef(key)}
-                        />
+                        /></UIStateScope>
                     </Card>
                 }
             })}
@@ -179,6 +185,12 @@ export class FloatingPanel extends React.Component<FloatingPanelProps, FloatingP
         return <div>
            
         </div>
+    }
+
+    private relativeScript() {
+        const root = this.state.root_path.replace(/\\/g, '/');
+        const script = (this.state.selectedScript ?? '').replace(/\\/g, '/');
+        return script.startsWith(root + '/') ? script.slice(root.length + 1) : script;
     }
 
     getScriptName(script: string): string {
@@ -280,6 +292,8 @@ export class FloatingPanel extends React.Component<FloatingPanelProps, FloatingP
                                     placeholder="输入提示词..."
                                     className="prompt-input-field"
                                     ref={this.refPositive}
+                                    value={this.state.positive}
+                                    onChange={event => this.setState({ positive: event.target.value })}
                                 />
                                 <Button
                                     className="generate-button"
@@ -298,11 +312,11 @@ export class FloatingPanel extends React.Component<FloatingPanelProps, FloatingP
                                 {this.renderInputs(functions[selectedFunction])}
                             </div>
                             <div className="details-section">
-                                <DetailsPanel
+                                <UIStateScope name={`details/${this.relativeScript()}/${selectedFunction}`}><DetailsPanel key={`${this.relativeScript()}/${selectedFunction}`}
                                     path={this.state.selectedScript ?? ''}
                                     selected={selectedFunction}
                                     ref={this.refDetails}
-                                />
+                                /></UIStateScope>
                             </div>
                         </div>)}
                 </div>

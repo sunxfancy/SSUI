@@ -1,4 +1,5 @@
-import React, { Component } from 'react';
+import React from 'react';
+import { PersistentComponent } from '../../UIState';
 import { registerComponent, ComponentRegister } from '../ComponentsManager';
 
 interface ControlNetModel {
@@ -36,10 +37,11 @@ function getControlNetLoader(
     withVae: boolean,
     functionName: string,
 ) {
-    return class ControlNetModelLoader extends Component<
+    return class ControlNetModelLoader extends PersistentComponent<
         ControlNetLoaderProps,
         ControlNetLoaderState
     > {
+        protected persistedFields: (keyof ControlNetLoaderState)[] = ['filePath', 'imagePath', 'weight', 'vaePath'];
         state: ControlNetLoaderState = {
             filePath: '',
             imagePath: '',
@@ -52,6 +54,7 @@ function getControlNetLoader(
         };
 
         componentDidMount() {
+            super.componentDidMount();
             this.fetchModels();
         }
 

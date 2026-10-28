@@ -29,6 +29,17 @@ class MockApiContractTest(unittest.TestCase):
         self.client = TestClient(app)
         self.client.put("/__test__/scenario", json={"name": "happy-path"})
 
+    def test_ui_state_mock_restores_and_isolates_views(self):
+        params = {"script_path": "/fixtures/demo.py", "view": "functional"}
+        self.assertEqual(self.client.get("/api/ui_state_load", params=params).json(), {})
+        state = {"prompt": "saved prompt", "enabled": False}
+        self.assertEqual(self.client.post("/api/ui_state_store", params=params,
+                                         json={"state_data": state}).status_code, 200)
+        self.assertEqual(self.client.get("/api/ui_state_load", params=params).json(), state)
+        self.assertEqual(self.client.get("/api/ui_state_load", params={**params, "view": "workflow"}).json(), {})
+        self.client.put("/__test__/scenario", json={"name": "happy-path"})
+        self.assertEqual(self.client.get("/api/ui_state_load", params=params).json(), {})
+
     def test_script_response_matches_contract(self):
         response = self.client.get("/api/script", params={"script_path": "/fixtures/demo.py"})
         self.assertEqual(response.status_code, 200)

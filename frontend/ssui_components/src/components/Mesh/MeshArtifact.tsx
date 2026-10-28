@@ -7,6 +7,7 @@ import './MeshArtifact.css';
 type MeshPayload = { path?: string; format?: string };
 
 class MeshArtifact extends IComponent<{}, { payload?: MeshPayload }> {
+    protected persistedFields: 'payload'[] = ['payload'];
     state: { payload?: MeshPayload } = {};
 
     override onUpdate(payload: MeshPayload) {
