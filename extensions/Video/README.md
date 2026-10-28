@@ -253,7 +253,7 @@ decode; peak process working set was 9.90 GiB during text encoding. The system
 retained at least 5.75 GiB available RAM. MP4 round-trip checks passed, and sampled
 frames show a coherent orange cat taking steps. The 256x256 trial had visible
 ghosting; this short 512px sample does not certify long-video quality or larger
-Wan variants. This verifies the staged model runner, not the Wan UI workflow.
+Wan variants. These measurements describe the staged model runner.
 
 ```powershell
 yarn test:wan:smoke --device cuda --size 512 --frames 17 --steps 30
@@ -270,3 +270,29 @@ generation above validates its effect on this host. Revalidate on SDK upgrades.
 The download entry checks disk space before fetching missing weights. The CPU
 BF16 LayerNorm offload regression, opt-in real-dependency runtime suite and eight
 device-policy tests pass; these small tests are separate from the real-model run.
+
+### Wan 1.3B SSUI workflow
+
+Open `examples/advance/workflow-video-wan21.py` and select `txt2vid_wan21_13b`.
+Download the pinned weights once with `yarn test:wan:smoke --download-only`.
+The local loader uses `models/wan-mac` by default; set `SSUI_WAN21_MODEL_DIR`
+to use a different directory. Preparing the workflow does not load/download
+weights. The default controls are 512x512, 17 frames, 30 steps and CFG 5.
+UMT5/VAE checkpoints are memory-mapped on CPU before pipeline offloading.
+
+```powershell
+yarn test:wan:smoke --device cuda --local-files-only --workflow --size 512 --frames 17 --steps 30
+```
+
+This command exercises the real sandbox, model loader, generation node and
+executor video exporter, then decodes both exported MP4 files to check frame
+counts/dimensions. The executor accepts both SSUI `Image` wrappers (returned by
+Wan) and PIL frames. `executor_result.json` records the actual executor output.
+The workflow smoke uses untiled decoding; the interactive node defaults to tiled.
+
+On the same R9700 host, the full workflow passed with 179.1 seconds wall time,
+7.51 GiB peak allocated VRAM and 16.73 GiB peak process working set. It uses BF16
+VAE decoding, unlike the staged FP32 decode above. Sampled frames show coherent
+cat motion. System available RAM reached 1.93 GiB, so this single-process path
+is not certified for a 16 GiB RAM machine. The staged runner remains the lower
+RAM option. Browser rendering and other Wan model variants remain unverified.

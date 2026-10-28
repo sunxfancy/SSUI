@@ -79,6 +79,38 @@ assert "seed" in workflow_config["Generate Video"]
 assert workflow_config["Generate Video"]["width"]["default"] == 256
 assert workflow_config["Generate Video"]["num_frames"]["default"] == 8
 
+# Preparing the real Wan sandbox must not download or load multi-GB weights.
+from ssui_video.Wan21 import Wan21T2V13BModel, Wan21TextToVideo
+with patch.object(Wan21T2V13BModel, "load_local", side_effect=AssertionError("prepare loaded weights")):
+    wan_loader = SSLoader()
+    wan_loader.load("examples/advance/workflow-video-wan21.py")
+    wan_loader.Execute()
+    wan_config = wan_loader.GetConfig("txt2vid_wan21_13b")["Generate Video"]
+    assert wan_config["width"]["default"] == 512
+    assert wan_config["num_frames"]["default"] == 17
+    assert wan_config["num_inference_steps"]["default"] == 30
+
+from ssui.config import SSUIConfig
+from ssui.base import Prompt
+config = SSUIConfig()("wan21_test")
+for key, value in dict(width=256, height=256, num_frames=9, num_inference_steps=4,
+                       cfg_scale=3.5, seed=123, tiled=False).items():
+    config[key] = value
+with patch("ssui_video.Wan2.WanVideoPipeline.from_model_manager") as factory:
+    factory.return_value.return_value = []
+    Wan21TextToVideo(config, Wan21T2V13BModel(object()), Prompt("cat"), Prompt("blur"))
+    actual = factory.return_value.call_args.kwargs
+    assert actual["num_frames"] == 9 and actual["num_inference_steps"] == 4
+    assert actual["cfg_scale"] == 3.5 and actual["seed"] == 123
+with tempfile.TemporaryDirectory() as directory:
+    with patch("ssui_video.Wan21.ModelManager", side_effect=AssertionError("allocated before preflight")):
+        try:
+            Wan21T2V13BModel.load_local(directory)
+        except FileNotFoundError as exc:
+            assert "Missing Wan checkpoint" in str(exc)
+        else:
+            raise AssertionError("missing model accepted")
+
 device = "mps" if torch.backends.mps.is_available() else "cpu"
 print("Runtime device:", device, "torch:", torch.__version__, flush=True)
 noise_pipe = BasePipeline(device=device)

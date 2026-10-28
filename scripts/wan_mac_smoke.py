@@ -2,6 +2,7 @@
 import argparse
 import hashlib
 import json
+import os
 from pathlib import Path
 import subprocess
 import shutil
@@ -96,11 +97,36 @@ def denoise_stage(args):
     torch.save(latent.cpu(), args.output / 'latents.pt')
 
 
+def workflow_stage(args):
+    import numpy as np
+    from backend.util.devices import TorchDevice
+    from ssui.base import Prompt, Image
+    from ss_executor.loader import SSLoader
+    TorchDevice.config.device = args.device
+    os.environ['SSUI_WAN21_MODEL_DIR'] = str(args.model_dir)
+    loader = SSLoader()
+    loader.load(str(ROOT / 'examples/advance/workflow-video-wan21.py'))
+    loader.Execute()
+    loader.GetConfig('txt2vid_wan21_13b')
+    loader.config.set_prepared(False)
+    for key, value in dict(width=args.size, height=args.size, num_frames=args.frames,
+                           num_inference_steps=args.steps, seed=args.seed, cfg_scale=args.cfg, tiled=False).items():
+        loader.config('Generate Video')[key] = value
+    fn = next(fn for fn, _, _ in loader.callables if fn.__name__ == 'txt2vid_wan21_13b')
+    result = fn(Prompt(args.prompt), Prompt(args.negative))
+    from ss_executor.__main__ import convert_task_return
+    import imageio.v2 as imageio
+    exported = convert_task_return(result, str(ROOT / 'examples/advance/workflow-video-wan21.py'))
+    decoded = imageio.mimread(exported['path'])
+    if len(decoded) != args.frames or any(a.shape != (args.size, args.size, 3) for a in decoded):
+        raise RuntimeError('Executor video export failed round-trip validation')
+    (args.output / 'executor_result.json').write_text(json.dumps(exported, indent=2))
+    frames = [frame._image if isinstance(frame, Image) else frame for frame in result.frames]
+    save_video(args, np.stack([np.asarray(frame.convert('RGB')) for frame in frames]))
+
+
 def decode_stage(args):
     import torch
-    import numpy as np
-    import imageio.v2 as imageio
-    from PIL import Image
     from diffsynth.models.utils import init_weights_on_device
     from diffsynth.models.wan_video_vae import WanVideoVAE
     weights = torch.load(args.model_dir / 'Wan2.1_VAE.pth', map_location='cpu', weights_only=True, mmap=True)
@@ -116,6 +142,13 @@ def decode_stage(args):
         video = model.decode(latent, device=args.device, tiled=False)[0]
         finite(video, 'VAE output')
         arrays = ((video.float().permute(1, 2, 3, 0) + 1) * 127.5).clamp(0, 255).byte().cpu().numpy()
+    save_video(args, arrays)
+
+
+def save_video(args, arrays):
+    import numpy as np
+    import imageio.v2 as imageio
+    from PIL import Image
     if arrays.shape != (args.frames, args.size, args.size, 3) or any(frame.std() < 1 for frame in arrays):
         raise RuntimeError(f'Invalid or blank video: {arrays.shape}')
     imageio.mimwrite(args.output / 'wan.mp4', arrays, fps=args.fps, codec='libx264')
@@ -147,7 +180,8 @@ def main():
     parser.add_argument('--negative', default='blurry, distorted, static, text, watermark, low quality')
     parser.add_argument('--local-files-only', action='store_true')
     parser.add_argument('--download-only', action='store_true')
-    parser.add_argument('--stage', choices=['text', 'denoise', 'decode'], help=argparse.SUPPRESS)
+    parser.add_argument('--workflow', action='store_true', help='Run the real SSUI Wan 1.3B sandbox workflow')
+    parser.add_argument('--stage', choices=['text', 'denoise', 'decode', 'workflow'], help=argparse.SUPPRESS)
     args = parser.parse_args()
     if args.size < 64 or args.size % 16 or args.frames < 5 or args.frames % 4 != 1 or args.steps < 2 or args.fps < 1:
         parser.error('size >=64 and divisible by16; frames >=5 and 4n+1; steps >=2; fps >=1')
@@ -163,7 +197,7 @@ def main():
         if args.device == "cuda":
             torch.cuda.reset_peak_memory_stats()
         started = time.monotonic()
-        {'text': text_stage, 'denoise': denoise_stage, 'decode': decode_stage}[args.stage](args)
+        {'text': text_stage, 'denoise': denoise_stage, 'decode': decode_stage, 'workflow': workflow_stage}[args.stage](args)
         metrics = {'torch': torch.__version__, 'device': args.device,
                    'dtype': 'float32' if args.stage == 'decode' else 'bfloat16',
                    'seconds': time.monotonic() - started, 'peak_rss_bytes': getattr(psutil.Process().memory_info(), 'peak_wset', None)}
@@ -209,7 +243,8 @@ def main():
               'min_system_available_bytes': psutil.virtual_memory().available,
               'initial_system_swap_bytes': psutil.swap_memory().used,
               'max_system_swap_bytes': psutil.swap_memory().used}
-    for stage in ('text', 'denoise', 'decode'):
+    stages = ('workflow',) if args.workflow else ('text', 'denoise', 'decode')
+    for stage in stages:
         print(f'Starting isolated {stage} stage', flush=True)
         command = [sys.executable, '-u', str(Path(__file__).resolve()), *sys.argv[1:], '--stage', stage]
         process = subprocess.Popen(command)
@@ -229,7 +264,7 @@ def main():
                 process.wait()
     report = {'memory': memory, 'repo': REPO, 'revision': REVISION, 'sha256': WEIGHTS,
               'parameters': {k: str(v) if isinstance(v, Path) else v for k, v in vars(args).items()},
-              'stages': {stage: json.loads((args.output / f'{stage}_metrics.json').read_text()) for stage in ('text', 'denoise', 'decode')},
+              'stages': {stage: json.loads((args.output / f'{stage}_metrics.json').read_text()) for stage in stages},
               'video': str(args.output / 'wan.mp4'),
               'metrics': json.loads((args.output / 'video_metrics.json').read_text())}
     (args.output / 'report.json').write_text(json.dumps(report, indent=2) + '\n')

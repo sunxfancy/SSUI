@@ -71,6 +71,7 @@ class Wan2I2VModel:
 @param("seed", Random(), default=42)
 @param("num_frames", Slider(1, 200, 1), default=81)
 @param("num_inference_steps", Slider(1, 100, 1), default=50)
+@param("cfg_scale", Slider(1, 10, 0.1), default=5)
 @param("height", Slider(16, 1280, 16), default=480)
 @param("width", Slider(16, 1280, 16), default=832)
 @param("tiled", Switch(), default=True)
@@ -91,6 +92,7 @@ def Wan2TextToVideo(
         width=config["width"],
         num_frames=config["num_frames"],
         num_inference_steps=config["num_inference_steps"],
+        cfg_scale=config["cfg_scale"],
         seed=config["seed"],
         tiled=config["tiled"],
     )
