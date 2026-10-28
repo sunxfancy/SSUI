@@ -47,6 +47,9 @@ class AutoWrappedModule(AutoTorchModule):
         self.vram_limit = vram_limit
         self.state = 0
 
+    def copy_for_computation(self):
+        return copy.deepcopy(self.module).to(dtype=self.computation_dtype, device=self.computation_device)
+
     def forward(self, *args, **kwargs):
         if self.state == 2:
             module = self.module
@@ -57,8 +60,21 @@ class AutoWrappedModule(AutoTorchModule):
                 self.keep()
                 module = self.module
             else:
-                module = copy.deepcopy(self.module).to(dtype=self.computation_dtype, device=self.computation_device)
+                module = self.copy_for_computation()
         return module(*args, **kwargs)
+
+
+class AutoWrappedEmbedding(AutoWrappedModule):
+    def copy_for_computation(self):
+        # UMT5's embedding is ~2 GiB: deepcopy on CPU before .to(GPU) creates
+        # an unnecessary full RAM copy. Transfer directly from mapped weights.
+        module = copy.copy(self.module)
+        module._parameters = dict(self.module._parameters)
+        module.weight = torch.nn.Parameter(
+            cast_to(self.module.weight, self.computation_dtype, self.computation_device),
+            requires_grad=self.module.weight.requires_grad,
+        )
+        return module
     
 
 class WanAutoCastLayerNorm(torch.nn.LayerNorm, AutoTorchModule):

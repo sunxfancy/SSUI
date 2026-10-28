@@ -296,3 +296,11 @@ VAE decoding, unlike the staged FP32 decode above. Sampled frames show coherent
 cat motion. System available RAM reached 1.93 GiB, so this single-process path
 is not certified for a 16 GiB RAM machine. The staged runner remains the lower
 RAM option. Browser rendering and other Wan model variants remain unverified.
+
+The Wan embedding offload path now transfers weights directly to the computation
+device instead of first deep-copying the ~2 GiB UMT5 embedding on CPU. Repeating
+the same 512px workflow reduced peak process working set from 16.73 to 14.84 GiB
+(1.89 GiB less), with unchanged 7.51 GiB peak VRAM. All 17 decoded MP4 frames were
+pixel-identical to the preceding run. This warmed run took 68.4 seconds total;
+cache/warmup differences mean the speed change is not attributed to this fix.
+This still does not establish that the complete workflow fits a 16 GiB RAM host.

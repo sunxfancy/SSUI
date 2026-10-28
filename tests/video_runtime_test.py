@@ -24,6 +24,19 @@ import mediapipe
 import diffsynth
 from diffsynth.pipelines.base import BasePipeline
 from diffsynth.vram_management.layers import WanAutoCastLayerNorm
+from diffsynth.vram_management.layers import AutoWrappedEmbedding
+# Offloading must not duplicate the large embedding on CPU or mutate its source.
+embedding = torch.nn.Embedding(32, 8, padding_idx=0, max_norm=1.0)
+source = embedding.weight.detach().clone()
+reference = torch.nn.Embedding(32, 8, padding_idx=0, max_norm=1.0).double()
+reference.load_state_dict(embedding.state_dict())
+ids = torch.tensor([[0, 1, 7, 1]])
+wrapped_embedding = AutoWrappedEmbedding(embedding, torch.float32, "cpu", torch.float32,
+                                         "cpu", torch.float64, "cpu", None)
+with patch("diffsynth.vram_management.layers.copy.deepcopy", side_effect=AssertionError("CPU clone")):
+    torch.testing.assert_close(wrapped_embedding(ids), reference(ids))
+    torch.testing.assert_close(wrapped_embedding(ids), reference(ids))
+torch.testing.assert_close(embedding.weight, source)
 # CPU offload must normalize BF16 affine parameters with FP32 activations.
 layer = torch.nn.LayerNorm(8).to(torch.bfloat16)
 x = torch.randn(2, 4, 8, dtype=torch.bfloat16)
