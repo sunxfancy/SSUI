@@ -16,6 +16,7 @@ from tqdm import tqdm
 from typing import Optional
 
 from ..vram_management import enable_vram_management, AutoWrappedModule, AutoWrappedLinear
+from ..vram_management.layers import AutoWrappedEmbedding
 from ..models.wan_video_text_encoder import T5RelativeEmbedding, T5LayerNorm
 from ..models.wan_video_dit import RMSNorm, sinusoidal_embedding_1d
 from ..models.wan_video_vae import RMS_norm, CausalConv3d, Upsample
@@ -47,7 +48,7 @@ class WanVideoPipeline(BasePipeline):
             self.text_encoder,
             module_map = {
                 torch.nn.Linear: AutoWrappedLinear,
-                torch.nn.Embedding: AutoWrappedModule,
+                torch.nn.Embedding: AutoWrappedEmbedding,
                 T5RelativeEmbedding: AutoWrappedModule,
                 T5LayerNorm: AutoWrappedModule,
             },

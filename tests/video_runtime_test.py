@@ -23,6 +23,27 @@ import torch
 import mediapipe
 import diffsynth
 from diffsynth.pipelines.base import BasePipeline
+from diffsynth.vram_management.layers import WanAutoCastLayerNorm
+from diffsynth.vram_management.layers import AutoWrappedEmbedding
+# Offloading must not duplicate the large embedding on CPU or mutate its source.
+embedding = torch.nn.Embedding(32, 8, padding_idx=0, max_norm=1.0)
+source = embedding.weight.detach().clone()
+reference = torch.nn.Embedding(32, 8, padding_idx=0, max_norm=1.0).double()
+reference.load_state_dict(embedding.state_dict())
+ids = torch.tensor([[0, 1, 7, 1]])
+wrapped_embedding = AutoWrappedEmbedding(embedding, torch.float32, "cpu", torch.float32,
+                                         "cpu", torch.float64, "cpu", None)
+with patch("diffsynth.vram_management.layers.copy.deepcopy", side_effect=AssertionError("CPU clone")):
+    torch.testing.assert_close(wrapped_embedding(ids), reference(ids))
+    torch.testing.assert_close(wrapped_embedding(ids), reference(ids))
+torch.testing.assert_close(embedding.weight, source)
+# CPU offload must normalize BF16 affine parameters with FP32 activations.
+layer = torch.nn.LayerNorm(8).to(torch.bfloat16)
+x = torch.randn(2, 4, 8, dtype=torch.bfloat16)
+wrapped = WanAutoCastLayerNorm(layer, torch.bfloat16, "cpu", torch.bfloat16, "cpu",
+                               torch.bfloat16, "cpu", None)
+expected = torch.nn.functional.layer_norm(x.float(), (8,), layer.weight.float(), layer.bias.float(), layer.eps).to(x.dtype)
+torch.testing.assert_close(wrapped(x), expected)
 from diffsynth.models.cog_dit import CogPatchify
 from diffsynth.models.attention import Attention
 from diffsynth.models.wan_video_dit import WanModel, rope_apply, precompute_freqs_cis, prepare_rope_freqs
@@ -70,6 +91,38 @@ assert "Generate Video" in workflow_config
 assert "seed" in workflow_config["Generate Video"]
 assert workflow_config["Generate Video"]["width"]["default"] == 256
 assert workflow_config["Generate Video"]["num_frames"]["default"] == 8
+
+# Preparing the real Wan sandbox must not download or load multi-GB weights.
+from ssui_video.Wan21 import Wan21T2V13BModel, Wan21TextToVideo
+with patch.object(Wan21T2V13BModel, "load_local", side_effect=AssertionError("prepare loaded weights")):
+    wan_loader = SSLoader()
+    wan_loader.load("examples/advance/workflow-video-wan21.py")
+    wan_loader.Execute()
+    wan_config = wan_loader.GetConfig("txt2vid_wan21_13b")["Generate Video"]
+    assert wan_config["width"]["default"] == 512
+    assert wan_config["num_frames"]["default"] == 17
+    assert wan_config["num_inference_steps"]["default"] == 30
+
+from ssui.config import SSUIConfig
+from ssui.base import Prompt
+config = SSUIConfig()("wan21_test")
+for key, value in dict(width=256, height=256, num_frames=9, num_inference_steps=4,
+                       cfg_scale=3.5, seed=123, tiled=False).items():
+    config[key] = value
+with patch("ssui_video.Wan2.WanVideoPipeline.from_model_manager") as factory:
+    factory.return_value.return_value = []
+    Wan21TextToVideo(config, Wan21T2V13BModel(object()), Prompt("cat"), Prompt("blur"))
+    actual = factory.return_value.call_args.kwargs
+    assert actual["num_frames"] == 9 and actual["num_inference_steps"] == 4
+    assert actual["cfg_scale"] == 3.5 and actual["seed"] == 123
+with tempfile.TemporaryDirectory() as directory:
+    with patch("ssui_video.Wan21.ModelManager", side_effect=AssertionError("allocated before preflight")):
+        try:
+            Wan21T2V13BModel.load_local(directory)
+        except FileNotFoundError as exc:
+            assert "Missing Wan checkpoint" in str(exc)
+        else:
+            raise AssertionError("missing model accepted")
 
 device = "mps" if torch.backends.mps.is_available() else "cpu"
 print("Runtime device:", device, "torch:", torch.__version__, flush=True)

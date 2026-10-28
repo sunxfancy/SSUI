@@ -1,10 +1,23 @@
 """Runtime policy for the Wan nodes."""
+import sys
 import torch
 from backend.util.devices import TorchDevice
 
 
+def configure_wan_blas(device):
+    """Avoid Windows ROCm 7.2 hipBLASLt's native BF16 heuristic crash.
+
+    PyTorch's BLAS preference is process-wide. On ROCm, 'cublas' selects
+    regular hipBLAS; this also covers offloaded Linear layers in Wan nodes.
+    """
+    if (sys.platform == "win32" and torch.device(device).type == "cuda"
+            and (torch.version.hip or "").startswith("7.2.")):
+        torch.backends.cuda.preferred_blas_library("cublas")
+
+
 def wan_runtime():
     device = TorchDevice.choose_torch_device()
+    configure_wan_blas(device)
     dtype = torch.bfloat16 if device.type == "cuda" else torch.float32
     if device.type == "mps":
         # BF16 needs macOS 14+; FP16 may overflow the UMT5 text encoder.

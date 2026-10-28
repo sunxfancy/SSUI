@@ -225,3 +225,82 @@ SSUI_QWEN_IMAGE_VRAM_LIMIT_GIB   低显存模式的模型常驻显存上限（Gi
 较大的系统内存和磁盘空间；当前 SSUI Qwen-Image 节点要求 CUDA。32 GiB
 显存运行 512×512 时，可在模型加载参数中设置 `vram_limit_gib=24`，为激活
 和 VAE 解码预留空间。设为 `0` 时沿用自动值或上述环境变量。
+
+## Windows AMD / ROCm validation
+
+On Radeon AI PRO R9700 (gfx1201), Windows Python 3.12 and Torch
+2.9.1+rocm7.2.1, the real AnimateDiff SSUI sandbox workflow generated and
+round-trip decoded a 512x512, 16-frame MP4 (seed 42, 20 steps). Model loading
+plus generation took 40.5 seconds after initial kernel warmup, with 3.92 GiB
+peak allocated VRAM and 2.69 GiB peak process working set. The orange-cat
+sequence shows changing legs/tail across the clip; this is a short smoke test,
+not a long-video quality guarantee. A 256x256 lake example was nearly static
+and missed the requested sailboat, so successful encoding alone is insufficient.
+
+```powershell
+yarn test:video:smoke --device cuda --size 512 --frames 16 --steps 20 --workflow --prompt "A small orange cat walking slowly across a green lawn, daylight, fixed camera, realistic video."
+```
+
+`cuda` is also PyTorch's device name on ROCm. Reports include HIP version,
+GPU name, peak allocated VRAM and (on Windows) peak process working set.
+The preview samples the entire clip instead of only its first frames.
+Wan 2.1 T2V-1.3B also passed full staged generation on this host: 512x512,
+17 frames at 8 FPS, seed 42, 30 steps and CFG 5. All three pinned checkpoints
+passed SHA256 verification. Text encoding took 14.6 seconds, denoising 26.9
+seconds and FP32 VAE decoding 178.8 seconds (237.4 seconds including checkpoint
+verification and subprocess startup). Peak allocated VRAM was 14.86 GiB during
+decode; peak process working set was 9.90 GiB during text encoding. The system
+retained at least 5.75 GiB available RAM. MP4 round-trip checks passed, and sampled
+frames show a coherent orange cat taking steps. The 256x256 trial had visible
+ghosting; this short 512px sample does not certify long-video quality or larger
+Wan variants. These measurements describe the staged model runner.
+
+```powershell
+yarn test:wan:smoke --device cuda --size 512 --frames 17 --steps 30
+```
+
+Windows ROCm 7.2's hipBLASLt crashed natively while selecting a BF16 matrix
+multiplication algorithm in Wan denoising. Wan node loaders and the staged smoke
+entry now select regular hipBLAS through PyTorch's `preferred_blas_library` API.
+This preference is process-wide and limited to Windows ROCm 7.2 GPU runs; it is
+not applied on CPU, MPS, NVIDIA CUDA or other ROCm versions. The installed Torch
+build warns that this API is experimental/unsupported on Windows, but the full
+generation above validates its effect on this host. Revalidate on SDK upgrades.
+
+The download entry checks disk space before fetching missing weights. The CPU
+BF16 LayerNorm offload regression, opt-in real-dependency runtime suite and eight
+device-policy tests pass; these small tests are separate from the real-model run.
+
+### Wan 1.3B SSUI workflow
+
+Open `examples/advance/workflow-video-wan21.py` and select `txt2vid_wan21_13b`.
+Download the pinned weights once with `yarn test:wan:smoke --download-only`.
+The local loader uses `models/wan-mac` by default; set `SSUI_WAN21_MODEL_DIR`
+to use a different directory. Preparing the workflow does not load/download
+weights. The default controls are 512x512, 17 frames, 30 steps and CFG 5.
+UMT5/VAE checkpoints are memory-mapped on CPU before pipeline offloading.
+
+```powershell
+yarn test:wan:smoke --device cuda --local-files-only --workflow --size 512 --frames 17 --steps 30
+```
+
+This command exercises the real sandbox, model loader, generation node and
+executor video exporter, then decodes both exported MP4 files to check frame
+counts/dimensions. The executor accepts both SSUI `Image` wrappers (returned by
+Wan) and PIL frames. `executor_result.json` records the actual executor output.
+The workflow smoke uses untiled decoding; the interactive node defaults to tiled.
+
+On the same R9700 host, the full workflow passed with 179.1 seconds wall time,
+7.51 GiB peak allocated VRAM and 16.73 GiB peak process working set. It uses BF16
+VAE decoding, unlike the staged FP32 decode above. Sampled frames show coherent
+cat motion. System available RAM reached 1.93 GiB, so this single-process path
+is not certified for a 16 GiB RAM machine. The staged runner remains the lower
+RAM option. Browser rendering and other Wan model variants remain unverified.
+
+The Wan embedding offload path now transfers weights directly to the computation
+device instead of first deep-copying the ~2 GiB UMT5 embedding on CPU. Repeating
+the same 512px workflow reduced peak process working set from 16.73 to 14.84 GiB
+(1.89 GiB less), with unchanged 7.51 GiB peak VRAM. All 17 decoded MP4 frames were
+pixel-identical to the preceding run. This warmed run took 68.4 seconds total;
+cache/warmup differences mean the speed change is not attributed to this fix.
+This still does not establish that the complete workflow fits a 16 GiB RAM host.

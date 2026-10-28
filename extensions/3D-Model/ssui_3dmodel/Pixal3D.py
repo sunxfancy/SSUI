@@ -2,6 +2,7 @@
 
 import math
 import os
+import sys
 from typing import Any, Optional
 
 import numpy as np
@@ -57,7 +58,7 @@ def _require_accelerator() -> None:
         raise RuntimeError("Pixal3D requires a CUDA or ROCm GPU; CPU inference is not supported.")
 
 
-def _build_image_cond_model(config: dict[str, Any]):
+def _build_image_cond_model(config: dict[str, Any], backbone=None):
     try:
         from pixal3d.trainers.flow_matching.mixins.image_conditioned_proj import (
             DinoV3ProjFeatureExtractor,
@@ -67,7 +68,7 @@ def _build_image_cond_model(config: dict[str, Any]):
             "Pixal3D runtime is incomplete. Install the 3D-Model extension's "
             "TRELLIS.2/Pixal3D accelerator dependencies before loading this model."
         ) from exc
-    model = DinoV3ProjFeatureExtractor(**config)
+    model = DinoV3ProjFeatureExtractor(**config, backbone=backbone)
     model.eval()
     return model
 
@@ -96,6 +97,9 @@ class Pixal3DModel:
         # Respect explicit choices made by the operator before importing Pixal3D.
         os.environ.setdefault("ATTN_BACKEND", "sdpa")
         os.environ.setdefault("SPARSE_ATTN_BACKEND", os.environ["ATTN_BACKEND"])
+        from .runtime import require_glb_runtime
+
+        require_glb_runtime()
         try:
             from pixal3d.pipelines import Pixal3DImageTo3DPipeline
         except ImportError as exc:
@@ -104,9 +108,16 @@ class Pixal3DModel:
                 "with its CUDA or ROCm dependencies."
             ) from exc
 
-        pipeline = Pixal3DImageTo3DPipeline.from_pretrained(model_path)
+        pipeline = Pixal3DImageTo3DPipeline.from_pretrained(
+            model_path, low_ram=bool(low_vram and sys.platform == "win32" and torch.version.hip)
+        )
+        backbones = {}
         for name, config in IMAGE_COND_CONFIGS.items():
-            setattr(pipeline, f"image_cond_model_{name}", _build_image_cond_model(config))
+            # These frozen backbones run sequentially; keep per-stage projection
+            # grids but avoid four identical 1.2 GB weight copies in host RAM.
+            module = _build_image_cond_model(config, backbones.get(config["model_name"]))
+            backbones[config["model_name"]] = module.model
+            setattr(pipeline, f"image_cond_model_{name}", module)
 
         pipeline.low_vram = low_vram
         if low_vram:
@@ -228,7 +239,8 @@ def GenPixal3DModel(config: SSUIConfig, model: Pixal3DModel, image: Image) -> Me
         raise RuntimeError("Pixal3D GLB export requires the TRELLIS.2 o_voxel extension.") from exc
 
     generated = mesh_list[0]
-    glb = o_voxel.postprocess.to_glb(
+    from .export import to_glb
+    glb = to_glb(
         vertices=generated.vertices,
         faces=generated.faces,
         attr_volume=generated.attrs,

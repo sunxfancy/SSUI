@@ -1,0 +1,70 @@
+diff --git a/pyproject.toml b/pyproject.toml
+index ab6c03f..5ecf8f2 100644
+--- a/pyproject.toml
++++ b/pyproject.toml
+@@ -9,7 +9,7 @@ build-backend = "setuptools.build_meta"
+ 
+ [project]
+ name = "cumesh"
+-version = "0.0.1+rocm72"
++version = "0.0.1+ssui.rocm72"
+ description = "CuMesh with Windows ROCm 7.2 support"
+ requires-python = ">=3.8"
+ readme = "README.md"
+diff --git a/src/io.cu b/src/io.cu
+index 579cf16..5f5aa3e 100644
+--- a/src/io.cu
++++ b/src/io.cu
+@@ -1,8 +1,25 @@
+ #include "cumesh.h"
++#include <algorithm>
+ 
+ 
+ namespace cumesh {
+ 
++// Windows HIP's narrow-pitch 2D copies silently truncate above 2^20 rows.
++// Bound each copy; do not rely on a successful return code for a tall copy.
++static cudaError_t copy_tensor_rows(
++    void* dst, size_t dst_pitch, const void* src, size_t src_pitch,
++    size_t width, size_t height, cudaMemcpyKind kind) {
++    constexpr size_t chunk_rows = 65536;
++    for (size_t row = 0; row < height; row += chunk_rows) {
++        auto status = cudaMemcpy2D(
++            static_cast<char*>(dst) + row * dst_pitch, dst_pitch,
++            static_cast<const char*>(src) + row * src_pitch, src_pitch,
++            width, std::min(chunk_rows, height - row), kind);
++        if (status != cudaSuccess) return status;
++    }
++    return cudaSuccess;
++}
++
+ 
+ template <typename T>
+ struct TorchTypeMapping;
+@@ -92,7 +109,7 @@ static torch::Tensor buffer_to_tensor(const Buffer<T> buffer) {
+             cudaMemcpyDeviceToDevice
+         ));
+     } else {
+-        CUDA_CHECK(cudaMemcpy2D(
++        CUDA_CHECK(copy_tensor_rows(
+             tensor.data_ptr(),
+             dst_bytes,
+             buffer.ptr,
+@@ -112,7 +129,7 @@ void CuMesh::init(const torch::Tensor& vertices, const torch::Tensor& faces) {
+     size_t num_faces = faces.size(0);
+     this->vertices.resize(num_vertices);
+     this->faces.resize(num_faces);
+-    CUDA_CHECK(cudaMemcpy2D(
++    CUDA_CHECK(copy_tensor_rows(
+         this->vertices.ptr,
+         sizeof(float3),
+         vertices.data_ptr<float>(),
+@@ -121,7 +138,7 @@ void CuMesh::init(const torch::Tensor& vertices, const torch::Tensor& faces) {
+         num_vertices,
+         cudaMemcpyDeviceToDevice
+     ));
+-    CUDA_CHECK(cudaMemcpy2D(
++    CUDA_CHECK(copy_tensor_rows(
+         this->faces.ptr,
+         sizeof(int3),
+         faces.data_ptr<int>(),

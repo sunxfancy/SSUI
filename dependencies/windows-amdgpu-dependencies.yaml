@@ -80,9 +80,12 @@ babel:
     - jupyterlab-server
 beautifulsoup4:
   version: "4.15.0"
-  isRoot: true
   dependents:
     - nbconvert
+bitsandbytes:
+  version: "0.49.2+rocm72"
+  url: "https://github.com/sunxfancy/bitsandbytes-0.49.2.rocm72/releases/download/v0.49.2%2Brocm72/bitsandbytes-0.49.2%2Brocm72-py3-none-win_amd64.whl"
+  isRoot: true
 blake3:
   version: "1.0.9"
   isRoot: true
@@ -153,6 +156,10 @@ contourpy:
 controlnet-aux:
   version: "0.0.10"
   isRoot: true
+cumesh:
+  version: "0.0.1+ssui.rocm72"
+  url: "https://github.com/sunxfancy/SSUI/releases/download/rocm-wheels-20261027/cumesh-0.0.1%2Bssui.rocm72-cp312-cp312-win_amd64.whl#sha256=b8a4a82e82b39cb7d3396e8909f186fe7720163eb2ca7cfdd9dc9c03e5947544"
+  isRoot: true
   dependents:
     - o-voxel
 cumm-cu124:
@@ -195,9 +202,12 @@ deprecated:
     - pygltflib
 detect-installer:
   version: "0.1.0"
-  isRoot: true
   dependents:
     - fastapi-cloud-cli
+diff-gaussian-rasterization:
+  version: "0.0.0"
+  url: "https://github.com/sunxfancy/diff-gaussian-rasterization/releases/download/v0.1/diff_gaussian_rasterization-0.0.0-cp312-cp312-win_amd64.whl"
+  isRoot: true
 diffusers:
   version: "0.39.0"
   isRoot: true
@@ -284,10 +294,14 @@ flask:
     - kaolin
 flatbuffers:
   version: "25.12.19"
-  isRoot: true
   dependents:
     - mediapipe
     - onnxruntime
+flex-gemm:
+  version: "1.0.0+rocm72"
+  url: "https://github.com/sunxfancy/FlexGEMM.rocm72/releases/download/v1.0.0%2Brocm72/flex_gemm-1.0.0%2Brocm72-cp312-cp312-win_amd64.whl"
+  isRoot: true
+  dependents:
     - o-voxel
 fonttools:
   version: "4.63.0"
@@ -515,9 +529,12 @@ jupyterlab-server:
     - notebook
 jupyterlab-widgets:
   version: "3.0.16"
-  isRoot: true
   dependents:
     - ipywidgets
+kaolin:
+  version: "0.17.0"
+  url: "https://nvidia-kaolin.s3.us-east-2.amazonaws.com/torch-2.4.0_cu124/kaolin-0.17.0-cp312-cp312-win_amd64.whl"
+  isRoot: true
 kiwisolver:
   version: "1.5.0"
   dependents:
@@ -619,6 +636,10 @@ narwhals:
   version: "2.22.1"
   dependents:
     - scikit-learn
+natten:
+  version: "0.17.4+ssui.rocm72"
+  url: "https://github.com/sunxfancy/SSUI/releases/download/rocm-wheels-20261027/natten-0.17.4%2Bssui.rocm72-cp312-cp312-win_amd64.whl#sha256=96698e957dcde7c963b46f7e8512526055313dd75ab55e3b1288b9a00c667d23"
+  isRoot: true
 nbclient:
   version: "0.11.0"
   dependents:
@@ -665,7 +686,6 @@ numba:
     - pymatting
 numpy:
   version: "1.26.4"
-  isRoot: true
   dependents:
     - accelerate
     - bitsandbytes
@@ -707,6 +727,14 @@ numpy:
     - transformers
     - trimesh
     - warp-lang
+nvdiffrast:
+  version: "0.4.0+ssui.rocm72"
+  url: "https://github.com/sunxfancy/SSUI/releases/download/rocm-wheels-20261027/nvdiffrast-0.4.0%2Bssui.rocm72-cp312-cp312-win_amd64.whl#sha256=5ead6ef29217d88d20a24cacacf05da66f810edc0b03b9567c08f1f30e8613db"
+  isRoot: true
+o-voxel:
+  version: "0.0.1+rocm72"
+  url: "https://github.com/sunxfancy/o-voxel.rocm72/releases/download/v0.0.1%2Brocm72/o_voxel-0.0.1%2Brocm72-cp312-cp312-win_amd64.whl"
+  isRoot: true
 omegaconf:
   version: "2.3.1"
   dependents:
@@ -888,6 +916,10 @@ pymatting:
 pymeshfix:
   version: "0.18.1"
   isRoot: true
+pynini:
+  version: "2.1.6.post1"
+  url: "https://github.com/sunxfancy/pynini-2.1.6.post1/releases/download/2.1.6.post1/pynini-2.1.6.post1-cp312-cp312-win_amd64.whl"
+  isRoot: true
 pyparsing:
   version: "3.3.2"
   dependents:
@@ -1013,10 +1045,29 @@ rich-toolkit:
     - fastapi-cloud-cli
 rignore:
   version: "0.7.6"
-  isRoot: true
   dependents:
     - fastapi-cloud-cli
+rocm:
+  version: "https://repo.radeon.com/rocm/windows/rocm-rel-7.2.1/rocm-7.2.1.tar.gz"
+  url: "https://repo.radeon.com/rocm/windows/rocm-rel-7.2.1/rocm-7.2.1.tar.gz"
+  isRoot: true
+  dependents:
     - torch
+rocm-sdk-core:
+  version: "7.2.1"
+  url: "https://repo.radeon.com/rocm/windows/rocm-rel-7.2.1/rocm_sdk_core-7.2.1-py3-none-win_amd64.whl"
+  isRoot: true
+  dependents:
+    - rocm
+rocm-sdk-devel:
+  version: "7.2.1"
+  url: "https://repo.radeon.com/rocm/windows/rocm-rel-7.2.1/rocm_sdk_devel-7.2.1-py3-none-win_amd64.whl"
+  isRoot: true
+rocm-sdk-libraries-custom:
+  version: "7.2.1"
+  url: "https://repo.radeon.com/rocm/windows/rocm-rel-7.2.1/rocm_sdk_libraries_custom-7.2.1-py3-none-win_amd64.whl"
+  isRoot: true
+  dependents:
     - rocm
 rpds-py:
   version: "2026.5.1"
@@ -1153,10 +1204,15 @@ tinycss2:
   dependents:
     - bleach
 tokenizers:
-  version: "0.21.1"
+  version: "0.22.2"
   isRoot: true
   dependents:
     - transformers
+torch:
+  version: "2.9.1+rocm7.2.1"
+  url: "https://repo.radeon.com/rocm/windows/rocm-rel-7.2.1/torch-2.9.1%2Brocm7.2.1-cp312-cp312-win_amd64.whl"
+  isRoot: true
+  dependents:
     - accelerate
     - bitsandbytes
     - clip-anytorch
@@ -1174,8 +1230,20 @@ tokenizers:
     - torchaudio
     - torchsde
     - torchvision
+torch-scatter:
+  version: "2.1.2+pt24cu124"
+  url: "https://data.pyg.org/whl/torch-2.4.0%2Bcu124/torch_scatter-2.1.2%2Bpt24cu124-cp312-cp312-win_amd64.whl"
+  isRoot: true
+torchaudio:
+  version: "2.9.1+rocm7.2.1"
+  url: "https://repo.radeon.com/rocm/windows/rocm-rel-7.2.1/torchaudio-2.9.1%2Brocm7.2.1-cp312-cp312-win_amd64.whl"
+  isRoot: true
 torchsde:
   version: "0.2.6"
+  isRoot: true
+torchvision:
+  version: "0.24.1+rocm7.2.1"
+  url: "https://repo.radeon.com/rocm/windows/rocm-rel-7.2.1/torchvision-0.24.1%2Brocm7.2.1-cp312-cp312-win_amd64.whl"
   isRoot: true
   dependents:
     - clip-anytorch
@@ -1225,7 +1293,7 @@ trampoline:
   dependents:
     - torchsde
 transformers:
-  version: "4.55.4"
+  version: "4.57.6"
   isRoot: true
   dependents:
     - compel
@@ -1344,9 +1412,12 @@ websockets:
     - uvicorn
 werkzeug:
   version: "3.1.8"
-  isRoot: true
   dependents:
     - flask
+wetextprocessing:
+  version: "1.0.4"
+  url: "https://github.com/sunxfancy/pynini-2.1.6.post1/releases/download/2.1.6.post1/WeTextProcessing-1.0.4-py3-none-any.whl"
+  isRoot: true
 widgetsnbextension:
   version: "4.0.15"
   dependents:

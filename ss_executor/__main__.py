@@ -89,11 +89,14 @@ def convert_task_return(result, task_script):
         import cv2
         import numpy as np
 
+        # Video nodes may return SSUI Images or raw PIL images.
+        frames = [frame._image if isinstance(frame, Image) else frame for frame in result.frames]
+
         task_project_root = search_project_root(os.path.dirname(task_script))
         output_dir = os.path.join(task_project_root, "output")
         os.makedirs(output_dir, exist_ok=True)
         path = os.path.join(output_dir, f"video_{uuid.uuid4().hex}.mp4")
-        width, height = result.frames[0].size
+        width, height = frames[0].size
         writer = cv2.VideoWriter(
             path,
             cv2.VideoWriter_fourcc(*"mp4v"),
@@ -105,11 +108,11 @@ def convert_task_return(result, task_script):
             import imageio.v2 as imageio
 
             with imageio.get_writer(path, fps=float(result.fps), codec="libx264", macro_block_size=1) as fallback:
-                for frame in result.frames:
+                for frame in frames:
                     fallback.append_data(np.asarray(frame.convert("RGB")))
         else:
             try:
-                for frame in result.frames:
+                for frame in frames:
                     rgb = np.asarray(frame.convert("RGB"))
                     writer.write(cv2.cvtColor(rgb, cv2.COLOR_RGB2BGR))
             finally:

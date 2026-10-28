@@ -1,8 +1,9 @@
 from typing import *
+import torch
 
 CONV = 'flex_gemm' 
 DEBUG = False
-ATTN = 'flash_attn'
+ATTN = 'sdpa' if torch.version.hip else 'flash_attn'
 
 def __from_env():
     import os
