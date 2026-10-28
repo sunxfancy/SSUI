@@ -51,6 +51,7 @@ const HuggingfaceModels: React.FC<HuggingfaceModelsProps> = ({ source = 'hugging
                 const progress: Record<string, number> = {};
                 for (const task of tasks) {
                     if (task.kind === 'download' && task.meta?.kind === source &&
+                        typeof task.meta.repo_id === 'string' &&
                         (task.status === 'waiting' || task.status === 'processing')) {
                         progress[task.meta.repo_id] = task.progress;
                     }

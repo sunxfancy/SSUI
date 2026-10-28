@@ -36,6 +36,7 @@ function createRuntime(): RuntimeAdapters {
       fetchTasks: vi.fn(async () => [waitingTask]),
       removeTask: vi.fn(async () => true),
       cancelTask: vi.fn(async () => true),
+      retryTask: vi.fn(async () => "retry-task"),
       clearCompleted: vi.fn(async () => {}),
       subscribe: vi.fn(() => () => {}),
     },

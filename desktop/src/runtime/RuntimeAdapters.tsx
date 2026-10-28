@@ -9,6 +9,7 @@ export interface TaskClient {
   fetchTasks(): Promise<QueueTask[]>;
   removeTask(id: string): Promise<boolean>;
   cancelTask(id: string): Promise<boolean>;
+  retryTask(id: string): Promise<string>;
   clearCompleted(): Promise<void>;
   subscribe(callback: (task: QueueTask) => void): () => void;
 }
