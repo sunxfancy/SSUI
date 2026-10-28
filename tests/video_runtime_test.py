@@ -23,6 +23,14 @@ import torch
 import mediapipe
 import diffsynth
 from diffsynth.pipelines.base import BasePipeline
+from diffsynth.vram_management.layers import WanAutoCastLayerNorm
+# CPU offload must normalize BF16 affine parameters with FP32 activations.
+layer = torch.nn.LayerNorm(8).to(torch.bfloat16)
+x = torch.randn(2, 4, 8, dtype=torch.bfloat16)
+wrapped = WanAutoCastLayerNorm(layer, torch.bfloat16, "cpu", torch.bfloat16, "cpu",
+                               torch.bfloat16, "cpu", None)
+expected = torch.nn.functional.layer_norm(x.float(), (8,), layer.weight.float(), layer.bias.float(), layer.eps).to(x.dtype)
+torch.testing.assert_close(wrapped(x), expected)
 from diffsynth.models.cog_dit import CogPatchify
 from diffsynth.models.attention import Attention
 from diffsynth.models.wan_video_dit import WanModel, rope_apply, precompute_freqs_cis, prepare_rope_freqs

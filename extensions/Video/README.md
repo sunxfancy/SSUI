@@ -225,3 +225,30 @@ SSUI_QWEN_IMAGE_VRAM_LIMIT_GIB   低显存模式的模型常驻显存上限（Gi
 较大的系统内存和磁盘空间；当前 SSUI Qwen-Image 节点要求 CUDA。32 GiB
 显存运行 512×512 时，可在模型加载参数中设置 `vram_limit_gib=24`，为激活
 和 VAE 解码预留空间。设为 `0` 时沿用自动值或上述环境变量。
+
+## Windows AMD / ROCm validation
+
+On Radeon AI PRO R9700 (gfx1201), Windows Python 3.12 and Torch
+2.9.1+rocm7.2.1, the real AnimateDiff SSUI sandbox workflow generated and
+round-trip decoded a 512x512, 16-frame MP4 (seed 42, 20 steps). Model loading
+plus generation took 40.5 seconds after initial kernel warmup, with 3.92 GiB
+peak allocated VRAM and 2.69 GiB peak process working set. The orange-cat
+sequence shows changing legs/tail across the clip; this is a short smoke test,
+not a long-video quality guarantee. A 256x256 lake example was nearly static
+and missed the requested sailboat, so successful encoding alone is insufficient.
+
+```powershell
+yarn test:video:smoke --device cuda --size 512 --frames 16 --steps 20 --workflow --prompt "A small orange cat walking slowly across a green lawn, daylight, fixed camera, realistic video."
+```
+
+`cuda` is also PyTorch's device name on ROCm. Reports include HIP version,
+GPU name, peak allocated VRAM and (on Windows) peak process working set.
+The preview samples the entire clip instead of only its first frames.
+The Wan staged smoke entry now accepts `--device cuda` and uses Windows-safe
+memory reporting; its full-generation validation is tracked separately.
+
+Wan's Windows full-model run remains unverified: downloading the UMT5/DiT
+checkpoints exhausted the validation host's disk. Temporary range chunks were
+removed, and the download entry now checks space before fetching missing weights.
+The CPU BF16 LayerNorm offload regression and the opt-in real-dependency video
+runtime suite pass; those tests do not certify a full Wan video on ROCm.

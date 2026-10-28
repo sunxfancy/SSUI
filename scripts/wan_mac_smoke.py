@@ -4,6 +4,7 @@ import hashlib
 import json
 from pathlib import Path
 import subprocess
+import shutil
 import sys
 import time
 
@@ -141,7 +142,7 @@ def main():
     parser.add_argument('--fps', type=int, default=8)
     parser.add_argument('--seed', type=int, default=42)
     parser.add_argument('--cfg', type=float, default=5)
-    parser.add_argument('--device', choices=['mps', 'cpu'], default='mps')
+    parser.add_argument('--device', choices=['mps', 'cpu', 'cuda'], default='mps')
     parser.add_argument('--prompt', default='A small orange cat walking slowly across a green lawn, daylight, fixed camera, realistic video.')
     parser.add_argument('--negative', default='blurry, distorted, static, text, watermark, low quality')
     parser.add_argument('--local-files-only', action='store_true')
@@ -154,17 +155,39 @@ def main():
     args.output = args.output.resolve()
     args.output.mkdir(parents=True, exist_ok=True)
     if args.stage:
-        import resource
+        import psutil
         import torch
         torch.set_num_threads(4)
+        if args.device == "cuda":
+            torch.cuda.reset_peak_memory_stats()
         started = time.monotonic()
         {'text': text_stage, 'denoise': denoise_stage, 'decode': decode_stage}[args.stage](args)
         metrics = {'torch': torch.__version__, 'device': args.device,
                    'dtype': 'float32' if args.stage == 'decode' else 'bfloat16',
-                   'seconds': time.monotonic() - started, 'peak_rss_bytes': resource.getrusage(resource.RUSAGE_SELF).ru_maxrss * (1 if sys.platform == 'darwin' else 1024)}
+                   'seconds': time.monotonic() - started, 'peak_rss_bytes': getattr(psutil.Process().memory_info(), 'peak_wset', None)}
+        if sys.platform != 'win32':
+            import resource
+            metrics['peak_rss_bytes'] = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss * (1 if sys.platform == 'darwin' else 1024)
+        if args.device == 'cuda':
+            torch.cuda.synchronize()
+            metrics.update(hip=torch.version.hip, gpu=torch.cuda.get_device_name(), peak_vram_bytes=torch.cuda.max_memory_allocated())
         (args.output / f'{args.stage}_metrics.json').write_text(json.dumps(metrics, indent=2))
         print(f'{args.stage} complete: {metrics}', flush=True)
         return
+    if not args.local_files_only:
+        args.model_dir.mkdir(parents=True, exist_ok=True)
+        # Full pinned checkpoint sizes; leave room for latents and video output.
+        sizes = {
+            'models_t5_umt5-xxl-enc-bf16.pth': 11361920418,
+            'diffusion_pytorch_model.safetensors': 5676070424,
+            'Wan2.1_VAE.pth': 507609880,
+        }
+        needed = sum(size for name, size in sizes.items()
+                     if not (args.model_dir / name).is_file()) + 1024**3
+        free = shutil.disk_usage(args.model_dir).free
+        if free < needed:
+            raise RuntimeError(f'Insufficient disk space: need {needed / 1024**3:.1f} GiB free '
+                               f'for missing Wan weights and output, have {free / 1024**3:.1f} GiB')
     from huggingface_hub import snapshot_download
     snapshot_download(REPO, revision=REVISION, local_dir=args.model_dir,
                       allow_patterns=list(WEIGHTS) + ['google/umt5-xxl/*'],

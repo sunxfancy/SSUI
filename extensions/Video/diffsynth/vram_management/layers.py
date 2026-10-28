@@ -88,8 +88,9 @@ class WanAutoCastLayerNorm(torch.nn.LayerNorm, AutoTorchModule):
             else:
                 weight = None if self.weight is None else cast_to(self.weight, self.computation_dtype, self.computation_device)
                 bias = None if self.bias is None else cast_to(self.bias, self.computation_dtype, self.computation_device)
-        if x.device.type == "mps":
-            # Torch 2.4 supports MPS BF16 operations but not MPS autocast.
+        if x.device.type in ("cpu", "mps"):
+            # CPU rejects FP32 activations with BF16 affine parameters;
+            # Torch 2.4 MPS has no autocast. Normalize both in FP32.
             return torch.nn.functional.layer_norm(
                 x.float(), self.normalized_shape,
                 None if weight is None else weight.float(),
