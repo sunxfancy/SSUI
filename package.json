@@ -125,6 +125,12 @@
     "test:native": "yarn workspace ssui-desktop test:native",
     "test:desktop-ui": "playwright test --config playwright.desktop.config.ts",
     "test:rust:external": "yarn workspace ssui-desktop test:rust:external",
+    "install:ardy": "node dependencies/venv.cjs python extensions/Motion/install_ardy.py",
+    "install:hy-motion": "node dependencies/venv.cjs python extensions/Motion/install_motion_model.py hy-motion",
+    "install:msflow": "node dependencies/venv.cjs python extensions/Motion/install_motion_model.py msflow",
+    "download:motion-model": "node dependencies/venv.cjs python scripts/download_motion_weights.py",
+    "test:motion-model": "node dependencies/venv.cjs python scripts/motion_models_smoke.py",
+    "preview:motion-model": "node dependencies/venv.cjs python scripts/motion_models_preview.py",
     "install:kimodo": "node dependencies/venv.cjs python extensions/Motion/install_kimodo.py",
     "test:kimodo:smoke": "node dependencies/venv.cjs python scripts/kimodo_mac_smoke.py",
     "test:kimodo:preview": "node dependencies/venv.cjs python scripts/kimodo_preview.py"

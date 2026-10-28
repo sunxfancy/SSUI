@@ -1,5 +1,8 @@
 # Motion extension
 
+ARDY, MotionSpaceFlow XYZ and HY-Motion 1.0 Lite are also available as independent
+text-to-motion workflows. See [deployment and real-GPU validation](../../doc/MotionModels.md).
+
 The Motion extension provides both NVIDIA Kimodo text-to-motion generation and
 MediaPipe video pose recognition with BVH/Blender reconstruction.
 
