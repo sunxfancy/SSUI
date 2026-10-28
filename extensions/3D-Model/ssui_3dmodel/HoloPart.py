@@ -63,5 +63,24 @@ def CompleteParts(config: SSUIConfig, mesh: Mesh) -> Mesh:
 
 @param('target_faces', Slider(100, 200000, 100), default=5000)
 def QuadRemeshCompleted(config: SSUIConfig, mesh: Mesh) -> Mesh:
-    """对补全部件逐连通曲面重拓扑，再保留原部件分组导出。"""
-    return Mesh() if config.is_prepare() else quad_remesh(mesh, config['target_faces'], split_components=True)
+    """逐曲面重拓扑并闭合开口，保留部件分组；补洞加密会增加面数。"""
+    return Mesh() if config.is_prepare() else remesh_completed(mesh, config['target_faces'])
+
+
+def remesh_completed(mesh: Mesh, target_faces=5000) -> Mesh:
+    python = os.environ.get('SSUI_HOLOPART_PYTHON')
+    if not python:
+        raise RuntimeError('Configure SSUI_HOLOPART_PYTHON for native boundary closure')
+    if os.environ.get('SSUI_QUADRIFLOW_WSL_DISTRO'):
+        raise RuntimeError('HoloPart remeshing requires native QuadriFlow, not WSL')
+    raw = quad_remesh(mesh, target_faces, split_components=True)
+    job = _job()
+    source = job/'source.json'
+    source.write_text(json.dumps({'artifacts':raw.artifacts,'preview_path':raw.preview_path}),encoding='utf-8')
+    _run([python,'-u',str(Path(__file__).with_name('holopart_closure.py')),str(source),str(job)],job/'closure.log')
+    import trimesh
+    result = Mesh(trimesh.load(job/'retopology.glb',force='scene',process=False))
+    result.artifacts = {name:str(job/name) for name in ('retopology.obj','retopology.glb','report.json','preview.json','closure.json')}
+    result.preview_path = str(job/'preview.json')
+    result.quality = json.loads((job/'result.json').read_text(encoding='utf-8'))['quality']
+    return result

@@ -17,7 +17,12 @@ from ssui_3dmodel.Retopology import _read_polygons
 def inspect(payload_file):
     data = json.loads(payload_file.read_text(encoding='utf-8'))
     source = trimesh.load(data['input']['path'], force='mesh')
-    target = trimesh.load(data['retopology']['artifacts']['retopology.glb'], force='mesh')
+    exported = trimesh.load(data['retopology']['artifacts']['retopology.glb'], force='scene', process=False)
+    preview_export = trimesh.load(data['retopology']['path'],force='scene',process=False)
+    if 'closure.json' in data['retopology']['artifacts']:
+        if set(exported.geometry) != set(preview_export.geometry) or not all(m.is_watertight for m in preview_export.geometry.values()):
+            raise RuntimeError('Serialized Mesh export changed closed part grouping')
+    target = trimesh.util.concatenate(list(exported.geometry.values()))
     vertices, polygons = _read_polygons(data['retopology']['artifacts']['retopology.obj'])
     edges = Counter(tuple(sorted((face[i], face[(i + 1) % len(face)])))
                     for face in polygons for i in range(len(face)))
@@ -25,7 +30,12 @@ def inspect(payload_file):
     b, _ = trimesh.sample.sample_surface(target, 30000, seed=42)
     distances = np.concatenate([cKDTree(a).query(b)[0], cKDTree(b).query(a)[0]])
     diagonal = np.linalg.norm(source.bounds[1] - source.bounds[0])
-    report = {'polygons': len(polygons), 'quads': sum(len(face) == 4 for face in polygons),
+    report = {'exported_part_count':len(exported.geometry),
+        'serialized_export_part_count':len(preview_export.geometry),
+        'serialized_export_watertight_parts':sum(m.is_watertight for m in preview_export.geometry.values()),
+        'watertight_parts':sum(m.is_watertight for m in exported.geometry.values()),
+        'exported_groups':{name:{'watertight':bool(m.is_watertight), 'winding_consistent':bool(m.is_winding_consistent)} for name,m in exported.geometry.items()},
+        'polygons': len(polygons), 'quads': sum(len(face) == 4 for face in polygons),
         'quad_ratio': sum(len(face) == 4 for face in polygons) / len(polygons),
         'finite_vertices': bool(np.isfinite(vertices).all()),
         'boundary_edges': sum(count == 1 for count in edges.values()),
@@ -52,6 +62,9 @@ def inspect(payload_file):
             summary['preparation'] = json.loads(Path(data['completed']['artifacts']['preparation.json']).read_text(encoding='utf-8'))
             summary['completion_artifacts'] = data['completed']['artifacts']
             summary['limitation'] = 'Generated amodal geometry changes the input shape; open boundaries remain and require review'
+            if 'closure.json' in data['retopology']['artifacts']:
+                summary['closure'] = json.loads(Path(data['retopology']['artifacts']['closure.json']).read_text(encoding='utf-8'))
+                summary['limitation'] = 'Closed indexed topology verified per group; bounded thin shells can replace unsafe caps. Global self-intersections are not certified.'
         (payload_file.parent / 'verification.json').write_text(json.dumps(summary, indent=2), encoding='utf-8')
     print(json.dumps(report, indent=2))
 
