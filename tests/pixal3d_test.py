@@ -148,7 +148,9 @@ class Pixal3DWorkflowTest(unittest.TestCase):
         module = Path(__file__).resolve().parents[1] / "extensions/3D-Model/vendor/pixal3d/modules/image_feature_extractor.py"
         with patch.dict(sys.modules, {"transformers": types.SimpleNamespace()}):
             runpy.run_path(str(module))
-        from pixal3d.pipelines import Pixal3DImageTo3DPipeline
+        with patch.dict(sys.modules, {"cumesh": None, "pixal3d.representations": None}):
+            namespace = runpy.run_module("pixal3d.pipelines.pixal3d_image_to_3d")
+        Pixal3DImageTo3DPipeline = namespace["Pixal3DImageTo3DPipeline"]
         from PIL import ImageDraw
         pipeline = Pixal3DImageTo3DPipeline.__new__(Pixal3DImageTo3DPipeline)
         pipeline.rembg_model = None

@@ -1,3 +1,4 @@
+from __future__ import annotations
 from typing import *
 import torch
 import torch.nn as nn
@@ -7,7 +8,8 @@ from .base import Pipeline
 from . import samplers, rembg
 from ..modules.sparse import SparseTensor
 from ..modules import image_feature_extractor
-from ..representations import Mesh, MeshWithVoxel
+if TYPE_CHECKING:
+    from ..representations import Mesh, MeshWithVoxel
 
 
 class Pixal3DImageTo3DPipeline(Pipeline):
@@ -593,6 +595,8 @@ class Pixal3DImageTo3DPipeline(Pipeline):
             tex_slat (SparseTensor): The structured latent for texture.
             resolution (int): The resolution of the output.
         """
+        from ..representations import MeshWithVoxel
+
         meshes, subs = self.decode_shape_slat(shape_slat, resolution)
         tex_voxels = self.decode_tex_slat(tex_slat, subs)
         out_mesh = []
