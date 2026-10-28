@@ -73,6 +73,9 @@ async def _start_download(
         request_uuid: str,
         callback_data: Dict[str, Any],
     ) -> None:
+        record = task_service.get(record_id)
+        if record is None or record.status in ("completed", "failed", "cancelled"):
+            return
         progress_data = callback_data.get("download_progress") or callback_data.get("download_error")
         error = callback_data.get("download_error")
         if isinstance(progress_data, dict):
@@ -101,6 +104,9 @@ async def _start_download(
         request_uuid: str,
         extra_data: Optional[Dict[str, Any]] = None,
     ) -> None:
+        record = task_service.get(record_id)
+        if record is None or record.status in ("completed", "failed", "cancelled"):
+            return
         extra = extra_data or {}
         error = extra.get("error")
         task_service.update(
@@ -114,6 +120,7 @@ async def _start_download(
         )
         websocket_service.send_finish(client_id, request_uuid, extra)
 
+    task_service.update(record_id, status="processing")
     await _notify_task_started(task_service, websocket_service, record_id)
 
     if url and url.startswith(("http://", "https://")):
@@ -123,6 +130,12 @@ async def _start_download(
             client_id="task",
             request_uuid=request_uuid,
             callback=progress_callback,
+            finish_callback=finish_callback,
+        )
+    elif repo_id and kind == "modelscope":
+        await model_service.modelscope_download(
+            repo_id=repo_id, local_dir=local_dir, client_id="task",
+            request_uuid=request_uuid, callback=hf_progress_callback,
             finish_callback=finish_callback,
         )
     elif repo_id:

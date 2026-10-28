@@ -53,6 +53,16 @@ class TaskService {
         return data.success === true;
     }
 
+    public async retryTask(id: string): Promise<string> {
+        const response = await fetch(`${this.getBaseUrl()}/api/tasks/${encodeURIComponent(id)}/retry`, {
+            method: 'POST'
+        });
+        if (!response.ok) throw new Error(`Failed to retry task: ${response.status}`);
+        const data = await response.json();
+        if (!data.success || !data.task_id) throw new Error('Failed to retry task');
+        return data.task_id;
+    }
+
     public async clearCompleted(): Promise<void> {
         await fetch(`${this.getBaseUrl()}/api/tasks/clear`, {
             method: 'POST'
