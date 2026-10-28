@@ -98,9 +98,19 @@ server.serve_forever()
       }
       return (await fetch(`http://127.0.0.1:${port}/status`)).ok;
     }, 'embedded WebDriver startup', 30_000);
-    browser = await remote({ hostname: '127.0.0.1', port, logLevel: 'error',
-      connectionRetryCount: 0, waitforTimeout: 5000, capabilities: { browserName: 'wry' },
-    });
+    // The driver starts listening before WebView2 registers its first window.
+    const windowDeadline = Date.now() + 30_000;
+    while (!browser) {
+      try {
+        browser = await remote({ hostname: '127.0.0.1', port, logLevel: 'error',
+          connectionRetryCount: 0, waitforTimeout: 5000, capabilities: { browserName: 'wry' },
+        });
+      } catch (error) {
+        if (!/No window could be found|no such window/i.test(String(error)) ||
+            Date.now() >= windowDeadline || app.exitCode !== null || app.signalCode !== null) throw error;
+        await new Promise(resolve => setTimeout(resolve, 250));
+      }
+    }
     await browser.$('#root-path').waitForExist();
     await browser.$('#root-path').setValue(root);
     await browser.$('#python-path').setValue(python);
