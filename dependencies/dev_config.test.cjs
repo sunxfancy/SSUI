@@ -10,6 +10,19 @@ function fixture(t) {
   t.after(() => fs.rmSync(dir, { recursive: true, force: true }));
   return dir;
 }
+
+test('retopology settings preserve WSL paths and environment overrides', t => {
+  const repo = fixture(t);
+  fs.writeFileSync(path.join(repo, '.ssui-dev.json'), JSON.stringify({
+    SSUI_P3SAM_PYTHON: '/home/user/p3sam/bin/python', SSUI_P3SAM_WSL_DISTRO: 'Ubuntu',
+    SSUI_P3SAM_DEVICE: 'cpu', SSUI_QUADRIFLOW_EXECUTABLE: '/opt/quadriflow',
+  }));
+  const config = resolveConfig({SSUI_P3SAM_DEVICE: 'cuda'}, repo, path.join(repo, 'home'));
+  assert.equal(config.SSUI_P3SAM_PYTHON, '/home/user/p3sam/bin/python');
+  assert.equal(config.SSUI_P3SAM_WSL_DISTRO, 'Ubuntu');
+  assert.equal(config.SSUI_P3SAM_DEVICE, 'cuda');
+  assert.equal(config.SSUI_QUADRIFLOW_EXECUTABLE, '/opt/quadriflow');
+});
 test('unconfigured checkout keeps its own venv', t => {
   const repo = fixture(t);
   assert.equal(resolveConfig({}, repo, path.join(repo, 'empty-home')).SSUI_VENV_PATH, path.join(repo, '.venv'));

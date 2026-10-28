@@ -105,3 +105,9 @@ yarn test:trellis:smoke --workflow --output output/trellis-mac-workflow
 SSUI 沙盒工作流复测：两阶段各 8 步，节点执行约 176 秒，完整命令约 180 秒，
 产物位于 `output/trellis-mac-workflow/mesh.glb`。全量回归 79 项：68 通过、11 跳过，
 包括真实 MPS 稀疏卷积、完整小型 SLatFlow、合批注意力和 FlexiCubes 数值对比。
+
+## 自动重拓扑
+
+`examples/basic/workflow-retopology.py` 提供模型导入 → P3-SAM 部件分割 → 独立
+QuadriFlow → 可旋转预览与 GLB / 四边面 OBJ 导出。配置与限制见
+[自动重拓扑说明](../../doc/Retopology.md)。

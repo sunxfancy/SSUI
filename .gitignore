@@ -44,3 +44,4 @@ desktop/src-tauri/workflow/txt2img/
 
 # Native test build cache (directory or local symlink)
 /desktop/src-tauri/target
+/.yarn-cache/

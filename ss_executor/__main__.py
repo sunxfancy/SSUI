@@ -189,7 +189,28 @@ def convert_task_return(result, task_script):
         os.makedirs(output_dir, exist_ok=True)
         path = os.path.join(output_dir, f"mesh_{uuid.uuid4().hex}.glb")
         result._model.export(path)
-        return {"type": "mesh", "path": path, "format": "glb"}
+        artifacts = getattr(result, "artifacts", {})
+        preview_path = getattr(result, "preview_path", None)
+        if not preview_path:
+            import json
+            import numpy as np
+            import trimesh
+            geometries = result._model.dump() if isinstance(result._model, trimesh.Scene) else [result._model]
+            preview = []
+            budget = max(1, 30000 // max(1, len(geometries)))
+            for index, geometry in enumerate(geometries):
+                if not isinstance(geometry, trimesh.Trimesh) or not len(geometry.faces):
+                    continue
+                indices = np.linspace(0, len(geometry.faces) - 1, min(budget, len(geometry.faces)), dtype=int)
+                sample = geometry.submesh([indices], append=True)
+                preview.append({"name": geometry.metadata.get("name", f"part_{index}"),
+                                "vertices": sample.vertices.tolist(), "faces": sample.faces.tolist()})
+            preview_path = path + ".preview.json"
+            with open(preview_path, "w", encoding="utf-8") as stream:
+                json.dump(preview, stream)
+        return {"type": "mesh", "path": path, "format": "glb",
+                "preview_path": preview_path, "artifacts": artifacts,
+                "quality": getattr(result, "quality", None)}
     return result
 
 class Executor:
