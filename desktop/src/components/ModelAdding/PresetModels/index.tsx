@@ -55,8 +55,8 @@ const fallbackPresets: PresetModel[] = [
 
 export const PresetModels: React.FC<PresetModelsProps> = ({ onModelSelect }) => {
     const { t } = useTranslation();
-    const [presets, setPresets] = useState<PresetModel[]>(fallbackPresets);
-    const [loading, setLoading] = useState(false);
+    const [presets, setPresets] = useState<PresetModel[]>([]);
+    const [loading, setLoading] = useState(true);
     const [loadError, setLoadError] = useState<string | null>(null);
     const [downloading, setDownloading] = useState<{ [id: string]: number }>({});
     const taskService = useRef(TaskService.getInstance());
@@ -73,13 +73,16 @@ export const PresetModels: React.FC<PresetModelsProps> = ({ onModelSelect }) => 
                     throw new Error(`Failed to fetch preset models: ${response.status}`);
                 }
                 const data = await response.json();
-                if (data.items && data.items.length > 0) {
+                if (Array.isArray(data.items)) {
                     setPresets(data.items);
+                } else {
+                    throw new Error('Invalid preset models response');
                 }
                 setLoadError(null);
             } catch (error) {
                 console.error('获取预设模型失败:', error);
                 setLoadError(error instanceof Error ? error.message : 'Failed to fetch preset models');
+                setPresets(fallbackPresets);
             } finally {
                 setLoading(false);
             }

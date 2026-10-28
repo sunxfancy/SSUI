@@ -1,3 +1,4 @@
+from ._runtime import wan_runtime
 import os
 
 import torch
@@ -22,7 +23,7 @@ WAN22_I2V_MODEL_ID = "Wan-AI/Wan2.2-I2V-A14B"
 # Wan2.2 与 Wan2.1 共享 UMT5-XXL 文本编码器、tokenizer 和 VAE（1.1.9 会自动重定向下载）
 WAN21_T2V_LIGHT_MODEL_ID = "Wan-AI/Wan2.1-T2V-1.3B"
 
-LOCAL_MODEL_PATH = os.environ.get("SSUI_WAN_MODEL_ROOT", "models")
+LOCAL_MODEL_PATH = os.environ.get("SSUI_WAN_MODEL_ROOT", os.environ.get("SSUI_MODEL_DIR", "models"))
 
 # 官方推荐的负面提示词（Wan 官方示例原样）
 WAN22_NEGATIVE_PROMPT = (
@@ -42,8 +43,7 @@ class Wan22TI2VModel:
     @staticmethod
     def load() -> "Wan22TI2VModel":
         pipe = WanVideoPipeline.from_pretrained(
-            torch_dtype=torch.bfloat16,  # 可改为 torch.float8_e4m3fn 启用 FP8 量化
-            device="cuda",
+            **wan_runtime(),
             model_configs=[
                 ModelConfig(
                     model_id=WAN22_TI2V_MODEL_ID,
@@ -83,8 +83,7 @@ class Wan22T2VA14BModel:
     @staticmethod
     def load() -> "Wan22T2VA14BModel":
         pipe = WanVideoPipeline.from_pretrained(
-            torch_dtype=torch.bfloat16,
-            device="cuda",
+            **wan_runtime(),
             model_configs=[
                 ModelConfig(
                     model_id=WAN22_T2V_MODEL_ID,
@@ -130,8 +129,7 @@ class Wan22I2VA14BModel:
     @staticmethod
     def load() -> "Wan22I2VA14BModel":
         pipe = WanVideoPipeline.from_pretrained(
-            torch_dtype=torch.bfloat16,
-            device="cuda",
+            **wan_runtime(),
             model_configs=[
                 ModelConfig(
                     model_id=WAN22_I2V_MODEL_ID,

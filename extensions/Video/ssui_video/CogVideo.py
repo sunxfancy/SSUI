@@ -1,4 +1,4 @@
-import torch
+from backend.util.devices import TorchDevice
 
 from ssui.annotation import param
 from ssui.base import Prompt, Image
@@ -15,7 +15,10 @@ class CogVideoModel:
 
     @staticmethod
     def load() -> "CogVideoModel":
-        model_manager = ModelManager()
+        device = TorchDevice.choose_torch_device()
+        model_manager = ModelManager(
+            torch_dtype=TorchDevice.choose_torch_dtype(device), device=str(device)
+        )
         download_models(["CogVideoX-5B"])
         model_manager.load_models(
             [
@@ -23,8 +26,6 @@ class CogVideoModel:
                 "models/CogVideo/CogVideoX-5b/text_encoder",
                 "models/CogVideo/CogVideoX-5b/vae/diffusion_pytorch_model.safetensors",
             ],
-            torch_dtype=torch.float16,
-            device="cuda",
         )
         return CogVideoModel(model_manager)
 

@@ -1,19 +1,19 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Card, Elevation, Button, Tag, Spinner, Icon, Dialog, Intent, NonIdealState } from '@blueprintjs/core';
-import ExecutorService from '../../services/Executor';
-import ServerService from '../../services/Server';
-import TaskService, { QueueTask } from '../../services/TaskService';
+import { QueueTask } from '../../services/TaskService';
 import { CommandInfo } from '../../providers/IInstallerProvider';
 import { useTranslation } from 'react-i18next';
+import { useRuntimeAdapters } from '../../runtime/RuntimeAdapters';
 
 interface QueueProps {
+    /** Supplied items enable local preview mode without backend polling or sockets. */
     items?: QueueTask[];
     onRemoveItem?: (id: string) => void;
     onPauseItem?: (id: string) => void;
     onResumeItem?: (id: string) => void;
 }
 
-const Queue: React.FC<QueueProps> = ({ items: initialItems }) => {
+const Queue: React.FC<QueueProps> = ({ items: initialItems, onRemoveItem }) => {
     const { t } = useTranslation();
     const [items, setItems] = useState<QueueTask[]>(initialItems ?? []);
     const [loading, setLoading] = useState(true);
@@ -23,7 +23,8 @@ const Queue: React.FC<QueueProps> = ({ items: initialItems }) => {
     const [isRestartDialogOpen, setIsRestartDialogOpen] = useState(false);
     const [restartType, setRestartType] = useState<'server' | 'executor' | null>(null);
     const [isRestarting, setIsRestarting] = useState(false);
-    const taskService = useRef(TaskService.getInstance());
+    const runtime = useRuntimeAdapters();
+    const taskService = useRef(runtime.tasks);
 
     const loadTasks = useCallback(async () => {
         try {
@@ -39,6 +40,12 @@ const Queue: React.FC<QueueProps> = ({ items: initialItems }) => {
     }, []);
 
     useEffect(() => {
+        if (initialItems !== undefined) {
+            setItems(initialItems);
+            setLoading(false);
+            setError(null);
+            return;
+        }
         loadTasks();
 
         // websocket 实时更新
@@ -57,9 +64,9 @@ const Queue: React.FC<QueueProps> = ({ items: initialItems }) => {
 
         const fetchStatus = async () => {
             try {
-                const executorResult = await ExecutorService.getInstance().getExecutorStatus();
+                const executorResult = await runtime.executor.getExecutorStatus();
                 setExecutorStatus(executorResult);
-                const serverResult = await ServerService.getInstance().getServerStatus();
+                const serverResult = await runtime.server.getServerStatus();
                 setServerStatus(serverResult);
             } catch (err) {
                 console.error('获取服务状态时出错:', err);
@@ -73,17 +80,17 @@ const Queue: React.FC<QueueProps> = ({ items: initialItems }) => {
             clearInterval(pollId);
             clearInterval(statusId);
         };
-    }, [loadTasks]);
+    }, [loadTasks, initialItems]);
 
     const handleRestartService = async () => {
         if (!restartType) return;
         setIsRestarting(true);
         try {
             if (restartType === 'server') {
-                const newStatus = await ServerService.getInstance().restartServer();
+                const newStatus = await runtime.server.restartServer();
                 setServerStatus(newStatus);
             } else {
-                const newStatus = await ExecutorService.getInstance().restartExecutor();
+                const newStatus = await runtime.executor.restartExecutor();
                 setExecutorStatus(newStatus);
             }
         } catch (error) {
@@ -126,6 +133,11 @@ const Queue: React.FC<QueueProps> = ({ items: initialItems }) => {
     };
 
     const handleRemove = async (id: string) => {
+        if (initialItems !== undefined) {
+            onRemoveItem?.(id);
+            setItems(prev => prev.filter(item => item.id !== id));
+            return;
+        }
         const success = await taskService.current.removeTask(id);
         if (success) {
             setItems(prev => prev.filter(item => item.id !== id));
@@ -133,6 +145,10 @@ const Queue: React.FC<QueueProps> = ({ items: initialItems }) => {
     };
 
     const handleCancel = async (id: string) => {
+        if (initialItems !== undefined) {
+            setItems(prev => prev.map(item => item.id === id ? { ...item, status: 'cancelled' } : item));
+            return;
+        }
         const success = await taskService.current.cancelTask(id);
         if (success) {
             setItems(prev => prev.map(item => item.id === id ? { ...item, status: 'cancelled', progress: 0 } : item));
@@ -140,6 +156,10 @@ const Queue: React.FC<QueueProps> = ({ items: initialItems }) => {
     };
 
     const handleClearCompleted = async () => {
+        if (initialItems !== undefined) {
+            setItems(prev => prev.filter(item => item.status !== 'completed'));
+            return;
+        }
         await taskService.current.clearCompleted();
         await loadTasks();
     };

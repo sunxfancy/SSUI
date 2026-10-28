@@ -1,0 +1,2703 @@
+{
+  "platform": "win_arm64",
+  "python": "3.12.15",
+  "checkedAt": "2026-10-23T17:16:19.670309+00:00",
+  "scope": "Input requirements on PyPI and explicit indexes; tags/Requires-Python only, not runtime or native DLL validation",
+  "packages": [
+    {
+      "requirement": "absl-py==2.5.1",
+      "name": "absl-py",
+      "source": "https://pypi.org/pypi/absl-py/json",
+      "status": "wheel",
+      "version": "2.5.1",
+      "wheels": [
+        "absl_py-2.5.1-py3-none-any.whl"
+      ]
+    },
+    {
+      "requirement": "accelerate==1.15.0",
+      "name": "accelerate",
+      "source": "https://pypi.org/pypi/accelerate/json",
+      "status": "wheel",
+      "version": "1.15.0",
+      "wheels": [
+        "accelerate-1.15.0-py3-none-any.whl"
+      ]
+    },
+    {
+      "requirement": "agent-detector==2.0.0",
+      "name": "agent-detector",
+      "source": "https://pypi.org/pypi/agent-detector/json",
+      "status": "wheel",
+      "version": "2.0.0",
+      "wheels": [
+        "agent_detector-2.0.0-py3-none-any.whl"
+      ]
+    },
+    {
+      "requirement": "aiohappyeyeballs==2.7.1",
+      "name": "aiohappyeyeballs",
+      "source": "https://pypi.org/pypi/aiohappyeyeballs/json",
+      "status": "wheel",
+      "version": "2.7.1",
+      "wheels": [
+        "aiohappyeyeballs-2.7.1-py3-none-any.whl"
+      ]
+    },
+    {
+      "requirement": "aiohttp==3.14.5",
+      "name": "aiohttp",
+      "source": "https://pypi.org/pypi/aiohttp/json",
+      "status": "wheel",
+      "version": "3.14.5",
+      "wheels": [
+        "aiohttp-3.14.5-cp312-cp312-win_arm64.whl",
+        "aiohttp-3.14.5-py3-none-any.whl"
+      ]
+    },
+    {
+      "requirement": "aioshutil==1.6",
+      "name": "aioshutil",
+      "source": "https://pypi.org/pypi/aioshutil/json",
+      "status": "wheel",
+      "version": "1.6",
+      "wheels": [
+        "aioshutil-1.6-py3-none-any.whl"
+      ]
+    },
+    {
+      "requirement": "aiosignal==1.4.0",
+      "name": "aiosignal",
+      "source": "https://pypi.org/pypi/aiosignal/json",
+      "status": "wheel",
+      "version": "1.4.0",
+      "wheels": [
+        "aiosignal-1.4.0-py3-none-any.whl"
+      ]
+    },
+    {
+      "requirement": "annotated-doc==0.0.5",
+      "name": "annotated-doc",
+      "source": "https://pypi.org/pypi/annotated-doc/json",
+      "status": "wheel",
+      "version": "0.0.5",
+      "wheels": [
+        "annotated_doc-0.0.5-py3-none-any.whl"
+      ]
+    },
+    {
+      "requirement": "annotated-types==0.8.0",
+      "name": "annotated-types",
+      "source": "https://pypi.org/pypi/annotated-types/json",
+      "status": "wheel",
+      "version": "0.8.0",
+      "wheels": [
+        "annotated_types-0.8.0-py3-none-any.whl"
+      ]
+    },
+    {
+      "requirement": "antlr4-python3-runtime==4.9.3+ssui.cpu.r1.b0faf253a9595",
+      "name": "antlr4-python3-runtime",
+      "source": "https://sunxfancy.github.io/ssui-python-packages/simple/windows/arm64/cpu/antlr4-python3-runtime/",
+      "indexErrors": [
+        {
+          "index": "https://download.pytorch.org/whl/cpu/antlr4-python3-runtime/",
+          "error": "HTTP Error 403: Forbidden"
+        },
+        {
+          "index": "https://sunxfancy.github.io/ssui-python-packages/simple/windows/arm64/cpu/2.9.1/antlr4-python3-runtime/",
+          "error": "HTTP Error 404: Not Found"
+        }
+      ],
+      "status": "wheel",
+      "version": "4.9.3+ssui.cpu.r1.b0faf253a9595",
+      "wheels": [
+        "antlr4_python3_runtime-4.9.3+ssui.cpu.r1.b0faf253a9595-py3-none-any.whl"
+      ]
+    },
+    {
+      "requirement": "anyio==4.15.1",
+      "name": "anyio",
+      "source": "https://pypi.org/pypi/anyio/json",
+      "status": "wheel",
+      "version": "4.15.1",
+      "wheels": [
+        "anyio-4.15.1-py3-none-any.whl"
+      ]
+    },
+    {
+      "requirement": "argon2-cffi==25.1.0",
+      "name": "argon2-cffi",
+      "source": "https://pypi.org/pypi/argon2-cffi/json",
+      "status": "wheel",
+      "version": "25.1.0",
+      "wheels": [
+        "argon2_cffi-25.1.0-py3-none-any.whl"
+      ]
+    },
+    {
+      "requirement": "argon2-cffi-bindings==26.1.0",
+      "name": "argon2-cffi-bindings",
+      "source": "https://pypi.org/pypi/argon2-cffi-bindings/json",
+      "status": "wheel",
+      "version": "26.1.0",
+      "wheels": [
+        "argon2_cffi_bindings-26.1.0-cp310-abi3-win_arm64.whl"
+      ]
+    },
+    {
+      "requirement": "arrow==1.4.0",
+      "name": "arrow",
+      "source": "https://pypi.org/pypi/arrow/json",
+      "status": "wheel",
+      "version": "1.4.0",
+      "wheels": [
+        "arrow-1.4.0-py3-none-any.whl"
+      ]
+    },
+    {
+      "requirement": "asttokens==3.0.2",
+      "name": "asttokens",
+      "source": "https://pypi.org/pypi/asttokens/json",
+      "status": "wheel",
+      "version": "3.0.2",
+      "wheels": [
+        "asttokens-3.0.2-py3-none-any.whl"
+      ]
+    },
+    {
+      "requirement": "async-lru==2.4.0",
+      "name": "async-lru",
+      "source": "https://pypi.org/pypi/async-lru/json",
+      "status": "wheel",
+      "version": "2.4.0",
+      "wheels": [
+        "async_lru-2.4.0-py3-none-any.whl"
+      ]
+    },
+    {
+      "requirement": "attrs==26.1.0",
+      "name": "attrs",
+      "source": "https://pypi.org/pypi/attrs/json",
+      "status": "wheel",
+      "version": "26.1.0",
+      "wheels": [
+        "attrs-26.1.0-py3-none-any.whl"
+      ]
+    },
+    {
+      "requirement": "audioread==3.1.0",
+      "name": "audioread",
+      "source": "https://pypi.org/pypi/audioread/json",
+      "status": "wheel",
+      "version": "3.1.0",
+      "wheels": [
+        "audioread-3.1.0-py3-none-any.whl"
+      ]
+    },
+    {
+      "requirement": "babel==2.18.0",
+      "name": "babel",
+      "source": "https://pypi.org/pypi/babel/json",
+      "status": "wheel",
+      "version": "2.18.0",
+      "wheels": [
+        "babel-2.18.0-py3-none-any.whl"
+      ]
+    },
+    {
+      "requirement": "beautifulsoup4==4.15.0",
+      "name": "beautifulsoup4",
+      "source": "https://pypi.org/pypi/beautifulsoup4/json",
+      "status": "wheel",
+      "version": "4.15.0",
+      "wheels": [
+        "beautifulsoup4-4.15.0-py3-none-any.whl"
+      ]
+    },
+    {
+      "requirement": "blake3==1.0.11",
+      "name": "blake3",
+      "source": "https://pypi.org/pypi/blake3/json",
+      "status": "wheel",
+      "version": "1.0.11",
+      "wheels": [
+        "blake3-1.0.11-cp312-cp312-win_arm64.whl"
+      ]
+    },
+    {
+      "requirement": "bleach==6.4.0",
+      "name": "bleach",
+      "source": "https://pypi.org/pypi/bleach/json",
+      "status": "wheel",
+      "version": "6.4.0",
+      "wheels": [
+        "bleach-6.4.0-py3-none-any.whl"
+      ]
+    },
+    {
+      "requirement": "certifi==2026.10.19",
+      "name": "certifi",
+      "source": "https://pypi.org/pypi/certifi/json",
+      "status": "wheel",
+      "version": "2026.10.19",
+      "wheels": [
+        "certifi-2026.10.19-py3-none-any.whl"
+      ]
+    },
+    {
+      "requirement": "cffi==2.1.1",
+      "name": "cffi",
+      "source": "https://pypi.org/pypi/cffi/json",
+      "status": "wheel",
+      "version": "2.1.1",
+      "wheels": [
+        "cffi-2.1.1-cp312-cp312-win_arm64.whl"
+      ]
+    },
+    {
+      "requirement": "charset-normalizer==3.5.2",
+      "name": "charset-normalizer",
+      "source": "https://pypi.org/pypi/charset-normalizer/json",
+      "status": "wheel",
+      "version": "3.5.2",
+      "wheels": [
+        "charset_normalizer-3.5.2-cp312-cp312-win_arm64.whl",
+        "charset_normalizer-3.5.2-cp37-abi3-win_arm64.whl",
+        "charset_normalizer-3.5.2-py3-none-any.whl"
+      ]
+    },
+    {
+      "requirement": "click==8.5.0",
+      "name": "click",
+      "source": "https://pypi.org/pypi/click/json",
+      "status": "wheel",
+      "version": "8.5.0",
+      "wheels": [
+        "click-8.5.0-py3-none-any.whl"
+      ]
+    },
+    {
+      "requirement": "clip-anytorch==2.6.0",
+      "name": "clip-anytorch",
+      "source": "https://pypi.org/pypi/clip-anytorch/json",
+      "status": "wheel",
+      "version": "2.6.0",
+      "wheels": [
+        "clip_anytorch-2.6.0-py3-none-any.whl"
+      ]
+    },
+    {
+      "requirement": "cloudpickle==3.1.2",
+      "name": "cloudpickle",
+      "source": "https://pypi.org/pypi/cloudpickle/json",
+      "status": "wheel",
+      "version": "3.1.2",
+      "wheels": [
+        "cloudpickle-3.1.2-py3-none-any.whl"
+      ]
+    },
+    {
+      "requirement": "colorama==0.4.6",
+      "name": "colorama",
+      "source": "https://pypi.org/pypi/colorama/json",
+      "status": "wheel",
+      "version": "0.4.6",
+      "wheels": [
+        "colorama-0.4.6-py2.py3-none-any.whl"
+      ]
+    },
+    {
+      "requirement": "comm==0.2.3",
+      "name": "comm",
+      "source": "https://pypi.org/pypi/comm/json",
+      "status": "wheel",
+      "version": "0.2.3",
+      "wheels": [
+        "comm-0.2.3-py3-none-any.whl"
+      ]
+    },
+    {
+      "requirement": "compel==2.3.1",
+      "name": "compel",
+      "source": "https://pypi.org/pypi/compel/json",
+      "status": "wheel",
+      "version": "2.3.1",
+      "wheels": [
+        "compel-2.3.1-py3-none-any.whl"
+      ]
+    },
+    {
+      "requirement": "conformer==0.3.2",
+      "name": "conformer",
+      "source": "https://pypi.org/pypi/conformer/json",
+      "status": "wheel",
+      "version": "0.3.2",
+      "wheels": [
+        "conformer-0.3.2-py3-none-any.whl"
+      ]
+    },
+    {
+      "requirement": "contourpy==1.4.0",
+      "name": "contourpy",
+      "source": "https://pypi.org/pypi/contourpy/json",
+      "status": "wheel",
+      "version": "1.4.0",
+      "wheels": [
+        "contourpy-1.4.0-cp312-cp312-win_arm64.whl"
+      ]
+    },
+    {
+      "requirement": "controlnet-aux==0.0.10+ssui.cpu.r1.b7286b30fa4bc",
+      "name": "controlnet-aux",
+      "source": "https://sunxfancy.github.io/ssui-python-packages/simple/windows/arm64/cpu/controlnet-aux/",
+      "indexErrors": [
+        {
+          "index": "https://download.pytorch.org/whl/cpu/controlnet-aux/",
+          "error": "HTTP Error 403: Forbidden"
+        },
+        {
+          "index": "https://sunxfancy.github.io/ssui-python-packages/simple/windows/arm64/cpu/2.9.1/controlnet-aux/",
+          "error": "HTTP Error 404: Not Found"
+        }
+      ],
+      "status": "wheel",
+      "version": "0.0.10+ssui.cpu.r1.b7286b30fa4bc",
+      "wheels": [
+        "controlnet_aux-0.0.10+ssui.cpu.r1.b7286b30fa4bc-py3-none-any.whl"
+      ]
+    },
+    {
+      "requirement": "cycler==0.12.1",
+      "name": "cycler",
+      "source": "https://pypi.org/pypi/cycler/json",
+      "status": "wheel",
+      "version": "0.12.1",
+      "wheels": [
+        "cycler-0.12.1-py3-none-any.whl"
+      ]
+    },
+    {
+      "requirement": "cython==3.3.0",
+      "name": "cython",
+      "source": "https://pypi.org/pypi/cython/json",
+      "status": "wheel",
+      "version": "3.3.0",
+      "wheels": [
+        "cython-3.3.0-cp39-abi3-win_arm64.whl",
+        "cython-3.3.0-py3-none-any.whl"
+      ]
+    },
+    {
+      "requirement": "debugpy==1.8.22",
+      "name": "debugpy",
+      "source": "https://pypi.org/pypi/debugpy/json",
+      "status": "wheel",
+      "version": "1.8.22",
+      "wheels": [
+        "debugpy-1.8.22-py2.py3-none-any.whl"
+      ]
+    },
+    {
+      "requirement": "decorator==5.3.1",
+      "name": "decorator",
+      "source": "https://pypi.org/pypi/decorator/json",
+      "status": "wheel",
+      "version": "5.3.1",
+      "wheels": [
+        "decorator-5.3.1-py3-none-any.whl"
+      ]
+    },
+    {
+      "requirement": "defusedxml==0.7.1",
+      "name": "defusedxml",
+      "source": "https://pypi.org/pypi/defusedxml/json",
+      "status": "wheel",
+      "version": "0.7.1",
+      "wheels": [
+        "defusedxml-0.7.1-py2.py3-none-any.whl"
+      ]
+    },
+    {
+      "requirement": "deprecated==3.0.0",
+      "name": "deprecated",
+      "source": "https://pypi.org/pypi/deprecated/json",
+      "status": "wheel",
+      "version": "3.0.0",
+      "wheels": [
+        "deprecated-3.0.0-py3-none-any.whl"
+      ]
+    },
+    {
+      "requirement": "detect-installer==0.2.1",
+      "name": "detect-installer",
+      "source": "https://pypi.org/pypi/detect-installer/json",
+      "status": "wheel",
+      "version": "0.2.1",
+      "wheels": [
+        "detect_installer-0.2.1-py3-none-any.whl"
+      ]
+    },
+    {
+      "requirement": "diffusers==0.39.0",
+      "name": "diffusers",
+      "source": "https://pypi.org/pypi/diffusers/json",
+      "status": "wheel",
+      "version": "0.39.0",
+      "wheels": [
+        "diffusers-0.39.0-py3-none-any.whl"
+      ]
+    },
+    {
+      "requirement": "distlib==0.4.4",
+      "name": "distlib",
+      "source": "https://pypi.org/pypi/distlib/json",
+      "status": "wheel",
+      "version": "0.4.4",
+      "wheels": [
+        "distlib-0.4.4-py2.py3-none-any.whl"
+      ]
+    },
+    {
+      "requirement": "dnspython==2.9.0",
+      "name": "dnspython",
+      "source": "https://pypi.org/pypi/dnspython/json",
+      "status": "wheel",
+      "version": "2.9.0",
+      "wheels": [
+        "dnspython-2.9.0-py3-none-any.whl"
+      ]
+    },
+    {
+      "requirement": "easydict==1.13",
+      "name": "easydict",
+      "source": "https://pypi.org/pypi/easydict/json",
+      "status": "wheel",
+      "version": "1.13",
+      "wheels": [
+        "easydict-1.13-py3-none-any.whl"
+      ]
+    },
+    {
+      "requirement": "einops==0.8.2",
+      "name": "einops",
+      "source": "https://pypi.org/pypi/einops/json",
+      "status": "wheel",
+      "version": "0.8.2",
+      "wheels": [
+        "einops-0.8.2-py3-none-any.whl"
+      ]
+    },
+    {
+      "requirement": "email-validator==2.3.0",
+      "name": "email-validator",
+      "source": "https://pypi.org/pypi/email-validator/json",
+      "status": "wheel",
+      "version": "2.3.0",
+      "wheels": [
+        "email_validator-2.3.0-py3-none-any.whl"
+      ]
+    },
+    {
+      "requirement": "executing==2.3.0",
+      "name": "executing",
+      "source": "https://pypi.org/pypi/executing/json",
+      "status": "wheel",
+      "version": "2.3.0",
+      "wheels": [
+        "executing-2.3.0-py3-none-any.whl"
+      ]
+    },
+    {
+      "requirement": "fastapi==0.161.1",
+      "name": "fastapi",
+      "source": "https://pypi.org/pypi/fastapi/json",
+      "status": "wheel",
+      "version": "0.161.1",
+      "wheels": [
+        "fastapi-0.161.1-py3-none-any.whl"
+      ]
+    },
+    {
+      "requirement": "fastapi-cli==0.0.32",
+      "name": "fastapi-cli",
+      "source": "https://pypi.org/pypi/fastapi-cli/json",
+      "status": "wheel",
+      "version": "0.0.32",
+      "wheels": [
+        "fastapi_cli-0.0.32-py3-none-any.whl"
+      ]
+    },
+    {
+      "requirement": "fastapi-cloud-cli==0.26.0",
+      "name": "fastapi-cloud-cli",
+      "source": "https://pypi.org/pypi/fastapi-cloud-cli/json",
+      "status": "wheel",
+      "version": "0.26.0",
+      "wheels": [
+        "fastapi_cloud_cli-0.26.0-py3-none-any.whl"
+      ]
+    },
+    {
+      "requirement": "fastar==0.12.0",
+      "name": "fastar",
+      "source": "https://pypi.org/pypi/fastar/json",
+      "status": "wheel",
+      "version": "0.12.0",
+      "wheels": [
+        "fastar-0.12.0-cp312-cp312-win_arm64.whl"
+      ]
+    },
+    {
+      "requirement": "fastjsonschema==2.22.2",
+      "name": "fastjsonschema",
+      "source": "https://pypi.org/pypi/fastjsonschema/json",
+      "status": "wheel",
+      "version": "2.22.2",
+      "wheels": [
+        "fastjsonschema-2.22.2-py3-none-any.whl"
+      ]
+    },
+    {
+      "requirement": "filelock==4.2.4",
+      "name": "filelock",
+      "source": "https://pypi.org/pypi/filelock/json",
+      "status": "wheel",
+      "version": "4.2.4",
+      "wheels": [
+        "filelock-4.2.4-py3-none-any.whl"
+      ]
+    },
+    {
+      "requirement": "flatbuffers==25.12.19",
+      "name": "flatbuffers",
+      "source": "https://pypi.org/pypi/flatbuffers/json",
+      "status": "wheel",
+      "version": "25.12.19",
+      "wheels": [
+        "flatbuffers-25.12.19-py2.py3-none-any.whl"
+      ]
+    },
+    {
+      "requirement": "fonttools==4.67.0",
+      "name": "fonttools",
+      "source": "https://pypi.org/pypi/fonttools/json",
+      "status": "wheel",
+      "version": "4.67.0",
+      "wheels": [
+        "fonttools-4.67.0-py3-none-any.whl"
+      ]
+    },
+    {
+      "requirement": "fqdn==1.6.0",
+      "name": "fqdn",
+      "source": "https://pypi.org/pypi/fqdn/json",
+      "status": "wheel",
+      "version": "1.6.0",
+      "wheels": [
+        "fqdn-1.6.0-py3-none-any.whl"
+      ]
+    },
+    {
+      "requirement": "frozenlist==1.8.0",
+      "name": "frozenlist",
+      "source": "https://pypi.org/pypi/frozenlist/json",
+      "status": "wheel",
+      "version": "1.8.0",
+      "wheels": [
+        "frozenlist-1.8.0-cp312-cp312-win_arm64.whl",
+        "frozenlist-1.8.0-py3-none-any.whl"
+      ]
+    },
+    {
+      "requirement": "fsspec==2026.9.0",
+      "name": "fsspec",
+      "source": "https://pypi.org/pypi/fsspec/json",
+      "status": "wheel",
+      "version": "2026.9.0",
+      "wheels": [
+        "fsspec-2026.9.0-py3-none-any.whl"
+      ]
+    },
+    {
+      "requirement": "ftfy==6.3.1",
+      "name": "ftfy",
+      "source": "https://pypi.org/pypi/ftfy/json",
+      "status": "wheel",
+      "version": "6.3.1",
+      "wheels": [
+        "ftfy-6.3.1-py3-none-any.whl"
+      ]
+    },
+    {
+      "requirement": "gguf==0.19.0",
+      "name": "gguf",
+      "source": "https://pypi.org/pypi/gguf/json",
+      "status": "wheel",
+      "version": "0.19.0",
+      "wheels": [
+        "gguf-0.19.0-py3-none-any.whl"
+      ]
+    },
+    {
+      "requirement": "glcontext==3.0.0+ssui.cpu.r1.bf1816f253e6a",
+      "name": "glcontext",
+      "source": "https://sunxfancy.github.io/ssui-python-packages/simple/windows/arm64/cpu/glcontext/",
+      "indexErrors": [
+        {
+          "index": "https://download.pytorch.org/whl/cpu/glcontext/",
+          "error": "HTTP Error 403: Forbidden"
+        },
+        {
+          "index": "https://sunxfancy.github.io/ssui-python-packages/simple/windows/arm64/cpu/2.9.1/glcontext/",
+          "error": "HTTP Error 404: Not Found"
+        }
+      ],
+      "status": "wheel",
+      "version": "3.0.0+ssui.cpu.r1.bf1816f253e6a",
+      "wheels": [
+        "glcontext-3.0.0+ssui.cpu.r1.bf1816f253e6a-cp312-cp312-win_arm64.whl"
+      ]
+    },
+    {
+      "requirement": "googleapis-common-protos==1.76.0",
+      "name": "googleapis-common-protos",
+      "source": "https://pypi.org/pypi/googleapis-common-protos/json",
+      "status": "wheel",
+      "version": "1.76.0",
+      "wheels": [
+        "googleapis_common_protos-1.76.0-py3-none-any.whl"
+      ]
+    },
+    {
+      "requirement": "h11==0.16.0",
+      "name": "h11",
+      "source": "https://pypi.org/pypi/h11/json",
+      "status": "wheel",
+      "version": "0.16.0",
+      "wheels": [
+        "h11-0.16.0-py3-none-any.whl"
+      ]
+    },
+    {
+      "requirement": "hf-transfer==0.1.9+ssui.cpu.r1.b0a21e114de54",
+      "name": "hf-transfer",
+      "source": "https://sunxfancy.github.io/ssui-python-packages/simple/windows/arm64/cpu/hf-transfer/",
+      "indexErrors": [
+        {
+          "index": "https://download.pytorch.org/whl/cpu/hf-transfer/",
+          "error": "HTTP Error 403: Forbidden"
+        },
+        {
+          "index": "https://sunxfancy.github.io/ssui-python-packages/simple/windows/arm64/cpu/2.9.1/hf-transfer/",
+          "error": "HTTP Error 404: Not Found"
+        }
+      ],
+      "status": "wheel",
+      "version": "0.1.9+ssui.cpu.r1.b0a21e114de54",
+      "wheels": [
+        "hf_transfer-0.1.9+ssui.cpu.r1.b0a21e114de54-cp38-abi3-win_arm64.whl"
+      ]
+    },
+    {
+      "requirement": "hf-xet==1.7.0",
+      "name": "hf-xet",
+      "source": "https://pypi.org/pypi/hf-xet/json",
+      "status": "wheel",
+      "version": "1.7.0",
+      "wheels": [
+        "hf_xet-1.7.0-cp38-abi3-win_arm64.whl"
+      ]
+    },
+    {
+      "requirement": "httpcore==1.0.9",
+      "name": "httpcore",
+      "source": "https://pypi.org/pypi/httpcore/json",
+      "status": "wheel",
+      "version": "1.0.9",
+      "wheels": [
+        "httpcore-1.0.9-py3-none-any.whl"
+      ]
+    },
+    {
+      "requirement": "httpcore2==2.16.0",
+      "name": "httpcore2",
+      "source": "https://pypi.org/pypi/httpcore2/json",
+      "status": "wheel",
+      "version": "2.16.0",
+      "wheels": [
+        "httpcore2-2.16.0-py3-none-any.whl"
+      ]
+    },
+    {
+      "requirement": "httptools==0.9.0",
+      "name": "httptools",
+      "source": "https://pypi.org/pypi/httptools/json",
+      "status": "wheel",
+      "version": "0.9.0",
+      "wheels": [
+        "httptools-0.9.0-cp312-cp312-win_arm64.whl"
+      ]
+    },
+    {
+      "requirement": "httpx==0.28.1",
+      "name": "httpx",
+      "source": "https://pypi.org/pypi/httpx/json",
+      "status": "wheel",
+      "version": "0.28.1",
+      "wheels": [
+        "httpx-0.28.1-py3-none-any.whl"
+      ]
+    },
+    {
+      "requirement": "httpx2==2.16.0",
+      "name": "httpx2",
+      "source": "https://pypi.org/pypi/httpx2/json",
+      "status": "wheel",
+      "version": "2.16.0",
+      "wheels": [
+        "httpx2-2.16.0-py3-none-any.whl"
+      ]
+    },
+    {
+      "requirement": "huggingface-hub==0.36.2",
+      "name": "huggingface-hub",
+      "source": "https://pypi.org/pypi/huggingface-hub/json",
+      "status": "wheel",
+      "version": "0.36.2",
+      "wheels": [
+        "huggingface_hub-0.36.2-py3-none-any.whl"
+      ]
+    },
+    {
+      "requirement": "hydra-core==1.3.2",
+      "name": "hydra-core",
+      "source": "https://pypi.org/pypi/hydra-core/json",
+      "status": "wheel",
+      "version": "1.3.2",
+      "wheels": [
+        "hydra_core-1.3.2-py3-none-any.whl"
+      ]
+    },
+    {
+      "requirement": "idna==3.20",
+      "name": "idna",
+      "source": "https://pypi.org/pypi/idna/json",
+      "status": "wheel",
+      "version": "3.20",
+      "wheels": [
+        "idna-3.20-py3-none-any.whl"
+      ]
+    },
+    {
+      "requirement": "igraph==1.0.0",
+      "name": "igraph",
+      "source": "https://pypi.org/pypi/igraph/json",
+      "status": "wheel",
+      "version": "1.0.0",
+      "wheels": [
+        "igraph-1.0.0-cp39-abi3-win_arm64.whl"
+      ]
+    },
+    {
+      "requirement": "imageio==2.38.1",
+      "name": "imageio",
+      "source": "https://pypi.org/pypi/imageio/json",
+      "status": "wheel",
+      "version": "2.38.1",
+      "wheels": [
+        "imageio-2.38.1-py3-none-any.whl"
+      ]
+    },
+    {
+      "requirement": "imageio-ffmpeg==0.6.0+ssui.cpu.r2.b06fa0f77c82a",
+      "name": "imageio-ffmpeg",
+      "source": "https://sunxfancy.github.io/ssui-python-packages/simple/windows/arm64/cpu/imageio-ffmpeg/",
+      "indexErrors": [
+        {
+          "index": "https://download.pytorch.org/whl/cpu/imageio-ffmpeg/",
+          "error": "HTTP Error 403: Forbidden"
+        },
+        {
+          "index": "https://sunxfancy.github.io/ssui-python-packages/simple/windows/arm64/cpu/2.9.1/imageio-ffmpeg/",
+          "error": "HTTP Error 404: Not Found"
+        }
+      ],
+      "status": "wheel",
+      "version": "0.6.0+ssui.cpu.r2.b06fa0f77c82a",
+      "wheels": [
+        "imageio_ffmpeg-0.6.0+ssui.cpu.r2.b06fa0f77c82a-py3-none-win_arm64.whl"
+      ]
+    },
+    {
+      "requirement": "importlib-metadata==9.1.0",
+      "name": "importlib-metadata",
+      "source": "https://pypi.org/pypi/importlib-metadata/json",
+      "status": "wheel",
+      "version": "9.1.0",
+      "wheels": [
+        "importlib_metadata-9.1.0-py3-none-any.whl"
+      ]
+    },
+    {
+      "requirement": "importlib-resources==7.1.0",
+      "name": "importlib-resources",
+      "source": "https://pypi.org/pypi/importlib-resources/json",
+      "status": "wheel",
+      "version": "7.1.0",
+      "wheels": [
+        "importlib_resources-7.1.0-py3-none-any.whl"
+      ]
+    },
+    {
+      "requirement": "ipykernel==7.4.0",
+      "name": "ipykernel",
+      "source": "https://pypi.org/pypi/ipykernel/json",
+      "status": "wheel",
+      "version": "7.4.0",
+      "wheels": [
+        "ipykernel-7.4.0-py3-none-any.whl"
+      ]
+    },
+    {
+      "requirement": "ipython==9.17.1",
+      "name": "ipython",
+      "source": "https://pypi.org/pypi/ipython/json",
+      "status": "wheel",
+      "version": "9.17.1",
+      "wheels": [
+        "ipython-9.17.1-py3-none-any.whl"
+      ]
+    },
+    {
+      "requirement": "ipython-pygments-lexers==1.1.1",
+      "name": "ipython-pygments-lexers",
+      "source": "https://pypi.org/pypi/ipython-pygments-lexers/json",
+      "status": "wheel",
+      "version": "1.1.1",
+      "wheels": [
+        "ipython_pygments_lexers-1.1.1-py3-none-any.whl"
+      ]
+    },
+    {
+      "requirement": "isoduration==20.11.0",
+      "name": "isoduration",
+      "source": "https://pypi.org/pypi/isoduration/json",
+      "status": "wheel",
+      "version": "20.11.0",
+      "wheels": [
+        "isoduration-20.11.0-py3-none-any.whl"
+      ]
+    },
+    {
+      "requirement": "jedi==0.20.1",
+      "name": "jedi",
+      "source": "https://pypi.org/pypi/jedi/json",
+      "status": "wheel",
+      "version": "0.20.1",
+      "wheels": [
+        "jedi-0.20.1-py2.py3-none-any.whl"
+      ]
+    },
+    {
+      "requirement": "jinja2==3.1.6",
+      "name": "jinja2",
+      "source": "https://pypi.org/pypi/jinja2/json",
+      "status": "wheel",
+      "version": "3.1.6",
+      "wheels": [
+        "jinja2-3.1.6-py3-none-any.whl"
+      ]
+    },
+    {
+      "requirement": "joblib==1.6.0",
+      "name": "joblib",
+      "source": "https://pypi.org/pypi/joblib/json",
+      "status": "wheel",
+      "version": "1.6.0",
+      "wheels": [
+        "joblib-1.6.0-py3-none-any.whl"
+      ]
+    },
+    {
+      "requirement": "json5==0.17.3",
+      "name": "json5",
+      "source": "https://pypi.org/pypi/json5/json",
+      "status": "wheel",
+      "version": "0.17.3",
+      "wheels": [
+        "json5-0.17.3-py3-none-any.whl"
+      ]
+    },
+    {
+      "requirement": "jsonpointer==3.4",
+      "name": "jsonpointer",
+      "source": "https://pypi.org/pypi/jsonpointer/json",
+      "status": "wheel",
+      "version": "3.4",
+      "wheels": [
+        "jsonpointer-3.4-py3-none-any.whl"
+      ]
+    },
+    {
+      "requirement": "jsonschema==4.26.0",
+      "name": "jsonschema",
+      "source": "https://pypi.org/pypi/jsonschema/json",
+      "status": "wheel",
+      "version": "4.26.0",
+      "wheels": [
+        "jsonschema-4.26.0-py3-none-any.whl"
+      ]
+    },
+    {
+      "requirement": "jsonschema-specifications==2025.9.1",
+      "name": "jsonschema-specifications",
+      "source": "https://pypi.org/pypi/jsonschema-specifications/json",
+      "status": "wheel",
+      "version": "2025.9.1",
+      "wheels": [
+        "jsonschema_specifications-2025.9.1-py3-none-any.whl"
+      ]
+    },
+    {
+      "requirement": "jupyter-builder==1.2.3",
+      "name": "jupyter-builder",
+      "source": "https://pypi.org/pypi/jupyter-builder/json",
+      "status": "wheel",
+      "version": "1.2.3",
+      "wheels": [
+        "jupyter_builder-1.2.3-py3-none-any.whl"
+      ]
+    },
+    {
+      "requirement": "jupyter-client==8.10.0",
+      "name": "jupyter-client",
+      "source": "https://pypi.org/pypi/jupyter-client/json",
+      "status": "wheel",
+      "version": "8.10.0",
+      "wheels": [
+        "jupyter_client-8.10.0-py3-none-any.whl"
+      ]
+    },
+    {
+      "requirement": "jupyter-core==5.9.1",
+      "name": "jupyter-core",
+      "source": "https://pypi.org/pypi/jupyter-core/json",
+      "status": "wheel",
+      "version": "5.9.1",
+      "wheels": [
+        "jupyter_core-5.9.1-py3-none-any.whl"
+      ]
+    },
+    {
+      "requirement": "jupyter-events==0.12.1",
+      "name": "jupyter-events",
+      "source": "https://pypi.org/pypi/jupyter-events/json",
+      "status": "wheel",
+      "version": "0.12.1",
+      "wheels": [
+        "jupyter_events-0.12.1-py3-none-any.whl"
+      ]
+    },
+    {
+      "requirement": "jupyter-lsp==2.3.1",
+      "name": "jupyter-lsp",
+      "source": "https://pypi.org/pypi/jupyter-lsp/json",
+      "status": "wheel",
+      "version": "2.3.1",
+      "wheels": [
+        "jupyter_lsp-2.3.1-py3-none-any.whl"
+      ]
+    },
+    {
+      "requirement": "jupyter-server==2.21.1",
+      "name": "jupyter-server",
+      "source": "https://pypi.org/pypi/jupyter-server/json",
+      "status": "wheel",
+      "version": "2.21.1",
+      "wheels": [
+        "jupyter_server-2.21.1-py3-none-any.whl"
+      ]
+    },
+    {
+      "requirement": "jupyter-server-terminals==0.5.4",
+      "name": "jupyter-server-terminals",
+      "source": "https://pypi.org/pypi/jupyter-server-terminals/json",
+      "status": "wheel",
+      "version": "0.5.4",
+      "wheels": [
+        "jupyter_server_terminals-0.5.4-py3-none-any.whl"
+      ]
+    },
+    {
+      "requirement": "jupyterlab==4.6.4",
+      "name": "jupyterlab",
+      "source": "https://pypi.org/pypi/jupyterlab/json",
+      "status": "wheel",
+      "version": "4.6.4",
+      "wheels": [
+        "jupyterlab-4.6.4-py3-none-any.whl"
+      ]
+    },
+    {
+      "requirement": "jupyterlab-pygments==0.3.0",
+      "name": "jupyterlab-pygments",
+      "source": "https://pypi.org/pypi/jupyterlab-pygments/json",
+      "status": "wheel",
+      "version": "0.3.0",
+      "wheels": [
+        "jupyterlab_pygments-0.3.0-py3-none-any.whl"
+      ]
+    },
+    {
+      "requirement": "jupyterlab-server==2.28.1",
+      "name": "jupyterlab-server",
+      "source": "https://pypi.org/pypi/jupyterlab-server/json",
+      "status": "wheel",
+      "version": "2.28.1",
+      "wheels": [
+        "jupyterlab_server-2.28.1-py3-none-any.whl"
+      ]
+    },
+    {
+      "requirement": "kiwisolver==1.5.1",
+      "name": "kiwisolver",
+      "source": "https://pypi.org/pypi/kiwisolver/json",
+      "status": "wheel",
+      "version": "1.5.1",
+      "wheels": [
+        "kiwisolver-1.5.1-cp312-cp312-win_arm64.whl"
+      ]
+    },
+    {
+      "requirement": "kornia==0.8.3",
+      "name": "kornia",
+      "source": "https://pypi.org/pypi/kornia/json",
+      "status": "wheel",
+      "version": "0.8.3",
+      "wheels": [
+        "kornia-0.8.3-py3-none-any.whl"
+      ]
+    },
+    {
+      "requirement": "kornia-rs==0.2.0",
+      "name": "kornia-rs",
+      "source": "https://pypi.org/pypi/kornia-rs/json",
+      "status": "wheel",
+      "version": "0.2.0",
+      "wheels": [
+        "kornia_rs-0.2.0-cp312-cp312-win_arm64.whl"
+      ]
+    },
+    {
+      "requirement": "lark==1.3.1",
+      "name": "lark",
+      "source": "https://pypi.org/pypi/lark/json",
+      "status": "wheel",
+      "version": "1.3.1",
+      "wheels": [
+        "lark-1.3.1-py3-none-any.whl"
+      ]
+    },
+    {
+      "requirement": "lazy-loader==0.6",
+      "name": "lazy-loader",
+      "source": "https://pypi.org/pypi/lazy-loader/json",
+      "status": "wheel",
+      "version": "0.6",
+      "wheels": [
+        "lazy_loader-0.6-py3-none-any.whl"
+      ]
+    },
+    {
+      "requirement": "librosa==0.11.0",
+      "name": "librosa",
+      "source": "https://pypi.org/pypi/librosa/json",
+      "status": "wheel",
+      "version": "0.11.0",
+      "wheels": [
+        "librosa-0.11.0-py3-none-any.whl"
+      ]
+    },
+    {
+      "requirement": "llvmlite==0.50.0",
+      "name": "llvmlite",
+      "source": "https://pypi.org/pypi/llvmlite/json",
+      "status": "wheel",
+      "version": "0.50.0",
+      "wheels": [
+        "llvmlite-0.50.0-cp312-cp312-win_arm64.whl"
+      ]
+    },
+    {
+      "requirement": "markdown-it-py==4.2.0",
+      "name": "markdown-it-py",
+      "source": "https://pypi.org/pypi/markdown-it-py/json",
+      "status": "wheel",
+      "version": "4.2.0",
+      "wheels": [
+        "markdown_it_py-4.2.0-py3-none-any.whl"
+      ]
+    },
+    {
+      "requirement": "markupsafe==3.0.4",
+      "name": "markupsafe",
+      "source": "https://pypi.org/pypi/markupsafe/json",
+      "status": "wheel",
+      "version": "3.0.4",
+      "wheels": [
+        "markupsafe-3.0.4-cp312-cp312-win_arm64.whl"
+      ]
+    },
+    {
+      "requirement": "matplotlib==3.11.2",
+      "name": "matplotlib",
+      "source": "https://pypi.org/pypi/matplotlib/json",
+      "status": "wheel",
+      "version": "3.11.2",
+      "wheels": [
+        "matplotlib-3.11.2-cp312-cp312-win_arm64.whl"
+      ]
+    },
+    {
+      "requirement": "matplotlib-inline==0.2.2",
+      "name": "matplotlib-inline",
+      "source": "https://pypi.org/pypi/matplotlib-inline/json",
+      "status": "wheel",
+      "version": "0.2.2",
+      "wheels": [
+        "matplotlib_inline-0.2.2-py3-none-any.whl"
+      ]
+    },
+    {
+      "requirement": "mdurl==0.1.2",
+      "name": "mdurl",
+      "source": "https://pypi.org/pypi/mdurl/json",
+      "status": "wheel",
+      "version": "0.1.2",
+      "wheels": [
+        "mdurl-0.1.2-py3-none-any.whl"
+      ]
+    },
+    {
+      "requirement": "mediapipe==1.1.1+ssui.cpu.r1.b45e54946cee2",
+      "name": "mediapipe",
+      "source": "https://sunxfancy.github.io/ssui-python-packages/simple/windows/arm64/cpu/mediapipe/",
+      "indexErrors": [
+        {
+          "index": "https://download.pytorch.org/whl/cpu/mediapipe/",
+          "error": "HTTP Error 403: Forbidden"
+        },
+        {
+          "index": "https://sunxfancy.github.io/ssui-python-packages/simple/windows/arm64/cpu/2.9.1/mediapipe/",
+          "error": "HTTP Error 404: Not Found"
+        }
+      ],
+      "status": "wheel",
+      "version": "1.1.1+ssui.cpu.r1.b45e54946cee2",
+      "wheels": [
+        "mediapipe-1.1.1+ssui.cpu.r1.b45e54946cee2-py3-none-win_arm64.whl"
+      ]
+    },
+    {
+      "requirement": "mistune==3.4.0",
+      "name": "mistune",
+      "source": "https://pypi.org/pypi/mistune/json",
+      "status": "wheel",
+      "version": "3.4.0",
+      "wheels": [
+        "mistune-3.4.0-py3-none-any.whl"
+      ]
+    },
+    {
+      "requirement": "ml-dtypes==0.6.0",
+      "name": "ml-dtypes",
+      "source": "https://pypi.org/pypi/ml-dtypes/json",
+      "status": "wheel",
+      "version": "0.6.0",
+      "wheels": [
+        "ml_dtypes-0.6.0-cp312-cp312-win_arm64.whl"
+      ]
+    },
+    {
+      "requirement": "modelscope==1.26.0",
+      "name": "modelscope",
+      "source": "https://pypi.org/pypi/modelscope/json",
+      "status": "wheel",
+      "version": "1.26.0",
+      "wheels": [
+        "modelscope-1.26.0-py3-none-any.whl"
+      ]
+    },
+    {
+      "requirement": "moderngl==5.12.0+ssui.cpu.r1.be987004179e0",
+      "name": "moderngl",
+      "source": "https://sunxfancy.github.io/ssui-python-packages/simple/windows/arm64/cpu/moderngl/",
+      "indexErrors": [
+        {
+          "index": "https://download.pytorch.org/whl/cpu/moderngl/",
+          "error": "HTTP Error 403: Forbidden"
+        },
+        {
+          "index": "https://sunxfancy.github.io/ssui-python-packages/simple/windows/arm64/cpu/2.9.1/moderngl/",
+          "error": "HTTP Error 404: Not Found"
+        }
+      ],
+      "status": "wheel",
+      "version": "5.12.0+ssui.cpu.r1.be987004179e0",
+      "wheels": [
+        "moderngl-5.12.0+ssui.cpu.r1.be987004179e0-cp312-cp312-win_arm64.whl"
+      ]
+    },
+    {
+      "requirement": "more-itertools==11.2.1",
+      "name": "more-itertools",
+      "source": "https://pypi.org/pypi/more-itertools/json",
+      "status": "wheel",
+      "version": "11.2.1",
+      "wheels": [
+        "more_itertools-11.2.1-py3-none-any.whl"
+      ]
+    },
+    {
+      "requirement": "mpmath==1.3.0",
+      "name": "mpmath",
+      "source": "https://pypi.org/pypi/mpmath/json",
+      "status": "wheel",
+      "version": "1.3.0",
+      "wheels": [
+        "mpmath-1.3.0-py3-none-any.whl"
+      ]
+    },
+    {
+      "requirement": "msgpack==1.2.3",
+      "name": "msgpack",
+      "source": "https://pypi.org/pypi/msgpack/json",
+      "status": "wheel",
+      "version": "1.2.3",
+      "wheels": [
+        "msgpack-1.2.3-cp312-cp312-win_arm64.whl"
+      ]
+    },
+    {
+      "requirement": "multidict==7.1.0",
+      "name": "multidict",
+      "source": "https://pypi.org/pypi/multidict/json",
+      "status": "wheel",
+      "version": "7.1.0",
+      "wheels": [
+        "multidict-7.1.0-cp312-cp312-win_arm64.whl",
+        "multidict-7.1.0-py3-none-any.whl"
+      ]
+    },
+    {
+      "requirement": "narwhals==2.27.1",
+      "name": "narwhals",
+      "source": "https://pypi.org/pypi/narwhals/json",
+      "status": "wheel",
+      "version": "2.27.1",
+      "wheels": [
+        "narwhals-2.27.1-py3-none-any.whl"
+      ]
+    },
+    {
+      "requirement": "nbclient==0.11.0",
+      "name": "nbclient",
+      "source": "https://pypi.org/pypi/nbclient/json",
+      "status": "wheel",
+      "version": "0.11.0",
+      "wheels": [
+        "nbclient-0.11.0-py3-none-any.whl"
+      ]
+    },
+    {
+      "requirement": "nbconvert==7.17.2",
+      "name": "nbconvert",
+      "source": "https://pypi.org/pypi/nbconvert/json",
+      "status": "wheel",
+      "version": "7.17.2",
+      "wheels": [
+        "nbconvert-7.17.2-py3-none-any.whl"
+      ]
+    },
+    {
+      "requirement": "nbformat==5.11.1",
+      "name": "nbformat",
+      "source": "https://pypi.org/pypi/nbformat/json",
+      "status": "wheel",
+      "version": "5.11.1",
+      "wheels": [
+        "nbformat-5.11.1-py3-none-any.whl"
+      ]
+    },
+    {
+      "requirement": "nest-asyncio2==1.7.4",
+      "name": "nest-asyncio2",
+      "source": "https://pypi.org/pypi/nest-asyncio2/json",
+      "status": "wheel",
+      "version": "1.7.4",
+      "wheels": [
+        "nest_asyncio2-1.7.4-py3-none-any.whl"
+      ]
+    },
+    {
+      "requirement": "networkx==3.3",
+      "name": "networkx",
+      "source": "https://pypi.org/pypi/networkx/json",
+      "status": "wheel",
+      "version": "3.3",
+      "wheels": [
+        "networkx-3.3-py3-none-any.whl"
+      ]
+    },
+    {
+      "requirement": "notebook==7.6.3",
+      "name": "notebook",
+      "source": "https://pypi.org/pypi/notebook/json",
+      "status": "wheel",
+      "version": "7.6.3",
+      "wheels": [
+        "notebook-7.6.3-py3-none-any.whl"
+      ]
+    },
+    {
+      "requirement": "notebook-shim==0.2.4",
+      "name": "notebook-shim",
+      "source": "https://pypi.org/pypi/notebook-shim/json",
+      "status": "wheel",
+      "version": "0.2.4",
+      "wheels": [
+        "notebook_shim-0.2.4-py3-none-any.whl"
+      ]
+    },
+    {
+      "requirement": "numba==0.68.0",
+      "name": "numba",
+      "source": "https://pypi.org/pypi/numba/json",
+      "status": "wheel",
+      "version": "0.68.0",
+      "wheels": [
+        "numba-0.68.0-cp312-cp312-win_arm64.whl"
+      ]
+    },
+    {
+      "requirement": "numpy==2.5.4",
+      "name": "numpy",
+      "source": "https://pypi.org/pypi/numpy/json",
+      "status": "wheel",
+      "version": "2.5.4",
+      "wheels": [
+        "numpy-2.5.4-cp312-cp312-win_arm64.whl"
+      ]
+    },
+    {
+      "requirement": "omegaconf==2.3.1",
+      "name": "omegaconf",
+      "source": "https://pypi.org/pypi/omegaconf/json",
+      "status": "wheel",
+      "version": "2.3.1",
+      "wheels": [
+        "omegaconf-2.3.1-py3-none-any.whl"
+      ]
+    },
+    {
+      "requirement": "onnx==1.23.2",
+      "name": "onnx",
+      "source": "https://pypi.org/pypi/onnx/json",
+      "status": "wheel",
+      "version": "1.23.2",
+      "wheels": [
+        "onnx-1.23.2-cp312-abi3-win_arm64.whl"
+      ]
+    },
+    {
+      "requirement": "onnxruntime==1.31.0",
+      "name": "onnxruntime",
+      "source": "https://pypi.org/pypi/onnxruntime/json",
+      "status": "wheel",
+      "version": "1.31.0",
+      "wheels": [
+        "onnxruntime-1.31.0-cp312-cp312-win_arm64.whl"
+      ]
+    },
+    {
+      "requirement": "openai-whisper==20240930+ssui.cpu.r1.b7b7485ae8627",
+      "name": "openai-whisper",
+      "source": "https://sunxfancy.github.io/ssui-python-packages/simple/windows/arm64/cpu/openai-whisper/",
+      "indexErrors": [
+        {
+          "index": "https://download.pytorch.org/whl/cpu/openai-whisper/",
+          "error": "HTTP Error 403: Forbidden"
+        },
+        {
+          "index": "https://sunxfancy.github.io/ssui-python-packages/simple/windows/arm64/cpu/2.9.1/openai-whisper/",
+          "error": "HTTP Error 404: Not Found"
+        }
+      ],
+      "status": "wheel",
+      "version": "20240930+ssui.cpu.r1.b7b7485ae8627",
+      "wheels": [
+        "openai_whisper-20240930+ssui.cpu.r1.b7b7485ae8627-py3-none-any.whl"
+      ]
+    },
+    {
+      "requirement": "opencv-python-headless==4.11.0.86+ssui.cpu.r1.b05e8c6d74ea4",
+      "name": "opencv-python-headless",
+      "source": "https://sunxfancy.github.io/ssui-python-packages/simple/windows/arm64/cpu/opencv-python-headless/",
+      "indexErrors": [
+        {
+          "index": "https://download.pytorch.org/whl/cpu/opencv-python-headless/",
+          "error": "HTTP Error 403: Forbidden"
+        },
+        {
+          "index": "https://sunxfancy.github.io/ssui-python-packages/simple/windows/arm64/cpu/2.9.1/opencv-python-headless/",
+          "error": "HTTP Error 404: Not Found"
+        }
+      ],
+      "status": "wheel",
+      "version": "4.11.0.86+ssui.cpu.r1.b05e8c6d74ea4",
+      "wheels": [
+        "opencv_python_headless-4.11.0.86+ssui.cpu.r1.b05e8c6d74ea4-cp312-cp312-win_arm64.whl"
+      ]
+    },
+    {
+      "requirement": "opentelemetry-api==1.45.1",
+      "name": "opentelemetry-api",
+      "source": "https://pypi.org/pypi/opentelemetry-api/json",
+      "status": "wheel",
+      "version": "1.45.1",
+      "wheels": [
+        "opentelemetry_api-1.45.1-py3-none-any.whl"
+      ]
+    },
+    {
+      "requirement": "opentelemetry-exporter-http-transport==0.66b1",
+      "name": "opentelemetry-exporter-http-transport",
+      "source": "https://pypi.org/pypi/opentelemetry-exporter-http-transport/json",
+      "status": "wheel",
+      "version": "0.66b1",
+      "wheels": [
+        "opentelemetry_exporter_http_transport-0.66b1-py3-none-any.whl"
+      ]
+    },
+    {
+      "requirement": "opentelemetry-exporter-otlp-common==0.66b1",
+      "name": "opentelemetry-exporter-otlp-common",
+      "source": "https://pypi.org/pypi/opentelemetry-exporter-otlp-common/json",
+      "status": "wheel",
+      "version": "0.66b1",
+      "wheels": [
+        "opentelemetry_exporter_otlp_common-0.66b1-py3-none-any.whl"
+      ]
+    },
+    {
+      "requirement": "opentelemetry-exporter-otlp-proto-common==1.45.1",
+      "name": "opentelemetry-exporter-otlp-proto-common",
+      "source": "https://pypi.org/pypi/opentelemetry-exporter-otlp-proto-common/json",
+      "status": "wheel",
+      "version": "1.45.1",
+      "wheels": [
+        "opentelemetry_exporter_otlp_proto_common-1.45.1-py3-none-any.whl"
+      ]
+    },
+    {
+      "requirement": "opentelemetry-exporter-otlp-proto-http==1.45.1",
+      "name": "opentelemetry-exporter-otlp-proto-http",
+      "source": "https://pypi.org/pypi/opentelemetry-exporter-otlp-proto-http/json",
+      "status": "wheel",
+      "version": "1.45.1",
+      "wheels": [
+        "opentelemetry_exporter_otlp_proto_http-1.45.1-py3-none-any.whl"
+      ]
+    },
+    {
+      "requirement": "opentelemetry-proto==1.45.1",
+      "name": "opentelemetry-proto",
+      "source": "https://pypi.org/pypi/opentelemetry-proto/json",
+      "status": "wheel",
+      "version": "1.45.1",
+      "wheels": [
+        "opentelemetry_proto-1.45.1-py3-none-any.whl"
+      ]
+    },
+    {
+      "requirement": "opentelemetry-sdk==1.45.1",
+      "name": "opentelemetry-sdk",
+      "source": "https://pypi.org/pypi/opentelemetry-sdk/json",
+      "status": "wheel",
+      "version": "1.45.1",
+      "wheels": [
+        "opentelemetry_sdk-1.45.1-py3-none-any.whl"
+      ]
+    },
+    {
+      "requirement": "opentelemetry-semantic-conventions==0.66b1",
+      "name": "opentelemetry-semantic-conventions",
+      "source": "https://pypi.org/pypi/opentelemetry-semantic-conventions/json",
+      "status": "wheel",
+      "version": "0.66b1",
+      "wheels": [
+        "opentelemetry_semantic_conventions-0.66b1-py3-none-any.whl"
+      ]
+    },
+    {
+      "requirement": "packaging==26.3",
+      "name": "packaging",
+      "source": "https://pypi.org/pypi/packaging/json",
+      "status": "wheel",
+      "version": "26.3",
+      "wheels": [
+        "packaging-26.3-py3-none-any.whl"
+      ]
+    },
+    {
+      "requirement": "pandocfilters==1.5.1",
+      "name": "pandocfilters",
+      "source": "https://pypi.org/pypi/pandocfilters/json",
+      "status": "wheel",
+      "version": "1.5.1",
+      "wheels": [
+        "pandocfilters-1.5.1-py2.py3-none-any.whl"
+      ]
+    },
+    {
+      "requirement": "parso==0.8.7",
+      "name": "parso",
+      "source": "https://pypi.org/pypi/parso/json",
+      "status": "wheel",
+      "version": "0.8.7",
+      "wheels": [
+        "parso-0.8.7-py2.py3-none-any.whl"
+      ]
+    },
+    {
+      "requirement": "picklescan==1.0.5",
+      "name": "picklescan",
+      "source": "https://pypi.org/pypi/picklescan/json",
+      "status": "wheel",
+      "version": "1.0.5",
+      "wheels": [
+        "picklescan-1.0.5-py3-none-any.whl"
+      ]
+    },
+    {
+      "requirement": "pillow==13.0.0",
+      "name": "pillow",
+      "source": "https://pypi.org/pypi/pillow/json",
+      "status": "wheel",
+      "version": "13.0.0",
+      "wheels": [
+        "pillow-13.0.0-cp312-cp312-win_arm64.whl"
+      ]
+    },
+    {
+      "requirement": "platformdirs==4.13.5",
+      "name": "platformdirs",
+      "source": "https://pypi.org/pypi/platformdirs/json",
+      "status": "wheel",
+      "version": "4.13.5",
+      "wheels": [
+        "platformdirs-4.13.5-py3-none-any.whl"
+      ]
+    },
+    {
+      "requirement": "plyfile==1.1.5",
+      "name": "plyfile",
+      "source": "https://pypi.org/pypi/plyfile/json",
+      "status": "wheel",
+      "version": "1.1.5",
+      "wheels": [
+        "plyfile-1.1.5-py3-none-any.whl"
+      ]
+    },
+    {
+      "requirement": "pooch==1.9.0",
+      "name": "pooch",
+      "source": "https://pypi.org/pypi/pooch/json",
+      "status": "wheel",
+      "version": "1.9.0",
+      "wheels": [
+        "pooch-1.9.0-py3-none-any.whl"
+      ]
+    },
+    {
+      "requirement": "prometheus-client==0.26.0",
+      "name": "prometheus-client",
+      "source": "https://pypi.org/pypi/prometheus-client/json",
+      "status": "wheel",
+      "version": "0.26.0",
+      "wheels": [
+        "prometheus_client-0.26.0-py3-none-any.whl"
+      ]
+    },
+    {
+      "requirement": "prompt-toolkit==3.0.53",
+      "name": "prompt-toolkit",
+      "source": "https://pypi.org/pypi/prompt-toolkit/json",
+      "status": "wheel",
+      "version": "3.0.53",
+      "wheels": [
+        "prompt_toolkit-3.0.53-py3-none-any.whl"
+      ]
+    },
+    {
+      "requirement": "propcache==0.5.4",
+      "name": "propcache",
+      "source": "https://pypi.org/pypi/propcache/json",
+      "status": "wheel",
+      "version": "0.5.4",
+      "wheels": [
+        "propcache-0.5.4-cp312-cp312-win_arm64.whl",
+        "propcache-0.5.4-py3-none-any.whl"
+      ]
+    },
+    {
+      "requirement": "protobuf==7.36.2",
+      "name": "protobuf",
+      "source": "https://pypi.org/pypi/protobuf/json",
+      "status": "wheel",
+      "version": "7.36.2",
+      "wheels": [
+        "protobuf-7.36.2-py3-none-any.whl"
+      ]
+    },
+    {
+      "requirement": "psutil==7.2.2",
+      "name": "psutil",
+      "source": "https://pypi.org/pypi/psutil/json",
+      "status": "wheel",
+      "version": "7.2.2",
+      "wheels": [
+        "psutil-7.2.2-cp37-abi3-win_arm64.whl"
+      ]
+    },
+    {
+      "requirement": "pure-eval==0.2.4",
+      "name": "pure-eval",
+      "source": "https://pypi.org/pypi/pure-eval/json",
+      "status": "wheel",
+      "version": "0.2.4",
+      "wheels": [
+        "pure_eval-0.2.4-py3-none-any.whl"
+      ]
+    },
+    {
+      "requirement": "pyarrow==20.0.0+ssui.cpu.r1.b9bfc03949403",
+      "name": "pyarrow",
+      "source": "https://sunxfancy.github.io/ssui-python-packages/simple/windows/arm64/cpu/pyarrow/",
+      "indexErrors": [
+        {
+          "index": "https://download.pytorch.org/whl/cpu/pyarrow/",
+          "error": "HTTP Error 403: Forbidden"
+        },
+        {
+          "index": "https://sunxfancy.github.io/ssui-python-packages/simple/windows/arm64/cpu/2.9.1/pyarrow/",
+          "error": "HTTP Error 404: Not Found"
+        }
+      ],
+      "status": "wheel",
+      "version": "20.0.0+ssui.cpu.r1.b9bfc03949403",
+      "wheels": [
+        "pyarrow-20.0.0+ssui.cpu.r1.b9bfc03949403-cp312-cp312-win_arm64.whl"
+      ]
+    },
+    {
+      "requirement": "pycparser==3.12",
+      "name": "pycparser",
+      "source": "https://pypi.org/pypi/pycparser/json",
+      "status": "wheel",
+      "version": "3.12",
+      "wheels": [
+        "pycparser-3.12-py3-none-any.whl"
+      ]
+    },
+    {
+      "requirement": "pydantic==2.14.1",
+      "name": "pydantic",
+      "source": "https://pypi.org/pypi/pydantic/json",
+      "status": "wheel",
+      "version": "2.14.1",
+      "wheels": [
+        "pydantic-2.14.1-py3-none-any.whl"
+      ]
+    },
+    {
+      "requirement": "pydantic-core==2.50.1",
+      "name": "pydantic-core",
+      "source": "https://pypi.org/pypi/pydantic-core/json",
+      "status": "wheel",
+      "version": "2.50.1",
+      "wheels": [
+        "pydantic_core-2.50.1-cp312-cp312-win_arm64.whl"
+      ]
+    },
+    {
+      "requirement": "pydantic-extra-types==2.11.1",
+      "name": "pydantic-extra-types",
+      "source": "https://pypi.org/pypi/pydantic-extra-types/json",
+      "status": "wheel",
+      "version": "2.11.1",
+      "wheels": [
+        "pydantic_extra_types-2.11.1-py3-none-any.whl"
+      ]
+    },
+    {
+      "requirement": "pydantic-settings==2.16.1",
+      "name": "pydantic-settings",
+      "source": "https://pypi.org/pypi/pydantic-settings/json",
+      "status": "wheel",
+      "version": "2.16.1",
+      "wheels": [
+        "pydantic_settings-2.16.1-py3-none-any.whl"
+      ]
+    },
+    {
+      "requirement": "pygments==2.21.0",
+      "name": "pygments",
+      "source": "https://pypi.org/pypi/pygments/json",
+      "status": "wheel",
+      "version": "2.21.0",
+      "wheels": [
+        "pygments-2.21.0-py3-none-any.whl"
+      ]
+    },
+    {
+      "requirement": "pymatting==1.1.16",
+      "name": "pymatting",
+      "source": "https://pypi.org/pypi/pymatting/json",
+      "status": "wheel",
+      "version": "1.1.16",
+      "wheels": [
+        "pymatting-1.1.16-py3-none-any.whl"
+      ]
+    },
+    {
+      "requirement": "pymeshfix==0.17.1+ssui.cpu.r1.b9816cfcfdc6b",
+      "name": "pymeshfix",
+      "source": "https://sunxfancy.github.io/ssui-python-packages/simple/windows/arm64/cpu/pymeshfix/",
+      "indexErrors": [
+        {
+          "index": "https://download.pytorch.org/whl/cpu/pymeshfix/",
+          "error": "HTTP Error 403: Forbidden"
+        },
+        {
+          "index": "https://sunxfancy.github.io/ssui-python-packages/simple/windows/arm64/cpu/2.9.1/pymeshfix/",
+          "error": "HTTP Error 404: Not Found"
+        }
+      ],
+      "status": "wheel",
+      "version": "0.17.1+ssui.cpu.r1.b9816cfcfdc6b",
+      "wheels": [
+        "pymeshfix-0.17.1+ssui.cpu.r1.b9816cfcfdc6b-cp312-cp312-win_arm64.whl"
+      ]
+    },
+    {
+      "requirement": "pynini==2.1.6.post1+ssui.cpu.r1.b9c91f73d4a44",
+      "name": "pynini",
+      "source": "https://sunxfancy.github.io/ssui-python-packages/simple/windows/arm64/cpu/pynini/",
+      "indexErrors": [
+        {
+          "index": "https://download.pytorch.org/whl/cpu/pynini/",
+          "error": "HTTP Error 403: Forbidden"
+        },
+        {
+          "index": "https://sunxfancy.github.io/ssui-python-packages/simple/windows/arm64/cpu/2.9.1/pynini/",
+          "error": "HTTP Error 404: Not Found"
+        }
+      ],
+      "status": "wheel",
+      "version": "2.1.6.post1+ssui.cpu.r1.b9c91f73d4a44",
+      "wheels": [
+        "pynini-2.1.6.post1+ssui.cpu.r1.b9c91f73d4a44-cp312-cp312-win_arm64.whl"
+      ]
+    },
+    {
+      "requirement": "pyparsing==3.3.3",
+      "name": "pyparsing",
+      "source": "https://pypi.org/pypi/pyparsing/json",
+      "status": "wheel",
+      "version": "3.3.3",
+      "wheels": [
+        "pyparsing-3.3.3-py3-none-any.whl"
+      ]
+    },
+    {
+      "requirement": "python-dateutil==3.0.0",
+      "name": "python-dateutil",
+      "source": "https://pypi.org/pypi/python-dateutil/json",
+      "status": "wheel",
+      "version": "3.0.0",
+      "wheels": [
+        "python_dateutil-3.0.0-py2.py3-none-any.whl"
+      ]
+    },
+    {
+      "requirement": "python-discovery==1.6.4",
+      "name": "python-discovery",
+      "source": "https://pypi.org/pypi/python-discovery/json",
+      "status": "wheel",
+      "version": "1.6.4",
+      "wheels": [
+        "python_discovery-1.6.4-py3-none-any.whl"
+      ]
+    },
+    {
+      "requirement": "python-dotenv==1.2.4",
+      "name": "python-dotenv",
+      "source": "https://pypi.org/pypi/python-dotenv/json",
+      "status": "wheel",
+      "version": "1.2.4",
+      "wheels": [
+        "python_dotenv-1.2.4-py3-none-any.whl"
+      ]
+    },
+    {
+      "requirement": "python-json-logger==4.2.0",
+      "name": "python-json-logger",
+      "source": "https://pypi.org/pypi/python-json-logger/json",
+      "status": "wheel",
+      "version": "4.2.0",
+      "wheels": [
+        "python_json_logger-4.2.0-py3-none-any.whl"
+      ]
+    },
+    {
+      "requirement": "python-multipart==0.0.32",
+      "name": "python-multipart",
+      "source": "https://pypi.org/pypi/python-multipart/json",
+      "status": "wheel",
+      "version": "0.0.32",
+      "wheels": [
+        "python_multipart-0.0.32-py3-none-any.whl"
+      ]
+    },
+    {
+      "requirement": "pyvista==0.46.3",
+      "name": "pyvista",
+      "source": "https://pypi.org/pypi/pyvista/json",
+      "status": "wheel",
+      "version": "0.46.3",
+      "wheels": [
+        "pyvista-0.46.3-py3-none-any.whl"
+      ]
+    },
+    {
+      "requirement": "pywinpty==3.1.0",
+      "name": "pywinpty",
+      "source": "https://pypi.org/pypi/pywinpty/json",
+      "status": "wheel",
+      "version": "3.1.0",
+      "wheels": [
+        "pywinpty-3.1.0-cp312-cp312-win_arm64.whl"
+      ]
+    },
+    {
+      "requirement": "pyworld==0.3.4+ssui.cpu.r1.b83bf5208b453",
+      "name": "pyworld",
+      "source": "https://sunxfancy.github.io/ssui-python-packages/simple/windows/arm64/cpu/pyworld/",
+      "indexErrors": [
+        {
+          "index": "https://download.pytorch.org/whl/cpu/pyworld/",
+          "error": "HTTP Error 403: Forbidden"
+        },
+        {
+          "index": "https://sunxfancy.github.io/ssui-python-packages/simple/windows/arm64/cpu/2.9.1/pyworld/",
+          "error": "HTTP Error 404: Not Found"
+        }
+      ],
+      "status": "wheel",
+      "version": "0.3.4+ssui.cpu.r1.b83bf5208b453",
+      "wheels": [
+        "pyworld-0.3.4+ssui.cpu.r1.b83bf5208b453-cp312-cp312-win_arm64.whl"
+      ]
+    },
+    {
+      "requirement": "pyyaml==6.0.3",
+      "name": "pyyaml",
+      "source": "https://pypi.org/pypi/pyyaml/json",
+      "status": "wheel",
+      "version": "6.0.3",
+      "wheels": [
+        "pyyaml-6.0.3-cp312-cp312-win_arm64.whl"
+      ]
+    },
+    {
+      "requirement": "pyzmq==27.2.0",
+      "name": "pyzmq",
+      "source": "https://pypi.org/pypi/pyzmq/json",
+      "status": "wheel",
+      "version": "27.2.0",
+      "wheels": [
+        "pyzmq-27.2.0-cp312-abi3-win_arm64.whl"
+      ]
+    },
+    {
+      "requirement": "referencing==0.37.0",
+      "name": "referencing",
+      "source": "https://pypi.org/pypi/referencing/json",
+      "status": "wheel",
+      "version": "0.37.0",
+      "wheels": [
+        "referencing-0.37.0-py3-none-any.whl"
+      ]
+    },
+    {
+      "requirement": "regex==2026.9.29",
+      "name": "regex",
+      "source": "https://pypi.org/pypi/regex/json",
+      "status": "wheel",
+      "version": "2026.9.29",
+      "wheels": [
+        "regex-2026.9.29-cp312-cp312-win_arm64.whl"
+      ]
+    },
+    {
+      "requirement": "rembg==2.0.86",
+      "name": "rembg",
+      "source": "https://pypi.org/pypi/rembg/json",
+      "status": "wheel",
+      "version": "2.0.86",
+      "wheels": [
+        "rembg-2.0.86-py3-none-any.whl"
+      ]
+    },
+    {
+      "requirement": "requests==2.34.2",
+      "name": "requests",
+      "source": "https://pypi.org/pypi/requests/json",
+      "status": "wheel",
+      "version": "2.34.2",
+      "wheels": [
+        "requests-2.34.2-py3-none-any.whl"
+      ]
+    },
+    {
+      "requirement": "restrictedpython==8.5",
+      "name": "restrictedpython",
+      "source": "https://pypi.org/pypi/restrictedpython/json",
+      "status": "wheel",
+      "version": "8.5",
+      "wheels": [
+        "restrictedpython-8.5-py3-none-any.whl"
+      ]
+    },
+    {
+      "requirement": "rfc3339-validator==0.1.4",
+      "name": "rfc3339-validator",
+      "source": "https://pypi.org/pypi/rfc3339-validator/json",
+      "status": "wheel",
+      "version": "0.1.4",
+      "wheels": [
+        "rfc3339_validator-0.1.4-py2.py3-none-any.whl"
+      ]
+    },
+    {
+      "requirement": "rfc3986-validator==0.1.1",
+      "name": "rfc3986-validator",
+      "source": "https://pypi.org/pypi/rfc3986-validator/json",
+      "status": "wheel",
+      "version": "0.1.1",
+      "wheels": [
+        "rfc3986_validator-0.1.1-py2.py3-none-any.whl"
+      ]
+    },
+    {
+      "requirement": "rfc3987-syntax==1.1.0",
+      "name": "rfc3987-syntax",
+      "source": "https://pypi.org/pypi/rfc3987-syntax/json",
+      "status": "wheel",
+      "version": "1.1.0",
+      "wheels": [
+        "rfc3987_syntax-1.1.0-py3-none-any.whl"
+      ]
+    },
+    {
+      "requirement": "rich==15.0.0",
+      "name": "rich",
+      "source": "https://pypi.org/pypi/rich/json",
+      "status": "wheel",
+      "version": "15.0.0",
+      "wheels": [
+        "rich-15.0.0-py3-none-any.whl"
+      ]
+    },
+    {
+      "requirement": "rich-toolkit==0.20.6",
+      "name": "rich-toolkit",
+      "source": "https://pypi.org/pypi/rich-toolkit/json",
+      "status": "wheel",
+      "version": "0.20.6",
+      "wheels": [
+        "rich_toolkit-0.20.6-py3-none-any.whl"
+      ]
+    },
+    {
+      "requirement": "rignore==0.8.1",
+      "name": "rignore",
+      "source": "https://pypi.org/pypi/rignore/json",
+      "status": "wheel",
+      "version": "0.8.1",
+      "wheels": [
+        "rignore-0.8.1-cp312-cp312-win_arm64.whl"
+      ]
+    },
+    {
+      "requirement": "rpds-py==2026.9.1",
+      "name": "rpds-py",
+      "source": "https://pypi.org/pypi/rpds-py/json",
+      "status": "wheel",
+      "version": "2026.9.1",
+      "wheels": [
+        "rpds_py-2026.9.1-cp312-cp312-win_arm64.whl"
+      ]
+    },
+    {
+      "requirement": "safetensors==0.8.0",
+      "name": "safetensors",
+      "source": "https://pypi.org/pypi/safetensors/json",
+      "status": "wheel",
+      "version": "0.8.0",
+      "wheels": [
+        "safetensors-0.8.0-cp310-abi3-win_arm64.whl"
+      ]
+    },
+    {
+      "requirement": "scikit-image==0.26.0",
+      "name": "scikit-image",
+      "source": "https://pypi.org/pypi/scikit-image/json",
+      "status": "wheel",
+      "version": "0.26.0",
+      "wheels": [
+        "scikit_image-0.26.0-cp312-cp312-win_arm64.whl"
+      ]
+    },
+    {
+      "requirement": "scikit-learn==1.9.1",
+      "name": "scikit-learn",
+      "source": "https://pypi.org/pypi/scikit-learn/json",
+      "status": "wheel",
+      "version": "1.9.1",
+      "wheels": [
+        "scikit_learn-1.9.1-cp312-cp312-win_arm64.whl"
+      ]
+    },
+    {
+      "requirement": "scipy==1.18.1",
+      "name": "scipy",
+      "source": "https://pypi.org/pypi/scipy/json",
+      "status": "wheel",
+      "version": "1.18.1",
+      "wheels": [
+        "scipy-1.18.1-cp312-cp312-win_arm64.whl"
+      ]
+    },
+    {
+      "requirement": "scooby==0.12.0",
+      "name": "scooby",
+      "source": "https://pypi.org/pypi/scooby/json",
+      "status": "wheel",
+      "version": "0.12.0",
+      "wheels": [
+        "scooby-0.12.0-py3-none-any.whl"
+      ]
+    },
+    {
+      "requirement": "send2trash==2.1.0",
+      "name": "send2trash",
+      "source": "https://pypi.org/pypi/send2trash/json",
+      "status": "wheel",
+      "version": "2.1.0",
+      "wheels": [
+        "send2trash-2.1.0-py3-none-any.whl"
+      ]
+    },
+    {
+      "requirement": "sentencepiece==0.2.2",
+      "name": "sentencepiece",
+      "source": "https://pypi.org/pypi/sentencepiece/json",
+      "status": "wheel",
+      "version": "0.2.2",
+      "wheels": [
+        "sentencepiece-0.2.2-cp312-cp312-win_arm64.whl"
+      ]
+    },
+    {
+      "requirement": "sentry-sdk==2.73.0",
+      "name": "sentry-sdk",
+      "source": "https://pypi.org/pypi/sentry-sdk/json",
+      "status": "wheel",
+      "version": "2.73.0",
+      "wheels": [
+        "sentry_sdk-2.73.0-py3-none-any.whl"
+      ]
+    },
+    {
+      "requirement": "setuptools==80.9.0",
+      "name": "setuptools",
+      "source": "https://pypi.org/pypi/setuptools/json",
+      "status": "wheel",
+      "version": "80.9.0",
+      "wheels": [
+        "setuptools-80.9.0-py3-none-any.whl"
+      ]
+    },
+    {
+      "requirement": "shellingham==1.5.4",
+      "name": "shellingham",
+      "source": "https://pypi.org/pypi/shellingham/json",
+      "status": "wheel",
+      "version": "1.5.4",
+      "wheels": [
+        "shellingham-1.5.4-py2.py3-none-any.whl"
+      ]
+    },
+    {
+      "requirement": "six==1.17.0",
+      "name": "six",
+      "source": "https://pypi.org/pypi/six/json",
+      "status": "wheel",
+      "version": "1.17.0",
+      "wheels": [
+        "six-1.17.0-py2.py3-none-any.whl"
+      ]
+    },
+    {
+      "requirement": "sounddevice==0.5.6",
+      "name": "sounddevice",
+      "source": "https://pypi.org/pypi/sounddevice/json",
+      "status": "wheel",
+      "version": "0.5.6",
+      "wheels": [
+        "sounddevice-0.5.6-py3-none-any.whl",
+        "sounddevice-0.5.6-py3-none-win_arm64.whl"
+      ]
+    },
+    {
+      "requirement": "soundfile==0.14.0",
+      "name": "soundfile",
+      "source": "https://pypi.org/pypi/soundfile/json",
+      "status": "wheel",
+      "version": "0.14.0",
+      "wheels": [
+        "soundfile-0.14.0-py2.py3-none-any.whl",
+        "soundfile-0.14.0-py2.py3-none-win_arm64.whl"
+      ]
+    },
+    {
+      "requirement": "soupsieve==3.0.4",
+      "name": "soupsieve",
+      "source": "https://pypi.org/pypi/soupsieve/json",
+      "status": "wheel",
+      "version": "3.0.4",
+      "wheels": [
+        "soupsieve-3.0.4-py3-none-any.whl"
+      ]
+    },
+    {
+      "requirement": "soxr==0.5.0.post1+ssui.cpu.r1.b9f0b72cc0d95",
+      "name": "soxr",
+      "source": "https://sunxfancy.github.io/ssui-python-packages/simple/windows/arm64/cpu/soxr/",
+      "indexErrors": [
+        {
+          "index": "https://download.pytorch.org/whl/cpu/soxr/",
+          "error": "HTTP Error 403: Forbidden"
+        },
+        {
+          "index": "https://sunxfancy.github.io/ssui-python-packages/simple/windows/arm64/cpu/2.9.1/soxr/",
+          "error": "HTTP Error 404: Not Found"
+        }
+      ],
+      "status": "wheel",
+      "version": "0.5.0.post1+ssui.cpu.r1.b9f0b72cc0d95",
+      "wheels": [
+        "soxr-0.5.0.post1+ssui.cpu.r1.b9f0b72cc0d95-cp312-abi3-win_arm64.whl"
+      ]
+    },
+    {
+      "requirement": "spandrel==0.4.2",
+      "name": "spandrel",
+      "source": "https://pypi.org/pypi/spandrel/json",
+      "status": "wheel",
+      "version": "0.4.2",
+      "wheels": [
+        "spandrel-0.4.2-py3-none-any.whl"
+      ]
+    },
+    {
+      "requirement": "stack-data==0.6.3",
+      "name": "stack-data",
+      "source": "https://pypi.org/pypi/stack-data/json",
+      "status": "wheel",
+      "version": "0.6.3",
+      "wheels": [
+        "stack_data-0.6.3-py3-none-any.whl"
+      ]
+    },
+    {
+      "requirement": "starlette==1.9.0",
+      "name": "starlette",
+      "source": "https://pypi.org/pypi/starlette/json",
+      "status": "wheel",
+      "version": "1.9.0",
+      "wheels": [
+        "starlette-1.9.0-py3-none-any.whl"
+      ]
+    },
+    {
+      "requirement": "sympy==1.14.0",
+      "name": "sympy",
+      "source": "https://pypi.org/pypi/sympy/json",
+      "status": "wheel",
+      "version": "1.14.0",
+      "wheels": [
+        "sympy-1.14.0-py3-none-any.whl"
+      ]
+    },
+    {
+      "requirement": "terminado==0.18.1",
+      "name": "terminado",
+      "source": "https://pypi.org/pypi/terminado/json",
+      "status": "wheel",
+      "version": "0.18.1",
+      "wheels": [
+        "terminado-0.18.1-py3-none-any.whl"
+      ]
+    },
+    {
+      "requirement": "texttable==1.7.2",
+      "name": "texttable",
+      "source": "https://pypi.org/pypi/texttable/json",
+      "status": "wheel",
+      "version": "1.7.2",
+      "wheels": [
+        "texttable-1.7.2-py2.py3-none-any.whl"
+      ]
+    },
+    {
+      "requirement": "threadpoolctl==3.7.0",
+      "name": "threadpoolctl",
+      "source": "https://pypi.org/pypi/threadpoolctl/json",
+      "status": "wheel",
+      "version": "3.7.0",
+      "wheels": [
+        "threadpoolctl-3.7.0-py3-none-any.whl"
+      ]
+    },
+    {
+      "requirement": "tifffile==2026.10.15",
+      "name": "tifffile",
+      "source": "https://pypi.org/pypi/tifffile/json",
+      "status": "wheel",
+      "version": "2026.10.15",
+      "wheels": [
+        "tifffile-2026.10.15-py3-none-any.whl"
+      ]
+    },
+    {
+      "requirement": "tiktoken==0.9.0+ssui.cpu.r1.bb0e785dac3f7",
+      "name": "tiktoken",
+      "source": "https://sunxfancy.github.io/ssui-python-packages/simple/windows/arm64/cpu/tiktoken/",
+      "indexErrors": [
+        {
+          "index": "https://download.pytorch.org/whl/cpu/tiktoken/",
+          "error": "HTTP Error 403: Forbidden"
+        },
+        {
+          "index": "https://sunxfancy.github.io/ssui-python-packages/simple/windows/arm64/cpu/2.9.1/tiktoken/",
+          "error": "HTTP Error 404: Not Found"
+        }
+      ],
+      "status": "wheel",
+      "version": "0.9.0+ssui.cpu.r1.bb0e785dac3f7",
+      "wheels": [
+        "tiktoken-0.9.0+ssui.cpu.r1.bb0e785dac3f7-cp312-cp312-win_arm64.whl"
+      ]
+    },
+    {
+      "requirement": "timm==1.0.30",
+      "name": "timm",
+      "source": "https://pypi.org/pypi/timm/json",
+      "status": "wheel",
+      "version": "1.0.30",
+      "wheels": [
+        "timm-1.0.30-py3-none-any.whl"
+      ]
+    },
+    {
+      "requirement": "tinycss2==1.5.1",
+      "name": "tinycss2",
+      "source": "https://pypi.org/pypi/tinycss2/json",
+      "status": "wheel",
+      "version": "1.5.1",
+      "wheels": [
+        "tinycss2-1.5.1-py3-none-any.whl"
+      ]
+    },
+    {
+      "requirement": "tokenizers==0.22.2",
+      "name": "tokenizers",
+      "source": "https://pypi.org/pypi/tokenizers/json",
+      "status": "wheel",
+      "version": "0.22.2",
+      "wheels": [
+        "tokenizers-0.22.2-cp39-abi3-win_arm64.whl"
+      ]
+    },
+    {
+      "requirement": "torch==2.9.1+cpu",
+      "name": "torch",
+      "source": "https://download.pytorch.org/whl/cpu/torch/",
+      "indexErrors": [
+        {
+          "index": "https://sunxfancy.github.io/ssui-python-packages/simple/windows/arm64/cpu/torch/",
+          "error": "HTTP Error 404: Not Found"
+        },
+        {
+          "index": "https://sunxfancy.github.io/ssui-python-packages/simple/windows/arm64/cpu/2.9.1/torch/",
+          "error": "HTTP Error 404: Not Found"
+        }
+      ],
+      "status": "wheel",
+      "version": "2.9.1+cpu",
+      "wheels": [
+        "torch-2.9.1+cpu-cp312-cp312-win_arm64.whl"
+      ]
+    },
+    {
+      "requirement": "torchaudio==2.9.1+ssui.cpu.291.r1.ba7c51896a4b0",
+      "name": "torchaudio",
+      "source": "https://sunxfancy.github.io/ssui-python-packages/simple/windows/arm64/cpu/2.9.1/torchaudio/",
+      "indexErrors": [
+        {
+          "index": "https://sunxfancy.github.io/ssui-python-packages/simple/windows/arm64/cpu/torchaudio/",
+          "error": "HTTP Error 404: Not Found"
+        }
+      ],
+      "status": "wheel",
+      "version": "2.9.1+ssui.cpu.291.r1.ba7c51896a4b0",
+      "wheels": [
+        "torchaudio-2.9.1+ssui.cpu.291.r1.ba7c51896a4b0-cp312-cp312-win_arm64.whl"
+      ]
+    },
+    {
+      "requirement": "torchsde==0.2.6",
+      "name": "torchsde",
+      "source": "https://pypi.org/pypi/torchsde/json",
+      "status": "wheel",
+      "version": "0.2.6",
+      "wheels": [
+        "torchsde-0.2.6-py3-none-any.whl"
+      ]
+    },
+    {
+      "requirement": "torchvision==0.24.1+d801a34",
+      "name": "torchvision",
+      "source": "https://download.pytorch.org/whl/cpu/torchvision/",
+      "indexErrors": [
+        {
+          "index": "https://sunxfancy.github.io/ssui-python-packages/simple/windows/arm64/cpu/torchvision/",
+          "error": "HTTP Error 404: Not Found"
+        },
+        {
+          "index": "https://sunxfancy.github.io/ssui-python-packages/simple/windows/arm64/cpu/2.9.1/torchvision/",
+          "error": "HTTP Error 404: Not Found"
+        }
+      ],
+      "status": "wheel",
+      "version": "0.24.1+d801a34",
+      "wheels": [
+        "torchvision-0.24.1+d801a34-cp312-cp312-win_arm64.whl"
+      ]
+    },
+    {
+      "requirement": "tornado==6.6",
+      "name": "tornado",
+      "source": "https://pypi.org/pypi/tornado/json",
+      "status": "wheel",
+      "version": "6.6",
+      "wheels": [
+        "tornado-6.6-cp311-abi3-win_arm64.whl"
+      ]
+    },
+    {
+      "requirement": "tqdm==4.70.1",
+      "name": "tqdm",
+      "source": "https://pypi.org/pypi/tqdm/json",
+      "status": "wheel",
+      "version": "4.70.1",
+      "wheels": [
+        "tqdm-4.70.1-py3-none-any.whl"
+      ]
+    },
+    {
+      "requirement": "traitlets==5.16.1",
+      "name": "traitlets",
+      "source": "https://pypi.org/pypi/traitlets/json",
+      "status": "wheel",
+      "version": "5.16.1",
+      "wheels": [
+        "traitlets-5.16.1-py3-none-any.whl"
+      ]
+    },
+    {
+      "requirement": "trampoline==0.1.2",
+      "name": "trampoline",
+      "source": "https://pypi.org/pypi/trampoline/json",
+      "status": "wheel",
+      "version": "0.1.2",
+      "wheels": [
+        "trampoline-0.1.2-py3-none-any.whl"
+      ]
+    },
+    {
+      "requirement": "transformers==4.57.6",
+      "name": "transformers",
+      "source": "https://pypi.org/pypi/transformers/json",
+      "status": "wheel",
+      "version": "4.57.6",
+      "wheels": [
+        "transformers-4.57.6-py3-none-any.whl"
+      ]
+    },
+    {
+      "requirement": "transformers-stream-generator==0.0.4+ssui.cpu.r2.b410865ecf176",
+      "name": "transformers-stream-generator",
+      "source": "https://sunxfancy.github.io/ssui-python-packages/simple/windows/arm64/cpu/transformers-stream-generator/",
+      "indexErrors": [
+        {
+          "index": "https://download.pytorch.org/whl/cpu/transformers-stream-generator/",
+          "error": "HTTP Error 403: Forbidden"
+        },
+        {
+          "index": "https://sunxfancy.github.io/ssui-python-packages/simple/windows/arm64/cpu/2.9.1/transformers-stream-generator/",
+          "error": "HTTP Error 404: Not Found"
+        }
+      ],
+      "status": "wheel",
+      "version": "0.0.4+ssui.cpu.r2.b410865ecf176",
+      "wheels": [
+        "transformers_stream_generator-0.0.4+ssui.cpu.r2.b410865ecf176-py3-none-any.whl"
+      ]
+    },
+    {
+      "requirement": "trimesh==5.1.1",
+      "name": "trimesh",
+      "source": "https://pypi.org/pypi/trimesh/json",
+      "status": "wheel",
+      "version": "5.1.1",
+      "wheels": [
+        "trimesh-5.1.1-py3-none-any.whl"
+      ]
+    },
+    {
+      "requirement": "truststore==0.10.5",
+      "name": "truststore",
+      "source": "https://pypi.org/pypi/truststore/json",
+      "status": "wheel",
+      "version": "0.10.5",
+      "wheels": [
+        "truststore-0.10.5-py3-none-any.whl"
+      ]
+    },
+    {
+      "requirement": "typer==0.27.3",
+      "name": "typer",
+      "source": "https://pypi.org/pypi/typer/json",
+      "status": "wheel",
+      "version": "0.27.3",
+      "wheels": [
+        "typer-0.27.3-py3-none-any.whl"
+      ]
+    },
+    {
+      "requirement": "typing-extensions==4.16.0",
+      "name": "typing-extensions",
+      "source": "https://pypi.org/pypi/typing-extensions/json",
+      "status": "wheel",
+      "version": "4.16.0",
+      "wheels": [
+        "typing_extensions-4.16.0-py3-none-any.whl"
+      ]
+    },
+    {
+      "requirement": "typing-inspection==0.4.4",
+      "name": "typing-inspection",
+      "source": "https://pypi.org/pypi/typing-inspection/json",
+      "status": "wheel",
+      "version": "0.4.4",
+      "wheels": [
+        "typing_inspection-0.4.4-py3-none-any.whl"
+      ]
+    },
+    {
+      "requirement": "tzdata==2026.5",
+      "name": "tzdata",
+      "source": "https://pypi.org/pypi/tzdata/json",
+      "status": "wheel",
+      "version": "2026.5",
+      "wheels": [
+        "tzdata-2026.5-py2.py3-none-any.whl"
+      ]
+    },
+    {
+      "requirement": "uri-template==1.3.0",
+      "name": "uri-template",
+      "source": "https://pypi.org/pypi/uri-template/json",
+      "status": "wheel",
+      "version": "1.3.0",
+      "wheels": [
+        "uri_template-1.3.0-py3-none-any.whl"
+      ]
+    },
+    {
+      "requirement": "urllib3==2.8.0",
+      "name": "urllib3",
+      "source": "https://pypi.org/pypi/urllib3/json",
+      "status": "wheel",
+      "version": "2.8.0",
+      "wheels": [
+        "urllib3-2.8.0-py3-none-any.whl"
+      ]
+    },
+    {
+      "requirement": "uvicorn==0.54.0",
+      "name": "uvicorn",
+      "source": "https://pypi.org/pypi/uvicorn/json",
+      "status": "wheel",
+      "version": "0.54.0",
+      "wheels": [
+        "uvicorn-0.54.0-py3-none-any.whl"
+      ]
+    },
+    {
+      "requirement": "virtualenv==21.14.13",
+      "name": "virtualenv",
+      "source": "https://pypi.org/pypi/virtualenv/json",
+      "status": "wheel",
+      "version": "21.14.13",
+      "wheels": [
+        "virtualenv-21.14.13-py3-none-any.whl"
+      ]
+    },
+    {
+      "requirement": "vtk==9.4.2+ssui.cpu.r1.b62943278488d",
+      "name": "vtk",
+      "source": "https://sunxfancy.github.io/ssui-python-packages/simple/windows/arm64/cpu/vtk/",
+      "indexErrors": [
+        {
+          "index": "https://download.pytorch.org/whl/cpu/vtk/",
+          "error": "HTTP Error 403: Forbidden"
+        },
+        {
+          "index": "https://sunxfancy.github.io/ssui-python-packages/simple/windows/arm64/cpu/2.9.1/vtk/",
+          "error": "HTTP Error 404: Not Found"
+        }
+      ],
+      "status": "wheel",
+      "version": "9.4.2+ssui.cpu.r1.b62943278488d",
+      "wheels": [
+        "vtk-9.4.2+ssui.cpu.r1.b62943278488d-cp312-cp312-win_arm64.whl"
+      ]
+    },
+    {
+      "requirement": "watchfiles==1.3.0",
+      "name": "watchfiles",
+      "source": "https://pypi.org/pypi/watchfiles/json",
+      "status": "wheel",
+      "version": "1.3.0",
+      "wheels": [
+        "watchfiles-1.3.0-cp310-abi3-win_arm64.whl"
+      ]
+    },
+    {
+      "requirement": "wcwidth==0.9.3",
+      "name": "wcwidth",
+      "source": "https://pypi.org/pypi/wcwidth/json",
+      "status": "wheel",
+      "version": "0.9.3",
+      "wheels": [
+        "wcwidth-0.9.3-cp310-abi3-win_arm64.whl",
+        "wcwidth-0.9.3-py3-none-any.whl"
+      ]
+    },
+    {
+      "requirement": "webcolors==25.10.0",
+      "name": "webcolors",
+      "source": "https://pypi.org/pypi/webcolors/json",
+      "status": "wheel",
+      "version": "25.10.0",
+      "wheels": [
+        "webcolors-25.10.0-py3-none-any.whl"
+      ]
+    },
+    {
+      "requirement": "webencodings==0.6.1",
+      "name": "webencodings",
+      "source": "https://pypi.org/pypi/webencodings/json",
+      "status": "wheel",
+      "version": "0.6.1",
+      "wheels": [
+        "webencodings-0.6.1-py3-none-any.whl"
+      ]
+    },
+    {
+      "requirement": "websocket-client==1.9.2",
+      "name": "websocket-client",
+      "source": "https://pypi.org/pypi/websocket-client/json",
+      "status": "wheel",
+      "version": "1.9.2",
+      "wheels": [
+        "websocket_client-1.9.2-py3-none-any.whl"
+      ]
+    },
+    {
+      "requirement": "websockets==17.3",
+      "name": "websockets",
+      "source": "https://pypi.org/pypi/websockets/json",
+      "status": "wheel",
+      "version": "17.3",
+      "wheels": [
+        "websockets-17.3-cp312-cp312-win_arm64.whl",
+        "websockets-17.3-py3-none-any.whl"
+      ]
+    },
+    {
+      "requirement": "wetextprocessing @ https://github.com/sunxfancy/pynini-2.1.6.post1/releases/download/2.1.6.post1/WeTextProcessing-1.0.4-py3-none-any.whl",
+      "name": "wetextprocessing",
+      "status": "direct-wheel",
+      "source": "https://github.com/sunxfancy/pynini-2.1.6.post1/releases/download/2.1.6.post1/WeTextProcessing-1.0.4-py3-none-any.whl"
+    },
+    {
+      "requirement": "wrapt==2.5.1",
+      "name": "wrapt",
+      "source": "https://pypi.org/pypi/wrapt/json",
+      "status": "wheel",
+      "version": "2.5.1",
+      "wheels": [
+        "wrapt-2.5.1-cp312-cp312-win_arm64.whl",
+        "wrapt-2.5.1-py3-none-any.whl"
+      ]
+    },
+    {
+      "requirement": "yarl==1.25.1",
+      "name": "yarl",
+      "source": "https://pypi.org/pypi/yarl/json",
+      "status": "wheel",
+      "version": "1.25.1",
+      "wheels": [
+        "yarl-1.25.1-cp312-cp312-win_arm64.whl",
+        "yarl-1.25.1-py3-none-any.whl"
+      ]
+    },
+    {
+      "requirement": "zipp==4.1.2",
+      "name": "zipp",
+      "source": "https://pypi.org/pypi/zipp/json",
+      "status": "wheel",
+      "version": "4.1.2",
+      "wheels": [
+        "zipp-4.1.2-py3-none-any.whl"
+      ]
+    }
+  ]
+}

@@ -1,5 +1,5 @@
 .functional-ui-root {
-    --functional-accent: #536dfe;
+    --functional-accent: #3d53df;
     --functional-accent-strong: #3d53df;
     --functional-accent-soft: color-mix(in srgb, var(--functional-accent) 11%, transparent);
     --functional-panel: color-mix(in srgb, var(--ssui-card-bg) 94%, var(--functional-accent) 6%);

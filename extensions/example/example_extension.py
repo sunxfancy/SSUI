@@ -1,5 +1,7 @@
+from fastapi import APIRouter
 
+app = APIRouter()
 
-@app.get("/extension/example/version")
+@app.get("/version")
 async def version():
     return "0.0.1"

@@ -26,7 +26,7 @@ except ModuleNotFoundError:
     
     
 def flash_attention(q: torch.Tensor, k: torch.Tensor, v: torch.Tensor, num_heads: int, compatibility_mode=False):
-    if compatibility_mode:
+    if compatibility_mode or q.device.type != "cuda":
         q = rearrange(q, "b s (n d) -> b n s d", n=num_heads)
         k = rearrange(k, "b s (n d) -> b n s d", n=num_heads)
         v = rearrange(v, "b s (n d) -> b n s d", n=num_heads)
@@ -66,8 +66,9 @@ def modulate(x: torch.Tensor, shift: torch.Tensor, scale: torch.Tensor):
 
 
 def sinusoidal_embedding_1d(dim, position):
-    sinusoid = torch.outer(position.type(torch.float64), torch.pow(
-        10000, -torch.arange(dim//2, dtype=torch.float64, device=position.device).div(dim//2)))
+    dtype = torch.float32 if position.device.type == "mps" else torch.float64
+    sinusoid = torch.outer(position.to(dtype), torch.pow(
+        10000, -torch.arange(dim//2, dtype=dtype, device=position.device).div(dim//2)))
     x = torch.cat([torch.cos(sinusoid), torch.sin(sinusoid)], dim=1)
     return x.to(position.dtype)
 
@@ -89,8 +90,21 @@ def precompute_freqs_cis(dim: int, end: int = 1024, theta: float = 10000.0):
     return freqs_cis
 
 
+def prepare_rope_freqs(freqs, device):
+    """MPS uses float32 real/imaginary pairs instead of complex128 tensors."""
+    if torch.device(device).type == "mps":
+        return torch.view_as_real(freqs).to(device=device, dtype=torch.float32)
+    return freqs.to(device)
+
+
 def rope_apply(x, freqs, num_heads):
     x = rearrange(x, "b s (n d) -> b s n d", n=num_heads)
+    if not freqs.is_complex():
+        pairs = x.float().reshape(*x.shape[:-1], -1, 2)
+        real, imag = pairs.unbind(-1)
+        cos, sin = freqs.unbind(-1)
+        rotated = torch.stack((real * cos - imag * sin, real * sin + imag * cos), dim=-1)
+        return rotated.flatten(2).to(x.dtype)
     x_out = torch.view_as_complex(x.to(torch.float64).reshape(
         x.shape[0], x.shape[1], x.shape[2], -1, 2))
     x_out = torch.view_as_real(x_out * freqs).flatten(2)
@@ -371,13 +385,16 @@ class WanModel(torch.nn.Module):
             clip_embdding = self.img_emb(clip_feature)
             context = torch.cat([clip_embdding, context], dim=1)
         
-        x, (f, h, w) = self.patchify(x)
+        x = self.patchify(x)
+        f, h, w = x.shape[2:]
+        x = rearrange(x, 'b c f h w -> b (f h w) c').contiguous()
         
         freqs = torch.cat([
             self.freqs[0][:f].view(f, 1, 1, -1).expand(f, h, w, -1),
             self.freqs[1][:h].view(1, h, 1, -1).expand(f, h, w, -1),
             self.freqs[2][:w].view(1, 1, w, -1).expand(f, h, w, -1)
-        ], dim=-1).reshape(f * h * w, 1, -1).to(x.device)
+        ], dim=-1).reshape(f * h * w, 1, -1)
+        freqs = prepare_rope_freqs(freqs, x.device)
         
         def create_custom_forward(module):
             def custom_forward(*inputs):

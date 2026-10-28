@@ -7,10 +7,12 @@ __pycache__/
 *.flow.py
 *.egg-info/
 node_modules/
+storybook-static/
 dist/
 test_env/
 /resources/
 /log/
+/tests/e2e/test-results/
 /models/
 
 *.safetensors
@@ -27,3 +29,18 @@ test_env/
 desktop/src-tauri/workflow/txt2img/
 
 .idea
+/.browser-tools/
+/test-artifacts/
+
+# Per-worktree development paths
+.ssui-dev.json
+
+# Browser test evidence
+/playwright-report/
+/test-results/
+/.test-tmp/
+/desktop/dist-native-test/
+/native-test-results/
+
+# Native test build cache (directory or local symlink)
+/desktop/src-tauri/target

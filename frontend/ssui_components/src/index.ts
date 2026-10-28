@@ -8,3 +8,4 @@ export * from './ContextMenu';
 export * from './shared/Workflow';
 
 export * from './UIState';
+export type { components as ApiComponents, operations as ApiOperations, paths as ApiPaths } from './api/generated';

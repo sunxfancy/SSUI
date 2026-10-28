@@ -74,6 +74,7 @@ export class ImageUploader extends IComponent<{ script_path: string }, ImageUplo
             <h5>Image Upload</h5>
             <input 
                 type="file" 
+                aria-label="Upload image"
                 accept="image/*"
                 onChange={this.handleFileChange}
                 disabled={this.state.uploading}

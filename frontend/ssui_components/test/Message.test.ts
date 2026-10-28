@@ -1,65 +1,71 @@
 import { Message } from '../src/Message';
 
-const { spawn } = require('child_process');
-const path = require('path');
-const net = require('net');
-let serverProcess: any;
-let mockPort: number;
-let message: Message | undefined;
-const originalWindow = (globalThis as any).window;
-
-beforeAll(async () => {
-    // Let the OS choose a port so this test cannot connect to a leftover server.
-    const reservation = net.createServer();
-    await new Promise<void>(resolve => reservation.listen(0, '127.0.0.1', resolve));
-    mockPort = reservation.address().port;
-    await new Promise<void>(resolve => reservation.close(resolve));
-
-    const python = path.resolve(__dirname, '../../../.venv',
-        process.platform === 'win32' ? 'Scripts/python.exe' : 'bin/python');
-    serverProcess = spawn(python, ['-m', 'uvicorn', 'server:app', '--host', '127.0.0.1', '--port', String(mockPort)], {
-        cwd: __dirname,
-        stdio: 'inherit',
-    });
-    let startupError: Error | undefined;
-    serverProcess.on('error', (error: Error) => { startupError = error; });
-    const deadline = Date.now() + 10000;
-    while (Date.now() < deadline) {
-        if (startupError) throw startupError;
-        if (serverProcess.exitCode !== null) throw new Error('Test server exited before becoming ready');
-        try {
-            const response = await fetch(`http://127.0.0.1:${mockPort}/openapi.json`);
-            if (response.ok) return;
-        } catch { /* The server has not bound its socket yet. */ }
-        await new Promise(resolve => setTimeout(resolve, 50));
-    }
-    throw new Error('Timed out waiting for the test server');
-}, 15000);
-
-afterAll(async () => {
-    await message?.disconnect();
-    if (serverProcess?.pid && serverProcess.exitCode === null) {
-        await new Promise<void>(resolve => {
-            const timeout = setTimeout(() => serverProcess.kill('SIGKILL'), 5000);
-            serverProcess.once('exit', () => { clearTimeout(timeout); resolve(); });
-            serverProcess.kill();
+// Deterministic transport tests: no Python service or fixed startup sleeps.
+describe('Message transport', () => {
+    let socket: FakeSocket;
+    const originalWindow = Object.getOwnPropertyDescriptor(globalThis, 'window');
+    const originalSocket = globalThis.WebSocket;
+    class FakeSocket {
+        static CLOSED = 3;
+        readyState = 1;
+        private closeListeners: (() => void)[] = [];
+        addEventListener(type: string, listener: () => void) {
+            if (type === 'close') this.closeListeners.push(listener);
+        }
+        onclose?: () => void;
+        onmessage?: (event: { data: string }) => void;
+        constructor(public url: string) {
+            socket = this;
+            queueMicrotask(() => this.send({ type: 'uuid', uuid: 'client' }));
+        }
+        send(data: unknown) { this.onmessage?.({ data: JSON.stringify(data) }); }
+        close = jest.fn(() => {
+            queueMicrotask(() => {
+                this.readyState = FakeSocket.CLOSED;
+                this.onclose?.();
+                this.closeListeners.splice(0).forEach(listener => listener());
+            });
         });
     }
-    if (originalWindow === undefined) delete (globalThis as any).window;
-    else (globalThis as any).window = originalWindow;
-}, 10000);
-
-it('waits for callbacks and closes the WebSocket before completing the request', async () => {
-    (globalThis as any).window = { location: { href: `http://127.0.0.1:${mockPort}` } };
-    message = new Message('127.0.0.1', mockPort);
-    const callback1 = jest.fn();
-    const callback2 = jest.fn();
-    const result = await message.post('start-task', undefined, { callback1, callback2 });
-    expect(result.type).toBe('finish');
-    expect(callback1).toHaveBeenCalledWith('value1');
-    expect(callback2).toHaveBeenCalledWith('value2');
-    expect(message.active_requests).toBe(0);
-    expect(message.ws).toBeUndefined();
-    expect(message.uuid).toBeUndefined();
-    expect(message.listening_callbacks).toEqual({});
-}, 10000);
+    beforeEach(() => {
+        Object.defineProperty(globalThis, 'window', { configurable: true, value: { location: { href: 'http://localhost:8000' } } });
+        globalThis.WebSocket = FakeSocket as any;
+        jest.spyOn(globalThis, 'fetch');
+    });
+    afterEach(() => {
+        jest.restoreAllMocks();
+        globalThis.WebSocket = originalSocket;
+        if (originalWindow) Object.defineProperty(globalThis, 'window', originalWindow);
+        else delete (globalThis as any).window;
+    });
+    it('delivers callbacks arriving before HTTP response and closes connection', async () => {
+        const message = new Message(); message.uuid = 'client';
+        const callback = jest.fn();
+        jest.mocked(fetch).mockImplementation(async () => {
+            socket.send({ type: 'callback', request_uuid: 'request', progress: 42 });
+            socket.send({ type: 'finish', request_uuid: 'request' });
+            return { ok: true, json: async () => ({ request_uuid: 'request', callbacks: ['progress'] }) } as Response;
+        });
+        await expect(message.post('task', { input: 1 }, { progress: callback })).resolves.toMatchObject({ type: 'finish' });
+        expect(callback).toHaveBeenCalledWith(42);
+        expect(socket.close).toHaveBeenCalledTimes(1);
+        expect(message.active_requests).toBe(0);
+        expect(socket.readyState).toBe(FakeSocket.CLOSED);
+        expect(message.message_cache).toEqual({});
+        expect(message.listening_callbacks).toEqual({});
+    });
+    it('rejects HTTP failure and releases callback connection', async () => {
+        const message = new Message(); message.uuid = 'client';
+        jest.mocked(fetch).mockResolvedValue({ ok: false, status: 503 } as Response);
+        await expect(message.post('task', undefined, {})).rejects.toThrow('503');
+        expect(socket.close).toHaveBeenCalledTimes(1);
+        expect(message.active_requests).toBe(0);
+        expect(socket.readyState).toBe(FakeSocket.CLOSED);
+    });
+    it('returns JSON without opening callback connection', async () => {
+        const message = new Message(); message.uuid = 'client';
+        jest.mocked(fetch).mockResolvedValue({ ok: true, json: async () => ({ value: 1 }) } as Response);
+        await expect(message.post('task')).resolves.toEqual({ value: 1 });
+        expect(message.ws).toBeUndefined();
+    });
+});

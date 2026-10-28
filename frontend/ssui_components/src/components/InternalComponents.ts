@@ -1,14 +1,17 @@
 import '../controllers/InternalControllers';
+import './Image/CanvasInput';
 import './Image/ImageUploader';
 import './Image/ImagePicker';
 import './Video/VideoUploader';
 import './Audio/AudioUploader';
 import './Motion/SkeletonPreview';
+import './Motion/MotionClipPreview';
 import './Mesh/MeshArtifact';
 import './Loader/SDLoader';
 import './Loader/ControlNetLoader';
 import './Base/ListContainer';
 import './Base/ScalarComponents';
+import './Base/RandomIntegerEditor';
 import './Base/UnionContainer';
 import './Base/PromptEditor';
 import './Loader/WorkflowLoaders';

@@ -19,7 +19,7 @@ if (params.has('path')) {
 ReactDOM.createRoot(document.getElementById("root") as HTMLElement).render(
   <React.StrictMode>
     <BlueprintProvider>
-        <UIStateProvider path={canvas_path} view="image-canvas"><App path={canvas_path} /></UIStateProvider>
+        {params.has('input') ? <App path={canvas_path} /> : <UIStateProvider path={canvas_path} view="image-canvas"><App path={canvas_path} /></UIStateProvider>}
     </BlueprintProvider>
   </React.StrictMode>
 );

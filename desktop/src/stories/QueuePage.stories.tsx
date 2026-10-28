@@ -1,6 +1,24 @@
 import type { Meta, StoryObj } from '@storybook/react';
 import Queue from '../components/Queue';
-import { QueueTask } from '../services/TaskService';
+import TaskService, { QueueTask } from '../services/TaskService';
+import { RuntimeAdapters, RuntimeAdaptersProvider } from '../runtime/RuntimeAdapters';
+
+const commandResult = async () => ({ success: true, message: '运行中' });
+const storyRuntime: RuntimeAdapters = {
+  executor: {
+    startExecutor: commandResult,
+    stopExecutor: commandResult,
+    getExecutorStatus: commandResult,
+    restartExecutor: commandResult,
+  },
+  server: {
+    startServer: commandResult,
+    stopServer: commandResult,
+    getServerStatus: commandResult,
+    restartServer: commandResult,
+  },
+  tasks: new TaskService('http://127.0.0.1:7422'),
+};
 
 const meta: Meta<typeof Queue> = {
   title: 'Components/Queue',
@@ -8,6 +26,7 @@ const meta: Meta<typeof Queue> = {
   parameters: {
     layout: 'fullscreen',
   },
+  decorators: [Story => <RuntimeAdaptersProvider value={storyRuntime}><Story /></RuntimeAdaptersProvider>],
 };
 
 export default meta;
@@ -25,11 +44,11 @@ const generateQueueItems = (count: number) => {
       name: `测试任务 ${i + 1}`,
       kind: i % 2 === 0 ? 'download' : 'generation',
       status: statuses[i % statuses.length],
-      progress: Math.floor(Math.random() * 100),
-      createdAt: (Date.now() - Math.random() * 10000000000) / 1000,
+      progress: (i * 23) % 100,
+      createdAt: 1760000000 - i * 3600,
       meta: {
         type: types[i % types.length],
-        priority: Math.floor(Math.random() * 5) + 1,
+        priority: i % 5 + 1,
       },
     });
   }
@@ -42,6 +61,9 @@ export const Empty: Story = {
     items: [],
   },
 };
+
+// E2E/integration story: no local items means Queue uses the injected HTTP/WebSocket task service.
+export const BackendLifecycle: Story = {};
 
 // 少量任务
 export const FewItems: Story = {
