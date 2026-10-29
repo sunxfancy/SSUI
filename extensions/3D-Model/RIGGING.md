@@ -69,7 +69,12 @@ Open3D/PyMeshLab；MIA 改用 Gradio 6 和兼容的 Transformers 5.1，避免安
 使用的 TensorBoard。独立环境通过 `.pth` 读取 CUDA base 的包，新增依赖只写入
 模型自己的环境，不修改 base。应保留 `--base-python` 对应的环境。
 
-本机原生组件构建命令（先读取根 `package.json`）：
+Windows ARM64、Python 3.13、CUDA 13.4 / PyTorch `2.16.0.dev20261026+cu134`
+已有发布的原生扩展和 FreeType 包，可按
+[ARM64 包安装说明](../../doc/WindowsArm64Packages.md)安装固定版本与 SHA256 的 wheel。
+这些包只适用于文档中的 ABI 和 GPU 架构组合。
+
+需要从源码重建时，使用以下命令（先读取根 `package.json`）：
 
 ```bash
 yarn build:rigging:cuda

@@ -125,6 +125,8 @@ test('lock compilation uses the requested target, Python version and unchanged l
 test('Windows ARM64 CPU uses published native wheels without cv2 collisions or GPU dependencies', () => {
   const resolved = resolveDependencies(profileFromName('windows-arm64-cpu'));
   assert.ok(resolved.requirements.includes('torch==2.9.1+cpu'));
+  assert.ok(resolved.requirements.includes('WeTextProcessing==1.0.4+ssui.cpu.import1.be4d2d5c7bc86'));
+  assert.ok(!resolved.requirements.some(line => line.includes('pynini-2.1.6.post1/releases')));
   assert.ok(resolved.requirements.includes('torchvision==0.24.1+d801a34'));
   assert.ok(resolved.requirements.includes('sentencepiece==0.2.2'));
   assert.ok(resolved.requirements.includes('transformers==4.57.6'));

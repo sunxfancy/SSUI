@@ -71,7 +71,7 @@ trimesh>=4.6.5
 virtualenv>=20.28.0
 vtk==9.4.2+ssui.cpu.r1.b62943278488d
 websockets>=14.1
-WeTextProcessing @ https://github.com/sunxfancy/pynini-2.1.6.post1/releases/download/2.1.6.post1/WeTextProcessing-1.0.4-py3-none-any.whl
+WeTextProcessing==1.0.4+ssui.cpu.import1.be4d2d5c7bc86
 --extra-index-url https://download.pytorch.org/whl/cpu
 --extra-index-url https://sunxfancy.github.io/ssui-python-packages/simple/windows/arm64/cpu/
 --extra-index-url https://sunxfancy.github.io/ssui-python-packages/simple/windows/arm64/cpu/2.9.1/

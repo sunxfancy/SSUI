@@ -1260,8 +1260,7 @@ websockets:
   dependents:
     - uvicorn
 wetextprocessing:
-  version: "1.0.4"
-  url: "https://github.com/sunxfancy/pynini-2.1.6.post1/releases/download/2.1.6.post1/WeTextProcessing-1.0.4-py3-none-any.whl"
+  version: "1.0.4+ssui.cpu.import1.be4d2d5c7bc86"
   isRoot: true
 wrapt:
   version: "2.5.1"
