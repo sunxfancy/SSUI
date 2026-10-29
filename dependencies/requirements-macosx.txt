@@ -42,6 +42,7 @@ scikit-image>=0.25.2
 scipy>=1.15.2
 sentencepiece==0.2.0
 spandrel>=0.4.1
+ssui-trellis-mps @ https://github.com/sunxfancy/ssui-python-packages/releases/download/ssui-trellis-mps-0.1.0-r1--macos-arm64-cp312-mps-torch241--14d1ff0eb3ca4fe7104e/ssui_trellis_mps-0.1.0+ssui.mps.241.r1.b14d1ff0eb3ca-cp312-cp312-macosx_12_0_arm64.whl
 tiktoken>=0.9.0
 tokenizers>=0.20.0
 torch==2.4.1

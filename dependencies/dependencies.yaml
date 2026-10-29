@@ -111,6 +111,12 @@ backend:
       torchvision: "==0.19.1"
 overrides:
   - when:
+      os: macos
+      arch: arm64
+      backend: mps
+    packages:
+      ssui-trellis-mps: "@ https://github.com/sunxfancy/ssui-python-packages/releases/download/ssui-trellis-mps-0.1.0-r1--macos-arm64-cp312-mps-torch241--14d1ff0eb3ca4fe7104e/ssui_trellis_mps-0.1.0+ssui.mps.241.r1.b14d1ff0eb3ca-cp312-cp312-macosx_12_0_arm64.whl"
+  - when:
       os: windows
       arch: x64
       backend: rocm
