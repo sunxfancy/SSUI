@@ -208,6 +208,7 @@ overrides:
       tiktoken: "==0.9.0+ssui.cpu.r1.bb0e785dac3f7"
       soxr: "==0.5.0.post1+ssui.cpu.r1.b9f0b72cc0d95"
       pynini: "==2.1.6.post1+ssui.cpu.r1.b9c91f73d4a44"
+      WeTextProcessing: "==1.0.4+ssui.cpu.import1.be4d2d5c7bc86"
       antlr4-python3-runtime: "==4.9.3+ssui.cpu.r1.b0faf253a9595"
       # Adapter delegates streaming to the selected Transformers public API.
       transformers_stream_generator: "==0.0.4+ssui.cpu.r2.b410865ecf176"
