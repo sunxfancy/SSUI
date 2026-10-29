@@ -1,0 +1,17 @@
+{
+  "unirig": {
+    "repo": "https://github.com/VAST-AI-Research/UniRig.git",
+    "revision": "6793c6640ff01c8fb389f3993434124bb43d2933",
+    "checkpoint": "VAST-AI/UniRig"
+  },
+  "mia": {
+    "repo": "https://github.com/jasongzy/Make-It-Animatable.git",
+    "revision": "8fb51382ff6da556cdb95cc03a48200603f3a493",
+    "checkpoint": "jasongzy/Make-It-Animatable"
+  },
+  "riganything": {
+    "repo": "https://github.com/Isabella98Liu/RigAnything.git",
+    "revision": "d03cdb21dd134fa81df6b0947522469db3f78bd2",
+    "checkpoint": "Isabellaliu/RigAnything"
+  }
+}

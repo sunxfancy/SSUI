@@ -137,7 +137,12 @@
     "preview:motion-model": "node dependencies/venv.cjs python scripts/motion_models_preview.py",
     "install:kimodo": "node dependencies/venv.cjs python extensions/Motion/install_kimodo.py",
     "test:kimodo:smoke": "node dependencies/venv.cjs python scripts/kimodo_mac_smoke.py",
-    "test:kimodo:preview": "node dependencies/venv.cjs python scripts/kimodo_preview.py"
+    "test:kimodo:preview": "node dependencies/venv.cjs python scripts/kimodo_preview.py",
+    "install:rigging": "node dependencies/venv.cjs python extensions/3D-Model/install_rigging.py",
+    "test:rigging": "node dependencies/venv.cjs python -m unittest tests.auto_rig_test -v",
+    "test:rigging:smoke": "node dependencies/venv.cjs python scripts/rigging_smoke.py",
+    "build:rigging:cuda": "node dependencies/venv.cjs python scripts/build_rigging_cuda.py",
+    "test:rigging:cuda": "node dependencies/venv.cjs python scripts/rigging_cuda_check.py"
   },
   "devDependencies": {
     "@axe-core/playwright": "^4.10.2",

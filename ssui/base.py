@@ -24,8 +24,11 @@ class MotionClip:
 
 
 class Mesh():
-    def __init__(self, model: trimesh.Trimesh = None):
+    def __init__(self, model: trimesh.Trimesh = None, path: str = None):
         self._model = model
+        # Native rigged GLBs must bypass trimesh's geometry-only re-export.
+        # A path-backed Mesh is an immutable artifact; _model is optional.
+        self.path = path
 
     @staticmethod
     def load(path: str) -> "Mesh":
