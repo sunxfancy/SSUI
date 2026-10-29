@@ -1,5 +1,11 @@
 # SSUI 3D Model extension
 
+## 自动骨骼绑定
+
+新增 UniRig、Make-It-Animatable（MIA）和 RigAnything 隔离运行适配器，
+统一 AutoRigMesh 节点与带蒙皮的原始 GLB 输出。
+安装、工作流、平台限制及真实推理验证状态见 [RIGGING.md](RIGGING.md)。
+
 ## TRELLIS and TRELLIS.2 GPU workflows
 
 Use `examples/advance/workflow-trellis.py` for the original TRELLIS model, or

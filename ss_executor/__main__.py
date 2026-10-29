@@ -189,6 +189,17 @@ def convert_task_return(result, task_script):
             payload["text"] = result._text
         return payload
     if isinstance(result, Mesh):
+        if result.path:
+            import shutil
+            source = os.path.abspath(result.path)
+            if not os.path.isfile(source) or os.path.splitext(source)[1].lower() != ".glb":
+                raise ValueError("Mesh artifact must be an existing GLB file")
+            task_project_root = search_project_root(os.path.dirname(task_script))
+            output_dir = os.path.join(task_project_root, "output")
+            os.makedirs(output_dir, exist_ok=True)
+            path = os.path.join(output_dir, f"mesh_{uuid.uuid4().hex}.glb")
+            shutil.copyfile(source, path)
+            return {"type": "mesh", "path": path, "format": "glb"}
         if result._model is None:
             raise ValueError("Mesh result contains no model data")
         task_project_root = search_project_root(os.path.dirname(task_script))
