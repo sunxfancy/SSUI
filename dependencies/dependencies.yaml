@@ -116,7 +116,7 @@ overrides:
       backend: rocm
     packages:
       accelerate: "==1.5.2"
-      bitsandbytes: "@ https://github.com/sunxfancy/bitsandbytes-0.49.2.rocm72/releases/download/v0.49.2%2Brocm72/bitsandbytes-0.49.2%2Brocm72-py3-none-win_amd64.whl"
+      bitsandbytes: "@ https://github.com/sunxfancy/ssui-python-packages/releases/download/bitsandbytes-0.49.2-r1--windows-x64-cp312-rocm721-gfx1201--1205112e0195fdacf32a/bitsandbytes-0.49.2%2Bssui.rocm.721.291.gfx1201.r1.b1205112e0195-py3-none-win_amd64.whl"
       cumesh: "@ https://github.com/sunxfancy/SSUI/releases/download/rocm-wheels-20261027/cumesh-0.0.1%2Bssui.rocm72-cp312-cp312-win_amd64.whl#sha256=b8a4a82e82b39cb7d3396e8909f186fe7720163eb2ca7cfdd9dc9c03e5947544"
       nvdiffrast: "@ https://github.com/sunxfancy/SSUI/releases/download/rocm-wheels-20261027/nvdiffrast-0.4.0%2Bssui.rocm72-cp312-cp312-win_amd64.whl#sha256=5ead6ef29217d88d20a24cacacf05da66f810edc0b03b9567c08f1f30e8613db"
       natten: "@ https://github.com/sunxfancy/SSUI/releases/download/rocm-wheels-20261027/natten-0.17.4%2Bssui.rocm72-cp312-cp312-win_amd64.whl#sha256=96698e957dcde7c963b46f7e8512526055313dd75ab55e3b1288b9a00c667d23"

@@ -52,7 +52,7 @@ babel==2.18.0
     # via jupyterlab-server
 beautifulsoup4==4.15.0
     # via nbconvert
-bitsandbytes @ https://github.com/sunxfancy/bitsandbytes-0.49.2.rocm72/releases/download/v0.49.2%2Brocm72/bitsandbytes-0.49.2%2Brocm72-py3-none-win_amd64.whl
+bitsandbytes @ https://github.com/sunxfancy/ssui-python-packages/releases/download/bitsandbytes-0.49.2-r1--windows-x64-cp312-rocm721-gfx1201--1205112e0195fdacf32a/bitsandbytes-0.49.2%2Bssui.rocm.721.291.gfx1201.r1.b1205112e0195-py3-none-win_amd64.whl
     # via -r dependencies/requirements-windows-amdgpu.txt
 blake3==1.0.9
     # via -r dependencies/requirements-windows-amdgpu.txt
