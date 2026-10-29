@@ -128,3 +128,13 @@ def compact_pairs(found):
             pairs = [(torch.cat((a,c)),torch.cat((b,d)))
                      for (a,b),(c,d) in zip(pairs,tile_pairs)]
     return pairs
+
+
+# macOS topology is maintained and released by ssui-python-packages.
+import sys as _sys
+if _sys.platform == 'darwin':
+    try:
+        from ssui_trellis_mps.topology import unique_rows, count_indices, neighbor_pairs, compact_pairs
+    except ImportError as exc:
+        raise ImportError('Install ssui-trellis-mps from the macos/arm64/mps/2.4.1 channel; '
+                          'see doc/MacModelSupport.md') from exc

@@ -598,6 +598,10 @@ sounddevice:
 spandrel:
   version: "0.4.1"
   isRoot: true
+ssui-trellis-mps:
+  version: "0.1.0+ssui.mps.241.r1.b14d1ff0eb3ca"
+  url: "https://github.com/sunxfancy/ssui-python-packages/releases/download/ssui-trellis-mps-0.1.0-r1--macos-arm64-cp312-mps-torch241--14d1ff0eb3ca4fe7104e/ssui_trellis_mps-0.1.0+ssui.mps.241.r1.b14d1ff0eb3ca-cp312-cp312-macosx_12_0_arm64.whl"
+  isRoot: true
 starlette:
   version: "0.46.1"
   dependents:
@@ -638,6 +642,7 @@ torch:
     - diffusers
     - kornia
     - spandrel
+    - ssui-trellis-mps
     - timm
     - torchaudio
     - torchsde

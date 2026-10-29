@@ -96,7 +96,7 @@ yarn test:trellis:smoke --workflow --output output/trellis-mac-workflow
 `--model-dir` / `SSUI_TRELLIS_MODEL_DIR` 可指定同一官方模型的本地目录。
 
 图像编码、稀疏结构采样、SLAT、网格解码和 FlexiCubes 数值运算在 GPU 上进行；
-整数邻接映射使用自定义 Metal 内核，坐标/边去重和计数在 MPS 上完成；CPU 仅读取少量尺寸元数据。首次运行需 Xcode 编译工具和 ninja。小窗口注意力合批，长序列按查询分块，
+整数邻接映射使用自定义 Metal 内核，坐标/边去重和计数在 MPS 上完成；CPU 仅读取少量尺寸元数据。原生桥接由 `ssui-trellis-mps` wheel 提供，安装见 `doc/MacModelSupport.md`；运行时不再需要 Xcode / ninja。小窗口注意力合批，长序列按查询分块，
 各阶段释放模型，避免全模型持续驻留。首次实测生成 228,766 顶点、455,764 三角面的椅子；
 原始网格并非闭合，局部有碎片/孔洞，不能当作已修复的生产模型。
 当前导出顶点颜色 GLB，尚未移植 CUDA UV 烘焙、Gaussian/RF 渲染及所有实验分支。

@@ -427,6 +427,8 @@ spandrel==0.4.1
     # via -r dependencies/requirements-macosx.txt
 starlette==0.46.1
     # via fastapi
+ssui-trellis-mps @ https://github.com/sunxfancy/ssui-python-packages/releases/download/ssui-trellis-mps-0.1.0-r1--macos-arm64-cp312-mps-torch241--14d1ff0eb3ca4fe7104e/ssui_trellis_mps-0.1.0+ssui.mps.241.r1.b14d1ff0eb3ca-cp312-cp312-macosx_12_0_arm64.whl
+    # via -r dependencies/requirements-macosx.txt
 sympy==1.13.3
     # via
     #   onnxruntime
@@ -453,6 +455,7 @@ torch==2.4.1
     #   diffusers
     #   kornia
     #   spandrel
+    #   ssui-trellis-mps
     #   timm
     #   torchaudio
     #   torchsde

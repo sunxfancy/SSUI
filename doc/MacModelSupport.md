@@ -133,3 +133,23 @@ TRELLIS 整数拓扑 GPU 移植已追加实测：69 万点邻接构建从 1777 m
 面索引完全一致，顶点最大误差 1.19e-7，8 位颜色最大差 1。
 已修复 Torch 2.4 MPS 的大整数排序及超过 2²⁴ 扁平索引精度问题；
 详细方法和复现命令见 `extensions/3D-Model/vendor/trellis/MPS_PORT.md`。
+
+## macOS 原生包迁移
+
+TRELLIS 的 Metal 原生桥接与整数拓扑实现已提取到
+[ssui-python-packages](https://github.com/sunxfancy/ssui-python-packages/tree/main/packages/ssui-trellis-mps)
+的 `ssui-trellis-mps` 包。当前消费者改动依赖该包先完成发布；不能仅合入
+SSUI 一侧。安装 CPython 3.12 / ARM64 / PyTorch 2.4.1 对应的 wheel：
+
+```sh
+python -m pip install --no-deps --index-url https://sunxfancy.github.io/ssui-python-packages/simple/macos/arm64/mps/2.4.1/ ssui-trellis-mps
+```
+
+原生扩展随 wheel 预编译，运行环境不再需要 Xcode / ninja。首次执行仍需
+Metal 驱动编译内嵌 shader。安装后运行 `yarn test:trellis:topology --check-only`
+及 `yarn test:trellis:smoke --local-files-only --workflow`；上文历史真模型结果
+不能代替迁移后的回归。macOS 依赖配置与锁文件已固定不可变 wheel URL；合入前必须确认该 release
+及其 `release.json` 的 SHA-256 校验。其他平台依赖不受此次迁移影响。
+
+TRELLIS 的模型/稀疏张量接入，以及 AnimateDiff、Wan、TripoSR、Kimodo 的
+节点设备适配仍由 SSUI 维护。Pynini 已由包仓库构建发布。
