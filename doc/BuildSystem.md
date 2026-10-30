@@ -17,11 +17,8 @@ yarn dev:desktop
 ```
 yarn dev:desktop
 yarn dev:functional_ui
-yarn dev:components
-yarn dev:server
-yarn dev:executor
 ```
-需要同时开启这5个进行项目集成开发，基本能满足所有项目代码热更新的需求。但如果你只需要单独测试某个部分，也可以只启动对应的服务器。
+共享组件库没有 `dev:components` 脚本；修改组件后运行 `yarn build:components`。`yarn dev:desktop` 在 7422 端口空闲时会自动启动 server 和 executor。若只在浏览器开发 Functional UI，可分别运行 `yarn dev:server`、`yarn dev:executor` 和 `yarn dev:functional_ui`。
 
 注：dev:server和dev:executor并不是开发服务器，不会热更新，但可以方便观察其运行状态和输出，也可以选择查看项目目录下的log文件夹。另外如果手动启动dev:server则也必须手动启动dev:executor。
 
@@ -45,12 +42,15 @@ yarn dev:executor
 - `yarn dev:server` - 启动FastAPI服务器（端口7422）
 - `yarn dev:executor` - 启动SSExecutor用来执行任务，运行模型
 - `yarn dev:functional_ui` - 启动功能UI开发服务器(端口7420)，desktop项目启动时，如果发现7420端口被占用，则会自动用开发用端口7420代替7422
-- `yarn dev:components` - 启动组件开发服务器，自动watch组件代码变化
+- `yarn storybook` - 在 6006 端口独立开发 UI 组件
 
 构建命令：
 - `yarn build:desktop` - 构建Tauri桌面应用
 - `yarn build:components` - 构建组件
 - `yarn build:functional_ui` - 构建功能UI
+- `yarn build:canvas` - 构建 Image Canvas 前端
+- `yarn build:canvas-engine` - 构建 Rust/Wasm Canvas Engine
+- `yarn build:desktop_ui` - 仅构建桌面前端，不编译 Tauri/Rust
 - `yarn build:example` - 构建示例扩展
 
 ## 打包
@@ -67,8 +67,14 @@ yarn dev:executor
 
 ## 测试
 
-- `yarn test` - 运行所有测试
+- `yarn test` - 运行 Python 测试
 - `yarn test_on <test_name>` - 运行指定测试，例如`yarn test_on ss_executor_test`
+- `yarn test:frontend` / `yarn test:ui` - 前端单元测试 / 浏览器测试
+- `yarn test:desktop-ui` / `yarn test:rust` - 桌面 UI / Rust 测试
+- `yarn test:canvas-engine` - Canvas Engine 的 Cargo 测试
+- `yarn test:contract` / `yarn api:check` - API 契约测试 / OpenAPI 类型同步检查
+
+浏览器和原生测试的环境要求及覆盖范围见 [测试指南](Testing.md)。
 
 请注意，测试分为常规与真模型回归两类：常规测试使用模拟模型输出在 CPU 上验证
 接口与流程，默认全部运行；真模型回归会下载大型模型，默认不运行。如需要，
