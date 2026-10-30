@@ -19,6 +19,7 @@ on:
       - '.github/workflows/windows-arm64-wheels.yml'
       - '.github/workflows/macos-intel-wheels.yml'
       - 'scripts/build_macos_intel_wheels.py'
+      - 'scripts/find_native_wheels.py'
       - 'scripts/verify_macos_wheels.py'
   pull_request:
     paths:
@@ -29,6 +30,7 @@ on:
       - '.github/workflows/windows-arm64-wheels.yml'
       - '.github/workflows/macos-intel-wheels.yml'
       - 'scripts/build_macos_intel_wheels.py'
+      - 'scripts/find_native_wheels.py'
       - 'scripts/verify_macos_wheels.py'
 permissions:
   contents: read
