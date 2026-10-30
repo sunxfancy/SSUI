@@ -10,11 +10,12 @@ export interface ViewOption {
 
 /**
  * 每种文件类型可用的视图（按顺序展示，当前视图高亮，点击可切换）。
- * - .py：Functional UI（函数调用）↔ Code Editor（代码编辑）
+ * - .py：会话 UI ↔ Functional UI（函数调用）↔ Code Editor（代码编辑）
  * - .flow：Flow（流程图）↔ Functional UI
  */
 const VIEW_OPTIONS: Record<string, ViewOption[]> = {
     py: [
+        { view: "conversation", label: "会话 UI", icon: "chat" },
         { view: "functional", label: "Functional UI", icon: "function" },
         { view: "code_editor", label: "Code Editor", icon: "code" },
     ],
@@ -37,7 +38,8 @@ function getExtension(path: string): string {
 
 function switchToView(path: string, view: string): void {
     const base = window.location.origin + window.location.pathname;
-    window.location.href = `${base}?view=${view}&path=${encodeURIComponent(path)}`;
+    window.history.pushState({}, '', `${base}?view=${view}&path=${encodeURIComponent(path)}`);
+    window.dispatchEvent(new PopStateEvent('popstate'));
 }
 
 export const ViewSwitcher: React.FC<ViewSwitcherProps> = ({ path, currentView }) => {

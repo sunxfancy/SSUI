@@ -46,9 +46,17 @@ class ModelScanResult(BaseModel):
     name: str
 
 
+class ConversationInfo(BaseModel):
+    prompt_param: str
+    context_param: str
+    context_kind: Literal["pairs", "text"]
+    context_output: Optional[int] = None
+
+
 class ScriptFunctionInfo(BaseModel):
     params: Dict[str, str]
     returns: List[str]
+    conversation: Optional[ConversationInfo] = None
 
 
 class FlowOperatorInfo(BaseModel):

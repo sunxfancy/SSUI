@@ -4,6 +4,7 @@ import { ItemPredicate, ItemRenderer, Select } from "@blueprintjs/select";
 import { ComponentTabRef, PersistentComponent, UIStateScope } from "ssui_components";
 import type { ApiComponents } from "ssui_components";
 import { DetailsPanel } from "./Details";
+import { ContextEditor, SessionAccess, SharedSettings, useSessions } from '../conversation/SessionState';
 import { registerUIProvider, UIProvider } from '../UIProvider';
 import { useConfig } from '../../config';
 import { ViewSwitcher } from "../common/ViewSwitcher";
@@ -16,7 +17,7 @@ interface Callable { rank: number; name: string; }
 type Params = ApiComponents['schemas']['ScriptFunctionInfo'];
 type ScriptMeta = ApiComponents['schemas']['ScriptMeta'];
 type FunctionMeta = ScriptMeta['functions'];
-interface FunctionalUIProps { path: string; autoOpenDetails?: boolean; }
+interface FunctionalUIProps { path: string; autoOpenDetails?: boolean; sessions?: SessionAccess | null; }
 interface FunctionalUIState {
     functions: FunctionMeta | null;
     loading: boolean;
@@ -116,6 +117,8 @@ export class FunctionalUI extends PersistentComponent<FunctionalUIProps, Functio
         const selected = selectedFunc?.name ?? this.getFunctionNames(functions)[0];
         const meta = functions[selected];
         if (!meta || typeof meta === 'string') return;
+        const conversation = meta.conversation;
+        const snapshot = conversation ? this.props.sessions?.get(selected, conversation) : undefined;
         this.executeRequest?.abort();
         const request = new AbortController();
         this.executeRequest = request;
@@ -124,6 +127,11 @@ export class FunctionalUI extends PersistentComponent<FunctionalUIProps, Functio
         try {
             const params: Record<string, unknown> = {};
             for (const key of Object.keys(meta.params)) {
+                if (conversation && key === conversation.context_param) {
+                    if (!snapshot) throw new Error('共享会话尚未准备好');
+                    params[key] = snapshot.context;
+                    continue;
+                }
                 const input = this.refInputs.get(key)?.current;
                 if (!input) throw new Error(`Input is not ready: ${key}`);
                 params[key] = input.onExecute();
@@ -144,6 +152,11 @@ export class FunctionalUI extends PersistentComponent<FunctionalUIProps, Functio
             }
             const outputNames = meta.returns.map((_type, index) => String(index));
             if (data.length !== outputNames.length) throw new Error('Unexpected output count');
+            if (conversation && snapshot) {
+                const prompt = params[conversation.prompt_param];
+                if (typeof prompt !== 'string') throw new Error('对话输入必须是文本');
+                this.props.sessions!.commit(selected, conversation, snapshot, prompt, data);
+            }
             data.forEach((item, index) => this.refOutputs.get(outputNames[index])?.current?.onUpdate(item));
             this.setState({ runError: null, hasRun: true });
         } catch (error) {
@@ -179,7 +192,7 @@ export class FunctionalUI extends PersistentComponent<FunctionalUIProps, Functio
 
     renderPorts = (meta: Params, port: 'input' | 'output', functionName: string): JSX.Element => {
         const entries: [string, string][] = port === 'input'
-            ? Object.entries(meta.params)
+            ? Object.entries(meta.params).filter(([name]) => name !== meta.conversation?.context_param)
             : meta.returns.map((type, index) => [String(index), type]);
         const refs = port === 'input' ? this.refInputs : this.refOutputs;
         if (!entries.length) return (
@@ -189,8 +202,8 @@ export class FunctionalUI extends PersistentComponent<FunctionalUIProps, Functio
         return <div className="functional-ui-port-list">{entries.map(([name, type], index) => (
             <section className="functional-ui-card" key={`${functionName}-${port}-${name}`}>
                 <div className="functional-ui-card-index">{String(index + 1).padStart(2, '0')}</div>
-                <UIStateScope name={`${functionName}/${port}/${name}`}><ComponentTabRef name={port === 'output' ? `output_${name}` : name} root_path={this.state.root_path}
-                    script_path={this.props.path} type={type} port={port} ref={this.getRef(name, refs)} /></UIStateScope>
+                <SharedSettings name={`${functionName}/${port}/${name}`}><ComponentTabRef name={port === 'output' ? `output_${name}` : name} root_path={this.state.root_path}
+                    script_path={this.props.path} type={type} port={port} ref={this.getRef(name, refs)} /></SharedSettings>
             </section>
         ))}</div>;
     };
@@ -219,9 +232,10 @@ export class FunctionalUI extends PersistentComponent<FunctionalUIProps, Functio
                     aria-expanded={this.state.isOpen}>高级参数</Button>
             </section>
             <Collapse isOpen={this.state.isOpen} keepChildrenMounted><div className="functional-ui-details-shell">
-                <UIStateScope name={`details/${selected}`}><DetailsPanel key={`${this.props.path}:${selected}`} path={this.props.path} selected={selected} ref={this.details} /></UIStateScope>
+                <SharedSettings name={`${selected}/details`}><DetailsPanel key={`${this.props.path}:${selected}`} path={this.props.path} selected={selected} ref={this.details} /></SharedSettings>
             </div></Collapse>
             {this.state.runError && <Callout role="alert" className="functional-ui-run-error" intent="danger" icon="error" title="运行失败">{this.state.runError}</Callout>}
+            {selectedMeta.conversation && <ContextEditor name={selected} conversation={selectedMeta.conversation} disabled={this.state.running} />}
             <div className="functional-ui-stage">
                 <section className="functional-ui-column functional-ui-column-input">
                     <header className="functional-ui-column-header"><div><span className="functional-ui-eyebrow">Configure</span><h2>输入</h2></div><span>{inputCount}</span></header>
@@ -262,7 +276,7 @@ export class FunctionalUI extends PersistentComponent<FunctionalUIProps, Functio
 
 const FunctionalUIView: React.FC<FunctionalUIProps> = ({ path }) => {
     const { config } = useConfig();
-    return <FunctionalUI path={path} autoOpenDetails={config.auto_open_details} />;
+    return <FunctionalUI path={path} autoOpenDetails={config.auto_open_details} sessions={useSessions()} />;
 };
 
 export class FunctionalUIProvider implements UIProvider {

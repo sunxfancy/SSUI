@@ -102,26 +102,18 @@ charset-normalizer:
 click:
   version: "8.4.2"
   dependents:
-    - huggingface-hub
     - rich-toolkit
     - typer
     - uvicorn
 clip-anytorch:
   version: "2.6.0"
   isRoot: true
-colorama:
-  version: "0.4.6"
-  dependents:
-    - click
-    - ipython
-    - tqdm
-    - uvicorn
 comm:
   version: "0.2.3"
   dependents:
     - ipykernel
 compel:
-  version: "2.4.0"
+  version: "2.3.1"
   isRoot: true
 contourpy:
   version: "1.3.3"
@@ -235,6 +227,7 @@ filelock:
     - modelscope
     - python-discovery
     - torch
+    - transformers
     - virtualenv
 flatbuffers:
   version: "25.12.19"
@@ -276,6 +269,10 @@ h11:
   dependents:
     - httpcore
     - uvicorn
+hf-transfer:
+  version: "0.1.9"
+  dependents:
+    - huggingface-hub
 hf-xet:
   version: "1.5.1"
   dependents:
@@ -294,10 +291,9 @@ httpx:
     - diffusers
     - fastapi
     - fastapi-cloud-cli
-    - huggingface-hub
     - jupyterlab
 huggingface-hub:
-  version: "1.21.0"
+  version: "0.36.2"
   isRoot: true
   dependents:
     - accelerate
@@ -627,9 +623,14 @@ parso:
   dependents:
     - jedi
 peft:
-  version: "0.19.1"
+  version: "0.17.1"
+  isRoot: true
   dependents:
     - diffsynth
+pexpect:
+  version: "4.9.0"
+  dependents:
+    - ipython
 picklescan:
   version: "1.0.4"
   isRoot: true
@@ -688,6 +689,11 @@ psutil:
     - ipykernel
     - ipython
     - peft
+ptyprocess:
+  version: "0.7.0"
+  dependents:
+    - pexpect
+    - terminado
 pure-eval:
   version: "0.2.3"
   dependents:
@@ -768,12 +774,6 @@ python-multipart:
 pyvista:
   version: "0.48.4"
   isRoot: true
-pywinpty:
-  version: "3.0.5"
-  dependents:
-    - jupyter-server
-    - jupyter-server-terminals
-    - terminado
 pyyaml:
   version: "6.0.3"
   isRoot: true
@@ -813,9 +813,11 @@ requests:
     - datasets
     - diffusers
     - gguf
+    - huggingface-hub
     - jupyterlab-server
     - modelscope
     - pooch
+    - transformers
 restrictedpython:
   version: "8.3"
   isRoot: true
@@ -851,10 +853,29 @@ rich-toolkit:
     - fastapi-cloud-cli
 rignore:
   version: "0.7.6"
-  isRoot: true
   dependents:
     - fastapi-cloud-cli
+rocm:
+  version: "https://repo.radeon.com/rocm/windows/rocm-rel-7.2.1/rocm-7.2.1.tar.gz"
+  url: "https://repo.radeon.com/rocm/windows/rocm-rel-7.2.1/rocm-7.2.1.tar.gz"
+  isRoot: true
+  dependents:
     - torch
+rocm-sdk-core:
+  version: "7.2.1"
+  url: "https://repo.radeon.com/rocm/windows/rocm-rel-7.2.1/rocm_sdk_core-7.2.1-py3-none-win_amd64.whl"
+  isRoot: true
+  dependents:
+    - rocm
+rocm-sdk-devel:
+  version: "7.2.1"
+  url: "https://repo.radeon.com/rocm/windows/rocm-rel-7.2.1/rocm_sdk_devel-7.2.1-py3-none-win_amd64.whl"
+  isRoot: true
+rocm-sdk-libraries-custom:
+  version: "7.2.1"
+  url: "https://repo.radeon.com/rocm/windows/rocm-rel-7.2.1/rocm_sdk_libraries_custom-7.2.1-py3-none-win_amd64.whl"
+  isRoot: true
+  dependents:
     - rocm
 rpds-py:
   version: "2026.5.1"
@@ -965,6 +986,11 @@ tokenizers:
   isRoot: true
   dependents:
     - transformers
+torch:
+  version: "2.9.1+rocm7.2.1"
+  url: "https://repo.radeon.com/rocm/windows/rocm-rel-7.2.1/torch-2.9.1%2Brocm7.2.1-cp312-cp312-win_amd64.whl"
+  isRoot: true
+  dependents:
     - accelerate
     - clip-anytorch
     - compel
@@ -978,8 +1004,16 @@ tokenizers:
     - torchaudio
     - torchsde
     - torchvision
+torchaudio:
+  version: "2.9.1+rocm7.2.1"
+  url: "https://repo.radeon.com/rocm/windows/rocm-rel-7.2.1/torchaudio-2.9.1%2Brocm7.2.1-cp312-cp312-win_amd64.whl"
+  isRoot: true
 torchsde:
   version: "0.2.6"
+  isRoot: true
+torchvision:
+  version: "0.24.1+rocm7.2.1"
+  url: "https://repo.radeon.com/rocm/windows/rocm-rel-7.2.1/torchvision-0.24.1%2Brocm7.2.1-cp312-cp312-win_amd64.whl"
   isRoot: true
   dependents:
     - clip-anytorch
@@ -1026,7 +1060,7 @@ trampoline:
   dependents:
     - torchsde
 transformers:
-  version: "5.12.1"
+  version: "4.57.6"
   isRoot: true
   dependents:
     - compel
@@ -1040,8 +1074,6 @@ typer:
   dependents:
     - fastapi-cli
     - fastapi-cloud-cli
-    - huggingface-hub
-    - transformers
 typing-extensions:
   version: "4.15.0"
   dependents:
@@ -1073,7 +1105,6 @@ tzdata:
   version: "2026.2"
   dependents:
     - arrow
-    - pandas
 uri-template:
   version: "1.3.0"
   dependents:
@@ -1090,6 +1121,10 @@ uvicorn:
     - fastapi
     - fastapi-cli
     - fastapi-cloud-cli
+uvloop:
+  version: "0.23.0"
+  dependents:
+    - uvicorn
 virtualenv:
   version: "21.5.1"
   isRoot: true

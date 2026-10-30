@@ -2,11 +2,8 @@ name: LLM
 version: 0.1.0
 server:
   venv: shared
+  packages:
+    - ssui_llm
   dependencies:
-    - numpy>=1.21.2
+    - peft==0.17.1
   main: extension.py
-
-web_ui:
-  dist: dist/
-  main: main.js
-  

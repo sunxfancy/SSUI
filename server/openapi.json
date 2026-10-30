@@ -244,6 +244,44 @@
         "title": "Body_upload_file_files_upload_post",
         "type": "object"
       },
+      "ConversationInfo": {
+        "properties": {
+          "context_kind": {
+            "enum": [
+              "pairs",
+              "text"
+            ],
+            "title": "Context Kind",
+            "type": "string"
+          },
+          "context_output": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Context Output"
+          },
+          "context_param": {
+            "title": "Context Param",
+            "type": "string"
+          },
+          "prompt_param": {
+            "title": "Prompt Param",
+            "type": "string"
+          }
+        },
+        "required": [
+          "prompt_param",
+          "context_param",
+          "context_kind"
+        ],
+        "title": "ConversationInfo",
+        "type": "object"
+      },
       "DynamicResult": {
         "description": "Executor-driven payload whose concrete shape is defined by a script.",
         "title": "DynamicResult"
@@ -277,6 +315,16 @@
       },
       "ScriptFunctionInfo": {
         "properties": {
+          "conversation": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ConversationInfo"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "params": {
             "additionalProperties": {
               "type": "string"

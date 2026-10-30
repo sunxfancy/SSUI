@@ -795,6 +795,20 @@ export interface components {
              */
             file: string;
         };
+        /** ConversationInfo */
+        ConversationInfo: {
+            /**
+             * Context Kind
+             * @enum {string}
+             */
+            context_kind: "pairs" | "text";
+            /** Context Output */
+            context_output?: number | null;
+            /** Context Param */
+            context_param: string;
+            /** Prompt Param */
+            prompt_param: string;
+        };
         /**
          * DynamicResult
          * @description Executor-driven payload whose concrete shape is defined by a script.
@@ -815,6 +829,7 @@ export interface components {
         };
         /** ScriptFunctionInfo */
         ScriptFunctionInfo: {
+            conversation?: components["schemas"]["ConversationInfo"] | null;
             /** Params */
             params: {
                 [key: string]: string;
