@@ -242,6 +242,8 @@ overrides:
       torchvision: '==0.23.0+ssui.cpu'
       torchaudio: '==2.8.0+ssui.cpu'
       numpy: <2
+      # Source-built torchaudio uses the native SoundFile backend for file I/O.
+      soundfile: '==0.14.0'
       # PyTorch 2.8 requires setuptools on Python 3.12; retain pkg_resources compatibility.
       setuptools: '==80.9.0'
       # Last Numba/LLVM pair with official CPython 3.12 macOS Intel wheels.

@@ -671,6 +671,8 @@ six==1.17.0
     #   rfc3339-validator
 sounddevice==0.5.6
     # via mediapipe
+soundfile==0.14.0
+    # via -r dependencies/requirements-macosx-x86_64.txt
 soupsieve==3.0.4
     # via beautifulsoup4
 spandrel==0.4.2

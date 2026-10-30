@@ -46,6 +46,7 @@ scikit-image>=0.25.2
 scipy>=1.15.2
 sentencepiece==0.2.0
 setuptools==80.9.0
+soundfile==0.14.0
 spandrel>=0.4.1
 tiktoken>=0.9.0
 tokenizers>=0.20.0
