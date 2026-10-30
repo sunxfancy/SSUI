@@ -764,7 +764,10 @@ export interface components {
         };
         /** Body_ui_state_asset_api_ui_state_asset_post */
         Body_ui_state_asset_api_ui_state_asset_post: {
-            /** File */
+            /**
+             * File
+             * Format: binary
+             */
             file: string;
         };
         /** Body_ui_state_store_api_ui_state_store_post */
@@ -786,7 +789,10 @@ export interface components {
         };
         /** Body_upload_file_files_upload_post */
         Body_upload_file_files_upload_post: {
-            /** File */
+            /**
+             * File
+             * Format: binary
+             */
             file: string;
         };
         /** ConversationInfo */
@@ -909,10 +915,6 @@ export interface components {
         };
         /** ValidationError */
         ValidationError: {
-            /** Context */
-            ctx?: Record<string, never>;
-            /** Input */
-            input?: unknown;
             /** Location */
             loc: (string | number)[];
             /** Message */
