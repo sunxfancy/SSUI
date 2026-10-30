@@ -53,7 +53,13 @@ if (/[\\/]/.test(exe)) {
 }
 
 console.log(`smoke: launching ${path.resolve(exe)}${args.length ? ` ${args.join(" ")}` : ""}`);
-const child = spawn(exe, args, { stdio: "ignore", windowsHide: false });
+// Installed apps must not accidentally load resources from the source checkout.
+const command = /[\\/]/.test(exe) ? path.resolve(exe) : exe;
+const workingDir = fs.mkdtempSync(path.join(require('node:os').tmpdir(), 'ssui-smoke-'));
+process.on('exit', () => {
+  try { fs.rmSync(workingDir, { recursive: true, force: true }); } catch { /* best effort */ }
+});
+const child = spawn(command, args, { cwd: workingDir, stdio: "ignore", windowsHide: false });
 let finished = false;
 
 const timer = setTimeout(() => {

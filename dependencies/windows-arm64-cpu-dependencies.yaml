@@ -8,6 +8,7 @@ accelerate:
   isRoot: true
   dependents:
     - diffusers
+    - peft
 agent-detector:
   version: "2.0.0"
   dependents:
@@ -321,6 +322,7 @@ huggingface-hub:
     - accelerate
     - controlnet-aux
     - diffusers
+    - peft
     - timm
     - tokenizers
     - transformers
@@ -616,6 +618,7 @@ numpy:
     - onnxruntime
     - openai-whisper
     - opencv-python-headless
+    - peft
     - plyfile
     - pymatting
     - pymeshfix
@@ -707,6 +710,7 @@ packaging:
     - matplotlib
     - nbconvert
     - onnxruntime
+    - peft
     - pooch
     - scikit-image
     - transformers
@@ -719,6 +723,9 @@ parso:
   version: "0.8.7"
   dependents:
     - jedi
+peft:
+  version: "0.17.1"
+  isRoot: true
 picklescan:
   version: "1.0.5"
   isRoot: true
@@ -776,6 +783,7 @@ psutil:
     - accelerate
     - imageio
     - ipython
+    - peft
 pure-eval:
   version: "0.2.4"
   dependents:
@@ -876,6 +884,7 @@ pyyaml:
     - huggingface-hub
     - jupyter-events
     - omegaconf
+    - peft
     - timm
     - transformers
     - uvicorn
@@ -956,6 +965,7 @@ safetensors:
   dependents:
     - accelerate
     - diffusers
+    - peft
     - spandrel
     - timm
     - transformers
@@ -1089,6 +1099,7 @@ torch:
     - diffusers
     - kornia
     - openai-whisper
+    - peft
     - spandrel
     - timm
     - torchaudio
@@ -1125,6 +1136,7 @@ tqdm:
     - huggingface-hub
     - modelscope
     - openai-whisper
+    - peft
     - rembg
     - transformers
 traitlets:
@@ -1151,6 +1163,7 @@ transformers:
   isRoot: true
   dependents:
     - compel
+    - peft
     - transformers-stream-generator
 transformers-stream-generator:
   version: "0.0.4+ssui.cpu.r2.b410865ecf176"

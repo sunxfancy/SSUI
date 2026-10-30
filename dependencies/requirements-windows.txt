@@ -36,6 +36,7 @@ onnx>=1.17.0
 onnxruntime>=1.21.0
 openai-whisper==20240930
 opencv-python-headless>=4.11.0.86
+peft==0.17.1
 picklescan>=0.0.24
 pillow>=11.0.0
 plyfile>=1.1

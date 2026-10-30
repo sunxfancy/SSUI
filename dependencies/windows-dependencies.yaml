@@ -8,6 +8,7 @@ accelerate:
   isRoot: true
   dependents:
     - diffusers
+    - peft
 aiohappyeyeballs:
   version: "2.6.1"
   dependents:
@@ -150,6 +151,10 @@ deprecated:
   isRoot: true
   dependents:
     - pygltflib
+diff-gaussian-rasterization:
+  version: "0.0.0"
+  url: "https://github.com/sunxfancy/diff-gaussian-rasterization/releases/download/v0.1/diff_gaussian_rasterization-0.0.0-cp312-cp312-win_amd64.whl"
+  isRoot: true
 diffusers:
   version: "0.38.0"
   isRoot: true
@@ -257,7 +262,7 @@ hf-transfer:
   dependents:
     - huggingface-hub
 hf-xet:
-  version: "1.1.2"
+  version: "1.7.1"
   dependents:
     - huggingface-hub
 httpcore:
@@ -280,6 +285,7 @@ huggingface-hub:
     - accelerate
     - controlnet-aux
     - diffusers
+    - peft
     - timm
     - tokenizers
     - transformers
@@ -387,9 +393,12 @@ jupyter-core:
     - jupyter-client
 jupyterlab-widgets:
   version: "3.0.13"
-  isRoot: true
   dependents:
     - ipywidgets
+kaolin:
+  version: "0.17.0"
+  url: "https://nvidia-kaolin.s3.us-east-2.amazonaws.com/torch-2.4.0_cu124/kaolin-0.17.0-cp312-cp312-win_amd64.whl"
+  isRoot: true
 kiwisolver:
   version: "1.4.8"
   dependents:
@@ -502,7 +511,6 @@ numba:
     - pymatting
 numpy:
   version: "1.26.3"
-  isRoot: true
   dependents:
     - accelerate
     - bitsandbytes
@@ -529,6 +537,7 @@ numpy:
     - opencv-contrib-python
     - opencv-python
     - opencv-python-headless
+    - peft
     - plyfile
     - pymatting
     - pymeshfix
@@ -549,6 +558,10 @@ numpy:
     - warp-lang
     - xatlas
     - xformers
+nvdiffrast:
+  version: "0.3.3.1"
+  url: "https://github.com/sunxfancy/nvdiffrast/releases/download/v0.3.3.1/nvdiffrast-0.3.3.1-cp312-cp312-win_amd64.whl"
+  isRoot: true
 omegaconf:
   version: "2.3.0"
   dependents:
@@ -590,6 +603,7 @@ packaging:
     - marshmallow
     - matplotlib
     - onnxruntime
+    - peft
     - pooch
     - scikit-image
     - transformers
@@ -602,6 +616,9 @@ pccm:
   dependents:
     - cumm-cu124
     - spconv-cu124
+peft:
+  version: "0.17.1"
+  isRoot: true
 picklescan:
   version: "0.0.24"
   isRoot: true
@@ -659,6 +676,7 @@ psutil:
   dependents:
     - accelerate
     - imageio
+    - peft
 pure-eval:
   version: "0.2.3"
   dependents:
@@ -708,6 +726,10 @@ pymatting:
 pymeshfix:
   version: "0.17.0"
   isRoot: true
+pynini:
+  version: "2.1.6.post1"
+  url: "https://github.com/sunxfancy/pynini-2.1.6.post1/releases/download/2.1.6.post1/pynini-2.1.6.post1-cp312-cp312-win_amd64.whl"
+  isRoot: true
 pyparsing:
   version: "3.2.3"
   dependents:
@@ -752,6 +774,7 @@ pyyaml:
     - gguf
     - huggingface-hub
     - omegaconf
+    - peft
     - timm
     - transformers
     - uvicorn
@@ -807,6 +830,7 @@ safetensors:
   dependents:
     - accelerate
     - diffusers
+    - peft
     - spandrel
     - timm
     - transformers
@@ -936,12 +960,17 @@ torch:
     - diffusers
     - kornia
     - openai-whisper
+    - peft
     - spandrel
     - timm
     - torchaudio
     - torchsde
     - torchvision
     - xformers
+torch-scatter:
+  version: "2.1.2+pt24cu124"
+  url: "https://data.pyg.org/whl/torch-2.4.0%2Bcu124/torch_scatter-2.1.2%2Bpt24cu124-cp312-cp312-win_amd64.whl"
+  isRoot: true
 torchaudio:
   version: "2.4.1+cu124"
   isRoot: true
@@ -970,6 +999,7 @@ tqdm:
     - kaolin
     - modelscope
     - openai-whisper
+    - peft
     - rembg
     - transformers
 traitlets:
@@ -990,6 +1020,7 @@ transformers:
   isRoot: true
   dependents:
     - compel
+    - peft
     - transformers-stream-generator
 transformers-stream-generator:
   version: "0.0.4"
@@ -1070,9 +1101,12 @@ websockets:
     - uvicorn
 werkzeug:
   version: "3.1.3"
-  isRoot: true
   dependents:
     - flask
+wetextprocessing:
+  version: "1.0.4"
+  url: "https://github.com/sunxfancy/pynini-2.1.6.post1/releases/download/2.1.6.post1/WeTextProcessing-1.0.4-py3-none-any.whl"
+  isRoot: true
 widgetsnbextension:
   version: "4.0.13"
   dependents:

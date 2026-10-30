@@ -18,3 +18,9 @@ export async function basename(path: string): Promise<string> {
   const parts = path.split(/[/\\]/);
   return parts[parts.length - 1] || path;
 }
+
+export async function dirname(path: string): Promise<string> {
+  const normalized = path.replace(/\\/g, '/');
+  const end = normalized.lastIndexOf('/');
+  return end < 0 ? '.' : normalized.slice(0, end) || '/';
+}

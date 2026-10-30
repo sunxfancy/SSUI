@@ -6,6 +6,7 @@ accelerate==1.15.0
     # via
     #   -r dependencies/requirements-windows-arm64-cpu.txt
     #   diffusers
+    #   peft
 agent-detector==2.0.0
     # via fastapi-cloud-cli
 aiohappyeyeballs==2.7.1
@@ -212,6 +213,7 @@ huggingface-hub==0.36.2
     #   accelerate
     #   controlnet-aux
     #   diffusers
+    #   peft
     #   timm
     #   tokenizers
     #   transformers
@@ -419,6 +421,7 @@ numpy==2.5.4
     #   onnxruntime
     #   openai-whisper
     #   opencv-python-headless
+    #   peft
     #   plyfile
     #   pymatting
     #   pymeshfix
@@ -490,6 +493,7 @@ packaging==26.3
     #   matplotlib
     #   nbconvert
     #   onnxruntime
+    #   peft
     #   pooch
     #   scikit-image
     #   transformers
@@ -498,6 +502,8 @@ pandocfilters==1.5.1
     # via nbconvert
 parso==0.8.7
     # via jedi
+peft==0.17.1
+    # via -r dependencies/requirements-windows-arm64-cpu.txt
 picklescan==1.0.5
     # via -r dependencies/requirements-windows-arm64-cpu.txt
 pillow==13.0.0
@@ -543,6 +549,7 @@ psutil==7.2.2
     #   accelerate
     #   imageio
     #   ipython
+    #   peft
 pure-eval==0.2.4
     # via stack-data
 pyarrow==20.0.0+ssui.cpu.r1.b9bfc03949403
@@ -614,6 +621,7 @@ pyyaml==6.0.3
     #   huggingface-hub
     #   jupyter-events
     #   omegaconf
+    #   peft
     #   timm
     #   transformers
     #   uvicorn
@@ -678,6 +686,7 @@ safetensors==0.8.0
     #   -r dependencies/requirements-windows-arm64-cpu.txt
     #   accelerate
     #   diffusers
+    #   peft
     #   spandrel
     #   timm
     #   transformers
@@ -770,6 +779,7 @@ torch==2.9.1+cpu
     #   diffusers
     #   kornia
     #   openai-whisper
+    #   peft
     #   spandrel
     #   timm
     #   torchaudio
@@ -801,6 +811,7 @@ tqdm==4.70.1
     #   huggingface-hub
     #   modelscope
     #   openai-whisper
+    #   peft
     #   rembg
     #   transformers
 traitlets==5.16.1
@@ -823,6 +834,7 @@ transformers==4.57.6
     # via
     #   -r dependencies/requirements-windows-arm64-cpu.txt
     #   compel
+    #   peft
     #   transformers-stream-generator
 transformers-stream-generator==0.0.4+ssui.cpu.r2.b410865ecf176
     # via -r dependencies/requirements-windows-arm64-cpu.txt

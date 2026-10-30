@@ -8,6 +8,7 @@ accelerate:
   isRoot: true
   dependents:
     - diffusers
+    - peft
 aiohappyeyeballs:
   version: "2.6.2"
   dependents:
@@ -368,6 +369,7 @@ huggingface-hub:
     - accelerate
     - controlnet-aux
     - diffusers
+    - peft
     - timm
     - tokenizers
     - transformers
@@ -709,6 +711,7 @@ numpy:
     - openai-whisper
     - opencv-contrib-python
     - opencv-python-headless
+    - peft
     - plyfile
     - pymatting
     - pymeshfix
@@ -776,6 +779,7 @@ packaging:
     - matplotlib
     - nbconvert
     - onnxruntime
+    - peft
     - pooch
     - scikit-image
     - transformers
@@ -792,6 +796,9 @@ pccm:
   dependents:
     - cumm-cu124
     - spconv-cu124
+peft:
+  version: "0.17.1"
+  isRoot: true
 picklescan:
   version: "1.0.4"
   isRoot: true
@@ -857,6 +864,7 @@ psutil:
     - imageio
     - ipykernel
     - ipython
+    - peft
 pure-eval:
   version: "0.2.3"
   dependents:
@@ -973,6 +981,7 @@ pyyaml:
     - huggingface-hub
     - jupyter-events
     - omegaconf
+    - peft
     - timm
     - transformers
     - uvicorn
@@ -1080,6 +1089,7 @@ safetensors:
   dependents:
     - accelerate
     - diffusers
+    - peft
     - spandrel
     - timm
     - transformers
@@ -1225,6 +1235,7 @@ torch:
     - kornia
     - o-voxel
     - openai-whisper
+    - peft
     - spandrel
     - timm
     - torchaudio
@@ -1271,6 +1282,7 @@ tqdm:
     - modelscope
     - o-voxel
     - openai-whisper
+    - peft
     - rembg
     - transformers
 traitlets:
@@ -1297,6 +1309,7 @@ transformers:
   isRoot: true
   dependents:
     - compel
+    - peft
     - transformers-stream-generator
 transformers-stream-generator:
   version: "0.0.4"

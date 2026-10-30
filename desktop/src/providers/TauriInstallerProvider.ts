@@ -1,6 +1,6 @@
 import { exit, relaunch } from '@tauri-apps/plugin-process';
 import { load } from '@tauri-apps/plugin-store';
-import { appDataDir, homeDir, join, resolveResource } from '@tauri-apps/api/path';
+import { appDataDir, homeDir, join, dirname, resolveResource } from '@tauri-apps/api/path';
 import { open } from '@tauri-apps/plugin-dialog';
 import { platform, arch } from '@tauri-apps/plugin-os';
 import { makeRuntimeTarget, dependencyProfile, pythonDistribution } from './runtimeTarget';
@@ -65,7 +65,7 @@ export class TauriInstallerProvider implements IInstallerProvider {
 
     async checkPythonInstalled(installDir: string): Promise<CommandInfo> {
         const currentPlatform = await this.detectPlatform();
-        const pythonPath = await join(installDir, currentPlatform === 'windows' ? '.venv\\python\\python.exe' : '.venv/bin/python3');
+        const pythonPath = await join(installDir, currentPlatform === 'windows' ? '.venv\\python\\python.exe' : '.venv/python/bin/python3');
 
         try {
             // 检查Python可执行文件是否存在
@@ -163,7 +163,7 @@ export class TauriInstallerProvider implements IInstallerProvider {
 
     async createVirtualEnv(installDir: string): Promise<CommandInfo> {
         const currentPlatform = await this.detectPlatform();
-        const pythonPath = await join(installDir, currentPlatform === 'windows' ? '.venv\\python\\python.exe' : '.venv/bin/python3');
+        const pythonPath = await join(installDir, currentPlatform === 'windows' ? '.venv\\python\\python.exe' : '.venv/python/bin/python3');
 
         try {
             const output = await invoke('run_python',
@@ -234,7 +234,7 @@ export class TauriInstallerProvider implements IInstallerProvider {
                 {
                     path: pipPath,
                     cwd: installDir,
-                    args:  ['install', '-r', resourcePath,
+                    args:  ['install', '-r', resourcePath, '--find-links', await dirname(resourcePath),
                         ...(dependencyProfile(await this.detectRuntimeTarget()).binaryOnly ? ['--only-binary=:all:'] : [])]
                 }
             );

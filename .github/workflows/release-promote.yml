@@ -1,0 +1,53 @@
+# Promotion reuses the candidate bytes; it never rebuilds or moves a tag.
+name: Promote release
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Verified candidate tag already merged into main
+        required: true
+        type: string
+permissions:
+  contents: write
+  actions: read
+concurrency:
+  group: release-stable
+  cancel-in-progress: false
+jobs:
+  promote:
+    runs-on: ubuntu-24.04
+    environment: release
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: main
+          fetch-depth: 0
+      - name: Verify tested candidate reached main
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ inputs.tag }}
+        run: |
+          set -euo pipefail
+          python3 -c 'import os; from scripts.release import parse_tag; parse_tag(os.environ["TAG"])'
+          git fetch origin "refs/tags/$TAG:refs/tags/$TAG"
+          SHA=$(git rev-parse "refs/tags/$TAG^{commit}")
+          git merge-base --is-ancestor "$SHA" origin/main
+          gh release download "$TAG" --dir candidate
+          python3 scripts/release_assets.py verify --directory candidate --tag "$TAG" --sha "$SHA"
+          # The candidate workflow must have completed, including strict tests.
+          gh run list --workflow release.yml --commit "$SHA" --status success --json databaseId --limit 100 > runs.json
+          python3 -c 'import json; assert json.load(open("runs.json")), "No successful release workflow for this commit"'
+          echo "SOURCE_SHA=$SHA" >> "$GITHUB_ENV"
+      - name: Publish same candidate bytes
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ inputs.tag }}
+        run: gh release edit "$TAG" --prerelease=false --latest
+      - name: Verify public release downloads
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ inputs.tag }}
+        run: |
+          gh release download "$TAG" --dir published
+          python3 scripts/release_assets.py verify --directory published --tag "$TAG" --sha "$SOURCE_SHA"

@@ -1,7 +1,7 @@
 {
   "name": "ssui",
   "private": true,
-  "author": "西风逍遥游 <sunxfancy@gmail.com>",
+  "author": "\u897f\u98ce\u900d\u9065\u6e38 <sunxfancy@gmail.com>",
   "license": "GPL-3.0-or-later",
   "workspaces": [
     "desktop",
@@ -60,10 +60,12 @@
     "build:example": "yarn workspace ssui-example-plugin build",
     "build:extension_builder": "yarn workspace extension_builder build",
     "build:vscode": "yarn workspace ssui-vscode compile",
-    "ext:package": "concurrently \"yarn ext:package_Image\" \"yarn ext:package_Video\" \"yarn ext:package_Audio\"",
+    "ext:package": "concurrently \"yarn ext:package_Image\" \"yarn ext:package_Video\" \"yarn ext:package_Audio\" \"yarn ext:package_LLM\"",
+    "ext:package_LLM": "cd extensions/LLM && node ../../extension_builder/dist/index.js package -o ../../desktop/src-tauri/resources/extensions/",
     "ext:package_Image": "cd extensions/Image && ssext package -o ../../desktop/src-tauri/resources/extensions/",
     "ext:package_Video": "cd extensions/Video && ssext package -o ../../desktop/src-tauri/resources/extensions/",
-    "ext:package_Audio": "cd extensions/Audio && ssext package -o ../../desktop/src-tauri/resources/extensions/",
+    "ext:package_Audio": "cd extensions/Audio && node ../../extension_builder/dist/index.js package -o ../../desktop/src-tauri/resources/extensions/",
+    "audio:setup:shared-rocm": "powershell -NoProfile -ExecutionPolicy Bypass -File extensions/Audio/scripts/setup_audio_shared_rocm.ps1",
     "test": "node dependencies/venv.cjs python tests/run_tests.py",
     "test:trellis:topology": "node dependencies/venv.cjs python scripts/trellis_topology_benchmark.py",
     "test:trellis:smoke": "node dependencies/venv.cjs python scripts/trellis_mac_smoke.py",
@@ -144,7 +146,8 @@
     "build:rigging:cuda": "node dependencies/venv.cjs python scripts/build_rigging_cuda.py",
     "test:rigging:cuda": "node dependencies/venv.cjs python scripts/rigging_cuda_check.py",
     "dev:bridge": "node dependencies/venv.cjs python -m uvicorn server.generation_bridge:create_demo_app --factory --host 127.0.0.1 --port 7423",
-    "test:bridge": "node dependencies/venv.cjs python -m unittest tests.generation_bridge_test -v"
+    "test:bridge": "node dependencies/venv.cjs python -m unittest tests.generation_bridge_test -v",
+    "test:runtime": "node --test dependencies/tests/*.test.cjs"
   },
   "devDependencies": {
     "@axe-core/playwright": "^4.10.2",

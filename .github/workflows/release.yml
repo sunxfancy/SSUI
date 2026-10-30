@@ -1,13 +1,5 @@
-# Orchestrate a release started by a GitHub Pre-release (or manual dispatch):
-#
-#   pre-release tag → start (version + vX.Y.Z branch) → strict tests →
-#   package + executable smoke test → upload artifacts → finish (formal
-#   release + promote/vX.Y.Z PR to main + rebase/vX.Y.Z PR to dev)
-#
-# Ported from EVEngine's release pipeline. The release is only formalized
-# (`gh release edit --prerelease=false`) after the packaged executables have
-# been smoke-tested, so a broken build never becomes the published release.
-
+# Six native desktop targets. Tagged versions must already be prepared in a PR.
+# This workflow publishes candidates only; release-promote.yml formalizes them.
 name: Release
 
 on:
@@ -30,18 +22,20 @@ concurrency:
   cancel-in-progress: false
 
 permissions:
-  contents: write
-  pull-requests: write
-  checks: write
+  contents: read
+  actions: read
 
 jobs:
   start:
+    permissions:
+      contents: write
     name: start (version + branch)
     runs-on: ubuntu-latest
     timeout-minutes: 15
     outputs:
       tag: ${{ steps.go.outputs.tag }}
       branch: ${{ steps.go.outputs.branch }}
+      sha: ${{ steps.go.outputs.sha }}
     steps:
       - name: Checkout
         timeout-minutes: 10
@@ -57,50 +51,96 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           CI: "true"
+          RELEASE_TAG: ${{ github.event.release.tag_name || inputs.tag }}
         run: |
           set -euo pipefail
-          TAG="${{ github.event.release.tag_name || inputs.tag }}"
+          TAG="$RELEASE_TAG"
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           python3 scripts/release.py start --tag "$TAG"
           echo "tag=$TAG" >> "$GITHUB_OUTPUT"
           echo "branch=v${TAG#v}" >> "$GITHUB_OUTPUT"
+          echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
 
   strict-tests:
     name: Strict tests
     needs: start
     uses: ./.github/workflows/ci.yml
     with:
-      ref: ${{ needs.start.outputs.branch }}
+      ref: ${{ needs.start.outputs.sha }}
     secrets: inherit
 
+  native-wheels:
+    needs: start
+    uses: ./.github/workflows/windows-arm64-wheels.yml
+    with:
+      ref: ${{ needs.start.outputs.sha }}
+
   package:
-    name: Package ${{ matrix.os }}
-    needs: [start, strict-tests]
+    name: Package ${{ matrix.id }}
+    needs: [start, strict-tests, native-wheels]
     runs-on: ${{ matrix.os }}
     timeout-minutes: 120
     strategy:
+      fail-fast: false
       matrix:
         include:
-          - os: windows-latest
+          - os: windows-2022
             platform: windows
-            binary: desktop/src-tauri/target/release/ssui.exe
-            artifacts: |
-              desktop/src-tauri/target/release/bundle/msi/*.msi
-              desktop/src-tauri/target/release/bundle/nsis/*.exe
-
-          - os: macOS-latest
+            arch: x86_64
+            target: x86_64-pc-windows-msvc
+            id: windows-x86_64
+            bundles: nsis
+            binary: desktop/src-tauri/target/x86_64-pc-windows-msvc/release/ssui.exe
+          - os: windows-11-arm
+            platform: windows
+            arch: arm64
+            target: aarch64-pc-windows-msvc
+            id: windows-arm64
+            bundles: nsis
+            binary: desktop/src-tauri/target/aarch64-pc-windows-msvc/release/ssui.exe
+          - os: macos-15-intel
             platform: macosx
-            binary: desktop/src-tauri/target/release/ssui
-            artifacts: |
-              desktop/src-tauri/target/release/bundle/dmg/*.dmg
+            arch: x86_64
+            target: x86_64-apple-darwin
+            id: macos-x86_64
+            bundles: dmg
+            config_args: --config src-tauri/tauri.intel.conf.json
+            binary: desktop/src-tauri/target/x86_64-apple-darwin/release/ssui
+          - os: macos-15
+            platform: macosx
+            arch: arm64
+            target: aarch64-apple-darwin
+            id: macos-arm64
+            bundles: dmg
+            binary: desktop/src-tauri/target/aarch64-apple-darwin/release/ssui
+          - os: ubuntu-24.04
+            platform: linux
+            arch: x86_64
+            target: x86_64-unknown-linux-gnu
+            id: linux-x86_64
+            bundles: deb
+            binary: desktop/src-tauri/target/x86_64-unknown-linux-gnu/release/ssui
+          - os: ubuntu-24.04-arm
+            platform: linux
+            arch: arm64
+            target: aarch64-unknown-linux-gnu
+            id: linux-arm64
+            bundles: deb
+            binary: desktop/src-tauri/target/aarch64-unknown-linux-gnu/release/ssui
 
     steps:
       - name: Checkout
         timeout-minutes: 10
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
-          ref: ${{ needs.start.outputs.branch }}
+          ref: ${{ needs.start.outputs.sha }}
+
+      - name: Check native runtime prerequisites
+        shell: bash
+        run: >-
+          python scripts/release_preflight.py --target '${{ matrix.id }}'
+
 
       - name: Set Node.js 22.x
         timeout-minutes: 5
@@ -113,29 +153,57 @@ jobs:
         timeout-minutes: 20
         run: yarn install --frozen-lockfile
 
-      - name: Setup Python
-        id: setup-uv
-        timeout-minutes: 5
-        uses: astral-sh/setup-uv@d0d8abe699bfb85fec6de9f7adb5ae17292296ff # v6
-        with:
-          version: "0.6.11"
-          enable-cache: false
-          python-version: 3.12.8
-          activate-environment: true
+      - name: Select shared runtime
+        id: runtime
+        run: node dependencies/runtime.cjs --github-output
+
+      - name: Install pinned standalone Python
+        timeout-minutes: 15
+        run: node dependencies/bootstrap.cjs --github-env
 
       - name: Install packaging
         timeout-minutes: 5
         run: uv pip install packaging==24.1
 
+      - name: Install Linux build and runtime dependencies
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf libglib2.0-dev pkg-config xvfb libgl1-mesa-dev libx11-dev
+
+      - name: Download native Intel macOS wheels
+        if: matrix.id == 'macos-x86_64'
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+        with:
+          name: macos-intel-wheels
+          path: ${{ runner.temp }}/native-wheels
+      - name: Verify Intel wheel manifest
+        if: matrix.id == 'macos-x86_64'
+        run: |
+          node dependencies/native_wheels.cjs "$RUNNER_TEMP/native-wheels"
+          echo "SSUI_NATIVE_WHEELHOUSE=$RUNNER_TEMP/native-wheels" >> "$GITHUB_ENV"
+
       - name: Install requirements
-        timeout-minutes: 20
-        run: uv pip install -r dependencies/${{ matrix.platform }}.lock --index-strategy unsafe-best-match --build-constraint dependencies/build-constraints.txt
+        timeout-minutes: 30
+        shell: bash
+        run: |
+          if [ '${{ matrix.id }}' = windows-arm64 ]; then
+            uv pip install --no-build -r dependencies/${{ steps.runtime.outputs.lock }} --index-strategy unsafe-best-match
+          elif [ '${{ matrix.id }}' = macos-x86_64 ]; then
+            uv pip install --find-links "$SSUI_NATIVE_WHEELHOUSE" -r dependencies/${{ steps.runtime.outputs.lock }} --index-strategy unsafe-best-match --build-constraint dependencies/build-constraints.txt
+          else
+            uv pip install -r dependencies/${{ steps.runtime.outputs.lock }} --index-strategy unsafe-best-match --build-constraint dependencies/build-constraints.txt
+          fi
+
+      - name: Verify native Python and inference libraries
+        run: python scripts/check_runtime.py --target ${{ matrix.id }}
 
       - name: Setup Rust
         timeout-minutes: 10
         uses: actions-rust-lang/setup-rust-toolchain@166cdcfd11aee3cb47222f9ddb555ce30ddb9659 # v1
         with:
           rustflags: ""
+          target: ${{ matrix.target }}
           # Run caching explicitly so its hit status is available to the summary.
           cache: "false"
 
@@ -149,7 +217,7 @@ jobs:
         uses: Swatinem/rust-cache@c19371144df3bb44fab255c43d04cbc2ab54d1c4 # v2.9.1
         with:
           workspaces: "desktop/src-tauri -> target"
-          shared-key: "tauri-release-${{ matrix.platform }}"
+          shared-key: "tauri-release-${{ matrix.id }}"
           cache-on-failure: "true"
 
       - name: Report Rust cache status
@@ -180,32 +248,125 @@ jobs:
         timeout-minutes: 20
         run: yarn build:extension_builder && cd extension_builder && npm link
 
+      - name: Build Debug desktop and run native tests
+        timeout-minutes: 60
+        run: |
+          yarn build:frontend
+          yarn build:desktop:debug --target ${{ matrix.target }} --no-bundle ${{ matrix.config_args }}
+          yarn test
+
       - name: Pack desktop
         timeout-minutes: 90
-        run: yarn package
+        run: yarn package --target ${{ matrix.target }} --bundles ${{ matrix.bundles }} ${{ matrix.config_args }}
 
       - name: Smoke test app executable
         timeout-minutes: 5
-        run: node scripts/smoke_app.cjs ${{ matrix.binary }}
-
-      - name: Verify packaged artifacts
-        timeout-minutes: 5
         shell: bash
         run: |
-          shopt -s nullglob
-          files=(${{ matrix.artifacts }})
-          if [ ${#files[@]} -eq 0 ]; then
-            echo "error: no packaged artifacts found under the expected bundle paths" >&2
-            exit 1
+          if [ "$RUNNER_OS" = Linux ]; then
+            xvfb-run -a node scripts/smoke_app.cjs '${{ matrix.binary }}'
+          else
+            node scripts/smoke_app.cjs '${{ matrix.binary }}'
           fi
-          ls -lh "${files[@]}"
 
+      - name: Collect verified installer
+        shell: bash
+        env:
+          TAG: ${{ needs.start.outputs.tag }}
+          SOURCE_SHA: ${{ needs.start.outputs.sha }}
+        run: >-
+          python scripts/release_assets.py collect --directory release-assets
+          --tag "$TAG" --sha "$SOURCE_SHA" --target '${{ matrix.id }}'
+          --binary '${{ matrix.binary }}'
+          --bundle 'desktop/src-tauri/target/${{ matrix.target }}/release/bundle'
+
+      - name: Save verified assets
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: release-${{ matrix.id }}
+          path: release-assets/*
+          if-no-files-found: error
+          retention-days: 30
+          overwrite: true
+
+  consumer:
+    name: Install downloaded ${{ matrix.id }}
+    needs: [start, package]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-2022
+            platform: windows
+            arch: x86_64
+            target: x86_64-pc-windows-msvc
+            id: windows-x86_64
+            bundles: nsis
+            binary: desktop/src-tauri/target/x86_64-pc-windows-msvc/release/ssui.exe
+          - os: windows-11-arm
+            platform: windows
+            arch: arm64
+            target: aarch64-pc-windows-msvc
+            id: windows-arm64
+            bundles: nsis
+            binary: desktop/src-tauri/target/aarch64-pc-windows-msvc/release/ssui.exe
+          - os: macos-15-intel
+            platform: macosx
+            arch: x86_64
+            target: x86_64-apple-darwin
+            id: macos-x86_64
+            bundles: dmg
+            binary: desktop/src-tauri/target/x86_64-apple-darwin/release/ssui
+          - os: macos-15
+            platform: macosx
+            arch: arm64
+            target: aarch64-apple-darwin
+            id: macos-arm64
+            bundles: dmg
+            binary: desktop/src-tauri/target/aarch64-apple-darwin/release/ssui
+          - os: ubuntu-24.04
+            platform: linux
+            arch: x86_64
+            target: x86_64-unknown-linux-gnu
+            id: linux-x86_64
+            bundles: deb
+            binary: desktop/src-tauri/target/x86_64-unknown-linux-gnu/release/ssui
+          - os: ubuntu-24.04-arm
+            platform: linux
+            arch: arm64
+            target: aarch64-unknown-linux-gnu
+            id: linux-arm64
+            bundles: deb
+            binary: desktop/src-tauri/target/aarch64-unknown-linux-gnu/release/ssui
+
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: ${{ needs.start.outputs.sha }}
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 22
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: release-${{ matrix.id }}
+          path: candidate
+      - name: Check downloaded checksum
+        shell: bash
+        run: |
+          python -c 'import json, pathlib, sys; sys.path.insert(0, "scripts"); from release_assets import digest; p=pathlib.Path("candidate"); r=json.loads(next(p.glob("*.json")).read_text()); assert digest(p/r["name"]) == r["sha256"]'
+      - name: Prepare Linux display
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y xvfb
       - name: Smoke test installed app (NSIS)
         if: runner.os == 'Windows'
         timeout-minutes: 15
         shell: pwsh
         run: |
-          $installer = Get-ChildItem "desktop/src-tauri/target/release/bundle/nsis/*.exe" |
+          $installer = Get-ChildItem "candidate/*.exe" |
             Select-Object -First 1
           $proc = Start-Process -FilePath $installer.FullName -ArgumentList '/S' -Wait -PassThru
           if ($proc.ExitCode -ne 0) {
@@ -223,25 +384,30 @@ jobs:
         timeout-minutes: 15
         run: |
           set -euo pipefail
-          DMG="$(ls desktop/src-tauri/target/release/bundle/dmg/*.dmg | head -1)"
+          DMG="$(ls candidate/*.dmg | head -1)"
           hdiutil attach "$DMG" -nobrowse -readonly -mountpoint /tmp/ssui-dmg
           trap 'hdiutil detach /tmp/ssui-dmg >/dev/null 2>&1 || true' EXIT
           APP="$(find /tmp/ssui-dmg -maxdepth 2 -name '*.app' | head -1)"
           test -n "$APP" || { echo "error: no .app found in DMG" >&2; exit 1; }
-          BIN="$(find "$APP/Contents/MacOS" -maxdepth 1 -type f | head -1)"
+          ditto "$APP" /tmp/ssui-installed.app
+          BIN="$(find /tmp/ssui-installed.app/Contents/MacOS -maxdepth 1 -type f | head -1)"
           test -n "$BIN" || { echo "error: no executable found in $APP" >&2; exit 1; }
           node scripts/smoke_app.cjs "$BIN"
 
-      - name: Upload release assets
-        timeout-minutes: 15
-        uses: softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65 # v2
-        with:
-          tag_name: ${{ needs.start.outputs.tag }}
-          files: ${{ matrix.artifacts }}
+      - name: Smoke test installed app (DEB)
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get install -y ./candidate/*.deb
+          xvfb-run -a node scripts/smoke_app.cjs /usr/bin/ssui
+
 
   finish:
-    name: finish (formal release + PRs)
-    needs: [start, package]
+    permissions:
+      contents: write
+      pull-requests: write
+      checks: write
+    name: Verify all six targets and open release PRs
+    needs: [start, package, consumer]
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -250,16 +416,33 @@ jobs:
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
           fetch-depth: 0
-          ref: ${{ needs.start.outputs.branch }}
+          ref: ${{ needs.start.outputs.sha }}
           token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Download verified assets
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          pattern: release-*
+          path: release-assets
+          merge-multiple: true
+
+      - name: Verify manifest and upload candidate
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ needs.start.outputs.tag }}
+          SOURCE_SHA: ${{ needs.start.outputs.sha }}
+        run: |
+          python3 scripts/release_assets.py verify --directory release-assets --tag "$TAG" --sha "$SOURCE_SHA"
+          python3 scripts/upload_release_assets.py "$TAG" release-assets
 
       - name: Finish release
         timeout-minutes: 10
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           CI: "true"
+          TAG: ${{ needs.start.outputs.tag }}
         run: |
           set -euo pipefail
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          python3 scripts/release.py finish --tag "${{ needs.start.outputs.tag }}"
+          python3 scripts/release.py finish --tag "$TAG"

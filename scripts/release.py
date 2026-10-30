@@ -4,8 +4,8 @@ Implements the quality gates the workflows rely on:
 
 - check-versions: `desktop/src-tauri/Cargo.toml` is the version source of
   truth; "required" touchpoints must match it, "tracked" ones only warn.
-- start: called on a GitHub pre-release; writes the official version, moves
-  the tag to the release commit and pushes a vX.Y.Z release branch.
+- start: called on a GitHub pre-release; validates the prepared version and
+  the immutable tagged release commit and pushes a vX.Y.Z release branch.
 - check-main-pr: PRs into `main` must be documentation-only or come from a
   `promote/vMAJOR.MINOR.PATCH` release branch. Posts the `main-gate` check via
   the Checks API so GITHUB_TOKEN-created PRs stay mergeable.
@@ -13,7 +13,7 @@ Implements the quality gates the workflows rely on:
   a PR (main is protected; dev never merges into main).
 - cleanup-branches: delete merged release branches (vX.Y.Z / promote/vX.Y.Z /
   rebase/vX.Y.Z); release tags are never touched.
-- finish: called after strict tests + packaging; marks the release formal and
+- finish: called after strict tests + packaging; keeps the release a candidate and
   opens the promote/vX.Y.Z PR to `main` plus a rebase/vX.Y.Z PR to `dev`.
 """
 
@@ -402,7 +402,7 @@ def _open_pr_or_warn(
 
     The repository setting "Allow GitHub Actions to create and approve pull
     requests" is UI-only and cannot be enabled from a workflow. When it is
-    disabled, finish should still complete (the release is already formal and
+    disabled, finish should still complete (the release remains a candidate with
     assets uploaded) and tell the maintainer exactly what to open manually.
     """
     try:
@@ -460,25 +460,26 @@ def cmd_start(
     ci: bool,
     dry_run: bool = False,
 ) -> None:
-    """Turn a GitHub pre-release into an official release branch + commit.
+    """Validate an immutable pre-release tag and create its release branch.
 
     Called from the Release workflow on `release: prereleased`. The tag is
-    expected to be `[v]MAJOR.MINOR.PATCH`. Writes the official version into
-    Cargo.toml and the required touchpoints, moves the tag to the release
-    commit and pushes a vX.Y.Z branch that CI then builds and packages.
+    expected to be `[v]MAJOR.MINOR.PATCH`. Requires the official version in Cargo.toml and required touchpoints
+    before tagging. Never moves a tag; pushes the validated release branch.
     """
     incoming = parse_tag(tag)
     branch = f"v{incoming.display()}"
     view = runner.run(["gh", "release", "view", tag, "--json", "tagName,isPrerelease"])
     meta = json.loads(view) if view.strip() else {"tagName": tag, "isPrerelease": True}
     is_pre = bool(meta.get("isPrerelease"))
+    if not is_pre:
+        raise ValueError("cannot rebuild a formal release; choose a new version")
 
     dirty = runner.run(["git", "status", "--porcelain"], check=False)
     if not ci and dirty.strip():
         print("error: working tree is dirty; commit or stash first", file=sys.stderr)
         raise SystemExit(1)
 
-    runner.run(["git", "fetch", "origin", "tag", tag, "--force"])
+    runner.run(["git", "fetch", "origin", "tag", tag])
     # The release branch and the release tag share a similar short name
     # (refs/heads/vX.Y.Z vs refs/tags/0.1.2). Always use explicit refspecs so
     # git never sees an ambiguous `git push origin vX.Y.Z`.
@@ -494,26 +495,13 @@ def cmd_start(
         raise SystemExit(1)
 
     already_official = current.triple() == incoming.triple() and current.dev == ""
-    if not is_pre and not already_official:
-        print(
-            "error: release is already formal but the tree is not the official version; "
-            "will not rewrite a published tag",
-            file=sys.stderr,
-        )
-        raise SystemExit(1)
-
-    new_text = write_version(text, incoming.official())
-    _store_cargo(runner, repo_root / CARGO_MANIFEST, new_text, dry_run=dry_run)
-    touched = [CARGO_MANIFEST]
-    touched += sync_version_files(repo_root, incoming.official(), dry_run=dry_run)
-    runner.run(["git", "add", *touched])
-    try:
-        runner.run(["git", "diff", "--cached", "--quiet"])
-    except CommandError:
-        runner.run(["git", "commit", "-m", f"release: {incoming.display()}"])
-    runner.run(["git", "tag", "-f", tag])
+    # Version preparation belongs in a reviewed PR before the immutable tag.
+    if not already_official:
+        raise ValueError("tagged version must already match the release; prepare a version PR first")
+    for tp in VERSION_TOUCHPOINTS:
+        if tp.kind == "required" and _read_json_version(repo_root, tp.path) != incoming.display():
+            raise ValueError(f"tagged version mismatch: {tp.path}")
     runner.run(["git", "push", "-u", "origin", f"refs/heads/{branch}"])
-    runner.run(["git", "push", "--force", "origin", f"refs/tags/{tag}"])
     _write_github_output(tag, branch)
 
 
@@ -579,16 +567,15 @@ def cmd_finish(
     tag: str,
     dry_run: bool = False,
 ) -> None:
-    """Mark the release formal and open promote/rebase PRs.
+    """Keep the candidate unpublished and open promote/rebase PRs.
 
     Called by the Release workflow after strict tests, packaging and the
-    executable smoke test have all passed. `gh release edit --prerelease=false`
-    is the actual "formal publish" step; promote/vX.Y.Z passes main-gate, and
+    executable smoke test have all passed. The separate promotion workflow
+    publishes only after this commit reaches main; promote/vX.Y.Z passes main-gate, and
     rebase/vX.Y.Z carries the release back onto `dev`.
     """
     incoming = parse_tag(tag)
     branch = f"v{incoming.display()}"
-    runner.run(["gh", "release", "edit", tag, "--prerelease=false"])
     runner.run(
         [
             "git",
@@ -600,7 +587,7 @@ def cmd_finish(
             f"refs/tags/{tag}",
         ]
     )
-    official = runner.run(["git", "rev-parse", f"refs/tags/{tag}"]).strip()
+    official = runner.run(["git", "rev-parse", f"refs/tags/{tag}^{{commit}}"]).strip()
     _open_promote_pr(runner, branch=branch, official=official)
 
     # Ensure the local release branch exists (CI built it, we did not push it),

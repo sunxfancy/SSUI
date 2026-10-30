@@ -1,0 +1,37 @@
+diff --git a/infer/infer.py b/infer/infer.py
+index 09019d1..6b3ec8e 100755
+--- a/infer/infer.py
++++ b/infer/infer.py
+@@ -20,7 +20,11 @@ import time
+ import random
+ 
+ import torch
++if torch.version.hip is not None:
++    # Windows ROCm MIOpen solver search can stall or fail on this VAE's conv1d.
++    torch.backends.cudnn.enabled = False
+ import torchaudio
++import soundfile as sf
+ from einops import rearrange
+ 
+ print("Current working directory:", os.getcwd())
+@@ -225,4 +229,6 @@ if __name__ == "__main__":
+     os.makedirs(output_dir, exist_ok=True)
+ 
+     output_path = os.path.join(output_dir, "output.wav")
+-    torchaudio.save(output_path, generated_song, sample_rate=44100)
++    # Newer torchaudio requires TorchCodec for saving; keep WAV export usable
++    # with the existing soundfile dependency on Windows ROCm.
++    sf.write(output_path, generated_song.numpy().T, samplerate=44100, subtype="PCM_16")
+diff --git a/model/__init__.py b/model/__init__.py
+index 7b09c41..ef34f23 100755
+--- a/model/__init__.py
++++ b/model/__init__.py
+@@ -1,6 +1,7 @@
+ from model.cfm import CFM
+ from model.dit import DiT
+-from model.trainer import Trainer
++# Training is not required by the inference CLI. Avoid importing wandb and
++# its optional telemetry stack in an inference-only Windows ROCm environment.
+ 
+ 
+ __all__ = ["CFM"]
