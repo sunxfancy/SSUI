@@ -1,6 +1,8 @@
 import os
 from contextlib import asynccontextmanager
 
+from server.generation_bridge import GenerationBridge, router as generation_router
+
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import RedirectResponse
@@ -60,6 +62,7 @@ def create_app(
         yield
         # 关闭所有连接
         print("closing scheduler and all websocket connections.")
+        await app.state.generation_bridge.close()
         await scheduler.stop()
         websocket_service.stop()
 
@@ -70,6 +73,7 @@ def create_app(
     app.state.scheduler = scheduler
     app.state.script_service = script_service
     app.state.websocket_service = websocket_service
+    app.state.generation_bridge = GenerationBridge()
     app.state.task_service = task_service
     app.state.resources_dir = resources_dir
     app.state.settings_path = settings_path
@@ -90,6 +94,7 @@ def create_app(
     app.include_router(extension_routes.router)
     app.include_router(websocket_routes.router)
     app.include_router(task_routes.router)
+    app.include_router(generation_router)
 
     # 对于静态数据的请求，使用文件资源管理器
     settings = config_service.get_settings()

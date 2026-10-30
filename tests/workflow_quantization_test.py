@@ -239,7 +239,10 @@ class QuantizedAdapterTests(unittest.TestCase):
         torch.manual_seed(42)
         linear = torch.nn.Linear(128, 128).to(dtype=torch.bfloat16).eval()
         x = torch.randn(2, 128, dtype=torch.bfloat16)
-        with torch.inference_mode():
+        # Exercise storage/compute dtype handling with the portable CPU kernel.
+        # The Windows CI wheel's accelerated BF16 path can terminate the process
+        # with STATUS_ILLEGAL_INSTRUCTION; this test does not require oneDNN.
+        with torch.backends.mkldnn.flags(enabled=False), torch.inference_mode():
             expected = linear(x)
             linear.to(dtype=fp8_storage_dtype("fp8", torch.bfloat16))
             wrapped = layers.AutoWrappedLinear(

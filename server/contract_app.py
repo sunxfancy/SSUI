@@ -4,6 +4,8 @@ Unlike ``server.app``, this module does not construct model/executor services or
 run extension discovery, so schema generation does not require a GPU runtime.
 """
 
+from server.generation_bridge import router as generation_router
+
 from fastapi import FastAPI
 
 from server.routes import (
@@ -26,6 +28,7 @@ def create_contract_app() -> FastAPI:
     app.include_router(ui_state_routes.router)
     app.include_router(extension_routes.router)
     app.include_router(task_routes.router)
+    app.include_router(generation_router)
     return app
 
 

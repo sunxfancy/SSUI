@@ -1,6 +1,46 @@
 {
   "components": {
     "schemas": {
+      "Artifact": {
+        "properties": {
+          "artifactId": {
+            "title": "Artifactid",
+            "type": "string"
+          },
+          "kind": {
+            "title": "Kind",
+            "type": "string"
+          },
+          "metadata": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/JsonValue"
+            },
+            "title": "Metadata",
+            "type": "object"
+          },
+          "mimeType": {
+            "title": "Mimetype",
+            "type": "string"
+          },
+          "sha256": {
+            "title": "Sha256",
+            "type": "string"
+          },
+          "url": {
+            "title": "Url",
+            "type": "string"
+          }
+        },
+        "required": [
+          "artifactId",
+          "kind",
+          "mimeType",
+          "url",
+          "sha256"
+        ],
+        "title": "Artifact",
+        "type": "object"
+      },
       "AsyncStart": {
         "properties": {
           "callbacks": {
@@ -286,6 +326,51 @@
         "description": "Executor-driven payload whose concrete shape is defined by a script.",
         "title": "DynamicResult"
       },
+      "Generate": {
+        "additionalProperties": false,
+        "properties": {
+          "clientId": {
+            "maxLength": 128,
+            "minLength": 1,
+            "title": "Clientid",
+            "type": "string"
+          },
+          "context": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/JsonValue"
+            },
+            "maxProperties": 32,
+            "title": "Context",
+            "type": "object"
+          },
+          "idempotencyKey": {
+            "maxLength": 128,
+            "minLength": 1,
+            "title": "Idempotencykey",
+            "type": "string"
+          },
+          "inputs": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/JsonValue"
+            },
+            "title": "Inputs",
+            "type": "object"
+          },
+          "recipe": {
+            "maxLength": 128,
+            "minLength": 1,
+            "title": "Recipe",
+            "type": "string"
+          }
+        },
+        "required": [
+          "recipe",
+          "clientId",
+          "idempotencyKey"
+        ],
+        "title": "Generate",
+        "type": "object"
+      },
       "HTTPValidationError": {
         "properties": {
           "detail": {
@@ -299,6 +384,75 @@
         "title": "HTTPValidationError",
         "type": "object"
       },
+      "Job": {
+        "properties": {
+          "artifacts": {
+            "items": {
+              "$ref": "#/components/schemas/Artifact"
+            },
+            "title": "Artifacts",
+            "type": "array"
+          },
+          "context": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/JsonValue"
+            },
+            "title": "Context",
+            "type": "object"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error"
+          },
+          "jobId": {
+            "title": "Jobid",
+            "type": "string"
+          },
+          "mock": {
+            "title": "Mock",
+            "type": "boolean"
+          },
+          "progress": {
+            "title": "Progress",
+            "type": "integer"
+          },
+          "recipe": {
+            "title": "Recipe",
+            "type": "string"
+          },
+          "state": {
+            "enum": [
+              "queued",
+              "running",
+              "succeeded",
+              "failed",
+              "cancelled"
+            ],
+            "title": "State",
+            "type": "string"
+          }
+        },
+        "required": [
+          "jobId",
+          "recipe",
+          "state",
+          "progress",
+          "context",
+          "artifacts",
+          "error",
+          "mock"
+        ],
+        "title": "Job",
+        "type": "object"
+      },
+      "JsonValue": {},
       "ScanModelsRequest": {
         "properties": {
           "scan_dir": {
@@ -860,6 +1014,209 @@
           }
         },
         "summary": "Flow Operators"
+      }
+    },
+    "/api/generation/v1/artifacts/{artifact_id}": {
+      "get": {
+        "operationId": "artifact_api_generation_v1_artifacts__artifact_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "artifact_id",
+            "required": true,
+            "schema": {
+              "title": "Artifact Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Artifact",
+        "tags": [
+          "generation prototype"
+        ]
+      }
+    },
+    "/api/generation/v1/capabilities": {
+      "get": {
+        "operationId": "capabilities_api_generation_v1_capabilities_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Capabilities",
+        "tags": [
+          "generation prototype"
+        ]
+      }
+    },
+    "/api/generation/v1/jobs": {
+      "post": {
+        "operationId": "create_job_api_generation_v1_jobs_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Generate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Job"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Create Job",
+        "tags": [
+          "generation prototype"
+        ]
+      }
+    },
+    "/api/generation/v1/jobs/{job_id}": {
+      "get": {
+        "operationId": "get_job_api_generation_v1_jobs__job_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "job_id",
+            "required": true,
+            "schema": {
+              "title": "Job Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Job"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Job",
+        "tags": [
+          "generation prototype"
+        ]
+      }
+    },
+    "/api/generation/v1/jobs/{job_id}/cancel": {
+      "post": {
+        "operationId": "cancel_job_api_generation_v1_jobs__job_id__cancel_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "job_id",
+            "required": true,
+            "schema": {
+              "title": "Job Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Job"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Cancel Job",
+        "tags": [
+          "generation prototype"
+        ]
+      }
+    },
+    "/api/generation/v1/recipes": {
+      "get": {
+        "operationId": "recipes_api_generation_v1_recipes_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Recipes",
+        "tags": [
+          "generation prototype"
+        ]
       }
     },
     "/api/hf/models": {

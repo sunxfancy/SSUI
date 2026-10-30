@@ -1,0 +1,19 @@
+<!doctype html><html lang="zh-CN"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>SSUI 开放生成协议 协议演示</title>
+<style>body{font:16px system-ui;background:#151923;color:#e8edf7;max-width:900px;margin:48px auto;padding:24px}section{background:#222938;border-radius:16px;padding:24px;margin:20px 0}input,button{font:inherit;padding:10px;border-radius:8px;border:1px solid #68758b;margin:5px}button{cursor:pointer;background:#b7d5ff}button:disabled{opacity:.4;cursor:default}#wall{height:240px;background:#7c8390;border-radius:8px;background-size:128px}small{color:#b4c0d6}#status{white-space:pre-wrap}progress{width:100%}</style>
+<h1>SSUI 开放生成协议</h1><p>通用客户端示例 · 真实 HTTP 调用 · 假素材生成</p><small>此页以编辑器为例演示客户端应用结果。对象和版本由客户端管理，SSUI 不解析这些信息。</small>
+<section><b>目标：wall-12 / baseColor</b><p>版本 <span id="revision">0</span> · <span id="mode">已应用</span></p><div id="wall"></div></section>
+<section><label>描述 <input id="prompt" value="风化红砖墙" maxlength="2000"></label><button id="generate">生成候选</button><button id="cancel" disabled>取消生成</button><progress id="progress" max="100" value="0"></progress><p id="status" role="status">就绪</p><button id="preview" disabled>预览候选</button><button id="apply" disabled>应用</button><button id="revert" disabled>退出预览</button><button id="undo" disabled>撤销应用</button><a id="download" hidden>下载 PNG</a></section>
+<script type="module">
+const $=id=>document.getElementById(id), base='/api/generation/v1';
+const sessionId=crypto.randomUUID();
+let revision=0, job=null, candidate=null, applied=null, history=[], busy=false;
+async function api(path,body){const r=await fetch(base+path,body===undefined?{}:{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});const data=await r.json();if(!r.ok)throw Error(JSON.stringify(data.detail));return data;}
+function show(url){$('wall').style.backgroundImage=url?`url("${url}")`:'none';}
+function update(){ $('revision').textContent=revision;$('generate').disabled=busy;$('cancel').disabled=!busy||!job;$('preview').disabled=!candidate||busy;$('apply').disabled=!candidate||busy;$('undo').disabled=!history.length||busy; }
+$('generate').onclick=async()=>{busy=true;candidate=null;job=null;$('download').hidden=true;$('revert').disabled=true;show(applied);$('mode').textContent='已应用';update();try{job=await api('/jobs',{recipe:'mock.checker@1',clientId:sessionId,context:{documentId:'demo',selectionId:'wall-12',revision},inputs:{prompt:$('prompt').value,size:256,seed:0},idempotencyKey:crypto.randomUUID()});update();const deadline=Date.now()+30000;while(true){$('status').textContent=`${job.state} · ${job.jobId}`;$('progress').value=job.progress;if(['succeeded','failed','cancelled'].includes(job.state))break;if(Date.now()>deadline)throw Error('查询超时；任务 ID：'+job.jobId);await new Promise(r=>setTimeout(r,200));job=await api('/jobs/'+job.jobId);}if(job.state==='succeeded'){candidate=job.artifacts[0];$('download').href=candidate.url;$('download').download=candidate.artifactId+'.png';$('download').hidden=false;}}catch(e){$('status').textContent=e.message;}finally{busy=false;update();}};
+$('cancel').onclick=async()=>{try{await api('/jobs/'+job.jobId+'/cancel',{});}catch(e){$('status').textContent=e.message;}};
+$('preview').onclick=()=>{show(candidate.url);$('mode').textContent='临时预览';$('revert').disabled=false;};
+$('revert').onclick=()=>{show(applied);$('mode').textContent='已应用';$('revert').disabled=true;};
+$('apply').onclick=()=>{if(job.context.revision!==revision){$('status').textContent='目标版本已改变，请重新生成';return;}history.push(applied);applied=candidate.url;revision++;candidate=null;show(applied);$('mode').textContent='已应用';$('revert').disabled=true;update();};
+$('undo').onclick=()=>{applied=history.pop();revision++;show(applied);$('mode').textContent='已应用';$('revert').disabled=true;update();};
+</script></html>
