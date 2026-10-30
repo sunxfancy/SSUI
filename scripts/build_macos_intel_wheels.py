@@ -27,7 +27,7 @@ def main():
     output.mkdir(exist_ok=True)
     env = dict(os.environ, MAX_JOBS='3', CMAKE_BUILD_PARALLEL_LEVEL='3',
                MACOSX_DEPLOYMENT_TARGET='13.0', USE_CUDA='0', USE_MPS='0',
-               USE_DISTRIBUTED='0', BUILD_TEST='0', USE_KINETO='0',
+               USE_DISTRIBUTED='1', USE_GLOO='1', USE_MPI='0', USE_NCCL='0', BUILD_TEST='0', USE_KINETO='0',
                USE_OPENMP='0', USE_MKLDNN='0', USE_FBGEMM='0', USE_NNPACK='0',
                USE_QNNPACK='0', USE_PYTORCH_QNNPACK='0', USE_XNNPACK='0',
                USE_FFMPEG='0', BUILD_SOX='0', TORCHVISION_USE_FFMPEG='0',
