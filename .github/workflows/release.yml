@@ -286,6 +286,7 @@ jobs:
           path: release-assets/*
           if-no-files-found: error
           retention-days: 30
+          overwrite: true
 
   consumer:
     name: Install downloaded ${{ matrix.id }}

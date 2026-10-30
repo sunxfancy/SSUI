@@ -17,17 +17,23 @@ def main():
     endpoint = f'repos/{repo}/actions/workflows/macos-intel-wheels.yml/runs'
     active = json.loads(gh('api', endpoint+'?status=in_progress&per_page=20'))['workflow_runs']
     for run in active:
-        if run['id'] >= int(os.environ['GITHUB_RUN_ID']) or run.get('head_repository', {}).get('full_name') != repo:
+        if run['id'] >= int(os.environ['GITHUB_RUN_ID']) or (run.get('head_repository') or {}).get('full_name') != repo:
             continue
         blob = gh('api', f'repos/{repo}/contents/{recipe}?ref={run["head_sha"]}', '--jq', '.sha')
         if blob == expected:
             print('Waiting for the already running native build', run['id'], flush=True)
             subprocess.run(['gh', 'run', 'watch', str(run['id']), '--interval', '60'])
             break
-    runs = json.loads(gh('api', endpoint+'?status=success&per_page=20'))['workflow_runs']
+    artifacts = json.loads(gh('api', f'repos/{repo}/actions/artifacts?name=macos-intel-wheels&per_page=100'))['artifacts']
     reused = False
-    for run in runs:
-        if run.get('head_repository', {}).get('full_name') != repo or run['event'] not in ('push', 'workflow_dispatch', 'release'):
+    workflows = {'.github/workflows/macos-intel-wheels.yml',
+                 '.github/workflows/windows-arm64-wheels.yml', '.github/workflows/release.yml'}
+    for artifact in artifacts:
+        if artifact['expired']:
+            continue
+        run = json.loads(gh('api', f'repos/{repo}/actions/runs/{artifact["workflow_run"]["id"]}'))
+        if (run['conclusion'] != 'success' or run['path'] not in workflows or
+                (run.get('head_repository') or {}).get('full_name') != repo):
             continue
         try:
             blob = gh('api', f'repos/{repo}/contents/{recipe}?ref={run["head_sha"]}', '--jq', '.sha')

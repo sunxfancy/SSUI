@@ -74,6 +74,7 @@ jobs:
           path: reports/
           if-no-files-found: warn
           retention-days: 30
+          overwrite: true
 
   macos-wheels:
     uses: ./.github/workflows/macos-intel-wheels.yml
