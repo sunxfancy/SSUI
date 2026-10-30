@@ -74,7 +74,9 @@ def main():
             # Vendor image-codec dylibs instead of depending on the runner's Homebrew.
             repaired = root / '.build' / 'repaired'
             import torch
-            repair_env = dict(env, DYLD_LIBRARY_PATH=str(Path(torch.__file__).parent / 'lib'))
+            # Homebrew's libpng requires macOS 14; delocate retags the wheel accordingly.
+            repair_env = dict(env, MACOSX_DEPLOYMENT_TARGET='14.0',
+                              DYLD_LIBRARY_PATH=str(Path(torch.__file__).parent / 'lib'))
             run('delocate-wheel', '--require-archs', 'x86_64', '--exclude', '/torch/lib/', '-w', str(repaired), str(wheel), env=repair_env)
             wheel.unlink()
             shutil.move(str(next(repaired.glob('*.whl'))), output)

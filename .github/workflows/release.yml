@@ -105,6 +105,7 @@ jobs:
             target: x86_64-apple-darwin
             id: macos-x86_64
             bundles: dmg
+            config_args: --config src-tauri/tauri.intel.conf.json
             binary: desktop/src-tauri/target/x86_64-apple-darwin/release/ssui
           - os: macos-15
             platform: macosx
@@ -251,12 +252,12 @@ jobs:
         timeout-minutes: 60
         run: |
           yarn build:frontend
-          yarn build:desktop:debug --target ${{ matrix.target }} --no-bundle
+          yarn build:desktop:debug --target ${{ matrix.target }} --no-bundle ${{ matrix.config_args }}
           yarn test
 
       - name: Pack desktop
         timeout-minutes: 90
-        run: yarn package --target ${{ matrix.target }} --bundles ${{ matrix.bundles }}
+        run: yarn package --target ${{ matrix.target }} --bundles ${{ matrix.bundles }} ${{ matrix.config_args }}
 
       - name: Smoke test app executable
         timeout-minutes: 5

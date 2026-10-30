@@ -44,6 +44,8 @@
 
 统一命名：`ssui-vX.Y.Z-<platform>-<architecture>.<extension>`。
 Linux 当前构建基线为 Ubuntu 24.04，不承诺兼容更老的 glibc/WebKit。
+Intel macOS wheel 包含要求 macOS 14 的 libpng；对应安装包通过
+`tauri.intel.conf.json` 声明最低 macOS 14，原生验收使用 macOS 15。
 其他最低系统要求需经目标系统验收后写入 Release notes，runner 版本本身
 不是最低支持版本证明。签名、公证凭据当前未配置，不宣称安装包已签名。
 
@@ -79,6 +81,7 @@ torchaudio 2.8.0（版本后缀 `+ssui.cpu`），保留 CPU/Gloo API，不启用
 开发/离线打包前下载 `macos-intel-wheels` artifact，设置
 `SSUI_NATIVE_WHEELHOUSE` 为解压目录。NumPy 1.x、Numba 0.62.1 / llvmlite
 0.45.1 保留 Intel 二进制兼容性。Apple Silicon 保留已有锁文件。
+本地 Intel 桌面打包使用 `yarn package --config src-tauri/tauri.intel.conf.json`。
 
 Windows ARM64 使用 `windows-arm64-cpu.lock` 的原生 CPU PyTorch 2.9.1
 及配套 torchvision、源码编译的 torchaudio、VTK、OpenCV、PyMeshFix、
