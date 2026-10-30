@@ -47,6 +47,8 @@ jobs:
       - name: Verify portable native libraries
         run: python scripts/verify_macos_wheels.py
       - name: Resolve the Intel dependency lock with the native wheels
+        env:
+          MACOSX_DEPLOYMENT_TARGET: '14.0'
         run: |
           cp dependencies/macosx-x86_64.lock native-wheels/macosx-x86_64.lock
           uv pip compile dependencies/requirements-macosx-x86_64.txt --find-links native-wheels --python-version 3.12.8 --python-platform x86_64-apple-darwin --index-strategy unsafe-best-match --emit-index-url -o native-wheels/macosx-x86_64.lock

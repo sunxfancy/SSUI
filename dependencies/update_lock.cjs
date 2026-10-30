@@ -79,7 +79,9 @@ function main() {
       }
       
       // 使用uv生成锁文件
-      execFileSync(venvPath, compileArgs(targetName, requirementsFile, lockFile, args.noUpgrade), { stdio: 'inherit', env: devEnv });
+      const compileEnv = targetName === 'macosx-x86_64'
+        ? { ...devEnv, MACOSX_DEPLOYMENT_TARGET: '14.0' } : devEnv;
+      execFileSync(venvPath, compileArgs(targetName, requirementsFile, lockFile, args.noUpgrade), { stdio: 'inherit', env: compileEnv });
       console.log(`已生成锁文件: ${lockFile}`);
       
       // 如果有index URL，将其添加到锁文件末尾
