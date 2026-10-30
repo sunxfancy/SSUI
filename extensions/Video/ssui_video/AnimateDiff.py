@@ -10,6 +10,7 @@ from diffsynth import (
 import torch
 import PIL.Image
 from backend.util.devices import TorchDevice
+from backend.quantization.workflow import int8_quantizer, quantize_manager_components
 from ssui.annotation import param
 from ssui.base import Prompt
 from ssui.config import SSUIConfig
@@ -17,7 +18,8 @@ from ssui.controller import Random, Slider
 
 
 class AnimateDiffModel:
-    def __init__(self, checkpoint_path: str = "", motion_path: str = ""):
+    def __init__(self, checkpoint_path: str = "", motion_path: str = "", quantization: str = "none"):
+        quantize = int8_quantizer(quantization)
         if bool(checkpoint_path) != bool(motion_path):
             raise ValueError("Provide both checkpoint_path and motion_path, or neither")
         if not checkpoint_path:
@@ -28,7 +30,7 @@ class AnimateDiffModel:
         # Load models
         device = TorchDevice.choose_torch_device()
         self.model_manager = ModelManager(
-            torch_dtype=TorchDevice.choose_torch_dtype(device), device=str(device)
+            torch_dtype=TorchDevice.choose_torch_dtype(device), device="cpu" if quantization != "none" else str(device)
         )
         self.model_manager.load_models(
             [
@@ -37,15 +39,20 @@ class AnimateDiffModel:
             ]
         )
 
+        if quantization != "none":
+            quantize_manager_components(self.model_manager, quantize, ("sd_unet", "sd_text_encoder"))
+            self.model_manager.to(str(device))
+            self.model_manager.device = str(device)
+
     @staticmethod
-    def load_local() -> "AnimateDiffModel":
+    def load_local(quantization: str = "none") -> "AnimateDiffModel":
         """Load the verified local weights used by the Mac example workflow."""
         root = Path(__file__).resolve().parents[3] / "models/video-smoke"
         checkpoint = Path(os.environ.get("SSUI_ANIMATEDIFF_CHECKPOINT", root / "sd1/dreamshaper_8.safetensors"))
         motion = Path(os.environ.get("SSUI_ANIMATEDIFF_MOTION", root / "animatediff/mm_sd_v15_v2.ckpt"))
         if not checkpoint.is_file() or not motion.is_file():
             raise FileNotFoundError("Download AnimateDiff weights first: yarn test:video:smoke --download-only")
-        return AnimateDiffModel(str(checkpoint), str(motion))
+        return AnimateDiffModel(str(checkpoint), str(motion), quantization=quantization)
 
 
 @param("width", Slider(64, 1024, 64), default=256)

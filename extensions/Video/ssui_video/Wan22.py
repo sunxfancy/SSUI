@@ -2,6 +2,7 @@ from ._runtime import wan_runtime
 import os
 
 import torch
+from backend.quantization.workflow import fp8_storage_dtype
 
 from ssui.annotation import param
 from ssui.base import Prompt, Image
@@ -15,7 +16,7 @@ from diffsynth.utils import ModelConfig
 # Wan 2.2 是目前 diffsynth 能支持到的最新 Wan 系列：
 #   - TI2V-5B：文生视频 / 图生视频 / 首尾帧 一体化，5B 参数量，24GB 显存可跑；
 #   - T2V-A14B / I2V-A14B：MoE 双专家（high_noise + low_noise）14B 级，质量更接近 Seedance，
-#     建议 48GB+ 显存，24GB 需配合 FP8（把下面 torch_dtype 改为 torch.float8_e4m3fn）。
+#     load(quantization="fp8") 可压缩双专家存储，计算精度仍由运行时选择。
 # 权重通过 ModelScope 下载（可在环境变量中覆盖本地根目录）。
 WAN22_TI2V_MODEL_ID = "Wan-AI/Wan2.2-TI2V-5B"
 WAN22_T2V_MODEL_ID = "Wan-AI/Wan2.2-T2V-A14B"
@@ -41,9 +42,11 @@ class Wan22TI2VModel:
         self.pipe = pipe
 
     @staticmethod
-    def load() -> "Wan22TI2VModel":
+    def load(quantization: str = "none") -> "Wan22TI2VModel":
+        runtime = wan_runtime()
+        storage_dtype = fp8_storage_dtype(quantization, runtime["torch_dtype"], device=runtime["device"])
         pipe = WanVideoPipeline.from_pretrained(
-            **wan_runtime(),
+            **runtime,
             model_configs=[
                 ModelConfig(
                     model_id=WAN22_TI2V_MODEL_ID,
@@ -54,6 +57,7 @@ class Wan22TI2VModel:
                 ModelConfig(
                     model_id=WAN22_TI2V_MODEL_ID,
                     origin_file_pattern="diffusion_pytorch_model*.safetensors",
+                    offload_dtype=storage_dtype,
                     offload_device="cpu",
                     local_model_path=LOCAL_MODEL_PATH,
                 ),
@@ -81,19 +85,23 @@ class Wan22T2VA14BModel:
         self.pipe = pipe
 
     @staticmethod
-    def load() -> "Wan22T2VA14BModel":
+    def load(quantization: str = "none") -> "Wan22T2VA14BModel":
+        runtime = wan_runtime()
+        storage_dtype = fp8_storage_dtype(quantization, runtime["torch_dtype"], device=runtime["device"])
         pipe = WanVideoPipeline.from_pretrained(
-            **wan_runtime(),
+            **runtime,
             model_configs=[
                 ModelConfig(
                     model_id=WAN22_T2V_MODEL_ID,
                     origin_file_pattern="high_noise_model/diffusion_pytorch_model*.safetensors",
+                    offload_dtype=storage_dtype,
                     offload_device="cpu",
                     local_model_path=LOCAL_MODEL_PATH,
                 ),
                 ModelConfig(
                     model_id=WAN22_T2V_MODEL_ID,
                     origin_file_pattern="low_noise_model/diffusion_pytorch_model*.safetensors",
+                    offload_dtype=storage_dtype,
                     offload_device="cpu",
                     local_model_path=LOCAL_MODEL_PATH,
                 ),
@@ -127,19 +135,23 @@ class Wan22I2VA14BModel:
         self.pipe = pipe
 
     @staticmethod
-    def load() -> "Wan22I2VA14BModel":
+    def load(quantization: str = "none") -> "Wan22I2VA14BModel":
+        runtime = wan_runtime()
+        storage_dtype = fp8_storage_dtype(quantization, runtime["torch_dtype"], device=runtime["device"])
         pipe = WanVideoPipeline.from_pretrained(
-            **wan_runtime(),
+            **runtime,
             model_configs=[
                 ModelConfig(
                     model_id=WAN22_I2V_MODEL_ID,
                     origin_file_pattern="high_noise_model/diffusion_pytorch_model*.safetensors",
+                    offload_dtype=storage_dtype,
                     offload_device="cpu",
                     local_model_path=LOCAL_MODEL_PATH,
                 ),
                 ModelConfig(
                     model_id=WAN22_I2V_MODEL_ID,
                     origin_file_pattern="low_noise_model/diffusion_pytorch_model*.safetensors",
+                    offload_dtype=storage_dtype,
                     offload_device="cpu",
                     local_model_path=LOCAL_MODEL_PATH,
                 ),

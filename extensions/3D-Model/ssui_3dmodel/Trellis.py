@@ -6,6 +6,7 @@ from ssui.config import SSUIConfig
 from ssui.base import Mesh, Image
 from ssui.annotation import param
 from ssui.controller import Random, Switch, Slider, Select
+from backend.quantization.workflow import int8_quantizer
 
 WINDOWS_ARM64 = platform.system() == "Windows" and platform.machine().lower() in ("arm64", "aarch64")
 
@@ -22,7 +23,8 @@ class TrellisModel:
         return self.model
 
     @staticmethod
-    def load(model_path: str):
+    def load(model_path: str, quantization: str = "none"):
+        quantize = int8_quantizer(quantization)
         if torch.version.hip:
             raise RuntimeError(
                 "Legacy TRELLIS requires CUDA-only extensions in SSUI. "
@@ -30,6 +32,8 @@ class TrellisModel:
             )
         from backend.util.devices import TorchDevice
         if TorchDevice.choose_torch_device().type == 'mps':
+            if quantization != 'none':
+                raise RuntimeError('Trellis INT8 is not supported by the isolated MPS runner; select none')
             from pathlib import Path
             root = Path(__file__).resolve().parents[3] / 'models/trellis-mac' if model_path == 'microsoft/TRELLIS-image-large' else Path(model_path)
             root = Path(os.environ.get('SSUI_TRELLIS_MODEL_DIR', root))
@@ -45,6 +49,9 @@ class TrellisModel:
         from trellis.pipelines.trellis_image_to_3d import TrellisImageTo3DPipeline
 
         model = TrellisImageTo3DPipeline.from_pretrained(model_path)
+        if quantization != "none":
+            for name in ("sparse_structure_flow_model", "slat_flow_model", "image_cond_model"):
+                quantize(model.models[name])
         model.cuda()
         return TrellisModel(model_path, model)
 

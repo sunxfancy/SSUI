@@ -1,5 +1,6 @@
 from ._runtime import wan_runtime
 import torch
+from backend.quantization.workflow import fp8_storage_dtype, load_dit_with_storage_dtype
 from diffsynth import ModelManager, WanVideoPipeline
 from modelscope import snapshot_download
 
@@ -14,19 +15,24 @@ class WanVideoModel:
         self.model_manager = model_manager
 
     @staticmethod
-    def load() -> "WanVideoModel":
-        model_manager = ModelManager(device="cpu", torch_dtype=wan_runtime()["torch_dtype"])
+    def load(quantization: str = "none") -> "WanVideoModel":
+        runtime = wan_runtime()
+        fp8_storage_dtype(quantization, runtime["torch_dtype"], device=runtime["device"])
+        model_manager = ModelManager(device="cpu", torch_dtype=runtime["torch_dtype"])
         snapshot_download("PAI/Wan2.1-Fun-1.3B-InP", local_dir="models/PAI/Wan2.1-Fun-1.3B-InP")
 
         # Load models
-        model_manager.load_models(
+        load_dit_with_storage_dtype(
+            model_manager,
             [
                 "models/PAI/Wan2.1-Fun-1.3B-InP/diffusion_pytorch_model.safetensors",
                 "models/PAI/Wan2.1-Fun-1.3B-InP/models_t5_umt5-xxl-enc-bf16.pth",
                 "models/PAI/Wan2.1-Fun-1.3B-InP/Wan2.1_VAE.pth",
                 "models/PAI/Wan2.1-Fun-1.3B-InP/models_clip_open-clip-xlm-roberta-large-vit-huge-14.pth",
             ],
-            torch_dtype=wan_runtime()["torch_dtype"],
+            quantization=quantization,
+            torch_dtype=runtime["torch_dtype"],
+            device="cpu",
         )
         return WanVideoModel(model_manager)
 
@@ -38,7 +44,7 @@ def WanImageTextToVideo(config: SSUIConfig, base_model: WanVideoModel, image: Im
         return [Image()]
     
     pipe = WanVideoPipeline.from_model_manager(base_model.model_manager, **wan_runtime())
-    pipe.enable_vram_management(num_persistent_param_in_dit=None)
+    pipe.enable_vram_management(num_persistent_param_in_dit=0)
 
     # Image-to-video
     video = pipe(
