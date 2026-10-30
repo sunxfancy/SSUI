@@ -304,3 +304,52 @@ the same 512px workflow reduced peak process working set from 16.73 to 14.84 GiB
 pixel-identical to the preceding run. This warmed run took 68.4 seconds total;
 cache/warmup differences mean the speed change is not attributed to this fix.
 This still does not establish that the complete workflow fits a 16 GiB RAM host.
+
+## 可选量化（本地 3D / 视频）
+
+`examples/advance/workflow-video.py`、`workflow-video-local.py` 和
+`workflow-3d.py` 中新增的 `img2mesh_quantized` 的模型选项中增加了 `quantization`。新选项默认 `none`，
+保留模型原有精度；准备工作流只登记控件，不下载或量化权重。
+
+| 模型 | 可选值 | 量化范围 |
+| --- | --- | --- |
+| Wan 2.1 / Fun、Wan 2.2（含 A14B 双专家） | `none` / `fp8` | DiT 权重以 FP8 E4M3 存储，运行时精度计算（CUDA 通常 BF16）；文本编码器、VAE、CLIP 保留原精度 |
+| Hunyuan T2V / I2V | `none` / `fp8` | DiT 使用 FP8 存储和 BF16 计算；其余组件保持原精度 |
+| CogVideo | `none` / `int8` | TorchAO INT8 weight-only Linear：DiT 和文本编码器；VAE 保留原精度 |
+| AnimateDiff | `none` / `int8` | TorchAO INT8 weight-only Linear：UNet 和文本编码器；卷积、VAE、运动模块保留原精度 |
+| Trellis | `none` / `int8` | TorchAO INT8 weight-only Linear：两级 flow 和图像条件编码器；几何、纹理解码器保持原精度 |
+| LTX-2.5 / MiniMax H3 | 已有节点选项 | 继续使用各自独立虚拟环境中的 `fp8-cast` / `int8` 实现 |
+
+Python 调用保持兼容，量化在模型加载时选择：
+
+```python
+model = Wan2T2VModel.load(quantization="fp8")
+model = CogVideoModel.load(quantization="int8")
+model = TrellisModel.load("jetx/trellis-image-large", quantization="int8")
+model = AnimateDiffModel(quantization="int8")
+```
+
+自定义工作流可以用 `ssui.quantization.FP8Quantization` 或
+`Int8Quantization` 注册模型加载选项；先检查 `config.is_prepare()`，
+在准备阶段构造空模型，执行阶段再将选项传给 `.load()`。
+
+INT8 为可选依赖，需要在**模型实际使用的 Python 环境**安装与 PyTorch
+匹配的 `torchao`。没有该依赖时，`none` 模式不导入它；选择 `int8`
+会在下载权重前给出明确错误，不会静默退回全精度。
+CPU 回归覆盖仓库固定的 PyTorch 2.4.1 + TorchAO 0.5.0，以及
+PyTorch 2.10.0 + TorchAO 0.15.0；未验证这些组合的 CUDA 内核或完整模型生成。
+INT8 逐层使用 FP32 计算量化比例，再恢复权重对外声明的原始浮点 dtype，
+避免 BF16 比例舍入导致 INT8 端点溢出，同时保留原有激活精度。
+实现采用 [TorchAO Int8WeightOnlyConfig](https://docs.pytorch.org/ao/stable/api_reference/generated/torchao.quantization.Int8WeightOnlyConfig.html)
+的逐通道权重量化，不量化激活，也不替换 Trellis SparseLinear 的前向接口。
+
+FP8 模式需要 PyTorch 提供 `float8_e4m3fn`。这里通过 DiffSynth 的
+存储/计算精度分离执行，不能将整个 pipeline 的计算 dtype 改成 FP8。
+Wan 2.1/Fun 的 DiT 使用按层换入，避免加载时先将完整 DiT 放入 GPU。
+
+量化降低的是指定权重的常驻存储，不代表总峰值内存等比例下降。
+当前加载器仍需读取原始 checkpoint；主内存加载峰值、视频激活、注意力、
+VAE 解码及输出帧仍受模型、分辨率、帧数影响。量化也可能影响质量或速度，
+具体显存下限需要在目标 GPU 上用固定输入验证。
+
+FP8 存储在 MPS 上会提前拒绝；Trellis 的独立 MPS runner 目前只支持 `none`。现有 `img2mesh(model, image)` 接口保持不变。

@@ -1,4 +1,5 @@
 import torch
+from backend.quantization.workflow import fp8_storage_dtype
 
 from ssui.annotation import param
 from ssui.base import Prompt, Image
@@ -19,14 +20,15 @@ class HunyuanVideoModel:
         self.model_manager = model_manager
 
     @staticmethod
-    def load() -> "HunyuanVideoModel":
+    def load(quantization: str = "none") -> "HunyuanVideoModel":
+        storage_dtype = fp8_storage_dtype(quantization, torch.bfloat16)
         model_manager = ModelManager()
         download_models(["HunyuanVideo"])
 
-        # The DiT model is loaded in bfloat16.
+        # Only DiT storage is optionally FP8; computation stays BF16.
         model_manager.load_models(
             ["models/HunyuanVideo/transformers/mp_rank_00_model_states.pt"],
-            torch_dtype=torch.bfloat16,  # you can use torch_dtype=torch.float8_e4m3fn to enable quantization.
+            torch_dtype=storage_dtype,
             device="cpu",
         )
 
@@ -69,13 +71,14 @@ class HunyuanImageToVideoModel:
         self.model_manager = model_manager
 
     @staticmethod
-    def load() -> "HunyuanImageToVideoModel":
+    def load(quantization: str = "none") -> "HunyuanImageToVideoModel":
+        storage_dtype = fp8_storage_dtype(quantization, torch.bfloat16)
         model_manager = ModelManager()
         download_models(["HunyuanVideoI2V"])
 
         model_manager.load_models(
             ["models/HunyuanVideoI2V/transformers/mp_rank_00_model_states.pt"],
-            torch_dtype=torch.bfloat16,
+            torch_dtype=storage_dtype,
             device="cpu",
         )
         model_manager.load_models(
