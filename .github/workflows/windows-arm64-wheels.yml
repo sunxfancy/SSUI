@@ -1,0 +1,139 @@
+# Source-built packages are published by sunxfancy/ssui-python-packages and pinned
+# in dependencies.yaml. Validate that exact set before a desktop release.
+name: Native desktop dependencies
+on:
+  workflow_call:
+    inputs:
+      ref:
+        type: string
+        default: ''
+  workflow_dispatch:
+  push:
+    branches: [dev]
+    paths:
+      - 'dependencies/**'
+      - 'scripts/*arm64*'
+      - 'scripts/audit_native_binaries.py'
+      - 'scripts/runtime_config.py'
+      - 'scripts/check_runtime.py'
+      - '.github/workflows/windows-arm64-wheels.yml'
+      - '.github/workflows/macos-intel-wheels.yml'
+      - 'scripts/build_macos_intel_wheels.py'
+      - 'scripts/find_native_wheels.py'
+      - 'scripts/verify_macos_wheels.py'
+  pull_request:
+    paths:
+      - 'dependencies/**'
+      - 'scripts/audit_native_binaries.py'
+      - 'scripts/runtime_config.py'
+      - 'scripts/check_runtime.py'
+      - '.github/workflows/windows-arm64-wheels.yml'
+      - '.github/workflows/macos-intel-wheels.yml'
+      - 'scripts/build_macos_intel_wheels.py'
+      - 'scripts/find_native_wheels.py'
+      - 'scripts/verify_macos_wheels.py'
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: windows-arm64-wheels-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'push' || github.event_name == 'pull_request' }}
+jobs:
+  verify:
+    name: Verify Windows ARM64 dependencies
+    runs-on: windows-11-arm
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: ${{ inputs.ref || github.ref }}
+      - name: Select runtime
+        id: runtime
+        run: node dependencies/runtime.cjs --github-output
+      - name: Install pinned standalone Python
+        timeout-minutes: 15
+        run: node dependencies/bootstrap.cjs --github-env
+      - name: Install the full native dependency lock
+        timeout-minutes: 30
+        run: |
+          uv pip sync --no-build --index-strategy unsafe-best-match dependencies/${{ steps.runtime.outputs.lock }}
+          uv pip check
+      - name: Verify Python and native inference kernels
+        run: python scripts/check_runtime.py --target windows-arm64
+      - name: Audit installed native libraries
+        run: python scripts/audit_native_binaries.py --output reports/native-binaries.json
+      - name: Exercise audio, video, 3D and image dependencies
+        timeout-minutes: 30
+        run: python dependencies/probe_arm64.py --download-assets --assets-root "${{ runner.temp }}/probe-assets" --output reports/runtime-probe.json
+      - name: Audit wheel availability and tags
+        timeout-minutes: 15
+        run: python dependencies/audit_wheels.py dependencies/windows-arm64-cpu.lock --python-version ${{ steps.runtime.outputs.python }} --strict --output reports/wheel-audit.json
+      - name: Preserve verification reports
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: windows-arm64-verification
+          path: reports/
+          if-no-files-found: warn
+          retention-days: 30
+          overwrite: true
+
+  macos-wheels:
+    uses: ./.github/workflows/macos-intel-wheels.yml
+    with:
+      ref: ${{ inputs.ref || github.ref }}
+
+  additional-runtimes:
+    needs: macos-wheels
+    name: Verify ${{ matrix.id }} dependencies
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-24.04-arm
+            id: linux-arm64
+          - os: macos-15-intel
+            id: macos-x86_64
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: ${{ inputs.ref || github.ref }}
+      - name: Check native runtime prerequisites
+        run: python3 scripts/release_preflight.py --target ${{ matrix.id }}
+      - name: Select runtime
+        id: runtime
+        run: node dependencies/runtime.cjs --github-output
+      - name: Install pinned standalone Python
+        timeout-minutes: 15
+        run: node dependencies/bootstrap.cjs --github-env
+      - name: Install Linux native build dependencies
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libgl1-mesa-dev libx11-dev
+      - name: Download verified Intel wheels
+        if: matrix.id == 'macos-x86_64'
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+        with:
+          name: macos-intel-wheels
+          path: native-wheels
+      - name: Check Intel wheel manifest
+        if: matrix.id == 'macos-x86_64'
+        run: node dependencies/native_wheels.cjs native-wheels
+      - name: Install the full native dependency lock
+        timeout-minutes: 25
+        env:
+          UV_HTTP_TIMEOUT: 600
+        run: |
+          if [ '${{ matrix.id }}' = macos-x86_64 ]; then
+            uv pip install --find-links native-wheels --index-strategy unsafe-best-match --build-constraint dependencies/build-constraints.txt -r dependencies/${{ steps.runtime.outputs.lock }}
+          else
+            uv pip install --index-strategy unsafe-best-match --build-constraint dependencies/build-constraints.txt -r dependencies/${{ steps.runtime.outputs.lock }}
+          fi
+          uv pip check
+      - name: Verify Python and native inference kernels
+        run: python scripts/check_runtime.py --target ${{ matrix.id }}
+      - name: Verify native LLVM JIT
+        run: python -c "import numba, numpy as np; f = numba.njit(lambda x:(x*x).sum()); assert f(np.arange(10)) == 285; assert f.nopython_signatures"

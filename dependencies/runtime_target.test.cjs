@@ -21,7 +21,7 @@ test('existing dependency names round-trip without changing their architecture',
 });
 
 test('missing ARM and QNN dependencies never fall back to x64/CUDA', () => {
-  assert.throws(() => dependencyProfile(runtimeTarget('linux', 'arm64', 'cpu')), /尚未提供/);
+  assert.equal(dependencyProfile(runtimeTarget('linux', 'arm64', 'cpu')).dependencyTarget, 'linux-arm64');
   assert.throws(() => dependencyProfile(runtimeTarget('windows', 'arm64', 'qnn')), /尚未提供/);
   assert.equal(profileFromName('windows-arm64-cpu').experimental, true);
   assert.throws(() => runtimeTarget('windows', 'ia32', 'cpu'), /CPU/);

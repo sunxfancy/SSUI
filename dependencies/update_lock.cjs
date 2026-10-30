@@ -25,8 +25,10 @@ function parseArgs(args = process.argv.slice(2)) {
 function compileArgs(target, requirementsFile, lockFile, noUpgrade = false) {
   const profile = profileFromName(target);
   const python = pythonDistribution(profile);
+  const nativeWheels = require('./native_wheels.cjs').wheelhouseFor(profile.dependencyTarget);
   return ['pip', 'compile', requirementsFile, '-o', lockFile,
     '--python-platform', python.triple, '--python-version', python.version,
+    ...(nativeWheels ? ['--find-links', nativeWheels] : []),
     ...(profile.binaryOnly ? ['--no-build', '--index-strategy', 'unsafe-best-match'] : []),
     // uv preserves existing pins by default; there is no --no-upgrade flag.
     ...(noUpgrade ? [] : ['--upgrade'])];
@@ -77,7 +79,9 @@ function main() {
       }
       
       // 使用uv生成锁文件
-      execFileSync(venvPath, compileArgs(targetName, requirementsFile, lockFile, args.noUpgrade), { stdio: 'inherit', env: devEnv });
+      const compileEnv = targetName === 'macosx-x86_64'
+        ? { ...devEnv, MACOSX_DEPLOYMENT_TARGET: '14.0' } : devEnv;
+      execFileSync(venvPath, compileArgs(targetName, requirementsFile, lockFile, args.noUpgrade), { stdio: 'inherit', env: compileEnv });
       console.log(`已生成锁文件: ${lockFile}`);
       
       // 如果有index URL，将其添加到锁文件末尾

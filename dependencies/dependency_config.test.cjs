@@ -84,7 +84,7 @@ test('migration retains OS/backend-specific versions, URLs, extras and multiple 
 });
 
 test('generation fails for missing dependency support instead of producing an ARM/CUDA fallback', () => {
-  assert.throws(() => generateRequirements('linux-arm64-cpu'), /尚未提供/);
+  assert.throws(() => generateRequirements('linux-arm64-qnn'), /尚未提供/);
   assert.throws(() => generate(['--target']), /缺少/);
   assert.throws(() => generate(['--typo']), /未知/);
   const spec = sample();
@@ -108,7 +108,7 @@ test('lock compilation uses the requested target, Python version and unchanged l
   assert.deepEqual(parseArgs(['--target', 'macos-arm64-mps', '-n']), { targets: ['macosx'], all: false, noUpgrade: true });
   assert.throws(() => parseArgs(['--target', 'windows', '--all']), /不能/);
   assert.throws(() => parseArgs(['--target']), /缺少/);
-  assert.throws(() => parseArgs(['--target', 'linux-arm64-cpu']), /尚未提供/);
+  assert.throws(() => parseArgs(['--target', 'linux-arm64-qnn']), /尚未提供/);
   const args = compileArgs('macosx', 'in file.txt', 'macosx.lock', true);
   assert.equal(args[args.indexOf('--python-platform') + 1], 'aarch64-apple-darwin');
   assert.equal(args[args.indexOf('--python-version') + 1], config.python.version);

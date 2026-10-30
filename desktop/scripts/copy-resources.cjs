@@ -143,6 +143,19 @@ async function main() {
   
   // 确保目标目录存在
   ensureDirectoryExists(targetDir);
+  const { wheelhouseFor } = require('../../dependencies/native_wheels.cjs');
+  const { getCurrentTarget } = require('../../dependencies/platform.cjs');
+  const nativeWheels = wheelhouseFor(getCurrentTarget());
+  // Remove stale wheels when switching build targets in the same checkout.
+  for (const name of fs.readdirSync(targetDir)) {
+    if (name.endsWith('.whl') || name === 'native-wheels.json') fs.unlinkSync(path.join(targetDir, name));
+  }
+  if (nativeWheels) {
+    const manifest = require('../../dependencies/native_wheels.cjs').verifyWheelhouse(nativeWheels);
+    for (const wheel of manifest.wheels) copyFile(path.join(nativeWheels, wheel.filename), path.join(targetDir, wheel.filename));
+    copyFile(path.join(nativeWheels, 'manifest.json'), path.join(targetDir, 'native-wheels.json'));
+  }
+
   
   // All packaged dependency sets come from the same OS / arch / backend registry.
   const { profiles } = require('../../dependencies/runtime-targets.json');

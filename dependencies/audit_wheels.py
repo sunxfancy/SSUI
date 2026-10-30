@@ -93,6 +93,26 @@ def audit(requirement, tags, python_version, extra_indexes=()):
     return result
 
 
+def audit_inputs(text):
+    requirements, indexes = [], []
+    for raw in text.splitlines():
+        line = raw.strip()
+        if not line or line.startswith('#'):
+            continue
+        match = re.fullmatch(r'--(?:extra-)?index-url(?:=|\s+)(\S+)', line)
+        if match:
+            indexes.append(match[1])
+        elif not line.startswith('--'):
+            requirements.append(line)
+    return requirements, indexes
+
+
+def audit_failed(results, strict=False):
+    if strict:
+        return any(item['status'] not in ('wheel', 'direct-wheel') for item in results)
+    return any(item['status'] == 'metadata-error' for item in results)
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("requirements")
@@ -100,18 +120,20 @@ def main():
     parser.add_argument("--python-version", default="3.12.8")
     parser.add_argument("--output", required=True)
     parser.add_argument("--extra-index-url", action="append", default=[])
+    parser.add_argument("--strict", action="store_true", help="Fail unless every requirement has a compatible wheel")
     args = parser.parse_args()
     version = tuple(map(int, args.python_version.split(".")[:2]))
     tags = set(cpython_tags(version, platforms=[args.platform])) | set(compatible_tags(version, interpreter=f"cp{version[0]}{version[1]}", platforms=[args.platform]))
-    lines = [line.strip() for line in Path(args.requirements).read_text(encoding="utf-8").splitlines() if line.strip() and not line.lstrip().startswith(("#", "--"))]
+    lines, indexes = audit_inputs(Path(args.requirements).read_text(encoding="utf-8"))
+    indexes = list(dict.fromkeys(indexes + args.extra_index_url))
     with ThreadPoolExecutor(max_workers=8) as pool:
-        results = list(pool.map(lambda line: audit(line, tags, args.python_version, args.extra_index_url), lines))
+        results = list(pool.map(lambda line: audit(line, tags, args.python_version, indexes), lines))
     report = {"platform": args.platform, "python": args.python_version, "checkedAt": datetime.now(timezone.utc).isoformat(), "scope": "Input requirements on PyPI and explicit indexes; tags/Requires-Python only, not runtime or native DLL validation", "packages": results}
     Path(args.output).parent.mkdir(parents=True, exist_ok=True)
     Path(args.output).write_text(json.dumps(report, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
     for item in results:
         print(f"{item['status']:28} {item['name']} {item.get('version', '')}")
-    return 1 if any(item["status"] == "metadata-error" for item in results) else 0
+    return int(audit_failed(results, args.strict))
 
 
 if __name__ == "__main__":

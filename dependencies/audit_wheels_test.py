@@ -3,12 +3,22 @@ from unittest.mock import patch
 
 from packaging.tags import compatible_tags, cpython_tags
 
-from audit_wheels import audit, wheel_matches
+from audit_wheels import audit, wheel_matches, audit_inputs, audit_failed
 
 
 class WheelAuditTests(unittest.TestCase):
     def setUp(self):
         self.tags = set(cpython_tags((3, 12), platforms=['win_arm64'])) | set(compatible_tags((3, 12), interpreter='cp312', platforms=['win_arm64']))
+
+    def test_lock_indexes_are_used(self):
+        lines, indexes = audit_inputs('# generated\ndemo==1\n --extra-index-url https://example.org/simple/\n--index-url=https://pypi.org/simple\n')
+        self.assertEqual(lines, ['demo==1'])
+        self.assertEqual(indexes, ['https://example.org/simple/', 'https://pypi.org/simple'])
+
+    def test_strict_gate_rejects_missing_or_wrong_architecture(self):
+        for status in ('source-only', 'incompatible-direct-url', 'no-compatible-distribution', 'metadata-error'):
+            self.assertTrue(audit_failed([{'status': status}], strict=True))
+        self.assertFalse(audit_failed([{'status': 'wheel'}, {'status': 'direct-wheel'}], strict=True))
 
     def test_native_and_universal_tags_do_not_accept_x64(self):
         self.assertTrue(wheel_matches('demo-1.0-cp312-cp312-win_arm64.whl', self.tags))
