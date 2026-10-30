@@ -167,6 +167,7 @@ def main():
     run([python, ROOT / 'scripts/check_windows_arm64_extensions.py'])
     manifest = dict(python=platform.python_version(), architecture=sysconfig.get_platform(), sources=recipes,
                     lock_sha256=hashlib.sha256(lock.read_bytes()).hexdigest(),
+                    runtime_lock_sha256=hashlib.sha256(runtime_lock.read_bytes()).hexdigest(),
                     wheels={f.name: hashlib.sha256(f.read_bytes()).hexdigest() for f in sorted(wheelhouse.glob('*.whl'))})
     (output / 'manifest.json').write_text(json.dumps(manifest, indent=2)+'\n')
     print('All native wheels built, audited and installed in a clean environment.')

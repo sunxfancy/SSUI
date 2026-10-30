@@ -330,7 +330,15 @@ function packOne(target, lockFile, opts, python, pyVersion) {
   const constraintsPath = path.join(stagingDir, 'constraints.txt');
   fs.writeFileSync(constraintsPath, BUILD_CONSTRAINTS, 'utf8');
 
-  downloadPackages(python, lockFile, packagesDir, constraintsPath);
+  if (target === 'windows-arm64') {
+    const { validateNativeWheelhouse } = require('./native-wheelhouse.cjs');
+    const native = validateNativeWheelhouse(process.env.SSUI_NATIVE_WHEELHOUSE);
+    fs.mkdirSync(packagesDir, { recursive: true });
+    for (const name of native.files) fs.copyFileSync(path.join(native.root, 'wheelhouse', name), path.join(packagesDir, name));
+    lockFile = native.lock; // No direct download URLs in the offline lock.
+  } else {
+    downloadPackages(python, lockFile, packagesDir, constraintsPath);
+  }
 
   const fileCount = fs.readdirSync(packagesDir).length;
   if (fileCount === 0) throw new Error(`没有下载到任何包(${packagesDir} 为空)`);

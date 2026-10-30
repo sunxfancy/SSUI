@@ -285,7 +285,7 @@ git config --local core.hooksPath .githooks/
 - 候选版本必须事先在 PR 中更新 Cargo.toml、Cargo.lock 和 desktop/package.json。
 - `start` 校验 tag，不移动它；`finish` 只开 promote/rebase PR，不发布正式版。
 - promote PR 保留原提交合入 main 后，从 main 运行 `release-promote.yml` 晋升同一批产物。
-- Linux ARM64 独立依赖与六平台 Python 已适配；Windows ARM64 扩展依赖方案待确定，门禁不会跳过。
+- 六平台使用独立运行时配置；Windows ARM64 缺失依赖由原生源码编译工作流提供，失败不可跳过。
 - `main-gate.yml`、`sync-docs.yml`、`cleanup-branches.yml` 保留原职责。
 
 ## AI 助手操作备忘

@@ -71,9 +71,24 @@ Linux 构建任务在安装依赖前安装 GL/X11 编译头文件。
 macOS Intel 使用独立的 `macosx-x86_64.lock`（PyTorch 2.2.2、NumPy 1.x），
 避免复用没有 Intel wheel 的 PyTorch 2.4.1。Apple Silicon 保留已有锁文件。
 
-Windows ARM64 的解释器下载阻塞已解决，但扩展依赖方案尚待确定：官方源有原生
-PyTorch CPU 包，部分音频和 3D 依赖没有原生预编译包。当前仍保留硬门禁，
-不会把旧 win_amd64/CUDA 依赖当作原生 ARM64 依赖放行。
+Windows ARM64 使用原生 CPU PyTorch 2.8.0，并在 `windows-11-arm` 上编译
+缺失的 wheel。torchvision 0.23.0、torchaudio 2.8.0、VTK 9.5.2 与 vcpkg
+源码固定到 `windows-arm64-sources.json` 中的 commit；其余缺包按锁定版本
+从源码构建，包括 OpenCV、PyMeshFix、ModernGL、glcontext、tiktoken 等。
+不使用 x64 后端转译。CUDA 专用扩展需要独立的受支持 GPU 工具链，不能把
+CUDA 算子靠重新编译转换成 CPU 算子；本配置覆盖原生 CPU 音频/3D 依赖。
+
+`windows-arm64-wheels.yml` 可单独手动运行，也由 Release 复用。它检查每个
+wheel 的平台标签及所有 DLL/PYD 的 PE 架构，然后在全新虚拟环境中离线
+安装整个 wheelhouse、执行 pip check、Torch/torchvision 算子、WAV 读写、
+重采样、VTK 几何和网格修复测试。任一缺包、架构错误或测试失败均阻止发布。
+
+成功后下载 `windows-arm64-wheels` artifact，将其解压路径设置为
+`SSUI_NATIVE_WHEELHOUSE`。桌面打包只嵌入需要源码构建的 wheel；用户安装时
+优先使用这些 wheel 且禁止本机源码构建。开发环境 `yarn install-requirements`
+和 `yarn pack-offline --target windows-arm64` 使用同一 artifact 的完整 wheelhouse。
+manifest 绑定原始锁文件、离线锁文件、Python 版本以及所有 wheel 校验和，
+不能复用其他版本的依赖产物。正式 Release 自动传递该 artifact，无需手动设置。
 
 Release 新增 `check_runtime.py`：在目标 runner 验证 Python 版本、后端架构，
 实际执行 Torch CPU 运算及 torchvision NMS，并导入核心推理库。

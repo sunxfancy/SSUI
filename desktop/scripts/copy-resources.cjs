@@ -157,22 +157,12 @@ async function main() {
   ensureDirectoryExists(wheelDir);
   fs.writeFileSync(path.join(wheelDir, 'README.txt'), 'Native dependency wheels for this installer.');
   if (process.platform === 'win32' && process.arch === 'arm64') {
-    const nativeDir = process.env.SSUI_NATIVE_WHEELHOUSE;
-    if (!nativeDir) throw new Error('Build/download the windows-arm64-wheels artifact and set SSUI_NATIVE_WHEELHOUSE first.');
-    const manifest = JSON.parse(fs.readFileSync(path.join(nativeDir, 'manifest.json'), 'utf8'));
-    const crypto = require('node:crypto');
-    const lockHash = crypto.createHash('sha256').update(fs.readFileSync(path.join(sourceDir, 'windows-arm64.lock'))).digest('hex');
-    if (manifest.lock_sha256 !== lockHash || manifest.architecture !== 'win-arm64') throw new Error('Native wheelhouse does not match this release runtime');
-    const bundled = path.join(nativeDir, 'bundled');
-    const wheels = fs.readdirSync(bundled).filter(n => n.endsWith('.whl'));
-    if (!wheels.length) throw new Error('Native wheelhouse contains no bundled wheels');
-    for (const name of wheels) {
-      const source = path.join(bundled, name);
-      const hash = crypto.createHash('sha256').update(fs.readFileSync(source)).digest('hex');
-      if (hash !== manifest.wheels[name]) throw new Error(`Native wheel checksum mismatch: ${name}`);
-      copyFile(source, path.join(wheelDir, name));
+    const { validateNativeWheelhouse } = require('../../dependencies/native-wheelhouse.cjs');
+    const native = validateNativeWheelhouse(process.env.SSUI_NATIVE_WHEELHOUSE);
+    for (const name of native.bundled) {
+      copyFile(path.join(native.root, 'bundled', name), path.join(wheelDir, name));
     }
-    copyFile(path.join(nativeDir, 'manifest.json'), path.join(wheelDir, 'manifest.json'));
+    copyFile(path.join(native.root, 'manifest.json'), path.join(wheelDir, 'manifest.json'));
   }
 
   // touch 一个文件
