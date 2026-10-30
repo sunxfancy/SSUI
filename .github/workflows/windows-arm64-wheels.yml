@@ -37,7 +37,7 @@ permissions:
   actions: read
 concurrency:
   group: windows-arm64-wheels-${{ github.ref }}
-  cancel-in-progress: ${{ github.event_name == 'push' }}
+  cancel-in-progress: ${{ github.event_name == 'push' || github.event_name == 'pull_request' }}
 jobs:
   verify:
     name: Verify Windows ARM64 dependencies

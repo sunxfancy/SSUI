@@ -70,7 +70,10 @@ macOS Intel 使用独立的 `macosx-x86_64.lock`。官方最后一版 Intel PyTo
 2.2.2 缺少当前 diffusers 所需 API，因此 `macos-intel-wheels.yml` 在原生
 runner 从固定源码 commit 构建 PyTorch 2.8.0、torchvision 0.23.0 和
 torchaudio 2.8.0（版本后缀 `+ssui.cpu`），保留 CPU/Gloo API，不启用 CUDA/MPS。
-构建报告记录源码、版本和 wheel 哈希；同一配方的已验证产物可复用。新虚拟
+构建报告记录源码、版本和 wheel 哈希；同一配方的已验证产物可复用。
+`macos-torch-checkpoint.json` 固定一次已完成 Torch 编译的配方及 wheel 哈希，
+允许在后续打包步骤失败后续构；配方不符或 artifact 过期时重新编译，哈希
+不符则失败。新虚拟
 环境验证 Torch、NMS、音频重采样和 PNG 编解码，并隐藏构建环境中的 Torch，
 检查动态库可搬移性。发布任务把这三个 wheel 内置到安装包，用户无需编译。
 开发/离线打包前下载 `macos-intel-wheels` artifact，设置

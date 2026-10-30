@@ -39,6 +39,8 @@ jobs:
           brew install libjpeg-turbo libpng
       - name: Build pinned native CPU wheels
         if: steps.reuse.outputs.reused != 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: python scripts/build_macos_intel_wheels.py
       - name: Verify source wheel manifest
         run: node dependencies/native_wheels.cjs native-wheels
