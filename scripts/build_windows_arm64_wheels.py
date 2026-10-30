@@ -74,8 +74,8 @@ def main():
     env.update(CMAKE_BUILD_PARALLEL_LEVEL='2', MAX_JOBS='2', USE_CUDA='0', USE_ROCM='0',
                FORCE_CUDA='0', BUILD_CUDA_CTC_DECODER='0', USE_OPENMP='0', DISTUTILS_USE_SDK='1')
     run([sys.executable, '-m', 'pip', 'install', 'pip==25.3', 'setuptools==80.9.0',
-         'wheel==0.45.1', 'packaging==24.1', 'build==1.3.0', 'cmake==3.31.8',
-         'ninja==1.13.0', 'delvewheel==1.11.2', 'numpy==2.2.6', 'cython==3.1.2', 'pybind11==2.13.6'])
+         'wheel==0.45.1', 'packaging==24.1', 'build==1.3.0', 'cmake==3.31.6',
+         'ninja==1.13.0', 'delvewheel==1.11.2', 'numpy==2.5.4', 'cython==3.1.2', 'pybind11==2.13.6'])
     requirements = [l.strip() for l in lock.read_text().splitlines() if l.strip() and not l.lstrip().startswith('#')]
     torch = next(r for r in requirements if r.startswith('torch @'))
     run([sys.executable, '-m', 'pip', 'install', torch])

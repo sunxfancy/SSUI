@@ -17,7 +17,7 @@ permissions:
   contents: read
 concurrency:
   group: windows-arm64-wheels-${{ github.ref }}
-  cancel-in-progress: false
+  cancel-in-progress: ${{ github.event_name == 'push' }}
 jobs:
   build:
     runs-on: windows-11-arm
