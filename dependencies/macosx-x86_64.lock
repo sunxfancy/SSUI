@@ -661,6 +661,10 @@ sentry-sdk==2.73.0
     # via fastapi-cloud-cli
 shellingham==1.5.4
     # via typer
+setuptools==80.9.0
+    # via
+    #   -r dependencies/requirements-macosx-x86_64.txt
+    #   torch
 six==1.17.0
     # via
     #   python-dateutil
