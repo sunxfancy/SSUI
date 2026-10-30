@@ -4,6 +4,7 @@ import { ProjectSettingsProvider } from './settings/ProjectSettings';
 import { WorkflowUIProvider } from "./workflow/WorkflowUI";
 import { ModelManagerUIProvider } from "./models/ModelManager";
 import { CodeEditorUIProvider } from "./code_editor/CodeEditor";
+import { ConversationUIProvider } from './conversation/ConversationView';
 export interface UIProvider {
     getName(): string;
     getUI(path: string): JSX.Element;
@@ -21,6 +22,7 @@ export function getUIProvider(name: string): UIProvider | undefined {
 }
 
 registerUIProvider(new FunctionalUIProvider());
+registerUIProvider(new ConversationUIProvider());
 registerUIProvider(new ProjectSettingsProvider());
 registerUIProvider(new ImagePreviewProvider());
 registerUIProvider(new WorkflowUIProvider());

@@ -8,6 +8,7 @@ accelerate:
   isRoot: true
   dependents:
     - diffusers
+    - peft
 aiohappyeyeballs:
   version: "2.6.1"
   dependents:
@@ -91,7 +92,7 @@ deprecated:
   version: "1.2.18"
   isRoot: true
 diffusers:
-  version: "0.32.2"
+  version: "0.38.0"
   isRoot: true
   dependents:
     - compel
@@ -173,7 +174,7 @@ hf-transfer:
   dependents:
     - huggingface-hub
 hf-xet:
-  version: "1.1.2"
+  version: "1.7.1"
   dependents:
     - huggingface-hub
 httpcore:
@@ -187,14 +188,16 @@ httptools:
 httpx:
   version: "0.28.1"
   dependents:
+    - diffusers
     - fastapi
 huggingface-hub:
-  version: "0.31.4"
+  version: "0.36.2"
   isRoot: true
   dependents:
     - accelerate
     - controlnet-aux
     - diffusers
+    - peft
     - tokenizers
     - transformers
 humanfriendly:
@@ -339,6 +342,7 @@ numpy:
     - opencv-python
     - opencv-python-headless
     - pandas
+    - peft
     - plyfile
     - pymatting
     - pymeshfix
@@ -386,11 +390,15 @@ packaging:
     - lazy-loader
     - matplotlib
     - onnxruntime
+    - peft
     - pooch
     - scikit-image
     - transformers
 pandas:
   version: "3.0.6"
+  isRoot: true
+peft:
+  version: "0.17.1"
   isRoot: true
 picklescan:
   version: "0.0.24"
@@ -437,6 +445,7 @@ psutil:
   dependents:
     - accelerate
     - imageio
+    - peft
 pycparser:
   version: "2.22"
   dependents:
@@ -497,6 +506,7 @@ pyyaml:
     - gguf
     - huggingface-hub
     - omegaconf
+    - peft
     - transformers
     - uvicorn
 referencing:
@@ -541,11 +551,12 @@ rpds-py:
     - jsonschema
     - referencing
 safetensors:
-  version: "0.5.3"
+  version: "0.8.0"
   isRoot: true
   dependents:
     - accelerate
     - diffusers
+    - peft
     - spandrel
     - transformers
 scikit-image:
@@ -623,7 +634,7 @@ timm:
   dependents:
     - controlnet-aux
 tokenizers:
-  version: "0.20.3"
+  version: "0.22.2"
   isRoot: true
   dependents:
     - transformers
@@ -637,6 +648,7 @@ torch:
     - controlnet-aux
     - diffusers
     - kornia
+    - peft
     - spandrel
     - timm
     - torchaudio
@@ -663,6 +675,7 @@ tqdm:
     - gguf
     - huggingface-hub
     - modelscope
+    - peft
     - rembg
     - transformers
 trampoline:
@@ -670,10 +683,11 @@ trampoline:
   dependents:
     - torchsde
 transformers:
-  version: "4.46.2"
+  version: "4.57.6"
   isRoot: true
   dependents:
     - compel
+    - peft
     - transformers-stream-generator
 transformers-stream-generator:
   version: "0.0.4"

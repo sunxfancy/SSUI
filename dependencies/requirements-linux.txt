@@ -23,6 +23,7 @@ mediapipe>=0.10.21
 moderngl>=5.12.0
 onnx>=1.17.0
 onnxruntime>=1.21.0
+peft==0.17.1
 picklescan>=0.0.24
 pillow>=11.0.0
 plyfile>=1.1

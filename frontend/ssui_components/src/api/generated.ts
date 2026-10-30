@@ -764,10 +764,7 @@ export interface components {
         };
         /** Body_ui_state_asset_api_ui_state_asset_post */
         Body_ui_state_asset_api_ui_state_asset_post: {
-            /**
-             * File
-             * Format: binary
-             */
+            /** File */
             file: string;
         };
         /** Body_ui_state_store_api_ui_state_store_post */
@@ -789,11 +786,22 @@ export interface components {
         };
         /** Body_upload_file_files_upload_post */
         Body_upload_file_files_upload_post: {
-            /**
-             * File
-             * Format: binary
-             */
+            /** File */
             file: string;
+        };
+        /** ConversationInfo */
+        ConversationInfo: {
+            /**
+             * Context Kind
+             * @enum {string}
+             */
+            context_kind: "pairs" | "text";
+            /** Context Output */
+            context_output?: number | null;
+            /** Context Param */
+            context_param: string;
+            /** Prompt Param */
+            prompt_param: string;
         };
         /**
          * DynamicResult
@@ -815,6 +823,7 @@ export interface components {
         };
         /** ScriptFunctionInfo */
         ScriptFunctionInfo: {
+            conversation?: components["schemas"]["ConversationInfo"] | null;
             /** Params */
             params: {
                 [key: string]: string;
@@ -900,6 +909,10 @@ export interface components {
         };
         /** ValidationError */
         ValidationError: {
+            /** Context */
+            ctx?: Record<string, never>;
+            /** Input */
+            input?: unknown;
             /** Location */
             loc: (string | number)[];
             /** Message */

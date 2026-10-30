@@ -195,7 +195,7 @@
       "Body_ui_state_asset_api_ui_state_asset_post": {
         "properties": {
           "file": {
-            "format": "binary",
+            "contentMediaType": "application/octet-stream",
             "title": "File",
             "type": "string"
           }
@@ -233,7 +233,7 @@
       "Body_upload_file_files_upload_post": {
         "properties": {
           "file": {
-            "format": "binary",
+            "contentMediaType": "application/octet-stream",
             "title": "File",
             "type": "string"
           }
@@ -242,6 +242,44 @@
           "file"
         ],
         "title": "Body_upload_file_files_upload_post",
+        "type": "object"
+      },
+      "ConversationInfo": {
+        "properties": {
+          "context_kind": {
+            "enum": [
+              "pairs",
+              "text"
+            ],
+            "title": "Context Kind",
+            "type": "string"
+          },
+          "context_output": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Context Output"
+          },
+          "context_param": {
+            "title": "Context Param",
+            "type": "string"
+          },
+          "prompt_param": {
+            "title": "Prompt Param",
+            "type": "string"
+          }
+        },
+        "required": [
+          "prompt_param",
+          "context_param",
+          "context_kind"
+        ],
+        "title": "ConversationInfo",
         "type": "object"
       },
       "DynamicResult": {
@@ -277,6 +315,16 @@
       },
       "ScriptFunctionInfo": {
         "properties": {
+          "conversation": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ConversationInfo"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "params": {
             "additionalProperties": {
               "type": "string"
@@ -526,6 +574,13 @@
       },
       "ValidationError": {
         "properties": {
+          "ctx": {
+            "title": "Context",
+            "type": "object"
+          },
+          "input": {
+            "title": "Input"
+          },
           "loc": {
             "items": {
               "anyOf": [

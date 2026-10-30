@@ -6,6 +6,7 @@ accelerate==1.5.2
     # via
     #   -r dependencies/requirements-windows-amdgpu.txt
     #   diffusers
+    #   peft
 aiohappyeyeballs==2.6.2
     # via aiohttp
 aiohttp==3.14.1
@@ -245,6 +246,7 @@ huggingface-hub==0.36.2
     #   accelerate
     #   controlnet-aux
     #   diffusers
+    #   peft
     #   timm
     #   tokenizers
     #   transformers
@@ -481,6 +483,7 @@ numpy==1.26.4
     #   openai-whisper
     #   opencv-contrib-python
     #   opencv-python-headless
+    #   peft
     #   plyfile
     #   pymatting
     #   pymeshfix
@@ -535,6 +538,7 @@ packaging==24.1
     #   matplotlib
     #   nbconvert
     #   onnxruntime
+    #   peft
     #   pooch
     #   scikit-image
     #   transformers
@@ -546,6 +550,8 @@ pccm==0.4.16
     # via
     #   cumm-cu124
     #   spconv-cu124
+peft==0.17.1
+    # via -r dependencies/requirements-windows-amdgpu.txt
 picklescan==1.0.4
     # via -r dependencies/requirements-windows-amdgpu.txt
 pillow==12.2.0
@@ -597,6 +603,7 @@ psutil==7.2.2
     #   imageio
     #   ipykernel
     #   ipython
+    #   peft
 pure-eval==0.2.3
     # via stack-data
 pyarrow==24.0.0
@@ -678,6 +685,7 @@ pyyaml==6.0.3
     #   huggingface-hub
     #   jupyter-events
     #   omegaconf
+    #   peft
     #   timm
     #   transformers
     #   uvicorn
@@ -759,6 +767,7 @@ safetensors==0.8.0
     #   -r dependencies/requirements-windows-amdgpu.txt
     #   accelerate
     #   diffusers
+    #   peft
     #   spandrel
     #   timm
     #   transformers
@@ -858,6 +867,7 @@ torch @ https://repo.radeon.com/rocm/windows/rocm-rel-7.2.1/torch-2.9.1%2Brocm7.
     #   kornia
     #   o-voxel
     #   openai-whisper
+    #   peft
     #   spandrel
     #   timm
     #   torchaudio
@@ -895,6 +905,7 @@ tqdm==4.66.5
     #   modelscope
     #   o-voxel
     #   openai-whisper
+    #   peft
     #   rembg
     #   transformers
 traitlets==5.15.1
@@ -917,6 +928,7 @@ transformers==4.57.6
     # via
     #   -r dependencies/requirements-windows-amdgpu.txt
     #   compel
+    #   peft
     #   transformers-stream-generator
 transformers-stream-generator==0.0.4
     # via -r dependencies/requirements-windows-amdgpu.txt

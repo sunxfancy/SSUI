@@ -14,6 +14,7 @@ export interface ComponentRefProps {
     root_path: string;
     script_path?: string;
     type_args?: PythonType[];
+    hideSingleTab?: boolean;
 }
 
 export class ComponentRef extends IComponent<ComponentRefProps> {
@@ -61,7 +62,7 @@ export class ComponentTabRef extends IComponent<ComponentRefProps, { selected: s
             <div className={styles.refTitle}>{this.props.name}</div>
             <TabsExpander />
             {components.map(c =>
-                    <Tab key={c.name} id={c.name} title={c.name}
+                    <Tab key={c.name} id={c.name} title={this.props.hideSingleTab && components.length === 1 ? undefined : c.name}
                          panel={<ComponentRef
                              name={c.name} type={this.props.type} ref={this.ref_array[c.name]} port={this.props.port}
                              parameterName={this.props.parameterName ?? this.props.name}
