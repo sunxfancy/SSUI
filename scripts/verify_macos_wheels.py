@@ -7,6 +7,14 @@ import sys
 import sysconfig
 
 
+def dynamic_library_paths(commands):
+    # otool -L also lists LC_ID_DYLIB, which is this library's identity, not a
+    # path dyld must open. Delocate deliberately uses synthetic /DLC identities.
+    paths = re.findall(r'cmd LC_(?:LOAD_DYLIB|LOAD_WEAK_DYLIB|REEXPORT_DYLIB|LAZY_LOAD_DYLIB|LOAD_UPWARD_DYLIB)\s+cmdsize \d+\s+name (.*?) \(offset', commands)
+    paths += re.findall(r'cmd LC_RPATH\s+cmdsize \d+\s+path (.*?) \(offset', commands)
+    return paths
+
+
 def main():
     root = Path.cwd()
     python = root / '.build' / 'wheel-consumer' / 'bin' / 'python'
@@ -19,11 +27,8 @@ def main():
         for library in (site / package).rglob('*'):
             if library.suffix not in ('.so', '.dylib'):
                 continue
-            links = subprocess.check_output(['otool', '-L', str(library)], text=True)
-            paths = [line.strip().split(' (', 1)[0] for line in links.splitlines()[1:]]
             commands = subprocess.check_output(['otool', '-l', str(library)], text=True)
-            paths += re.findall(r'cmd LC_RPATH\s+cmdsize \d+\s+path (.*?) \(offset', commands)
-            for dependency in paths:
+            for dependency in dynamic_library_paths(commands):
                 if dependency.startswith('/') and not dependency.startswith(('/usr/lib/', '/System/Library/')):
                     raise RuntimeError(f'Non-portable dynamic library reference: {library}: {dependency}')
     original = Path(sysconfig.get_paths()['platlib']) / 'torch'

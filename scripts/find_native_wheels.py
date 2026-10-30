@@ -1,4 +1,4 @@
-"""Reuse successful same-recipe builds from this repository, never fork artifacts."""
+"""Reuse same-recipe compiled wheels; consumer validation always runs again."""
 import json
 import os
 from pathlib import Path
@@ -8,6 +8,17 @@ import subprocess
 
 def gh(*args):
     return subprocess.check_output(['gh', *args], text=True).strip()
+
+
+def compiled_wheels_available(repo, run):
+    if run['conclusion'] == 'success':
+        return True
+    if run['conclusion'] != 'failure':
+        return False
+    jobs = json.loads(gh('api', f'repos/{repo}/actions/runs/{run["id"]}/jobs?per_page=100'))['jobs']
+    required = {'Build pinned native CPU wheels', 'Verify source wheel manifest'}
+    return any(required <= {s['name'] for s in job.get('steps', []) if s.get('conclusion') == 'success'}
+               for job in jobs)
 
 
 def main():
@@ -32,19 +43,21 @@ def main():
         if artifact['expired']:
             continue
         run = json.loads(gh('api', f'repos/{repo}/actions/runs/{artifact["workflow_run"]["id"]}'))
-        if (run['conclusion'] != 'success' or run['path'] not in workflows or
+        if (run['path'] not in workflows or
                 (run.get('head_repository') or {}).get('full_name') != repo):
             continue
         try:
             blob = gh('api', f'repos/{repo}/contents/{recipe}?ref={run["head_sha"]}', '--jq', '.sha')
             if blob != expected:
                 continue
+            if not compiled_wheels_available(repo, run):
+                continue
             output = Path('native-wheels')
             if output.exists():
                 shutil.rmtree(output)
             gh('run', 'download', str(run['id']), '--name', 'macos-intel-wheels', '--dir', str(output))
             subprocess.run(['node', 'dependencies/native_wheels.cjs', str(output)], check=True)
-            print('Reused verified native wheels from run', run['id'])
+            print('Reused compiled native wheels from run', run['id'], '; rerunning consumer validation')
             reused = True
             break
         except subprocess.CalledProcessError:
