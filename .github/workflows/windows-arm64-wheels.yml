@@ -1,6 +1,10 @@
 name: Windows ARM64 native dependencies
 on:
   workflow_call:
+    inputs:
+      ref:
+        type: string
+        default: ""
   workflow_dispatch:
   push:
     branches: ['codex/windows-arm64-release']
@@ -20,14 +24,15 @@ jobs:
     timeout-minutes: 360
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: ${{ inputs.ref || github.ref }}
       - name: Select runtime
         id: runtime
         run: node dependencies/runtime.cjs --github-output
-      - uses: astral-sh/setup-uv@d0d8abe699bfb85fec6de9f7adb5ae17292296ff # v6
-        with:
-          version: ${{ steps.runtime.outputs.uv }}
-          python-version: ${{ steps.runtime.outputs.python }}
-          activate-environment: true
+      - name: Install pinned standalone Python
+        timeout-minutes: 15
+        run: node dependencies/bootstrap.cjs --github-env
+
       - uses: actions-rust-lang/setup-rust-toolchain@166cdcfd11aee3cb47222f9ddb555ce30ddb9659 # v1
         with:
           target: aarch64-pc-windows-msvc

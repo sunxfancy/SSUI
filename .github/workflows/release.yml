@@ -69,9 +69,15 @@ jobs:
       ref: ${{ needs.start.outputs.sha }}
     secrets: inherit
 
+  native-wheels:
+    needs: start
+    uses: ./.github/workflows/windows-arm64-wheels.yml
+    with:
+      ref: ${{ needs.start.outputs.sha }}
+
   package:
     name: Package ${{ matrix.id }}
-    needs: [start, strict-tests]
+    needs: [start, strict-tests, native-wheels]
     runs-on: ${{ matrix.os }}
     timeout-minutes: 120
     strategy:
@@ -149,15 +155,9 @@ jobs:
         id: runtime
         run: node dependencies/runtime.cjs --github-output
 
-      - name: Setup Python
-        id: setup-uv
-        timeout-minutes: 5
-        uses: astral-sh/setup-uv@d0d8abe699bfb85fec6de9f7adb5ae17292296ff # v6
-        with:
-          version: ${{ steps.runtime.outputs.uv }}
-          enable-cache: false
-          python-version: ${{ steps.runtime.outputs.python }}
-          activate-environment: true
+      - name: Install pinned standalone Python
+        timeout-minutes: 15
+        run: node dependencies/bootstrap.cjs --github-env
 
       - name: Install packaging
         timeout-minutes: 5
@@ -169,7 +169,21 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf libglib2.0-dev pkg-config xvfb libgl1-mesa-dev libx11-dev
 
+      - name: Download validated native wheels
+        if: matrix.id == 'windows-arm64'
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: windows-arm64-wheels
+          path: native-wheels
+
+      - name: Install ARM64 dependencies from native wheelhouse
+        if: matrix.id == 'windows-arm64'
+        run: |
+          uv pip install --no-index --find-links native-wheels/wheelhouse -r native-wheels/runtime.lock
+          echo "SSUI_NATIVE_WHEELHOUSE=$env:GITHUB_WORKSPACE/native-wheels" >> $env:GITHUB_ENV
+
       - name: Install requirements
+        if: matrix.id != 'windows-arm64'
         timeout-minutes: 20
         run: uv pip install -r dependencies/${{ steps.runtime.outputs.lock }} --index-strategy unsafe-best-match --build-constraint dependencies/build-constraints.txt
 

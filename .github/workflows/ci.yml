@@ -100,15 +100,9 @@ jobs:
         id: runtime
         run: node dependencies/runtime.cjs --github-output
 
-      - name: Setup Python
-        id: setup-uv
-        timeout-minutes: 5
-        uses: astral-sh/setup-uv@d0d8abe699bfb85fec6de9f7adb5ae17292296ff # v6
-        with:
-          version: ${{ steps.runtime.outputs.uv }}
-          enable-cache: false
-          python-version: ${{ steps.runtime.outputs.python }}
-          activate-environment: true
+      - name: Install pinned standalone Python
+        timeout-minutes: 15
+        run: node dependencies/bootstrap.cjs --github-env
 
       - name: Install packaging
         timeout-minutes: 5

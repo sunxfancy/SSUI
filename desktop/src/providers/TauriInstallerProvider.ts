@@ -224,11 +224,19 @@ export class TauriInstallerProvider implements IInstallerProvider {
 
             const resourcePath = await resolveResource(await join('resources', lockFile));
 
-            const output = await invoke('run_python', 
+            const installArgs = ['install', '-r', resourcePath];
+            if (this.runtime().lockFile === 'windows-arm64.lock') {
+                const wheels = await resolveResource('resources/dependencies/wheels');
+                if (!(await exists(await join(wheels, 'manifest.json')))) {
+                    throw new Error('安装包缺少原生 ARM64 依赖，请重新下载安装包');
+                }
+                installArgs.push('--only-binary=:all:', '--find-links', wheels);
+            }
+            const output = await invoke('run_python',
                 {
                     path: pipPath,
                     cwd: installDir,
-                    args:  ['install', '-r', resourcePath]
+                    args: installArgs
                 }
             );
             console.log('安装依赖包: ' + output);

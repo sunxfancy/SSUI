@@ -22,3 +22,8 @@ if (!fs.existsSync(base)) {
 }
 if (!fs.existsSync(python)) run(base, ['-m', 'venv', path.join(root, '.venv')]);
 run(python, ['-m', 'pip', 'install', `uv==${runtime.uvVersion}`, 'packaging==24.1']);
+if (process.argv.includes('--github-env')) {
+  if (!process.env.GITHUB_ENV || !process.env.GITHUB_PATH) throw new Error('GitHub environment files are required');
+  fs.appendFileSync(process.env.GITHUB_ENV, `VIRTUAL_ENV=${path.join(root, '.venv')}\n`);
+  fs.appendFileSync(process.env.GITHUB_PATH, `${path.dirname(python)}\n`);
+}
