@@ -1,6 +1,6 @@
 """Fail early on known incompatible native runtime inputs; never emulate silently."""
 import argparse
-import json
+from runtime_config import runtime_for
 import re
 from pathlib import Path
 import urllib.request
@@ -22,13 +22,12 @@ def main():
     p.add_argument('--triple')
     a = p.parse_args()
     root = Path(__file__).resolve().parents[1]
-    runtime = json.loads((root / 'dependencies/runtime.json').read_text())
-    target = runtime['targets'][a.target]
+    target = runtime_for(a.target)
     triple = target['pythonTarget']
     if a.triple and a.triple != triple:
         raise ValueError('runtime triple differs from shared runtime configuration')
     check_lock(a.lock or root / 'dependencies' / target['lockFile'], a.target)
-    version, release = runtime['pythonVersion'], runtime['pythonRelease']
+    version, release = target['pythonVersion'], target['pythonRelease']
     url = f'https://github.com/astral-sh/python-build-standalone/releases/download/{release}/cpython-{version}+{release}-{triple}-install_only_stripped.tar.gz'
     # Check the actual runtime the installer downloads, not just the CI Python.
     with urllib.request.urlopen(urllib.request.Request(url, method='HEAD'), timeout=60) as response:

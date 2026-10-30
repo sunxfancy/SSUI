@@ -144,25 +144,12 @@ async function main() {
   // 确保目标目录存在
   ensureDirectoryExists(targetDir);
   
-  const locks = new Set(Object.values(require('../../dependencies/runtime.json').targets).map(t => t.lockFile));
-  for (const name of locks) {
-    const source = path.join(sourceDir, name);
-    if (!fs.existsSync(source)) throw new Error(`Missing required lock: ${source}`);
-    copyFile(source, path.join(targetDir, name));
-  }
-
-  // Bundle source-built ARM64 wheels so users never need a compiler.
-  const wheelDir = path.join(targetDir, 'wheels');
-  fs.rmSync(wheelDir, { recursive: true, force: true });
-  ensureDirectoryExists(wheelDir);
-  fs.writeFileSync(path.join(wheelDir, 'README.txt'), 'Native dependency wheels for this installer.');
-  if (process.platform === 'win32' && process.arch === 'arm64') {
-    const { validateNativeWheelhouse } = require('../../dependencies/native-wheelhouse.cjs');
-    const native = validateNativeWheelhouse(process.env.SSUI_NATIVE_WHEELHOUSE);
-    for (const name of native.bundled) {
-      copyFile(path.join(native.root, 'bundled', name), path.join(wheelDir, name));
-    }
-    copyFile(path.join(native.root, 'manifest.json'), path.join(wheelDir, 'manifest.json'));
+  // All packaged dependency sets come from the same OS / arch / backend registry.
+  const { profiles } = require('../../dependencies/runtime-targets.json');
+  for (const { dependencyTarget } of profiles) {
+    const source = path.join(sourceDir, `${dependencyTarget}.lock`);
+    if (!fs.existsSync(source)) throw new Error(`缺少依赖锁文件: ${source}`);
+    copyFile(source, path.join(targetDir, `${dependencyTarget}.lock`));
   }
 
   // touch 一个文件

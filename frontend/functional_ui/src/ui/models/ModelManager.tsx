@@ -1,3 +1,4 @@
+import { PersistentComponent } from 'ssui_components';
 import React from "react";
 import { UIProvider } from "../UIProvider";
 import { Card, Elevation, InputGroup, Tag } from "@blueprintjs/core";
@@ -22,7 +23,8 @@ type ModelManagerState = {
     filter: string;
 };
 
-export class ModelManager extends React.Component<ModelManagerProps, ModelManagerState> {
+export class ModelManager extends PersistentComponent<ModelManagerProps, ModelManagerState> {
+    protected persistedFields: (keyof ModelManagerState)[] = ['filter'];
     constructor(props: ModelManagerProps) {
         super(props);
         this.state = {
@@ -34,6 +36,7 @@ export class ModelManager extends React.Component<ModelManagerProps, ModelManage
     }
 
     componentDidMount() {
+        super.componentDidMount();
         this.fetchModels();
     }
 

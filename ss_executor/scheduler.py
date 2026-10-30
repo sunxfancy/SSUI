@@ -35,7 +35,10 @@ class TaskScheduler:
             self.server = await websockets.serve(
                 self.handle_executor_connection, 
                 host, 
-                port
+                port,
+                # Native mesh/GPU calls can hold the executor's GIL for minutes.
+                # Keep pings but tolerate delayed pongs during these calls.
+                ping_timeout=None,
             )
             print("任务调度器已启动")
           
@@ -91,7 +94,7 @@ class TaskScheduler:
 
     def _get_executor_id(self, websocket: websockets.ClientConnection) -> str:
         """获取执行器ID"""
-        host, port, _, _ = websocket.remote_address
+        host, port = websocket.remote_address[:2]
         return f"{host}:{port}"
 
     async def _handle_new_connection(self, executor_id: str, websocket: websockets.ClientConnection):
@@ -124,7 +127,15 @@ class TaskScheduler:
         if executor_id in self.executor_websockets:
             del self.executor_websockets[executor_id]
         if executor_id in self.executors:
-            self.executors[executor_id].is_active = False
+            executor = self.executors[executor_id]
+            executor.is_active = False
+            # Wake HTTP callers rather than leaving an orphaned running task.
+            for task in list(self.tasks.values()):
+                if task.executor_id == executor_id and task.status in (TaskStatus.PENDING, TaskStatus.RUNNING):
+                    await self._handle_task_result(TaskResult(
+                        task_id=task.task_id, status=TaskStatus.FAILED,
+                        error="Executor disconnected before returning the task result.",
+                    ), executor)
 
     def add_task(self, task: Task) -> str:
         """添加新任务"""

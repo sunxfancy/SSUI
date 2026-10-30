@@ -1,21 +1,17 @@
 #!/usr/bin/env node
 const { spawn } = require('child_process');
-const path = require('path');
-const isWin = process.platform === 'win32';
-
-// 根据操作系统选择正确的路径
-const current_path = path.resolve(__dirname, '..');
-const venvPath = isWin ? path.join(current_path, '.venv', 'Scripts') : path.join(current_path, '.venv', 'bin');
-const cmd = path.join(venvPath, process.argv[2]);
-
-var detached = false;
-// if (process.argv[2] === 'fastapi') {
-//     detached = true;
-// }
-
-// 获取传递给脚本的其余参数
-const args = process.argv.slice(3);
-
-// 执行命令
-const proc = spawn(cmd, args, { stdio: 'inherit', shell: false, detached: detached, windowsHide: true });
-proc.on('exit', code => process.exit(code)); 
+const { resolveConfig, executable } = require('./dev_config.cjs');
+const env = resolveConfig();
+const name = process.argv[2];
+if (!name) {
+  console.error('Usage: node dependencies/venv.cjs <command> [args]');
+  process.exit(1);
+}
+const proc = spawn(executable(name, env), process.argv.slice(3), {
+  stdio: 'inherit', shell: false, windowsHide: true, env,
+});
+proc.on('error', error => {
+  console.error(`Cannot run ${name} in ${env.SSUI_VENV_PATH}: ${error.message}`);
+  process.exit(1);
+});
+proc.on('exit', code => process.exit(code === null ? 1 : code));

@@ -1,33 +1,39 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {Spinner, Tabs, Tab, Icon, Button, Menu, MenuItem, Popover, Position, InputGroup} from '@blueprintjs/core';
 import axios from 'axios';
 import { CivitaiModel } from '../../../types/civitai';
 import styles from './style.module.css';
 import { TauriDownloaderProvider } from '../../../providers/TauriDownloaderProvider';
 import { DownloadTask } from '../../../providers/IDownloaderProvider';
+import type { IDownloaderProvider } from '../../../providers/IDownloaderProvider';
 import { getApiBaseUrl } from '../../../services/apiBase';
 
 interface CivitaiModelsProps {
+    downloaderProvider?: IDownloaderProvider;
     onModelSelect?: (model: CivitaiModel) => void;
 }
 
-export const CivitaiModels: React.FC<CivitaiModelsProps> = () => {
+export const CivitaiModels: React.FC<CivitaiModelsProps> = ({ downloaderProvider }) => {
     const [models, setModels] = useState<CivitaiModel[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [selectedType, setSelectedType] = useState<string>('all');
     const [downloadTasks, setDownloadTasks] = useState<DownloadTask[]>([]);
     const [searchQuery, setSearchQuery] = useState('');
-    const downloader = new TauriDownloaderProvider();
+    const downloader = useRef<IDownloaderProvider | null>(null);
 
     useEffect(() => {
+        const provider = downloaderProvider ?? new TauriDownloaderProvider(() => { void loadDownloadTasks(); });
+        downloader.current = provider;
         fetchModels();
-        loadDownloadTasks();
-    }, []);
+        void loadDownloadTasks();
+        return () => { if (provider instanceof TauriDownloaderProvider) provider.destroy(); downloader.current = null; };
+    }, [downloaderProvider]);
 
     const loadDownloadTasks = async () => {
-        const tasks = await downloader.getDownloadTasks();
-        setDownloadTasks(tasks);
+        const provider = downloader.current;
+        const tasks = await provider?.getDownloadTasks();
+        if (tasks && provider === downloader.current) setDownloadTasks([...tasks]);
     };
 
     const fetchModels = async (query?: string) => {
@@ -66,8 +72,8 @@ export const CivitaiModels: React.FC<CivitaiModelsProps> = () => {
     }
 
     const handleDownload = async (model: CivitaiModel, fileId: number) => {
-        const task = await downloader.addDownloadTask(model, fileId);
-        setDownloadTasks(prev => [...prev, task]);
+        await downloader.current?.addDownloadTask(model, fileId);
+        await loadDownloadTasks();
     };
 
     const getDownloadButtonText = (model: CivitaiModel) => {

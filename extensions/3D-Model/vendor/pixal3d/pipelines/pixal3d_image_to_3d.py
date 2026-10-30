@@ -1,3 +1,4 @@
+from __future__ import annotations
 from typing import *
 import torch
 import torch.nn as nn
@@ -7,7 +8,8 @@ from .base import Pipeline
 from . import samplers, rembg
 from ..modules.sparse import SparseTensor
 from ..modules import image_feature_extractor
-from ..representations import Mesh, MeshWithVoxel
+if TYPE_CHECKING:
+    from ..representations import Mesh, MeshWithVoxel
 
 
 class Pixal3DImageTo3DPipeline(Pipeline):
@@ -92,14 +94,14 @@ class Pixal3DImageTo3DPipeline(Pipeline):
         self._device = 'cpu'
 
     @classmethod
-    def from_pretrained(cls, path: str, config_file: str = "pipeline.json") -> "Pixal3DImageTo3DPipeline":
+    def from_pretrained(cls, path: str, config_file: str = "pipeline.json", low_ram: bool = False) -> "Pixal3DImageTo3DPipeline":
         """
         Load a pretrained model.
 
         Args:
             path (str): The path to the model. Can be either local path or a Hugging Face repository.
         """
-        pipeline = super().from_pretrained(path, config_file)
+        pipeline = super().from_pretrained(path, config_file, low_ram=low_ram)
         args = pipeline._pretrained_args
 
         pipeline.sparse_structure_sampler = getattr(samplers, args['sparse_structure_sampler']['name'])(**args['sparse_structure_sampler']['args'])
@@ -120,7 +122,10 @@ class Pixal3DImageTo3DPipeline(Pipeline):
         pipeline.image_cond_model_shape_1024 = None
         pipeline.image_cond_model_tex_1024 = None
 
-        pipeline.rembg_model = getattr(rembg, args['rembg_model']['name'])(**args['rembg_model']['args'])
+        # Masked RGBA inputs already contain the foreground. Do not download
+        # a separate (potentially gated) segmentation model until RGB needs it.
+        pipeline.rembg_model = None
+        pipeline._rembg_config = args['rembg_model']
         
         pipeline.low_vram = args.get('low_vram', True)
         pipeline.default_pipeline_type = args.get('default_pipeline_type', '1024_cascade')
@@ -163,6 +168,11 @@ class Pixal3DImageTo3DPipeline(Pipeline):
             output = input
         else:
             input = input.convert('RGB')
+            if self.rembg_model is None:
+                config = self._rembg_config
+                self.rembg_model = getattr(rembg, config['name'])(**config['args'])
+                if not self.low_vram:
+                    self.rembg_model.to(self.device)
             if self.low_vram:
                 self.rembg_model.to(self.device)
             output = self.rembg_model(input)
@@ -171,6 +181,8 @@ class Pixal3DImageTo3DPipeline(Pipeline):
         output_np = np.array(output)
         alpha = output_np[:, :, 3]
         bbox = np.argwhere(alpha > 0.8 * 255)
+        if bbox.size == 0:
+            raise ValueError("Pixal3D input has no visible foreground after background removal.")
         bbox = np.min(bbox[:, 1]), np.min(bbox[:, 0]), np.max(bbox[:, 1]), np.max(bbox[:, 0])
         center = (bbox[0] + bbox[2]) / 2, (bbox[1] + bbox[3]) / 2
         size = max(bbox[2] - bbox[0], bbox[3] - bbox[1])
@@ -331,7 +343,7 @@ class Pixal3DImageTo3DPipeline(Pipeline):
             tqdm_desc="Sampling sparse structure (proj)",
         ).samples
         if self.low_vram:
-            flow_model.cpu()
+            self.release_model(flow_model)
         
         # Decode sparse structure latent
         decoder = self.models['sparse_structure_decoder']
@@ -339,7 +351,7 @@ class Pixal3DImageTo3DPipeline(Pipeline):
             decoder.to(self.device)
         decoded = decoder(z_s)>0
         if self.low_vram:
-            decoder.cpu()
+            self.release_model(decoder)
         if resolution != decoded.shape[2]:
             ratio = decoded.shape[2] // resolution
             decoded = torch.nn.functional.max_pool3d(decoded.float(), ratio, ratio, 0) > 0.5
@@ -379,7 +391,7 @@ class Pixal3DImageTo3DPipeline(Pipeline):
             tqdm_desc="Sampling shape SLat (proj)",
         ).samples
         if self.low_vram:
-            flow_model.cpu()
+            self.release_model(flow_model)
 
         std = torch.tensor(self.shape_slat_normalization['std'])[None].to(slat.device)
         mean = torch.tensor(self.shape_slat_normalization['mean'])[None].to(slat.device)
@@ -430,7 +442,7 @@ class Pixal3DImageTo3DPipeline(Pipeline):
             tqdm_desc="Sampling LR shape SLat (proj, 512)",
         ).samples
         if self.low_vram:
-            flow_model_lr.cpu()
+            self.release_model(flow_model_lr)
         std = torch.tensor(self.shape_slat_normalization['std'])[None].to(slat.device)
         mean = torch.tensor(self.shape_slat_normalization['mean'])[None].to(slat.device)
         slat = slat * std + mean
@@ -441,8 +453,8 @@ class Pixal3DImageTo3DPipeline(Pipeline):
             self.models['shape_slat_decoder'].low_vram = True
         hr_coords = self.models['shape_slat_decoder'].upsample(slat, upsample_times=4)
         if self.low_vram:
-            self.models['shape_slat_decoder'].cpu()
             self.models['shape_slat_decoder'].low_vram = False
+            self.release_model(self.models['shape_slat_decoder'])
         hr_resolution = resolution
         while True:
             quant_coords = torch.cat([
@@ -474,7 +486,7 @@ class Pixal3DImageTo3DPipeline(Pipeline):
             tqdm_desc=f"Sampling HR shape SLat (proj, {hr_resolution})",
         ).samples
         if self.low_vram:
-            flow_model.cpu()
+            self.release_model(flow_model)
 
         std = torch.tensor(self.shape_slat_normalization['std'])[None].to(slat.device)
         mean = torch.tensor(self.shape_slat_normalization['mean'])[None].to(slat.device)
@@ -503,8 +515,8 @@ class Pixal3DImageTo3DPipeline(Pipeline):
             self.models['shape_slat_decoder'].low_vram = True
         ret = self.models['shape_slat_decoder'](slat, return_subs=True)
         if self.low_vram:
-            self.models['shape_slat_decoder'].cpu()
             self.models['shape_slat_decoder'].low_vram = False
+            self.release_model(self.models['shape_slat_decoder'])
         return ret
     
     def sample_tex_slat(
@@ -542,7 +554,7 @@ class Pixal3DImageTo3DPipeline(Pipeline):
             tqdm_desc="Sampling texture SLat (proj)",
         ).samples
         if self.low_vram:
-            flow_model.cpu()
+            self.release_model(flow_model)
 
         std = torch.tensor(self.tex_slat_normalization['std'])[None].to(slat.device)
         mean = torch.tensor(self.tex_slat_normalization['mean'])[None].to(slat.device)
@@ -568,7 +580,7 @@ class Pixal3DImageTo3DPipeline(Pipeline):
             self.models['tex_slat_decoder'].to(self.device)
         ret = self.models['tex_slat_decoder'](slat, guide_subs=subs) * 0.5 + 0.5
         if self.low_vram:
-            self.models['tex_slat_decoder'].cpu()
+            self.release_model(self.models['tex_slat_decoder'])
         return ret
     
     @torch.no_grad()
@@ -586,6 +598,8 @@ class Pixal3DImageTo3DPipeline(Pipeline):
             tex_slat (SparseTensor): The structured latent for texture.
             resolution (int): The resolution of the output.
         """
+        from ..representations import MeshWithVoxel
+
         meshes, subs = self.decode_shape_slat(shape_slat, resolution)
         tex_voxels = self.decode_tex_slat(tex_slat, subs)
         out_mesh = []
@@ -705,8 +719,8 @@ class Pixal3DImageTo3DPipeline(Pipeline):
             self.models['shape_slat_decoder'].low_vram = True
         hr_coords = self.models['shape_slat_decoder'].upsample(lr_slat, upsample_times=4)
         if self.low_vram:
-            self.models['shape_slat_decoder'].cpu()
             self.models['shape_slat_decoder'].low_vram = False
+            self.release_model(self.models['shape_slat_decoder'])
 
         lr_resolution = 512
         actual_hr_resolution = hr_resolution
@@ -751,7 +765,7 @@ class Pixal3DImageTo3DPipeline(Pipeline):
             tqdm_desc=f"Sampling HR shape SLat (proj, {actual_hr_resolution})",
         ).samples
         if self.low_vram:
-            flow_model_hr.cpu()
+            self.release_model(flow_model_hr)
         std = torch.tensor(self.shape_slat_normalization['std'])[None].to(hr_slat.device)
         mean = torch.tensor(self.shape_slat_normalization['mean'])[None].to(hr_slat.device)
         shape_slat = hr_slat * std + mean

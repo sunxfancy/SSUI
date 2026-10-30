@@ -3,24 +3,12 @@ import { load } from '@tauri-apps/plugin-store';
 import { appDataDir, homeDir, join, resolveResource } from '@tauri-apps/api/path';
 import { open } from '@tauri-apps/plugin-dialog';
 import { platform, arch } from '@tauri-apps/plugin-os';
+import { makeRuntimeTarget, dependencyProfile, pythonDistribution } from './runtimeTarget';
 import { IInstallerProvider, CommandInfo } from './IInstallerProvider';
-import { exists, readDir, writeTextFile, remove } from '@tauri-apps/plugin-fs';
+import { exists, readDir, readTextFile, writeTextFile, remove } from '@tauri-apps/plugin-fs';
 import { invoke } from '@tauri-apps/api/core';
-import runtimeConfig from '../../../dependencies/runtime.json';
 
 export class TauriInstallerProvider implements IInstallerProvider {
-    private runtime() {
-        const cpu = arch();
-        const id = `${platform()}-${cpu === 'aarch64' ? 'arm64' : cpu}`;
-        const target = runtimeConfig.targets[id as keyof typeof runtimeConfig.targets];
-        if (!target) throw new Error(`不支持的平台或架构: ${id}`);
-        return target;
-    }
-
-    async getDependencyLockFile(): Promise<string> {
-        return `dependencies/${this.runtime().lockFile}`;
-    }
-
     async getAppDataDir(): Promise<string> {
         return await appDataDir();
     }
@@ -58,6 +46,21 @@ export class TauriInstallerProvider implements IInstallerProvider {
 
     async detectPlatform(): Promise<string> {
         return await platform();
+    }
+
+    async detectRuntimeTarget() {
+        const currentPlatform = await this.detectPlatform();
+        let gpu = 'unknown';
+        if (currentPlatform !== 'macos') {
+            try {
+                const gpus = await invoke<Array<{ gpu_type: string }>>('detect_gpu');
+                gpu = gpus.some(g => g.gpu_type === 'NVIDIA') ? 'nvidia'
+                    : gpus.some(g => g.gpu_type === 'AMD') ? 'amd' : 'unknown';
+            } catch (error) {
+                console.warn('GPU detection failed:', error);
+            }
+        }
+        return makeRuntimeTarget(currentPlatform, arch(), gpu);
     }
 
     async checkPythonInstalled(installDir: string): Promise<CommandInfo> {
@@ -100,10 +103,13 @@ export class TauriInstallerProvider implements IInstallerProvider {
 
     async downloadPython(installDir: string): Promise<CommandInfo> {
         try {
+            const target = await this.detectRuntimeTarget();
+            dependencyProfile(target);
+            const python = pythonDistribution(target);
             const output: any = await invoke('download_python', {
-                version: runtimeConfig.pythonVersion,
-                release_date: runtimeConfig.pythonRelease,
-                architecture: this.runtime().pythonTarget,
+                version: python.version,
+                release_date: python.release,
+                architecture: python.triple,
                 path: await join(installDir, '.venv')
             });
             console.log(output);
@@ -181,7 +187,7 @@ export class TauriInstallerProvider implements IInstallerProvider {
 
     async checkPackagesInstalled(installDir: string): Promise<CommandInfo> {
         // 检查安装完成标记文件
-        const completionMarker = await join(installDir,'.venv', '.packages_installed');
+        const completionMarker = await join(installDir,'venv', '.packages_installed');
 
         try {
             const markerExists = await exists(completionMarker);
@@ -224,19 +230,12 @@ export class TauriInstallerProvider implements IInstallerProvider {
 
             const resourcePath = await resolveResource(await join('resources', lockFile));
 
-            const installArgs = ['install', '-r', resourcePath];
-            if (this.runtime().lockFile === 'windows-arm64.lock') {
-                const wheels = await resolveResource('resources/dependencies/wheels');
-                if (!(await exists(await join(wheels, 'manifest.json')))) {
-                    throw new Error('安装包缺少原生 ARM64 依赖，请重新下载安装包');
-                }
-                installArgs.push('--only-binary=:all:', '--find-links', wheels);
-            }
             const output = await invoke('run_python',
                 {
                     path: pipPath,
                     cwd: installDir,
-                    args: installArgs
+                    args:  ['install', '-r', resourcePath,
+                        ...(dependencyProfile(await this.detectRuntimeTarget()).binaryOnly ? ['--only-binary=:all:'] : [])]
                 }
             );
             console.log('安装依赖包: ' + output);
@@ -266,6 +265,7 @@ export class TauriInstallerProvider implements IInstallerProvider {
         // 以 manifest.json 是否存在作为“已解压”的标志
         const marker = await join(extractDir, 'manifest.json');
         if (await exists(marker)) {
+            await this.validateOfflineTarget(marker);
             return extractDir;
         }
         if (!(await exists(offlineInstallerPath))) {
@@ -279,7 +279,20 @@ export class TauriInstallerProvider implements IInstallerProvider {
             tar_path: offlineInstallerPath,
             target_path: extractDir
         });
+        await this.validateOfflineTarget(marker);
         return extractDir;
+    }
+
+    private async validateOfflineTarget(manifestPath: string): Promise<void> {
+        const manifest = JSON.parse(await readTextFile(manifestPath));
+        const target = await this.detectRuntimeTarget();
+        const profile = dependencyProfile(target);
+        // Legacy manifests identify a fixed OS/arch/backend through their alias.
+        if (manifest.target !== profile.dependencyTarget
+            || (manifest.runtimeTarget && (manifest.runtimeTarget.os !== target.os
+                || manifest.runtimeTarget.arch !== target.arch || manifest.runtimeTarget.backend !== target.backend))) {
+            throw new Error(`离线包与当前安装目标 ${target.os}-${target.arch}-${target.backend} 不匹配`);
+        }
     }
 
     async installPythonOffline(installDir: string, offlineInstallerPath: string): Promise<CommandInfo> {
@@ -359,6 +372,7 @@ export class TauriInstallerProvider implements IInstallerProvider {
             // 3. 离线安装：--no-index 完全不联网，--find-links 指向本地包目录，
             //    -c constraints.txt 钉 setuptools<81 以兼容老 sdist 的构建
             const args = ['install', '--no-index', '--find-links', packagesDir, '-r', lockPath];
+            if (dependencyProfile(await this.detectRuntimeTarget()).binaryOnly) args.push('--only-binary=:all:');
             if (await exists(constraintsPath)) {
                 args.push('-c', constraintsPath);
             }
@@ -428,4 +442,4 @@ export class TauriInstallerProvider implements IInstallerProvider {
         await store.set('root', installConfig);
         await store.save();
     }
-} 
+}

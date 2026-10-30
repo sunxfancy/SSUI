@@ -38,10 +38,108 @@ permissions:
 
 env:
   SSUI_CI_SKIP_INSTALL: 1
+  # Windows runners otherwise use a legacy code page for redirected Python output.
+  PYTHONUTF8: 1
   # torch 等 wheel 体积大，调大 HTTP 超时避免大文件下载偶发失败
   UV_HTTP_TIMEOUT: 600
 
 jobs:
+  frontend-tests:
+    name: Frontend and browser tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: ${{ inputs.ref || github.ref }}
+      - name: Setup Node
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 22
+          cache: yarn
+      - name: Install dependencies
+        run: yarn install --frozen-lockfile
+      - name: Frontend unit tests
+        run: yarn test:frontend
+      - name: Install Chromium
+        run: yarn test:ui:install --with-deps
+      - name: Browser interaction tests
+        run: yarn test:ui && yarn test:desktop-ui
+      - name: Upload browser evidence
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: browser-test-report
+          path: |
+            playwright-report/
+            test-results/
+          retention-days: 14
+
+  native-tests:
+    name: Native commands on ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 35
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: ${{ inputs.ref || github.ref }}
+      - name: Setup Node
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: 22
+          cache: yarn
+      - name: Install JS dependencies
+        run: yarn install --frozen-lockfile
+      - name: Setup Python fixtures
+        uses: astral-sh/setup-uv@d0d8abe699bfb85fec6de9f7adb5ae17292296ff
+        with:
+          version: "0.6.11"
+          enable-cache: false
+          python-version: 3.12.8
+          activate-environment: true
+      - name: File snapshot and conflict tests
+        run: yarn test:file-service
+      - name: Native Linux libraries
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev libdbus-1-dev xvfb
+      - name: Setup Rust
+        uses: actions-rust-lang/setup-rust-toolchain@166cdcfd11aee3cb47222f9ddb555ce30ddb9659
+        with:
+          rustflags: ""
+          cache: "false"
+      - name: Cache native Rust compilation
+        uses: Swatinem/rust-cache@c19371144df3bb44fab255c43d04cbc2ab54d1c4
+        with:
+          workspaces: "desktop/src-tauri -> target"
+          shared-key: "tauri-native-${{ runner.os }}"
+      - name: Prepare resources
+        run: yarn workspace ssui-desktop copy-resources
+      - name: Rust command tests
+        run: yarn test:rust
+      - name: Build isolated native test app
+        run: yarn test:native:build
+      - name: Native WebView tests (Linux)
+        if: runner.os == 'Linux'
+        run: xvfb-run -a yarn test:native
+      - name: Native WebView tests (Windows and macOS)
+        if: runner.os != 'Linux'
+        run: yarn test:native
+      - name: Upload native logs and failure screenshots
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: native-tests-${{ matrix.os }}
+          path: native-test-results/
+          retention-days: 14
+
   # Fast structural check: no toolchain, no build.
   qc:
     name: Release scripts
@@ -64,6 +162,87 @@ jobs:
       - name: Check release version consistency
         timeout-minutes: 5
         run: python3 scripts/release.py check-versions
+
+  frontend-e2e:
+    name: Frontend contracts and Chromium E2E
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - name: Checkout
+        timeout-minutes: 5
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: ${{ inputs.ref || github.ref }}
+
+      - name: Set Node.js 22.x
+        timeout-minutes: 5
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 22
+          cache: 'yarn'
+
+      - name: Install JavaScript dependencies
+        timeout-minutes: 10
+        run: yarn install --frozen-lockfile
+
+      - name: Setup Python
+        timeout-minutes: 5
+        uses: astral-sh/setup-uv@d0d8abe699bfb85fec6de9f7adb5ae17292296ff # v6
+        with:
+          version: "0.6.11"
+          enable-cache: true
+          python-version: 3.12.8
+          activate-environment: true
+
+      - name: Install mock API dependencies
+        timeout-minutes: 5
+        run: uv pip install -r tests/mock_api/requirements.txt
+
+      - name: Install Chromium
+        if: github.event_name != 'schedule'
+        timeout-minutes: 10
+        run: yarn playwright install --with-deps chromium
+
+      - name: Install cross-browser engines
+        if: github.event_name == 'schedule'
+        timeout-minutes: 15
+        run: yarn playwright install --with-deps chromium firefox webkit
+
+      - name: Run API contract tests
+        timeout-minutes: 5
+        run: yarn test:contract
+
+      - name: Check generated API types
+        timeout-minutes: 5
+        run: yarn api:check
+
+      - name: Run Functional UI component tests
+        timeout-minutes: 5
+        run: yarn test:functional_ui
+
+      - name: Run desktop browser-adapter tests
+        timeout-minutes: 5
+        run: yarn test:desktop_ui
+
+      - name: Run Image Canvas behavior tests
+        timeout-minutes: 5
+        run: yarn test:canvas
+
+      - name: Run Chromium E2E
+        timeout-minutes: 10
+        env:
+          SSUI_E2E_CROSS_BROWSER: ${{ github.event_name == 'schedule' && '1' || '0' }}
+        run: yarn test:e2e
+
+      - name: Upload Playwright failure artifacts
+        if: failure()
+        timeout-minutes: 5
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: playwright-results
+          path: tests/e2e/test-results/
+          if-no-files-found: ignore
+          retention-days: 7
 
   build:
     name: Build on ${{ matrix.os }}
@@ -96,6 +275,34 @@ jobs:
         timeout-minutes: 20
         run: yarn install --frozen-lockfile
 
+      - name: Verify runtime target selection
+        timeout-minutes: 5
+        run: |
+          yarn test:runtime-target
+          yarn test:dependency-config
+          yarn requirements:check
+
+      - name: Setup Rust
+        timeout-minutes: 10
+        uses: actions-rust-lang/setup-rust-toolchain@166cdcfd11aee3cb47222f9ddb555ce30ddb9659 # v1
+        with:
+          rustflags: ""
+          cache: "false"
+
+      - name: Build Canvas WASM kernel
+        timeout-minutes: 15
+        run: |
+          yarn workspace @ssui/canvas-engine setup
+          yarn build:canvas-engine
+          yarn test:canvas-engine
+
+      - name: Verify offline Storybook
+        if: matrix.platform == 'linux'
+        timeout-minutes: 10
+        run: |
+          yarn test:storybook
+          yarn build:storybook
+
       - name: Select shared runtime
         id: runtime
         run: node dependencies/runtime.cjs --github-output
@@ -114,16 +321,43 @@ jobs:
 
       - name: Install system dependencies
         if: ${{ matrix.platform == 'linux' }}
-        timeout-minutes: 20
+        timeout-minutes: 30
         run: |
-          sudo apt-get update
-          sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf libglib2.0-dev pkg-config
+          sudo apt-get -o Acquire::Retries=3 update
+          sudo apt-get -o Acquire::Retries=3 install -y --no-install-recommends libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf libglib2.0-dev pkg-config
 
-      - name: Setup Rust
+      - name: Restore Rust compilation cache
+        id: rust-cache
         timeout-minutes: 10
-        uses: actions-rust-lang/setup-rust-toolchain@166cdcfd11aee3cb47222f9ddb555ce30ddb9659 # v1
+        uses: Swatinem/rust-cache@c19371144df3bb44fab255c43d04cbc2ab54d1c4 # v2.9.1
         with:
-          rustflags: ""
+          workspaces: "desktop/src-tauri -> target"
+          shared-key: "tauri-release-${{ matrix.platform }}"
+          cache-on-failure: "true"
+
+      - name: Report Rust cache status
+        if: always()
+        timeout-minutes: 5
+        shell: bash
+        env:
+          CACHE_HIT: ${{ steps.rust-cache.outputs.cache-hit }}
+          CACHE_OUTCOME: ${{ steps.rust-cache.outcome }}
+          CACHE_PLATFORM: ${{ matrix.platform }}
+        run: |
+          if [ "$CACHE_OUTCOME" != "success" ]; then
+            status="Cache step did not complete successfully ($CACHE_OUTCOME)"
+          elif [ "$CACHE_HIT" = "true" ]; then
+            status="Exact cache hit"
+          else
+            status="No exact hit; see cache step logs for fallback restore or cache miss"
+          fi
+          {
+            echo "### Rust compilation cache ($CACHE_PLATFORM)"
+            echo "$status"
+            echo
+            echo 'Caches Cargo dependencies and their compiled artifacts in desktop/src-tauri/target.'
+            echo 'rust-cache reports exact cache hits, not a per-crate compilation hit percentage.'
+          } | tee -a "$GITHUB_STEP_SUMMARY"
 
       - name: Build Components
         timeout-minutes: 30
@@ -132,6 +366,12 @@ jobs:
       - name: Run Component Tests
         timeout-minutes: 20
         run: yarn test:components
+
+      - name: Build and test Image Canvas
+        timeout-minutes: 15
+        run: |
+          yarn build:canvas
+          yarn workspace ssui-image test --runInBand
 
       - name: Build Functional UI
         timeout-minutes: 30

@@ -12,6 +12,48 @@ export interface ComponentRegister {
 
 let components: { [key: string]: ComponentRegister } = {};
 
+export interface ComponentVariantRegister {
+    name: string;
+    /** Registered base component name. Its type and port determine eligibility. */
+    base: string;
+    matches(context: Readonly<ComponentRefProps>): boolean;
+    component: React.ComponentType<any>;
+    /** Higher priority wins; equal priorities keep registration order. */
+    priority?: number;
+    createComponent?: ComponentRegister['createComponent'];
+}
+
+const variants = new Map<string, ComponentVariantRegister>();
+
+/** Variants replace a base editor in place, without adding component tabs. */
+export function registerComponentVariant(variant: ComponentVariantRegister): () => void {
+    variants.set(variant.name, variant);
+    return () => {
+        if (variants.get(variant.name) === variant) variants.delete(variant.name);
+    };
+}
+
+export function resolveComponent(name: string, context: ComponentRefProps): ComponentRegister | undefined {
+    const base = getComponent(name);
+    if (!base) return undefined;
+    let selected: ComponentVariantRegister | undefined;
+    for (const variant of variants.values()) {
+        if (variant.base === name && variant.matches(context)
+            && (!selected || (variant.priority ?? 0) > (selected.priority ?? 0))) {
+            selected = variant;
+        }
+    }
+    if (!selected) return base;
+    const variant = selected;
+    return {
+        ...base,
+        name: variant.name,
+        component: variant.component,
+        createComponent: variant.createComponent ?? ((ref, params) =>
+            React.createElement(variant.component, { ...params, ref })),
+    };
+}
+
 export function registerComponent(component: ComponentRegister) {
     components[component.name] = component;
     if (!component.createComponent)

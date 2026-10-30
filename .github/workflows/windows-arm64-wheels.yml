@@ -1,16 +1,20 @@
+# Source-built packages are published by sunxfancy/ssui-python-packages and pinned
+# in dependencies.yaml. Validate that exact set before a desktop release.
 name: Windows ARM64 native dependencies
 on:
   workflow_call:
     inputs:
       ref:
         type: string
-        default: ""
+        default: ''
   workflow_dispatch:
   push:
     branches: ['codex/windows-arm64-release']
     paths:
       - 'dependencies/**'
       - 'scripts/*arm64*'
+      - 'scripts/audit_native_binaries.py'
+      - 'scripts/runtime_config.py'
       - 'scripts/check_runtime.py'
       - '.github/workflows/windows-arm64-wheels.yml'
 permissions:
@@ -19,9 +23,9 @@ concurrency:
   group: windows-arm64-wheels-${{ github.ref }}
   cancel-in-progress: ${{ github.event_name == 'push' }}
 jobs:
-  build:
+  verify:
     runs-on: windows-11-arm
-    timeout-minutes: 360
+    timeout-minutes: 90
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
@@ -32,25 +36,26 @@ jobs:
       - name: Install pinned standalone Python
         timeout-minutes: 15
         run: node dependencies/bootstrap.cjs --github-env
-
-      - uses: actions-rust-lang/setup-rust-toolchain@166cdcfd11aee3cb47222f9ddb555ce30ddb9659 # v1
-        with:
-          target: aarch64-pc-windows-msvc
-          rustflags: ''
-      - name: Compile and verify native wheels
-        shell: pwsh
+      - name: Install the full native dependency lock
+        timeout-minutes: 30
         run: |
-          $vswhere = "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe"
-          $vs = & $vswhere -latest -products '*' -property installationPath
-          if (-not $vs) { throw 'Visual Studio installation not found' }
-          Import-Module "$vs\Common7\Tools\Microsoft.VisualStudio.DevShell.dll"
-          Enter-VsDevShell -VsInstallPath $vs -SkipAutomaticLocation -DevCmdArguments '-arch=arm64 -host_arch=arm64'
-          python scripts/build_windows_arm64_wheels.py --work "$env:RUNNER_TEMP/arm64-build" --output native-wheels
-          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-      - name: Upload validated wheelhouse
+          uv pip sync --no-build --index-strategy unsafe-best-match dependencies/${{ steps.runtime.outputs.lock }}
+          uv pip check
+      - name: Verify Python and native inference kernels
+        run: python scripts/check_runtime.py --target windows-arm64
+      - name: Audit installed native libraries
+        run: python scripts/audit_native_binaries.py --output reports/native-binaries.json
+      - name: Exercise audio, video, 3D and image dependencies
+        timeout-minutes: 30
+        run: python dependencies/probe_arm64.py --download-assets --assets-root "${{ runner.temp }}/probe-assets" --output reports/runtime-probe.json
+      - name: Audit wheel availability and tags
+        timeout-minutes: 15
+        run: python dependencies/audit_wheels.py dependencies/windows-arm64-cpu.lock --python-version ${{ steps.runtime.outputs.python }} --output reports/wheel-audit.json
+      - name: Preserve verification reports
+        if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
-          name: windows-arm64-wheels
-          path: native-wheels/
-          if-no-files-found: error
+          name: windows-arm64-verification
+          path: reports/
+          if-no-files-found: warn
           retention-days: 30

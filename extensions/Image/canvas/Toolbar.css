@@ -43,3 +43,13 @@
     font-size: 20px;
     line-height: 1;
 } 
+
+.drawing-actions {
+    position: fixed; top: 10px; left: 66px; right: 285px; z-index: 1000;
+    display: flex; align-items: center; flex-wrap: wrap; gap: 8px;
+    padding: 8px 12px; background: #f5f8faf2; border: 1px solid #d8e1e8;
+    border-radius: 8px; color: #253343; font-size: 12px;
+}
+.drawing-actions button { cursor: pointer; padding: 4px 8px; }
+.drawing-actions input[type=number] { width: 58px; }
+.drawing-actions input[type=color] { width: 30px; height: 24px; padding: 0; }

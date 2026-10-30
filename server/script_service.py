@@ -1,7 +1,9 @@
 import ast
 import os
 import torch
-from typing import Dict, Any
+from typing import Dict, Any, get_type_hints, get_origin, get_args, Union
+import types
+from server.conversation import infer_conversation
 from server.models import FlowOperatorInfo, ScriptFunctionInfo
 from ss_executor import SSLoader, search_project_root
 from ss_executor.scheduler import TaskScheduler
@@ -27,6 +29,8 @@ class ScriptService:
             loader.Execute()
             
             def getTypeName(t):
+                if get_origin(t) in (Union, types.UnionType):
+                    return "typing.Union[" + ", ".join(getTypeName(a) for a in get_args(t)) + "]"
                 result = ""
                 if hasattr(t, "__module__"):
                     result += t.__module__ + "."
@@ -37,17 +41,21 @@ class ScriptService:
                     result += "]"
                 return result
             
-            return {
-                func.__name__: ScriptFunctionInfo(
+            functions = {}
+            for func, param_types, return_type in loader.callables:
+                hints = get_type_hints(func)
+                param_types = {name: hints.get(name, value) for name, value in param_types.items()}
+                return_type = hints.get("return", return_type)
+                functions[func.__name__] = ScriptFunctionInfo(
                     params={param: getTypeName(param_types[param]) for param in param_types},
                     returns=(
                         [getTypeName(t) for t in return_type.__args__]
-                        if return_type.__name__ == "tuple" or return_type.__name__ == "Tuple"
+                        if get_origin(return_type) is tuple
                         else [getTypeName(return_type)]
                     ),
+                    conversation=infer_conversation(param_types, return_type),
                 )
-                for func, param_types, return_type in loader.callables
-            }
+            return functions
         except Exception as e:
             return {"error": str(e)}
     

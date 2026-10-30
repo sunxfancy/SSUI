@@ -23,6 +23,6 @@ test('Tauri and Node architecture names resolve identically', () => {
 });
 test('unsupported and 32 bit platforms fail instead of selecting a default', () => {
   for (const [os, cpu] of [['linux', 'ia32'], ['win32', 'arm'], ['android', 'arm64']]) {
-    assert.throws(() => getRuntime(os, cpu), /Unsupported/);
+    assert.throws(() => getRuntime(os, cpu), /不支持/);
   }
 });

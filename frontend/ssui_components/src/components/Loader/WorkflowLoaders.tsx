@@ -15,6 +15,7 @@ type UploadLoaderProps = {
 };
 
 class UploadLoader extends IComponent<UploadLoaderProps, { path: string; executable: string; uploading: boolean; error?: string }> {
+    protected persistedFields: ('path' | 'executable')[] = ['path', 'executable'];
     state = { path: '', executable: this.props.executable ?? '', uploading: false, error: undefined as string | undefined };
 
     private upload = async (event: React.FormEvent<HTMLInputElement>) => {
@@ -60,6 +61,7 @@ class UploadLoader extends IComponent<UploadLoaderProps, { path: string; executa
 
 type QwenProps = { edit?: boolean };
 class QwenModelLoader extends IComponent<QwenProps, { modelId: string; lowVram: boolean; vramLimit: number }> {
+    protected persistedFields: ('modelId' | 'lowVram' | 'vramLimit')[] = ['modelId', 'lowVram', 'vramLimit'];
     state = {
         modelId: this.props.edit ? 'Qwen/Qwen-Image-Edit-2509' : 'Qwen/Qwen-Image',
         lowVram: true,
@@ -88,6 +90,7 @@ class QwenModelLoader extends IComponent<QwenProps, { modelId: string; lowVram: 
 }
 
 class FluxLoraLoader extends IComponent<{}, { path: string; weight: number }> {
+    protected persistedFields: ('path' | 'weight')[] = ['path', 'weight'];
     state = { path: '', weight: 0.75 };
     override onExecute(): Descriptor {
         return { function: 'ssui_image.Flux.FluxLora.load_one', params: { path: this.state.path, weight: this.state.weight } };
@@ -119,7 +122,7 @@ const QwenImageEditModelLoader = React.forwardRef<QwenModelLoader, object>((prop
     { name: 'PixelSrcAssetLoader', type: 'ssui_image.PixelArt.PixelSrcAsset', port: 'input',
         component: uploadComponent({ functionName: 'ssui_image.PixelArt.PixelSrcAsset.load', accept: '.pxl', label: 'pixelsrc 源文件', executable: 'pxl' }) },
     { name: 'MeshLoader', type: 'ssui.base.Mesh', port: 'input',
-        component: uploadComponent({ functionName: 'ssui.base.Mesh.load', accept: '.glb,.gltf,.obj,.fbx', label: '3D 模型文件' }) },
+        component: uploadComponent({ functionName: 'ssui.base.Mesh.load', accept: '.glb,.obj,.ply,.stl', label: '3D 模型文件（GLB / OBJ / PLY / STL）' }) },
     { name: 'QwenImageModelLoader', type: 'ssui_video.QwenImage.QwenImageModel', port: 'input', component: QwenModelLoader },
     { name: 'QwenImageEditModelLoader', type: 'ssui_video.QwenImage.QwenImageEditModel', port: 'input', component: QwenImageEditModelLoader },
     { name: 'FluxLoraLoader', type: 'ssui_image.Flux.FluxLora', port: 'input', component: FluxLoraLoader },

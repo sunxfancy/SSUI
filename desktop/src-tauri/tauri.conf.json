@@ -33,7 +33,6 @@
     ],
     "resources": [
       "resources/dependencies/*",
-      "resources/dependencies/wheels/*",
       "resources/extensions/*",
       "resources/app.tar.gz",
       "workflow/data.json",

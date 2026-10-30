@@ -32,7 +32,7 @@ class MotionExtensionTest(unittest.TestCase):
         node_config = config["Kimodo Text To Motion"]
 
         self.assertEqual(node_config["model"]["default"], "Kimodo-SOMA-RP-v1.1")
-        self.assertEqual(node_config["text_encoder_device"]["default"], "cuda")
+        self.assertEqual(node_config["text_encoder_device"]["default"], "auto")
 
 
 if __name__ == "__main__":

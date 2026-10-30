@@ -12,9 +12,23 @@ class Image():
         with PIL.Image.open(path) as image:
             return Image(image.convert("RGB").copy())
 
+@dataclass
+class MotionClip:
+    """Generated 3D joint motion and its native animation artifacts."""
+    path: str | None = None
+    npz_path: str | None = None
+    bvh_path: str | None = None
+    model: str = ""
+    fps: float = 30.0
+    frames: int = 0
+
+
 class Mesh():
-    def __init__(self, model: trimesh.Trimesh = None):
+    def __init__(self, model: trimesh.Trimesh = None, path: str = None):
         self._model = model
+        # Native rigged GLBs must bypass trimesh's geometry-only re-export.
+        # A path-backed Mesh is an immutable artifact; _model is optional.
+        self.path = path
 
     @staticmethod
     def load(path: str) -> "Mesh":

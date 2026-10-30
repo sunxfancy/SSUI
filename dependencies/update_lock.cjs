@@ -1,17 +1,35 @@
-const { execSync } = require('child_process');
+const { execFileSync } = require('child_process');
 const fs = require('fs');
 const path = require('path');
-const os = require('os');
+const { resolveConfig, executable } = require('./dev_config.cjs');
+const devEnv = resolveConfig();
 const { getAllTargets, getCurrentPlatformTargets } = require('./platform.cjs');
-const runtimeConfig = require('./runtime.json');
+const { profileFromName, pythonDistribution } = require('./runtime_target.cjs');
+const { generateRequirements } = require('./dependency_config.cjs');
 
 // 检查命令行参数
-function parseArgs() {
-  const args = process.argv.slice(2);
-  return {
-    noUpgrade: args.includes('--no-upgrade') || args.includes('-n'),
-    all: args.includes('--all') || args.includes('-a')
-  };
+function parseArgs(args = process.argv.slice(2)) {
+  const opts = { noUpgrade: false, all: false, targets: [] };
+  for (let i = 0; i < args.length; i++) {
+    if (args[i] === '--no-upgrade' || args[i] === '-n') opts.noUpgrade = true;
+    else if (args[i] === '--all' || args[i] === '-a') opts.all = true;
+    else if (args[i] === '--target') {
+      if (!args[i + 1] || args[i + 1].startsWith('-')) throw new Error('--target 缺少目标名称');
+      opts.targets.push(profileFromName(args[++i]).dependencyTarget);
+    } else throw new Error(`未知参数: ${args[i]}`);
+  }
+  if (opts.all && opts.targets.length) throw new Error('--all 不能与 --target 同时使用');
+  return opts;
+}
+
+function compileArgs(target, requirementsFile, lockFile, noUpgrade = false) {
+  const profile = profileFromName(target);
+  const python = pythonDistribution(profile);
+  return ['pip', 'compile', requirementsFile, '-o', lockFile,
+    '--python-platform', python.triple, '--python-version', python.version,
+    ...(profile.binaryOnly ? ['--no-build', '--index-strategy', 'unsafe-best-match'] : []),
+    // uv preserves existing pins by default; there is no --no-upgrade flag.
+    ...(noUpgrade ? [] : ['--upgrade'])];
 }
 
 // 读取requirements文件并提取index-url信息
@@ -37,18 +55,13 @@ function main() {
   try {
     const args = parseArgs();
     // --all 生成全部目标，否则只生成当前平台下的所有变体（含 GPU 变体）
-    const targets = args.all ? getAllTargets() : getCurrentPlatformTargets();
+    const targets = args.targets.length ? [...new Set(args.targets)] : args.all ? getAllTargets() : getCurrentPlatformTargets();
+    if (targets.length === 0) throw new Error('当前 OS / 架构尚未提供依赖配置，无法生成锁文件');
     
     for (const targetName of targets) {
-      const requirementsFile = path.join('.', 'dependencies', `requirements-${targetName}.txt`);
+      const requirementsFile = path.relative(process.cwd(), generateRequirements(targetName));
       const lockFile = path.join('.', 'dependencies', `${targetName}.lock`);
       
-      // 检查requirements文件是否存在
-      if (!fs.existsSync(requirementsFile)) {
-        console.log(`跳过目标 ${targetName}: 未找到requirements文件: ${requirementsFile}`);
-        continue;
-      }
-
       // 提取requirements文件中的index-url信息
       const indexUrls = extractIndexUrls(requirementsFile);
       if (indexUrls.length > 0) {
@@ -58,17 +71,13 @@ function main() {
       console.log(`正在为目标 ${targetName} 生成锁文件...`);
       
       // 构建uv命令，根据参数决定是否添加--no-upgrade选项
-      const venvPath = os.platform() === 'win32' ? '.venv\\Scripts\\uv.exe' : '.venv/bin/uv';
-      const runtime = Object.values(runtimeConfig.targets).find(t => t.lockFile === `${targetName}.lock`);
-      let uvCommand = `${venvPath} pip compile ${requirementsFile} -o ${lockFile}`;
-      if (runtime) uvCommand += ` --python-version ${runtimeConfig.pythonVersion} --python-platform ${runtime.pythonTarget}`;
+      const venvPath = process.env.SSUI_UV_PATH || executable('uv', devEnv);
       if (args.noUpgrade) {
         console.log('使用不升级模式: 已存在的包将不会升级到最新版本');
-        uvCommand += ' --no-upgrade';
       }
       
       // 使用uv生成锁文件
-      execSync(uvCommand, { stdio: 'inherit' });
+      execFileSync(venvPath, compileArgs(targetName, requirementsFile, lockFile, args.noUpgrade), { stdio: 'inherit', env: devEnv });
       console.log(`已生成锁文件: ${lockFile}`);
       
       // 如果有index URL，将其添加到锁文件末尾
@@ -105,12 +114,12 @@ function main() {
 
 // 解析锁文件内容
 function parseLockFile(content) {
-  // 首先去除文件末尾的index URL注释部分
-  cleanContent = content.split('\n').filter(line => !line.startsWith('#') && !line.startsWith('--extra-index-url')).join('\n');
+  // Keep uv's # via comments: they carry root and reverse-dependency edges.
+  const cleanContent = content.split('\n').filter(line => !line.startsWith('--')).join('\n');
 
   const dependencies = {};
   // 将锁文件按包分块，每个包以非空格开头的行为起始
-  const packageBlocks = cleanContent.split(/\n(?=[a-zA-Z0-9._-]+==)/);
+  const packageBlocks = cleanContent.split(/\n(?=[a-zA-Z0-9._-]+(?:==| @ ))/);
   
   for (const block of packageBlocks) {
     if (!block.trim()) continue;
@@ -119,16 +128,19 @@ function parseLockFile(content) {
     const firstLine = lines[0];
     
     // 检查是否为包定义行，并提取版本信息
-    const packageMatch = firstLine.match(/^([a-zA-Z0-9._-]+)==(.+)$/);
+    const packageMatch = firstLine.match(/^([a-zA-Z0-9._-]+)(?:==(.+)| @ (https?:\/\/\S+))$/);
     if (!packageMatch) continue;
     
     const packageName = packageMatch[1].toLowerCase();
-    const version = packageMatch[2];
+    const url = packageMatch[3];
+    const filename = url && decodeURIComponent(new URL(url).pathname.split('/').pop());
+    const version = packageMatch[2] || (filename?.endsWith('.whl') ? filename.split('-')[1] : url);
     dependencies[packageName] = { 
       version: version,
       dependents: [], 
       isRoot: false 
     };
+    if (url) dependencies[packageName].url = url;
     
     // 合并所有 via 行
     let viaContent = '';
@@ -180,6 +192,7 @@ function generateYaml(dependencies) {
     
     // 添加版本信息
     yaml += `  version: "${info.version}"\n`;
+    if (info.url) yaml += `  url: ${JSON.stringify(info.url)}\n`;
     
     // 添加根依赖标志
     if (info.isRoot) {
@@ -200,4 +213,5 @@ function generateYaml(dependencies) {
 }
 
 // 执行主函数
-main();
+if (require.main === module) main();
+module.exports = { parseArgs, compileArgs, parseLockFile, generateYaml };

@@ -30,24 +30,14 @@ const { spawnSync } = require('child_process');
 const fs = require('fs');
 const path = require('path');
 
+const { resolveConfig, executable } = require('./dev_config.cjs');
+const devEnv = resolveConfig();
 const ROOT = path.resolve(__dirname, '..');
 const DEPS_DIR = __dirname;
 const isWin = process.platform === 'win32';
-
-// python-build-standalone 版本（与 install.cmd / install.sh / 后端 download_python 保持一致）
-const runtimeConfig = require('./runtime.json');
-const PYTHON_VERSION = runtimeConfig.pythonVersion;
-const PYTHON_RELEASE = runtimeConfig.pythonRelease;
+const { profileFromName, pythonDistribution, assertPythonRuntime } = require('./runtime_target.cjs');
 
 // 各打包目标对应的 Python 架构（用于下载对应的 standalone 解释器）
-const TARGET_ARCH = {};
-for (const target of Object.values(runtimeConfig.targets)) {
-  const name = target.lockFile.replace(/\.lock$/, '');
-  // A legacy lock reused by an unconfigured target must not override its native owner.
-  TARGET_ARCH[name] ??= target.pythonTarget;
-}
-TARGET_ARCH['windows-amdgpu'] = TARGET_ARCH.windows;
-TARGET_ARCH['linux-amdgpu'] = TARGET_ARCH.linux;
 
 function parseArgs(argv) {
   const opts = {
@@ -111,7 +101,8 @@ function resolveTargets(opts) {
   }
 
   const result = [];
-  for (const t of candidates) {
+  for (const name of candidates) {
+    const t = profileFromName(name).dependencyTarget;
     const lockFile = path.join(DEPS_DIR, `${t}.lock`);
     if (fs.existsSync(lockFile)) {
       result.push({ target: t, lockFile });
@@ -125,16 +116,14 @@ function resolveTargets(opts) {
 // 定位用于下载的 python 解释器
 function resolvePython(opts) {
   if (opts.python) return opts.python;
-  const venvBin = isWin
-    ? path.join(ROOT, '.venv', 'Scripts', 'python.exe')
-    : path.join(ROOT, '.venv', 'bin', 'python');
+  const venvBin = executable('python', devEnv);
   if (fs.existsSync(venvBin)) return venvBin;
   console.warn(`未找到 .venv 内的 python(${venvBin})，回退到 PATH 中的 ${isWin ? 'python' : 'python3'}`);
   return isWin ? 'python' : 'python3';
 }
 
 function readPyVersion() {
-  const cfg = path.join(ROOT, '.venv', 'pyvenv.cfg');
+  const cfg = path.join(devEnv.SSUI_VENV_PATH, 'pyvenv.cfg');
   try {
     const m = fs.readFileSync(cfg, 'utf8').match(/^version\s*=\s*(.+)$/m);
     if (m) return m[1].trim();
@@ -173,7 +162,7 @@ function pipEnv(constraintsPath) {
 }
 
 // 下载某个 lock 的全部包到 destDir
-function downloadPackages(python, lockFile, destDir, constraintsPath) {
+function downloadPackages(python, lockFile, destDir, constraintsPath, binaryOnly = false) {
   fs.mkdirSync(destDir, { recursive: true });
   // --no-deps: lock 已是完整解析结果，逐条下载即可，避免 pip 重新解析拉到不同版本
   // --prefer-binary: 优先 wheel，减少 sdist 触发的本地构建
@@ -184,6 +173,7 @@ function downloadPackages(python, lockFile, destDir, constraintsPath) {
     '--no-deps',
     '--prefer-binary',
   ];
+  if (binaryOnly) args.push('--only-binary', ':all:');
   console.log(`\n> ${python} ${args.join(' ')}`);
   const res = spawnSync(python, args, { stdio: 'inherit', env: pipEnv(constraintsPath) });
   if (res.error) throw res.error;
@@ -275,7 +265,10 @@ SSUI 桌面端可在安装界面直接选择 .pkg，自动解压并离线安装�
 // 该压缩包与平台无关地可下载（只是按 arch 取不同文件），因此可在任意机器上为任意目标打包。
 // 返回下载到的文件名；无对应架构时返回 null。
 function downloadPythonStandalone(target, destDir) {
-  const arch = TARGET_ARCH[target];
+  const python = pythonDistribution(profileFromName(target));
+  const arch = python.triple;
+  const PYTHON_VERSION = python.version;
+  const PYTHON_RELEASE = python.release;
   if (!arch) {
     console.warn(`目标 ${target} 无对应的 Python 架构映射，跳过 Python 打包`);
     return null;
@@ -319,6 +312,14 @@ function createPkg(stagingDir, outFile) {
 }
 
 function packOne(target, lockFile, opts, python, pyVersion) {
+  const runtimeTarget = profileFromName(target);
+  const distribution = pythonDistribution(runtimeTarget);
+  // pip download resolves against the Python process, not Node or the host.
+  const probe = spawnSync(python, ['-c', 'import json, platform, sys; print(json.dumps({"os": sys.platform, "arch": platform.machine()}))'], { encoding: 'utf8' });
+  if (probe.error) throw probe.error;
+  if (probe.status !== 0) throw new Error(`无法检查下载用 Python: ${probe.stderr}`);
+  const pythonRuntime = JSON.parse(probe.stdout);
+  assertPythonRuntime(runtimeTarget, pythonRuntime);
   console.log(`\n========== 处理目标: ${target} ==========`);
   const stagingDir = path.join(opts.outputDir, `${target}-offline-installer`);
   const packagesDir = path.join(stagingDir, 'packages');
@@ -330,15 +331,7 @@ function packOne(target, lockFile, opts, python, pyVersion) {
   const constraintsPath = path.join(stagingDir, 'constraints.txt');
   fs.writeFileSync(constraintsPath, BUILD_CONSTRAINTS, 'utf8');
 
-  if (target === 'windows-arm64') {
-    const { validateNativeWheelhouse } = require('./native-wheelhouse.cjs');
-    const native = validateNativeWheelhouse(process.env.SSUI_NATIVE_WHEELHOUSE);
-    fs.mkdirSync(packagesDir, { recursive: true });
-    for (const name of native.files) fs.copyFileSync(path.join(native.root, 'wheelhouse', name), path.join(packagesDir, name));
-    lockFile = native.lock; // No direct download URLs in the offline lock.
-  } else {
-    downloadPackages(python, lockFile, packagesDir, constraintsPath);
-  }
+  downloadPackages(python, lockFile, packagesDir, constraintsPath, runtimeTarget.binaryOnly);
 
   const fileCount = fs.readdirSync(packagesDir).length;
   if (fileCount === 0) throw new Error(`没有下载到任何包(${packagesDir} 为空)`);
@@ -358,9 +351,10 @@ function packOne(target, lockFile, opts, python, pyVersion) {
   // 写 manifest
   const manifest = {
     target,
+    runtimeTarget: { os: runtimeTarget.os, arch: runtimeTarget.arch, backend: runtimeTarget.backend },
     python: pyVersion,
-    pythonVersion: PYTHON_VERSION,
-    pythonRelease: PYTHON_RELEASE,
+    pythonVersion: distribution.version,
+    pythonRelease: distribution.release,
     pythonArchive,
     packageCount: fileCount,
     builtOn: process.platform,

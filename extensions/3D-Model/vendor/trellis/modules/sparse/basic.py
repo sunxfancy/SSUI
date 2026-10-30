@@ -1,7 +1,9 @@
 from typing import *
 import torch
+from .topology import count_indices
 import torch.nn as nn
 from . import BACKEND, DEBUG
+from types import SimpleNamespace
 SparseTensorData = None # Lazy import
 
 
@@ -70,7 +72,9 @@ class SparseTensor:
                 shape = self.__cal_shape(feats, coords)
             if layout is None:
                 layout = self.__cal_layout(coords, shape[0])
-            if BACKEND == 'torchsparse':
+            if BACKEND == 'torch':
+                self.data = SimpleNamespace(features=feats, indices=coords)
+            elif BACKEND == 'torchsparse':
                 self.data = SparseTensorData(feats, coords, **kwargs)
             elif BACKEND == 'spconv':
                 spatial_shape = list(coords.max(0)[0] + 1)[1:]
@@ -121,7 +125,7 @@ class SparseTensor:
         return torch.Size(shape)
     
     def __cal_layout(self, coords, batch_size):
-        seq_len = torch.bincount(coords[:, 0], minlength=batch_size)
+        seq_len = count_indices(coords[:, 0], batch_size)
         offset = torch.cumsum(seq_len, dim=0) 
         layout = [slice((offset[i] - seq_len[i]).item(), offset[i].item()) for i in range(batch_size)]
         return layout
@@ -141,28 +145,28 @@ class SparseTensor:
     def feats(self) -> torch.Tensor:
         if BACKEND == 'torchsparse':
             return self.data.F
-        elif BACKEND == 'spconv':
+        elif BACKEND in ('spconv', 'torch'):
             return self.data.features
     
     @feats.setter
     def feats(self, value: torch.Tensor):
         if BACKEND == 'torchsparse':
             self.data.F = value
-        elif BACKEND == 'spconv':
+        elif BACKEND in ('spconv', 'torch'):
             self.data.features = value
 
     @property
     def coords(self) -> torch.Tensor:
         if BACKEND == 'torchsparse':
             return self.data.C
-        elif BACKEND == 'spconv':
+        elif BACKEND in ('spconv', 'torch'):
             return self.data.indices
         
     @coords.setter
     def coords(self, value: torch.Tensor):
         if BACKEND == 'torchsparse':
             self.data.C = value
-        elif BACKEND == 'spconv':
+        elif BACKEND in ('spconv', 'torch'):
             self.data.indices = value
 
     @property
@@ -228,6 +232,11 @@ class SparseTensor:
         return self.replace(new_feats, new_coords)
 
     def dense(self) -> torch.Tensor:
+        if BACKEND == 'torch':
+            size = (self.coords[:, 1:].max(0).values.cpu() + 1).tolist()
+            out = self.feats.new_zeros((self.shape[0], *size, *self.feats.shape[1:]))
+            out[tuple(self.coords.long().unbind(1))] = self.feats
+            return out.movedim(-1, 1)
         if BACKEND == 'torchsparse':
             return self.data.dense()
         elif BACKEND == 'spconv':
@@ -243,7 +252,9 @@ class SparseTensor:
     def replace(self, feats: torch.Tensor, coords: Optional[torch.Tensor] = None) -> 'SparseTensor':
         new_shape = [self.shape[0]]
         new_shape.extend(feats.shape[1:])
-        if BACKEND == 'torchsparse':
+        if BACKEND == 'torch':
+            new_data = SimpleNamespace(features=feats, indices=self.coords if coords is None else coords)
+        elif BACKEND == 'torchsparse':
             new_data = SparseTensorData(
                 feats=feats,
                 coords=self.data.coords if coords is None else coords,
@@ -387,6 +398,11 @@ class SparseTensor:
         if key is None:
             return cur_scale_cache
         return cur_scale_cache.get(key, None)
+
+
+if BACKEND == 'flex_gemm':
+    # Same feature/coordinate contract, without a dependency on spconv storage.
+    from pixal3d.modules.sparse.basic import SparseTensor
 
 
 def sparse_batch_broadcast(input: SparseTensor, other: torch.Tensor) -> torch.Tensor:

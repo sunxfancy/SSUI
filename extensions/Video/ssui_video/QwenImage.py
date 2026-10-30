@@ -30,7 +30,7 @@ def _model_config(model_id: str, pattern: str, low_vram: bool) -> ModelConfig:
         download_resource=os.environ.get(
             "SSUI_QWEN_IMAGE_DOWNLOAD_SOURCE", "ModelScope"
         ),
-        local_model_path=os.environ.get("SSUI_QWEN_IMAGE_MODEL_ROOT", "models"),
+        local_model_path=os.environ.get("SSUI_QWEN_IMAGE_MODEL_ROOT", os.environ.get("SSUI_MODEL_DIR", "models")),
         offload_device="cpu" if low_vram else None,
     )
 

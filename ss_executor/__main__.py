@@ -1,6 +1,9 @@
 import asyncio
 import datetime
 import os
+from backend.native_tools import configure_native_tools
+
+configure_native_tools()
 from fastapi.encoders import jsonable_encoder
 import websockets
 import json
@@ -8,6 +11,7 @@ from typing import Dict, Optional, Union
 import logging
 import sys
 import uuid
+import importlib
 
 project_root = os.path.abspath(os.path.dirname(os.path.dirname(__file__)))
 
@@ -23,7 +27,7 @@ for dir in os.listdir(extensions_root):
 
 
 from ss_executor.loader import SSLoader, search_project_root
-from ssui.base import Audio, Image, Mesh, SkeletonAnimation, Video
+from ssui.base import Audio, Image, Mesh, MotionClip, SkeletonAnimation, Video
 from ss_executor.sandbox import Sandbox
 from ss_executor.model import KillMessage, TaskStatus, Task, ExecutorRegister, RegisterResponse, UpdateStatus, TaskResult, ExeMessage
 import traceback
@@ -47,8 +51,11 @@ def convert_task_param(param):
 
         parts = name.split(".")
         current = __import__(parts[0])
+        prefix = parts[0]
         for part in parts[1:]:
-            current = getattr(current, part)
+            prefix += "." + part
+            # UI descriptors may refer to an SDK submodule the workflow did not import.
+            current = getattr(current, part) if hasattr(current, part) else importlib.import_module(prefix)
         return current(**params)
     if set(param) == {"items"}:
         return [convert_task_param(item) for item in param["items"]]
@@ -82,11 +89,14 @@ def convert_task_return(result, task_script):
         import cv2
         import numpy as np
 
+        # Video nodes may return SSUI Images or raw PIL images.
+        frames = [frame._image if isinstance(frame, Image) else frame for frame in result.frames]
+
         task_project_root = search_project_root(os.path.dirname(task_script))
         output_dir = os.path.join(task_project_root, "output")
         os.makedirs(output_dir, exist_ok=True)
         path = os.path.join(output_dir, f"video_{uuid.uuid4().hex}.mp4")
-        width, height = result.frames[0].size
+        width, height = frames[0].size
         writer = cv2.VideoWriter(
             path,
             cv2.VideoWriter_fourcc(*"mp4v"),
@@ -94,19 +104,31 @@ def convert_task_return(result, task_script):
             (width, height),
         )
         if not writer.isOpened():
-            raise RuntimeError("Unable to create the pose preview video")
-        try:
-            for frame in result.frames:
-                rgb = np.asarray(frame.convert("RGB"))
-                writer.write(cv2.cvtColor(rgb, cv2.COLOR_RGB2BGR))
-        finally:
             writer.release()
+            import imageio.v2 as imageio
+
+            with imageio.get_writer(path, fps=float(result.fps), codec="libx264", macro_block_size=1) as fallback:
+                for frame in frames:
+                    fallback.append_data(np.asarray(frame.convert("RGB")))
+        else:
+            try:
+                for frame in frames:
+                    rgb = np.asarray(frame.convert("RGB"))
+                    writer.write(cv2.cvtColor(rgb, cv2.COLOR_RGB2BGR))
+            finally:
+                writer.release()
         return {
             "type": "video",
             "path": path,
             "fps": result.fps,
             "metadata": result.metadata,
         }
+    if isinstance(result, MotionClip):
+        if not result.path or not os.path.isfile(result.path):
+            raise ValueError("Generated motion has no preview manifest")
+        return {"type": "motion_clip", "path": result.path, "npz_path": result.npz_path,
+                "bvh_path": result.bvh_path, "model": result.model, "fps": result.fps,
+                "frames": result.frames, "duration": result.frames / result.fps}
     if isinstance(result, SkeletonAnimation):
         from ssui_motion import export_bvh
 
@@ -167,6 +189,17 @@ def convert_task_return(result, task_script):
             payload["text"] = result._text
         return payload
     if isinstance(result, Mesh):
+        if result.path:
+            import shutil
+            source = os.path.abspath(result.path)
+            if not os.path.isfile(source) or os.path.splitext(source)[1].lower() != ".glb":
+                raise ValueError("Mesh artifact must be an existing GLB file")
+            task_project_root = search_project_root(os.path.dirname(task_script))
+            output_dir = os.path.join(task_project_root, "output")
+            os.makedirs(output_dir, exist_ok=True)
+            path = os.path.join(output_dir, f"mesh_{uuid.uuid4().hex}.glb")
+            shutil.copyfile(source, path)
+            return {"type": "mesh", "path": path, "format": "glb"}
         if result._model is None:
             raise ValueError("Mesh result contains no model data")
         task_project_root = search_project_root(os.path.dirname(task_script))
@@ -174,7 +207,28 @@ def convert_task_return(result, task_script):
         os.makedirs(output_dir, exist_ok=True)
         path = os.path.join(output_dir, f"mesh_{uuid.uuid4().hex}.glb")
         result._model.export(path)
-        return {"type": "mesh", "path": path, "format": "glb"}
+        artifacts = getattr(result, "artifacts", {})
+        preview_path = getattr(result, "preview_path", None)
+        if not preview_path:
+            import json
+            import numpy as np
+            import trimesh
+            geometries = result._model.dump() if isinstance(result._model, trimesh.Scene) else [result._model]
+            preview = []
+            budget = max(1, 30000 // max(1, len(geometries)))
+            for index, geometry in enumerate(geometries):
+                if not isinstance(geometry, trimesh.Trimesh) or not len(geometry.faces):
+                    continue
+                indices = np.linspace(0, len(geometry.faces) - 1, min(budget, len(geometry.faces)), dtype=int)
+                sample = geometry.submesh([indices], append=True)
+                preview.append({"name": geometry.metadata.get("name", f"part_{index}"),
+                                "vertices": sample.vertices.tolist(), "faces": sample.faces.tolist()})
+            preview_path = path + ".preview.json"
+            with open(preview_path, "w", encoding="utf-8") as stream:
+                json.dump(preview, stream)
+        return {"type": "mesh", "path": path, "format": "glb",
+                "preview_path": preview_path, "artifacts": artifacts,
+                "quality": getattr(result, "quality", None)}
     return result
 
 class Executor:
@@ -184,12 +238,13 @@ class Executor:
         )
         self.current_task: Optional[Task] = None
         self.is_running = True
-        
+
     async def connect(self):
         """连接到调度器服务器"""
         while self.is_running:
             try:
-                async with websockets.connect(self.scheduler_url) as websocket:
+                # Long native GPU/mesh calls may delay this process's event loop.
+                async with websockets.connect(self.scheduler_url, ping_timeout=None) as websocket:
                     # 发送注册消息
                     register_message = ExecutorRegister(
                         host="localhost",  # 这里应该使用实际的host
@@ -210,14 +265,14 @@ class Executor:
                             logger.error(f"注册失败: 收到未知消息类型")
                     except Exception as e:
                         logger.error(f"解析注册响应失败: {e}")
-                    
+
                     # 开始接收任务
                     await self._handle_messages(websocket)
-                    
+
             except Exception as e:
                 logger.error(f"连接错误: {e}")
                 await asyncio.sleep(5)  # 等待5秒后重试
-                
+
     async def _handle_messages(self, websocket):
         """处理来自调度器的消息"""
         while self.is_running:
@@ -239,7 +294,46 @@ class Executor:
             except Exception as e:
                 logger.error(f"处理消息时出错: {e} \n{traceback.format_exc()}")
                 break
-                
+
+    def _execute_task(self, task: Task):
+        # 执行任务
+        loader = SSLoader(use_sandbox=task.use_sandbox)
+        loader.load(task.script)
+        loader.Execute()
+
+        if task.is_prepare:
+            # 执行prepare pass
+            result = loader.GetConfig(task.callable)
+            print("执行器结果：")
+            print(result)
+        else:
+            # 执行execute pass
+            def find_callable(loader: SSLoader, callable: str):
+                for func, param_types, return_type in loader.callables:
+                    if func.__name__ == callable:
+                        return func, param_types, return_type
+                raise ValueError(f"未找到可调用函数: {callable}")
+
+            func, param_types, return_type = find_callable(loader, task.callable)
+            print(task.script, task.callable, task.params, task.details)
+            new_params = {}
+            for name, param in task.params.items():
+                print(name, param)
+                new_params[name] = convert_task_param(param)
+
+            # 注入配置
+            loader.config._update = task.details
+            # 执行
+            result = func(**new_params)
+
+            # 确保返回一个数组
+            if not isinstance(result, tuple):
+                result = (result,)
+
+            result = convert_task_return(result, task.script)
+
+        return result
+
     async def _handle_task(self, websocket, task: Task):
         """处理单个任务"""
         logger.info(f"开始执行任务 {task.task_id}")
@@ -251,42 +345,8 @@ class Executor:
                 status=TaskStatus.RUNNING
             )
             await websocket.send(status_update.model_dump_json())
-            
-            # 执行任务
-            loader = SSLoader(use_sandbox=task.use_sandbox)
-            loader.load(task.script)
-            loader.Execute()
 
-            if task.is_prepare:
-                # 执行prepare pass
-                result = loader.GetConfig(task.callable)
-                print("执行器结果：")
-                print(result)
-            else:
-                # 执行execute pass
-                def find_callable(loader: SSLoader, callable: str):
-                    for func, param_types, return_type in loader.callables:
-                        if func.__name__ == callable:
-                            return func, param_types, return_type
-                    raise ValueError(f"未找到可调用函数: {callable}")
-                
-                func, param_types, return_type = find_callable(loader, task.callable)
-                print(task.script, task.callable, task.params, task.details)
-                new_params = {}
-                for name, param in task.params.items():
-                    print(name, param)
-                    new_params[name] = convert_task_param(param)
-
-                # 注入配置
-                loader.config._update = task.details
-                # 执行
-                result = func(**new_params)
-
-                # 确保返回一个数组
-                if not isinstance(result, tuple):
-                    result = (result,)
-
-                result = convert_task_return(result, task.script)
+            result = await asyncio.to_thread(self._execute_task, task)
 
             # 发送任务完成状态和结果
             task_result = TaskResult(
@@ -295,7 +355,7 @@ class Executor:
                 result=jsonable_encoder(result)
             )
             await websocket.send(task_result.model_dump_json())
-            
+
         except Exception as e:
             # 发送任务失败状态
             task_result = TaskResult(
@@ -304,10 +364,10 @@ class Executor:
                 error=str(e) + '\n' + traceback.format_exc()
             )
             await websocket.send(task_result.model_dump_json())
-            
+
         finally:
             self.current_task = None
-            
+
 def main():
     print("executor_main.py 启动")
     import ssui

@@ -1,0 +1,18 @@
+# Windows ARM64 CPython 3.13 only; install into the documented CUDA runtime.
+# python -m pip install --no-deps --only-binary=:all: -r dependencies/requirements-windows-arm64-cuda-extensions.txt
+--index-url https://sunxfancy.github.io/ssui-python-packages/simple/windows/arm64/cuda/13.4/2.16.0.dev20261026-cu134/sm121/
+--extra-index-url https://sunxfancy.github.io/ssui-python-packages/simple/windows/arm64/cpu/
+--require-hashes
+cumesh==0.0.1+ssui.cuda.import1.b90a603c02779 --hash=sha256:b86a5bd860e2debaa079f4d58b2ee6726c68b7483fbcb188dee4a0ca28073878
+flex-gemm==1.0.0+ssui.cuda.import1.b1af45fd75c96 --hash=sha256:107b2a86cb90a03d968f14b2afac30c63b1da9c5d85fa2265b04eb7ba5f90753
+natten==0.21.0+ssui.cuda.import1.b7c6d8fca9047 --hash=sha256:730039c679071d40295be1737ee4cd923b9370a59732e0af45fd1f8c388ac815
+nvdiffrast==0.4.0+ssui.cuda.import1.b9efd4c52d064 --hash=sha256:2764d341a767651e140dea77dee2841daf8a9147dbea6bc303cb63f69f9ccd65
+o-voxel==0.0.1+ssui.cuda.import1.badfca380df77 --hash=sha256:994b93c285e6046db0e125b27aa4764fdb28d7a49d92d40e4831865b3a4ac041
+opencv-python-headless==4.11.0.86+ssui.cpu.import1.b2b67d25806a7 --hash=sha256:f10cf834939750362eba765ac89698f25d5468505650d6a357f601ceab5c9f1e
+cumm==0.7.11+ssui.cuda.import1.b0c5c6b4c953a --hash=sha256:8ca9bdf5e7c9eeb642ff8572e826765a55922177d5948c35bd0f4101808f3a24
+flash-attn==2.8.3+ssui.cuda.import1.b8cd5de54bbbe --hash=sha256:5e487486c37a1283551dfdf4a7c78970f7984c3e085bcba3db41801915a7ebe3
+pytorch3d==0.7.9+ssui.cuda.import1.b32e1e37f532e --hash=sha256:62306c335315d3c38d297a650bae7c55d9d0d3a9e9506303da56314b2959651c
+spconv==2.3.8+ssui.cuda.import1.b300365375bb3 --hash=sha256:c90c01b8a0e2cec87f7c09d60b13ceb8267e91daa373e5318af253948ff4ca40
+torch-cluster==1.6.3+ssui.cuda.import1.bde775c962837 --hash=sha256:d540550706830be513dfc3cbc4da986d1065ed7a0bbb7ae757767dd076d73848
+torch-scatter==2.1.2+ssui.cuda.import1.be7ce21366866 --hash=sha256:50e10a35eb8b8f776379c405a83b2fc93b1a4be547390cb7c47b870a611ff16e
+freetype-py==2.5.1+ssui.cpu.import1.b0c34a1fbaace --hash=sha256:e5824694c8938d49aaffba7f68bc27cd3dcf6a4876ce34645d3924ed6075a286

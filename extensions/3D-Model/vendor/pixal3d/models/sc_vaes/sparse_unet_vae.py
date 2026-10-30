@@ -1,4 +1,5 @@
 from typing import *
+from ...modules.sparse.linear import apply_rowwise
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -284,7 +285,7 @@ class SparseConvNeXtBlock3d(nn.Module):
     def _forward(self, x: sp.SparseTensor) -> sp.SparseTensor:
         h = self.conv(x)
         h = h.replace(self.norm(h.feats))
-        h = h.replace(self.mlp(h.feats))
+        h = h.replace(apply_rowwise(self.mlp, h.feats))
         return h + x
     
     def forward(self, x: sp.SparseTensor) -> sp.SparseTensor:
@@ -519,4 +520,3 @@ class SparseUnetVaeDecoder(nn.Module):
                     h, sub = block(h)
                 else:
                     h = block(h)
-       

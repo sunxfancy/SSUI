@@ -7,8 +7,16 @@
 # license agreement from NVIDIA CORPORATION & AFFILIATES is strictly prohibited.
 
 import torch
+from ....modules.sparse.topology import unique_rows
 from .tables import *
-from kaolin.utils.testing import check_tensor
+
+def check_tensor(tensor, shape, throw=True):
+    """FlexiCubes only needs Kaolin's shape check, not its native operators."""
+    valid = isinstance(tensor, torch.Tensor) and tensor.ndim == len(shape) and all(
+        expected is None or actual == expected for actual, expected in zip(tensor.shape, shape))
+    if not valid and throw:
+        raise ValueError(f"Expected tensor shape {shape}, got {getattr(tensor, 'shape', None)}")
+    return valid
 
 __all__ = [
     'FlexiCubes'
@@ -186,7 +194,7 @@ class FlexiCubes:
         """
         occ_n = scalar_field < 0
         all_edges = cube_idx[surf_cubes][:, self.cube_edges].reshape(-1, 2)
-        unique_edges, _idx_map, counts = torch.unique(all_edges, dim=0, return_inverse=True, return_counts=True)
+        unique_edges, _idx_map, counts = unique_rows(all_edges)
 
         unique_edges = unique_edges.long()
         mask_edges = occ_n[unique_edges.reshape(-1)].reshape(-1, 2).sum(-1) == 1
@@ -220,8 +228,8 @@ class FlexiCubes:
         """
         edge_dim = edges_weight.dim() - 2
         assert edges_weight.shape[edge_dim] == 2
-        edges_weight = torch.cat([torch.index_select(input=edges_weight, index=torch.tensor(1, device=self.device), dim=edge_dim), -
-                                 torch.index_select(input=edges_weight, index=torch.tensor(0, device=self.device), dim=edge_dim)]
+        edges_weight = torch.cat([torch.index_select(input=edges_weight, index=torch.tensor([1], device=self.device), dim=edge_dim), -
+                                 torch.index_select(input=edges_weight, index=torch.tensor([0], device=self.device), dim=edge_dim)]
                                  , edge_dim)
         denominator = edges_weight.sum(edge_dim)
         ue = (edges_x * edges_weight).sum(edge_dim) / denominator

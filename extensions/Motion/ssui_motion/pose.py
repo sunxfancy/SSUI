@@ -166,7 +166,21 @@ def _read_frames(video: Video):
 
     capture = cv2.VideoCapture(video.path)
     if not capture.isOpened():
-        raise ValueError(f"Cannot open video: {video.path}")
+        capture.release()
+        # The native ARM64 headless cv2 build has no FFmpeg videoio backend.
+        # Use the separately verified native executable bundled in its wheel.
+        import imageio_ffmpeg
+        reader = imageio_ffmpeg.read_frames(str(video.path))
+        try:
+            metadata = next(reader)
+            width, height = metadata['size']
+            fps = float(metadata.get('fps') or video.fps or 30)
+            for index, frame in enumerate(reader):
+                rgb = np.frombuffer(frame, dtype=np.uint8).reshape(height, width, 3)
+                yield index, PILImage.fromarray(rgb), fps
+        finally:
+            reader.close()
+        return
     fps = float(capture.get(cv2.CAP_PROP_FPS) or video.fps or 30)
     index = 0
     try:

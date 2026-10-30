@@ -3,6 +3,7 @@ import { Dialog, Button, Checkbox, FormGroup, InputGroup, Intent, Classes, Progr
 import { IInstallerProvider } from './providers/IInstallerProvider';
 import { TauriInstallerProvider } from './providers/TauriInstallerProvider';
 import { invoke } from '@tauri-apps/api/core';
+import { dependencyProfile } from './providers/runtimeTarget';
 
 interface InstallPageState {
   isOpen: boolean;
@@ -196,13 +197,13 @@ class InstallPage extends React.Component<InstallPageProps, InstallPageState> {
       }
     }
 
-    const fallbackLock = currentPlatform === 'macos' ? 'macosx' : currentPlatform;
-    lockFile = this.provider.getDependencyLockFile
-      ? await this.provider.getDependencyLockFile()
-      : `dependencies/${fallbackLock}.lock`;
-    this.setState(prev => ({ shellOutput: prev.shellOutput + `使用依赖文件 ${lockFile}...\n` }));
-
     try {
+      const target = await this.provider.detectRuntimeTarget();
+      const profile = dependencyProfile(target);
+      lockFile = `dependencies/${profile.dependencyTarget}.lock`;
+      this.setState(prev => ({ shellOutput: prev.shellOutput
+        + `安装目标: ${target.os} / ${target.arch} / ${target.backend}\n`
+        + (profile.experimental ? '此目标为实验支持，语音、视频、3D 和部分图像流程的依赖尚未齐全。\n' : '') }));
       // 1. 检查Python是否已安装
       this.setState(prev => ({
         shellOutput: prev.shellOutput + '正在检查Python是否已安装...\n',

@@ -14,9 +14,15 @@ const connections = [
 ];
 
 export class SkeletonPreview extends IComponent<{}, State> {
+    protected persistedFields: (keyof State)[] = ['index', 'path', 'bvhPath', 'retargetPath', 'retargetRmse'];
+    componentDidMount() {
+        super.componentDidMount();
+        const saved = this.context?.store.values[this.context.key] as State | undefined;
+        if (saved?.path) void this.onUpdate({ path: saved.path, bvh_path: saved.bvhPath, retarget_path: saved.retargetPath, retarget_rmse: saved.retargetRmse }, saved.index);
+    }
     state: State = { index: 0, loading: false };
 
-    override async onUpdate(payload: { path?: string; bvh_path?: string; retarget_path?: string; retarget_rmse?: number }): Promise<void> {
+    override async onUpdate(payload: { path?: string; bvh_path?: string; retarget_path?: string; retarget_rmse?: number }, index = 0): Promise<void> {
         if (!payload?.path) {
             this.setState({ error: '识别结果没有数据文件。' });
             return;
@@ -26,7 +32,7 @@ export class SkeletonPreview extends IComponent<{}, State> {
             const response = await fetch('/file?path=' + encodeURIComponent(payload.path));
             if (!response.ok) throw new Error(`读取失败 (${response.status})`);
             const data = await response.json() as AnimationData;
-            this.setState({ data, index: 0, loading: false });
+            this.setState({ data, index: Math.min(index, Math.max(0, data.frames.length - 1)), loading: false });
         } catch (error) {
             this.setState({ loading: false, error: error instanceof Error ? error.message : '无法读取骨骼数据。' });
         }

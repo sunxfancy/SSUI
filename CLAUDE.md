@@ -3,6 +3,7 @@
 修改代码后的**验证、编译、启动**，务必先查看对应目录的 `package.json` 中的 `scripts`，使用项目已定义的命令，不要自行猜测（例如不要直接 `npx tsc`，应使用子项目内的 `yarn build`）。
 
 更详细的构建说明见：`doc/BuildSystem.md`、`doc/Package.md`、`Readme.zh.md`。
+各目录入口和职责见 [模块导航](doc/Modules.md)。
 
 ---
 
@@ -18,12 +19,13 @@
 | `ssui-vscode/` | ssui-vscode | VS Code 插件 |
 | `extension_builder/` | extension_builder | 扩展打包 CLI（`ssext`） |
 | `extensions/Image/` | ssui-image | Image/Canvas 扩展前端 |
+| `extensions/example/` | ssui-example-plugin | 示例扩展插件 |
+| `packages/canvas-engine/` | @ssui/canvas-engine | Rust/Wasm Canvas Engine |
 
 不在 workspace 内但有关联的子项目：
 
 | 目录 | 说明 |
 |------|------|
-| `extensions/example/` | 示例扩展插件（`yarn build:example`） |
 | `extensions/Video/`、`extensions/Audio/` | 无独立 package.json，通过 `ssext package` 打包 |
 | `backend/`、`server/`、`ss_executor/` | Python 后端，通过 `dependencies/venv.cjs` 调用 |
 
@@ -42,7 +44,7 @@
 | `extensions/example/` | `yarn build:example`（根目录） | `cd extensions/example && yarn build`（`tsc`） |
 | `extension_builder/` | `yarn build:extension_builder`（根目录） | `cd extension_builder && yarn build`（`tsc`） |
 | `ssui-vscode/` | `yarn build:vscode`（根目录） | `cd ssui-vscode && yarn compile`（webpack） |
-| 前端整体 | `yarn build:frontend`（根目录） | `build:components` + `build:functional_ui` |
+| 前端整体 | `yarn build:frontend`（根目录） | `build:components` + `build:functional_ui` + `build:canvas` |
 | 完整桌面安装包 | `yarn package`（根目录） | `build:frontend` → `ext:package` → `build:desktop` |
 | Python 测试 | `yarn test`（根目录） | `python tests/run_tests.py`（经 venv.cjs） |
 
@@ -57,7 +59,7 @@
 | 命令 | 说明 |
 |------|------|
 | `yarn dev:desktop` | **最常用**。先 `build:frontend`，再 `desktop` 下 `tauri dev`。若 7422 未被占用，会自动启动 server 和 executor |
-| `yarn dev:desktop_sb` | 启动 desktop Storybook（端口 6006），独立开发 React 组件 |
+| `yarn storybook` / `yarn dev:desktop_sb` | 启动全仓库 Storybook（端口 6006），独立开发 UI 与插件 |
 | `yarn dev:server` | 先 `build:frontend`，再启动 FastAPI（`python -m server --dev`，端口 **7422**） |
 | `yarn dev:server:no_build` | 同上但不重新构建前端 |
 | `yarn dev:executor` | 启动 SSExecutor（`python -m ss_executor`） |
@@ -65,13 +67,14 @@
 | `yarn dev:canvas` | Image 扩展 Vite 开发服（`extensions/Image`） |
 | `yarn dev:vscode` | VS Code 插件 webpack watch |
 
-> `doc/BuildSystem.md` 提到 `yarn dev:components`，但**根 package.json 中不存在此脚本**。组件库无 `dev` 脚本，开发时修改 `ssui_components` 后需 `yarn build:components`，或依赖引用方的 dev 服务器热更新。
+> 组件库无 `dev` 脚本，开发时修改 `ssui_components` 后需 `yarn build:components`，或依赖引用方的 dev 服务器热更新。
 
 ### 构建（build）
 
 | 命令 | 说明 |
 |------|------|
-| `yarn build:frontend` | 构建 components + functional_ui |
+| `yarn build:frontend` | 构建 components + functional_ui + Image Canvas |
+| `yarn build:canvas` / `yarn build:canvas-engine` | 构建 Image Canvas 前端 / Rust-Wasm 引擎 |
 | `yarn build:components` | 构建 `frontend/ssui_components` |
 | `yarn build:functional_ui` | 构建 `frontend/functional_ui` |
 | `yarn build:desktop_ui` | 仅构建 desktop 前端（`cd desktop && yarn build`） |
@@ -107,6 +110,18 @@
 - `extensions/Image`：`yarn test`（Jest）
 - `ssui-vscode`：`yarn test`（vscode-test，会先 lint + compile）
 
+新增统一前端与 Tauri 测试入口（根目录）：
+
+- `yarn test:frontend`：组件 Jest + Functional UI 回归 + desktop Provider Vitest。
+- `yarn test:canvas-engine`：Canvas Engine 的 Cargo 测试。
+- `yarn test:contract` / `yarn api:check`：模拟 API 契约测试 / OpenAPI 类型同步检查。
+- `yarn test:ui` / `yarn test:desktop-ui`：Functional UI / desktop IPC 模拟浏览器测试。
+- `yarn test:rust`：真实本地命令、子进程、下载及解包测试；硬件/公网测试默认忽略。
+- `yarn test:native:build && yarn test:native`：独立 Tauri WebView 的真实 IPC 端到端测试。
+- Linux 无头环境使用 `xvfb-run -a yarn test:native`；Python fixture 无模型依赖。
+- `yarn test:rust:external`：显式运行硬件和外部大文件下载测试。
+- 详细覆盖范围、证据目录及环境要求见 `doc/Testing.md`。测试驱动只在 `native-tests` feature 下启用，正式发行不要启用。
+
 ### 依赖与环境
 
 | 命令 | 说明 |
@@ -138,14 +153,14 @@ Python 统一入口：`node dependencies/venv.cjs <命令> [参数]`，在 `.ven
 | `yarn build` | **`tsc && vite build`**（验证 desktop 前端改动的标准命令） |
 | `yarn preview` | 预览 Vite 构建产物 |
 | `yarn tauri` | Tauri CLI 透传（如 `yarn tauri dev`、`yarn tauri build`） |
-| `yarn storybook` | Storybook 开发服（`-p 6006`） |
+| `yarn storybook` | 转发到根目录 Storybook 开发服（端口 6006） |
 | `yarn copy-resources` | 复制 lock 文件、打包 backend/server 等到 `src-tauri/resources` |
 
 `predev` / `prebuild` 会自动执行 `copy-resources`。
 
 根目录等价：`yarn dev:desktop_sb` = desktop storybook；`yarn build:desktop_ui` = desktop build。
 
-> `desktop/README.md` 写到根目录 `yarn dev:desktop_ui`，但根 package.json **无此脚本**。仅开发 UI 时在 `desktop/` 下执行 `yarn dev`；构建 UI 用 `yarn build:desktop_ui`。
+> 仅开发 UI 时在 `desktop/` 下执行 `yarn dev`；构建 UI 用根目录的 `yarn build:desktop_ui`。
 
 ### `frontend/ssui_components/`
 
@@ -225,12 +240,17 @@ yarn dev:functional_ui
 
 示例 URL：`http://localhost:7420/?path=<example_path>/basic/workflow-sd1.py`
 
-### 4. 独立开发 desktop React 组件（Storybook）
+### 4. 独立开发 UI 与插件（Storybook）
 
 ```bash
 yarn dev:desktop_sb
 # 或 cd desktop && yarn storybook
 ```
+
+Storybook 配置位于根目录 `.storybook/`，统一收录 desktop、共享组件、Functional UI 与扩展的 `*.stories.tsx`，
+也可在根目录执行 `yarn storybook`。无需启动后端或预构建组件。
+离线 mock、场景编写、插件接入与验证流程见 [doc/Storybook.md](doc/Storybook.md)。
+静态构建用 `yarn build:storybook`，mock 测试用 `yarn test:storybook`。
 
 ### 5. 开发 Image Canvas 扩展
 
@@ -263,7 +283,7 @@ yarn dev:desktop
 |------|------|
 | 7422 | FastAPI 应用服务器 / API 文档 `/docs` |
 | 7420 | functional_ui Vite 开发服 |
-| 6006 | desktop Storybook |
+| 6006 | 全仓库 Storybook |
 
 ---
 
@@ -285,7 +305,7 @@ git config --local core.hooksPath .githooks/
 - 候选版本必须事先在 PR 中更新 Cargo.toml、Cargo.lock 和 desktop/package.json。
 - `start` 校验 tag，不移动它；`finish` 只开 promote/rebase PR，不发布正式版。
 - promote PR 保留原提交合入 main 后，从 main 运行 `release-promote.yml` 晋升同一批产物。
-- 六平台使用独立运行时配置；Windows ARM64 缺失依赖由原生源码编译工作流提供，失败不可跳过。
+- 六平台使用独立运行时配置；Windows ARM64 使用专用包仓库的原生源码编译产物，发布前必须通过架构审计及运行探针。
 - `main-gate.yml`、`sync-docs.yml`、`cleanup-branches.yml` 保留原职责。
 
 ## AI 助手操作备忘
@@ -294,4 +314,6 @@ git config --local core.hooksPath .githooks/
 2. **验证 desktop 故事/组件**：`cd desktop && yarn build` 或 `yarn dev:desktop_sb` 手动查看。
 3. **修改了 ssui_components**：先 `yarn build:components`，或根目录 `yarn build:frontend`，再启动依赖它的 dev 服务。
 4. **完整发布前**：`SSUI_RUN_MODEL_TESTS=1 yarn test`，再按 `doc/Package.md` 执行 `yarn package`。
-5. **文档与代码不一致时以 `package.json` 为准**（已知：`dev:components`、`dev:desktop_ui` 在文档/README 中出现但根 scripts 无定义）。
+5. **文档与代码不一致时以 `package.json` 为准**；根目录没有 `dev:components` 或 `dev:desktop_ui` 脚本。
+
+多 worktree 的模型、缓存和 shared/独立 venv 配置见 [doc/DevelopmentEnvironments.md](doc/DevelopmentEnvironments.md)。
