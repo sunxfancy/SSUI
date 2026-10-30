@@ -39,3 +39,9 @@ test('Intel requires compiled wheels; other targets do not inherit them', () => 
   assert.throws(() => wheelhouseFor('macosx-x86_64', {}), /SSUI_NATIVE_WHEELHOUSE/);
   assert.equal(wheelhouseFor('windows-arm64-cpu', {}), null);
 });
+
+test('rejects unverified wheels that a package resolver could otherwise select', t => {
+  const { root } = fixture(t);
+  fs.writeFileSync(path.join(root, 'unexpected-1.0-py3-none-any.whl'), 'unverified');
+  assert.throws(() => verifyWheelhouse(root), /Unlisted/);
+});

@@ -17,6 +17,10 @@ function verifyWheelhouse(directory) {
   if (manifest.wheels.length !== 3 || new Set(manifest.wheels.map(w => w.name)).size !== 3) {
     throw new Error('Expected exactly three native PyTorch wheels');
   }
+  const listed = new Set(manifest.wheels.map(w => w.filename));
+  if (fs.readdirSync(root).some(name => name.endsWith('.whl') && !listed.has(name))) {
+    throw new Error('Unlisted wheel in native wheel directory');
+  }
   for (const wheel of manifest.wheels) {
     const pin = expected[wheel.name];
     if (!pin || wheel.version !== pin[0] || wheel.source !== pin[1]) throw new Error('Native wheel source/version mismatch');
