@@ -1,6 +1,6 @@
 # Source-built packages are published by sunxfancy/ssui-python-packages and pinned
 # in dependencies.yaml. Validate that exact set before a desktop release.
-name: Windows ARM64 native dependencies
+name: Native desktop dependencies
 on:
   workflow_call:
     inputs:
@@ -59,3 +59,42 @@ jobs:
           path: reports/
           if-no-files-found: warn
           retention-days: 30
+
+  additional-runtimes:
+    name: Verify ${{ matrix.id }} dependencies
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-24.04-arm
+            id: linux-arm64
+          - os: macos-15-intel
+            id: macos-x86_64
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: ${{ inputs.ref || github.ref }}
+      - name: Check native runtime prerequisites
+        run: python3 scripts/release_preflight.py --target ${{ matrix.id }}
+      - name: Select runtime
+        id: runtime
+        run: node dependencies/runtime.cjs --github-output
+      - name: Install pinned standalone Python
+        timeout-minutes: 15
+        run: node dependencies/bootstrap.cjs --github-env
+      - name: Install Linux native build dependencies
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libgl1-mesa-dev libx11-dev
+      - name: Install the full native dependency lock
+        timeout-minutes: 25
+        env:
+          UV_HTTP_TIMEOUT: 600
+        run: |
+          uv pip install --index-strategy unsafe-best-match --build-constraint dependencies/build-constraints.txt -r dependencies/${{ steps.runtime.outputs.lock }}
+          uv pip check
+      - name: Verify Python and native inference kernels
+        run: python scripts/check_runtime.py --target ${{ matrix.id }}
