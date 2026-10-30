@@ -1,0 +1,90 @@
+diff --git a/vector_quantize_pytorch/lookup_free_quantization.py b/vector_quantize_pytorch/lookup_free_quantization.py
+index b189792..1918660 100644
+--- a/vector_quantize_pytorch/lookup_free_quantization.py
++++ b/vector_quantize_pytorch/lookup_free_quantization.py
+@@ -12,7 +12,10 @@ from collections import namedtuple
+ from contextlib import nullcontext
+ 
+ import torch.distributed as dist
+-from torch.distributed import nn as dist_nn
++try:
++    from torch.distributed import nn as dist_nn
++except ImportError:
++    dist_nn = None  # Windows ROCm PyTorch omits distributed autograd.
+ 
+ import torch
+ from torch import nn, einsum
+@@ -32,7 +35,7 @@ LossBreakdown = namedtuple('LossBreakdown', ['per_sample_entropy', 'batch_entrop
+ 
+ @cache
+ def is_distributed():
+-    return dist.is_initialized() and dist.get_world_size() > 1
++    return dist.is_available() and dist.is_initialized() and dist.get_world_size() > 1
+ 
+ def maybe_distributed_mean(t):
+     if not is_distributed():
+diff --git a/vector_quantize_pytorch/residual_fsq.py b/vector_quantize_pytorch/residual_fsq.py
+index 54891e8..4f0472e 100644
+--- a/vector_quantize_pytorch/residual_fsq.py
++++ b/vector_quantize_pytorch/residual_fsq.py
+@@ -34,7 +34,7 @@ def round_up_multiple(num, mult):
+ # distributed helpers
+ 
+ def is_distributed():
+-    return dist.is_initialized() and dist.get_world_size() > 1
++    return dist.is_available() and dist.is_initialized() and dist.get_world_size() > 1
+ 
+ def get_maybe_sync_seed(device, max_size = 10_000):
+     rand_int = torch.randint(0, max_size, (), device = device)
+diff --git a/vector_quantize_pytorch/residual_lfq.py b/vector_quantize_pytorch/residual_lfq.py
+index 04d7dbb..777dbc5 100644
+--- a/vector_quantize_pytorch/residual_lfq.py
++++ b/vector_quantize_pytorch/residual_lfq.py
+@@ -29,7 +29,7 @@ def round_up_multiple(num, mult):
+ # distributed helpers
+ 
+ def is_distributed():
+-    return dist.is_initialized() and dist.get_world_size() > 1
++    return dist.is_available() and dist.is_initialized() and dist.get_world_size() > 1
+ 
+ def get_maybe_sync_seed(device, max_size = 10_000):
+     rand_int = torch.randint(0, max_size, (), device = device)
+diff --git a/vector_quantize_pytorch/residual_sim_vq.py b/vector_quantize_pytorch/residual_sim_vq.py
+index 08caa6c..87d4217 100644
+--- a/vector_quantize_pytorch/residual_sim_vq.py
++++ b/vector_quantize_pytorch/residual_sim_vq.py
+@@ -33,7 +33,7 @@ def round_up_multiple(num, mult):
+ # distributed helpers
+ 
+ def is_distributed():
+-    return dist.is_initialized() and dist.get_world_size() > 1
++    return dist.is_available() and dist.is_initialized() and dist.get_world_size() > 1
+ 
+ def get_maybe_sync_seed(device, max_size = 10_000):
+     rand_int = torch.randint(0, max_size, (), device = device)
+diff --git a/vector_quantize_pytorch/residual_vq.py b/vector_quantize_pytorch/residual_vq.py
+index 7ee97eb..9282d5a 100644
+--- a/vector_quantize_pytorch/residual_vq.py
++++ b/vector_quantize_pytorch/residual_vq.py
+@@ -91,7 +91,7 @@ def batch_select(t, indices, pattern = None):
+ # distributed helpers
+ 
+ def is_distributed():
+-    return dist.is_initialized() and dist.get_world_size() > 1
++    return dist.is_available() and dist.is_initialized() and dist.get_world_size() > 1
+ 
+ def get_maybe_sync_seed(device, max_size = 10_000):
+     rand_int = torch.randint(0, max_size, (), device = device)
+diff --git a/vector_quantize_pytorch/vector_quantize_pytorch.py b/vector_quantize_pytorch/vector_quantize_pytorch.py
+index 15ed416..86cfcec 100644
+--- a/vector_quantize_pytorch/vector_quantize_pytorch.py
++++ b/vector_quantize_pytorch/vector_quantize_pytorch.py
+@@ -335,7 +335,7 @@ def directional_reparam(src, tgt, noise_variance = 5e-3):
+ 
+ @cache
+ def is_distributed():
+-    return distributed.is_initialized() and distributed.get_world_size() > 1
++    return distributed.is_available() and distributed.is_initialized() and distributed.get_world_size() > 1
+ 
+ # regularization losses
+ 

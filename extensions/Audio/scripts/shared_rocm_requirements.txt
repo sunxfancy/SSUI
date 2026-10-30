@@ -1,0 +1,37 @@
+# Optional audio inference packages for SSUI's shared Windows ROCm Python.
+# Install with --no-deps so the existing ROCm torch and Transformers stay pinned.
+loguru==0.7.3
+xxhash==4.0.2
+win32-setctime==1.2.1
+einx==0.4.3
+frozendict==2.4.7
+torch-einops-utils==0.2.0
+muq==0.1.0
+phonemizer==3.3.0
+torchdiffeq==0.2.5
+x-transformers==2.1.2
+pykakasi==2.3.0
+jaconv==0.5.0
+jieba==0.42.1
+cn2an==0.5.23
+pypinyin==0.53.0
+Unidecode==1.3.8
+inflect==7.5.0
+py3langid==0.2.2
+x-clip==0.14.4
+nnAudio==0.3.4
+beartype==0.23.1
+mutagen==1.47.0
+pandas==2.2.3
+pytz==2026.6
+ema-pytorch==0.7.7
+segments==2.4.0
+dlinfo==2.0.0
+csvw==4.1.1
+isodate==0.7.2
+rfc3986==1.5.0
+uritemplate==4.2.0
+language-tags==1.3.2
+rdflib==7.6.0
+proces==0.1.7
+typeguard==4.6.0
