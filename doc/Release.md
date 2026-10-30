@@ -82,7 +82,9 @@ pynini 等原生 wheel，不使用 x64 后端转译。编译配方和产物由
 `windows-11-arm` 全新环境安装完整锁文件，执行依赖一致性检查、Torch /
 torchvision 算子、全部已安装 DLL/PYD 的 PE 架构检查、24 项音频/视频/3D/
 图像运行探针和 wheel 可用性审计。报告保留为 `windows-arm64-verification`
-artifact。任一缺包、架构错误或探针失败均阻止发布。
+artifact。sounddevice wheel 附带但不会加载的四个 x86/x64 PortAudio DLL
+单独记录，另外验证其实际加载的 PortAudio 为 ARM64。任一缺包、实际运行库
+架构错误或探针失败均阻止发布。
 
 Release 新增 `check_runtime.py`：在目标 runner 验证 Python 版本、后端架构，
 实际执行 Torch CPU 运算及 torchvision NMS，并导入核心推理库。

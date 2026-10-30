@@ -50,7 +50,7 @@ jobs:
         run: python dependencies/probe_arm64.py --download-assets --assets-root "${{ runner.temp }}/probe-assets" --output reports/runtime-probe.json
       - name: Audit wheel availability and tags
         timeout-minutes: 15
-        run: python dependencies/audit_wheels.py dependencies/windows-arm64-cpu.lock --python-version ${{ steps.runtime.outputs.python }} --output reports/wheel-audit.json
+        run: python dependencies/audit_wheels.py dependencies/windows-arm64-cpu.lock --python-version ${{ steps.runtime.outputs.python }} --strict --output reports/wheel-audit.json
       - name: Preserve verification reports
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
