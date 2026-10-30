@@ -13,6 +13,7 @@ on:
       - 'scripts/build_macos_intel_wheels.py'
 permissions:
   contents: read
+  actions: read
 concurrency:
   group: macos-intel-wheels-${{ github.ref }}
   cancel-in-progress: false
@@ -24,18 +25,29 @@ jobs:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
         with:
           ref: ${{ inputs.ref || github.ref }}
+      - name: Look for a verified build of this exact recipe
+        id: reuse
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: python3 scripts/find_native_wheels.py
       - name: Install pinned standalone Python
+        if: steps.reuse.outputs.reused != 'true'
         run: node dependencies/bootstrap.cjs --github-env
       - name: Install native build prerequisites
+        if: steps.reuse.outputs.reused != 'true'
         run: |
           python -m pip install setuptools==80.9.0 wheel==0.45.1 cmake==3.31.6 ninja==1.11.1.4 numpy==1.26.4 pyyaml==6.0.2 typing-extensions==4.15.0 sympy==1.14.0 networkx==3.5 jinja2==3.1.6 fsspec==2025.9.0 filelock==3.19.1 pillow==11.3.0 delocate==0.13.0
           brew install libjpeg-turbo libpng
       - name: Build pinned native CPU wheels
+        if: steps.reuse.outputs.reused != 'true'
         run: python scripts/build_macos_intel_wheels.py
+      - name: Verify source wheel manifest
+        run: node dependencies/native_wheels.cjs native-wheels
       - name: Preserve native wheels
+        if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
           name: macos-intel-wheels
           path: native-wheels/
-          if-no-files-found: error
+          if-no-files-found: warn
           retention-days: 30

@@ -42,13 +42,13 @@ def main():
         run('git', 'submodule', 'update', '--init', '--recursive', '--depth=1', cwd=source)
         build_env = dict(env, BUILD_VERSION=version+'+ssui.cpu',
                          PYTORCH_BUILD_VERSION=version+'+ssui.cpu', PYTORCH_BUILD_NUMBER='1')
-        run(sys.executable, '-m', 'pip', 'wheel', '--no-deps', '--no-build-isolation',
+        run(sys.executable, '-m', 'pip', 'wheel', '--verbose', '--no-deps', '--no-build-isolation',
             '.', '--wheel-dir', str(output), cwd=source, env=build_env)
         wheel = next(output.glob(name+'-*.whl'))
         if name == 'torchvision':
             # Vendor image-codec dylibs instead of depending on the runner's Homebrew.
             repaired = root / '.build' / 'repaired'
-            run('delocate-wheel', '--require-archs', 'x86_64', '-w', str(repaired), str(wheel))
+            run('delocate-wheel', '--require-archs', 'x86_64', '--exclude', '/torch/lib/', '-w', str(repaired), str(wheel))
             wheel.unlink()
             shutil.move(str(next(repaired.glob('*.whl'))), output)
             wheel = next(output.glob(name+'-*.whl'))
