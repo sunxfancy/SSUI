@@ -1,7 +1,7 @@
 {
   "name": "ssui",
   "private": true,
-  "author": "西风逍遥游 <sunxfancy@gmail.com>",
+  "author": "\u897f\u98ce\u900d\u9065\u6e38 <sunxfancy@gmail.com>",
   "license": "GPL-3.0-or-later",
   "workspaces": [
     "desktop",
@@ -51,7 +51,8 @@
     "test:components": "yarn workspace ssui_components jest test/ComponentsManager.test.ts",
     "postinstall": "node dependencies/install.cjs",
     "docker": "docker build -t ssui-docker .",
-    "docker-run": "docker run -it --gpus all -p 7422:7422 ssui-docker"
+    "docker-run": "docker run -it --gpus all -p 7422:7422 ssui-docker",
+    "test:runtime": "node --test dependencies/tests/runtime.test.cjs"
   },
   "devDependencies": {
     "concurrently": "^9.1.2",

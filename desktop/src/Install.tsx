@@ -196,18 +196,11 @@ class InstallPage extends React.Component<InstallPageProps, InstallPageState> {
       }
     }
 
-    // 根据平台选择正确的lock文件
-    if (currentPlatform === 'macos') {
-      lockFile = 'dependencies/macosx.lock';
-      this.setState({ shellOutput: this.state.shellOutput + '检测到macOS系统，使用macosx.lock...\n' });
-    } else if (currentPlatform === 'windows') {
-      lockFile = 'dependencies/windows.lock';
-      this.setState({ shellOutput: this.state.shellOutput + '检测到Windows系统，使用windows.lock...\n' });
-    } else {
-      // 假设Linux或其他系统使用macosx.lock
-      lockFile = 'dependencies/macosx.lock';
-      this.setState({ shellOutput: this.state.shellOutput + `检测到${currentPlatform}系统，使用macosx.lock作为默认选择...\n` });
-    }
+    const fallbackLock = currentPlatform === 'macos' ? 'macosx' : currentPlatform;
+    lockFile = this.provider.getDependencyLockFile
+      ? await this.provider.getDependencyLockFile()
+      : `dependencies/${fallbackLock}.lock`;
+    this.setState(prev => ({ shellOutput: prev.shellOutput + `使用依赖文件 ${lockFile}...\n` }));
 
     try {
       // 1. 检查Python是否已安装

@@ -3,6 +3,7 @@ const fs = require('fs');
 const path = require('path');
 const os = require('os');
 const { getAllTargets, getCurrentPlatformTargets } = require('./platform.cjs');
+const runtimeConfig = require('./runtime.json');
 
 // 检查命令行参数
 function parseArgs() {
@@ -58,7 +59,9 @@ function main() {
       
       // 构建uv命令，根据参数决定是否添加--no-upgrade选项
       const venvPath = os.platform() === 'win32' ? '.venv\\Scripts\\uv.exe' : '.venv/bin/uv';
+      const runtime = Object.values(runtimeConfig.targets).find(t => t.lockFile === `${targetName}.lock`);
       let uvCommand = `${venvPath} pip compile ${requirementsFile} -o ${lockFile}`;
+      if (runtime) uvCommand += ` --python-version ${runtimeConfig.pythonVersion} --python-platform ${runtime.pythonTarget}`;
       if (args.noUpgrade) {
         console.log('使用不升级模式: 已存在的包将不会升级到最新版本');
         uvCommand += ' --no-upgrade';

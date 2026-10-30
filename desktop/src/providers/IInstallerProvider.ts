@@ -16,6 +16,7 @@ export interface IInstallerProvider {
   
   // 平台检测
   detectPlatform(): Promise<string>;
+  getDependencyLockFile?(): Promise<string>;
   
   // 检测Python是否已安装
   checkPythonInstalled(installDir: string): Promise<CommandInfo>;

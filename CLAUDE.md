@@ -277,45 +277,16 @@ git config --local core.hooksPath .githooks/
 
 ---
 
-## CI / 质量门禁
+## CI / 质量门禁与发布
 
-仓库采用与 EVEngine 项目一致的质量控制体系（`.github/workflows/` + `scripts/release.py`）：
+完整操作流程与已知阻塞见 [doc/Release.md](doc/Release.md)。
 
-| 工作流 | 触发 | 作用 |
-|--------|------|------|
-| `ci.yml` | push/PR 到 `dev`、每周、手动、可被 release 复用 | 先跑版本一致性检查与 release.py 单测，再在 Windows / macOS / Linux 三平台构建并运行测试 |
-| `main-gate.yml` | PR 到 `main` | 只放行 docs-only 或 `promote/vX.Y.Z` 发布分支，其余一律拒绝 |
-| `sync-docs.yml` | `main` 上文档变更 | 通过 PR 把 `main` 的文档变更同步回 `dev`（`main` 受保护，禁止 `dev` 合入 `main`） |
-| `cleanup-branches.yml` | 每周 / 手动 | 删除已合入的 `vX.Y.Z` / `promote/*` / `rebase/*` 发布分支（不动 tag） |
-| `release.yml` | GitHub Pre-release 事件 / 手动 | `start` 写官方版本并切 `vX.Y.Z` 分支 → 复用 `ci.yml` 跑严格测试 → 打包 Windows / macOS 安装包 → 冒烟验证可执行 → 上传产物 → `finish` 转为正式发布并开 `promote/vX.Y.Z`（进 main）与 `rebase/vX.Y.Z`（回 dev）PR |
-
-质量门禁脚本 `scripts/release.py`（由 CI 的 qc job 运行单测）：
-
-| 命令 | 说明 |
-|------|------|
-| `python3 scripts/release.py check-versions` | 以 `desktop/src-tauri/Cargo.toml` 为版本源，required touchpoint（`desktop/package.json`）必须一致，tracked 包仅告警 |
-| `python3 scripts/release.py start --tag 0.1.2` | 把 pre-release tag 变成官方版本提交：改写版本号、移动 tag、推送 `v0.1.2` 分支 |
-| `python3 scripts/release.py finish --tag 0.1.2` | `gh release edit --prerelease=false` 正式发布，并打开 promote / rebase PR |
-| `python3 scripts/release.py check-main-pr` | main-gate 判定：docs-only 或 `promote/vX.Y.Z` 才允许进 `main` |
-| `python3 scripts/release.py sync-docs` | 把 `main` 的文档变更通过 PR 同步到 `dev` |
-| `python3 scripts/release.py cleanup-branches` | 清理已合并的发布分支 |
-
-Actions 均固定 commit SHA（由 dependabot 每周更新）。文档白名单：`Readme.md` / `Readme.zh.md` / `README.md` / `doc/**`。
-
-## 发布流程
-
-  0. **仓库前置条件**：Settings → Actions → General → Workflow permissions 需勾选
-     “Allow GitHub Actions to create and approve pull requests”，否则 `finish`
-     无法自动创建 promote / rebase PR（release.py 会降级为打印手动创建命令）。
-  1. 确保 `SSUI_RUN_MODEL_TESTS=1 yarn test` 通过（本地验证）。
-2. 在 GitHub 上从 `dev` 创建 **Pre-release**，tag 形如 `0.1.2`（`v` 前缀可选）。
-3. `release.yml` 自动执行：`start` → 严格测试 → Windows/macOS 打包 → 冒烟测试（直接运行 release 二进制 + 静默安装 NSIS / 挂载 DMG 验证可执行）→ 上传安装包 → `finish` 把 release 标记为正式。
-4. 合并 `promote/v0.1.2` PR 到 `main`（main-gate 放行）；合并 `rebase/v0.1.2` PR 到 `dev` 使 dev 包含发布改动。
-5. 每周定时 `cleanup-branches.yml` 自动清理已合并的发布分支。
-
-冒烟测试脚本：`node scripts/smoke_app.cjs <可执行文件> [秒数]`。
-
----
+- `ci.yml` 负责开发 CI；`release.yml` 固定已准备好的 tag/SHA，验证六个原生桌面目标。
+- 候选版本必须事先在 PR 中更新 Cargo.toml、Cargo.lock 和 desktop/package.json。
+- `start` 校验 tag，不移动它；`finish` 只开 promote/rebase PR，不发布正式版。
+- promote PR 保留原提交合入 main 后，从 main 运行 `release-promote.yml` 晋升同一批产物。
+- Linux ARM64 独立依赖与六平台 Python 已适配；Windows ARM64 扩展依赖方案待确定，门禁不会跳过。
+- `main-gate.yml`、`sync-docs.yml`、`cleanup-branches.yml` 保留原职责。
 
 ## AI 助手操作备忘
 

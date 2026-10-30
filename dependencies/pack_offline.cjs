@@ -35,17 +35,19 @@ const DEPS_DIR = __dirname;
 const isWin = process.platform === 'win32';
 
 // python-build-standalone 版本（与 install.cmd / install.sh / 后端 download_python 保持一致）
-const PYTHON_VERSION = '3.12.8';
-const PYTHON_RELEASE = '20241219';
+const runtimeConfig = require('./runtime.json');
+const PYTHON_VERSION = runtimeConfig.pythonVersion;
+const PYTHON_RELEASE = runtimeConfig.pythonRelease;
 
 // 各打包目标对应的 Python 架构（用于下载对应的 standalone 解释器）
-const TARGET_ARCH = {
-  'windows': 'x86_64-pc-windows-msvc',
-  'windows-amdgpu': 'x86_64-pc-windows-msvc',
-  'linux': 'x86_64-unknown-linux-gnu',
-  'linux-amdgpu': 'x86_64-unknown-linux-gnu',
-  'macosx': 'aarch64-apple-darwin',
-};
+const TARGET_ARCH = {};
+for (const target of Object.values(runtimeConfig.targets)) {
+  const name = target.lockFile.replace(/\.lock$/, '');
+  // A legacy lock reused by an unconfigured target must not override its native owner.
+  TARGET_ARCH[name] ??= target.pythonTarget;
+}
+TARGET_ARCH['windows-amdgpu'] = TARGET_ARCH.windows;
+TARGET_ARCH['linux-amdgpu'] = TARGET_ARCH.linux;
 
 function parseArgs(argv) {
   const opts = {

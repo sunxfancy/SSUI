@@ -58,6 +58,9 @@ jobs:
         timeout-minutes: 5
         run: python3 -m unittest discover -s scripts/tests -p "test_*.py" -v
 
+      - name: Test shared runtime selection
+        run: node --test dependencies/tests/runtime.test.cjs
+
       - name: Check release version consistency
         timeout-minutes: 5
         run: python3 scripts/release.py check-versions
@@ -93,14 +96,18 @@ jobs:
         timeout-minutes: 20
         run: yarn install --frozen-lockfile
 
+      - name: Select shared runtime
+        id: runtime
+        run: node dependencies/runtime.cjs --github-output
+
       - name: Setup Python
         id: setup-uv
         timeout-minutes: 5
         uses: astral-sh/setup-uv@d0d8abe699bfb85fec6de9f7adb5ae17292296ff # v6
         with:
-          version: "0.6.11"
+          version: ${{ steps.runtime.outputs.uv }}
           enable-cache: false
-          python-version: 3.12.8
+          python-version: ${{ steps.runtime.outputs.python }}
           activate-environment: true
 
       - name: Install packaging
@@ -109,7 +116,7 @@ jobs:
 
       - name: Install requirements
         timeout-minutes: 20
-        run: uv pip install -r dependencies/${{ matrix.platform }}.lock --index-strategy unsafe-best-match --build-constraint dependencies/build-constraints.txt
+        run: uv pip install -r dependencies/${{ steps.runtime.outputs.lock }} --index-strategy unsafe-best-match --build-constraint dependencies/build-constraints.txt
 
       - name: Install system dependencies
         if: ${{ matrix.platform == 'linux' }}

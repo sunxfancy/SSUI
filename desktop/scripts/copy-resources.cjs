@@ -144,22 +144,11 @@ async function main() {
   // 确保目标目录存在
   ensureDirectoryExists(targetDir);
   
-  // 复制Windows lock文件
-  const windowsLockSource = path.join(sourceDir, 'windows.lock');
-  const windowsLockTarget = path.join(targetDir, 'windows.lock');
-  if (fs.existsSync(windowsLockSource)) {
-    copyFile(windowsLockSource, windowsLockTarget);
-  } else {
-    console.warn(`警告: 源文件不存在 - ${windowsLockSource}`);
-  }
-  
-  // 复制MacOS lock文件
-  const macosLockSource = path.join(sourceDir, 'macosx.lock');
-  const macosLockTarget = path.join(targetDir, 'macosx.lock');
-  if (fs.existsSync(macosLockSource)) {
-    copyFile(macosLockSource, macosLockTarget);
-  } else {
-    console.warn(`警告: 源文件不存在 - ${macosLockSource}`);
+  const locks = new Set(Object.values(require('../../dependencies/runtime.json').targets).map(t => t.lockFile));
+  for (const name of locks) {
+    const source = path.join(sourceDir, name);
+    if (!fs.existsSync(source)) throw new Error(`Missing required lock: ${source}`);
+    copyFile(source, path.join(targetDir, name));
   }
 
   // touch 一个文件

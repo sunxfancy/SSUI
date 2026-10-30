@@ -1,0 +1,21 @@
+{
+  "torchvision": {
+    "version": "0.23.0",
+    "repository": "https://github.com/pytorch/vision.git",
+    "commit": "824e8c8726b65fd9d5abdc9702f81c2b0c4c0dc8"
+  },
+  "torchaudio": {
+    "version": "2.8.0",
+    "repository": "https://github.com/pytorch/audio.git",
+    "commit": "6e1c7fe9ff6d82b8665d0a46d859d3357d2ebaaa"
+  },
+  "vtk": {
+    "version": "9.5.2",
+    "repository": "https://github.com/Kitware/VTK.git",
+    "commit": "7c0494a68bff379d32d6b1fbaa3d10d27a73af54"
+  },
+  "vcpkg": {
+    "repository": "https://github.com/microsoft/vcpkg.git",
+    "commit": "ce613c41372b23b1f51333815feb3edd87ef8a8b"
+  }
+}

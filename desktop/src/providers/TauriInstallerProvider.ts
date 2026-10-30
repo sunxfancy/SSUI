@@ -2,12 +2,25 @@ import { exit, relaunch } from '@tauri-apps/plugin-process';
 import { load } from '@tauri-apps/plugin-store';
 import { appDataDir, homeDir, join, resolveResource } from '@tauri-apps/api/path';
 import { open } from '@tauri-apps/plugin-dialog';
-import { platform } from '@tauri-apps/plugin-os';
+import { platform, arch } from '@tauri-apps/plugin-os';
 import { IInstallerProvider, CommandInfo } from './IInstallerProvider';
 import { exists, readDir, writeTextFile, remove } from '@tauri-apps/plugin-fs';
 import { invoke } from '@tauri-apps/api/core';
+import runtimeConfig from '../../../dependencies/runtime.json';
 
 export class TauriInstallerProvider implements IInstallerProvider {
+    private runtime() {
+        const cpu = arch();
+        const id = `${platform()}-${cpu === 'aarch64' ? 'arm64' : cpu}`;
+        const target = runtimeConfig.targets[id as keyof typeof runtimeConfig.targets];
+        if (!target) throw new Error(`不支持的平台或架构: ${id}`);
+        return target;
+    }
+
+    async getDependencyLockFile(): Promise<string> {
+        return `dependencies/${this.runtime().lockFile}`;
+    }
+
     async getAppDataDir(): Promise<string> {
         return await appDataDir();
     }
@@ -49,7 +62,7 @@ export class TauriInstallerProvider implements IInstallerProvider {
 
     async checkPythonInstalled(installDir: string): Promise<CommandInfo> {
         const currentPlatform = await this.detectPlatform();
-        const pythonPath = await join(installDir, currentPlatform === 'windows' ? '.venv\\python\\python.exe' : '.venv/bin/python3');
+        const pythonPath = await join(installDir, currentPlatform === 'windows' ? '.venv\\python\\python.exe' : '.venv/python/bin/python3');
 
         try {
             // 检查Python可执行文件是否存在
@@ -86,21 +99,11 @@ export class TauriInstallerProvider implements IInstallerProvider {
     }
 
     async downloadPython(installDir: string): Promise<CommandInfo> {
-        const currentPlatform = await this.detectPlatform();
-        let architecture = '';
-        if (currentPlatform === 'windows') {
-            architecture = 'x86_64-pc-windows-msvc';
-        } else if (currentPlatform === 'macos') {
-            architecture = 'aarch64-apple-darwin';
-        } else if (currentPlatform === 'linux') {
-            architecture = 'x86_64-unknown-linux-gnu';
-        }
-
         try {
             const output: any = await invoke('download_python', {
-                version: '3.12.8',
-                release_date: '20241219',
-                architecture: architecture,
+                version: runtimeConfig.pythonVersion,
+                release_date: runtimeConfig.pythonRelease,
+                architecture: this.runtime().pythonTarget,
                 path: await join(installDir, '.venv')
             });
             console.log(output);
@@ -154,7 +157,7 @@ export class TauriInstallerProvider implements IInstallerProvider {
 
     async createVirtualEnv(installDir: string): Promise<CommandInfo> {
         const currentPlatform = await this.detectPlatform();
-        const pythonPath = await join(installDir, currentPlatform === 'windows' ? '.venv\\python\\python.exe' : '.venv/bin/python3');
+        const pythonPath = await join(installDir, currentPlatform === 'windows' ? '.venv\\python\\python.exe' : '.venv/python/bin/python3');
 
         try {
             const output = await invoke('run_python',
@@ -178,7 +181,7 @@ export class TauriInstallerProvider implements IInstallerProvider {
 
     async checkPackagesInstalled(installDir: string): Promise<CommandInfo> {
         // 检查安装完成标记文件
-        const completionMarker = await join(installDir,'venv', '.packages_installed');
+        const completionMarker = await join(installDir,'.venv', '.packages_installed');
 
         try {
             const markerExists = await exists(completionMarker);

@@ -302,90 +302,27 @@ class SyncDocsTest(unittest.TestCase):
 
 
 class StartTest(unittest.TestCase):
-    def setUp(self):
-        self.runner = release.FakeRunner()
-        self.runner.cargo_text = CARGO
-        self.tmp = tempfile.TemporaryDirectory()
-        self.root = Path(self.tmp.name)
-        self.pkg = self.root / "desktop/package.json"
-        self.pkg.parent.mkdir(parents=True, exist_ok=True)
-        self.pkg.write_text('{"name": "ssui-desktop", "version": "0.1.1"}\n', encoding="utf-8")
-
-    def tearDown(self):
-        self.tmp.cleanup()
-
-    def _wire_happy(self, *, is_prerelease="true", cargo=CARGO):
-        r = self.runner
-        r.cargo_text = cargo
-        r.when(
-            ["gh", "release", "view", "0.1.2", "--json", "tagName,isPrerelease"],
-            stdout='{"tagName":"0.1.2","isPrerelease":%s}\n' % is_prerelease,
-        )
-        r.when(["git", "status", "--porcelain"], stdout="")
-        r.when(["git", "fetch", "origin", "tag", "0.1.2", "--force"], stdout="")
-        r.when(["git", "checkout", "-B", "v0.1.2", "refs/tags/0.1.2"], stdout="")
-        r.when(["git", "add"], stdout="")
-        r.when(["git", "diff", "--cached", "--quiet"], rc=1)
-        r.when(["git", "commit", "-m", "release: 0.1.2"], stdout="")
-        r.when(["git", "tag", "-f", "0.1.2"], stdout="")
-        r.when(["git", "push", "-u", "origin", "refs/heads/v0.1.2"], stdout="")
-        r.when(["git", "push", "--force", "origin", "refs/tags/0.1.2"], stdout="")
-        return r
-
-    def test_start_writes_official_and_moves_tag(self):
-        r = self._wire_happy()
-        release.cmd_start(r, tag="0.1.2", repo_root=self.root, ci=True)
-        self.assertEqual(release.read_version(r.cargo_text).display(), "0.1.2")
-        self.assertEqual(release._read_json_version(self.root, "desktop/package.json"), "0.1.2")
-        self.assertIn(["git", "commit", "-m", "release: 0.1.2"], r.calls)
-        self.assertIn(["git", "tag", "-f", "0.1.2"], r.calls)
-        self.assertIn(["git", "push", "-u", "origin", "refs/heads/v0.1.2"], r.calls)
-
-    def test_start_idempotent_when_already_official(self):
-        official = release.write_version(CARGO, release.parse_tag("0.1.2"))
-        r = self._wire_happy(cargo=official)
-        r.when(["git", "diff", "--cached", "--quiet"], rc=0)
-        self.pkg.write_text('{"name": "ssui-desktop", "version": "0.1.2"}\n', encoding="utf-8")
-        release.cmd_start(r, tag="0.1.2", repo_root=self.root, ci=True)
-        commit_calls = [c for c in r.calls if c[:2] == ["git", "commit"]]
-        self.assertEqual(commit_calls, [])
-
-    def test_start_rejects_downgrade(self):
-        newer = release.write_version(CARGO, release.parse_tag("0.2.0"))
-        r = self._wire_happy(cargo=newer)
-        with self.assertRaises(SystemExit):
-            release.cmd_start(r, tag="0.1.2", repo_root=self.root, ci=True)
-        self.assertFalse(any(c[:2] == ["git", "commit"] for c in r.calls))
-
-    def test_start_formal_mismatch_fails(self):
-        r = self._wire_happy(is_prerelease="false")
-        with self.assertRaises(SystemExit):
-            release.cmd_start(r, tag="0.1.2", repo_root=self.root, ci=True)
-
-    def test_start_formal_and_already_official_ok(self):
-        official = release.write_version(CARGO, release.parse_tag("0.1.2"))
-        r = self._wire_happy(is_prerelease="false", cargo=official)
-        r.when(["git", "diff", "--cached", "--quiet"], rc=0)
-        self.pkg.write_text('{"name": "ssui-desktop", "version": "0.1.2"}\n', encoding="utf-8")
-        release.cmd_start(r, tag="0.1.2", repo_root=self.root, ci=True)
-
-    def test_start_syncs_required_version_touchpoint(self):
-        self.pkg.write_text('{"name": "ssui-desktop", "version": "9.9.9"}\n', encoding="utf-8")
-        r = self._wire_happy()
-        release.cmd_start(r, tag="0.1.2", repo_root=self.root, ci=True)
-        self.assertEqual(release._read_json_version(self.root, "desktop/package.json"), "0.1.2")
-        add_call = next(c for c in r.calls if c[:2] == ["git", "add"])
-        self.assertIn("desktop/package.json", add_call)
-        self.assertIn("desktop/src-tauri/Cargo.toml", add_call)
-
-    def test_dry_run_never_writes_files(self):
-        self.pkg.write_text('{"name": "ssui-desktop", "version": "9.9.9"}\n', encoding="utf-8")
-        r = self._wire_happy()
-        release.cmd_start(r, tag="0.1.2", repo_root=self.root, ci=True, dry_run=True)
-        self.assertEqual(
-            self.pkg.read_text(encoding="utf-8"),
-            '{"name": "ssui-desktop", "version": "9.9.9"}\n',
-        )
+    def test_start_preserves_tag_and_rejects_unprepared_version(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            pkg = root / "desktop/package.json"
+            pkg.parent.mkdir(parents=True)
+            pkg.write_text('{"version":"0.1.2"}')
+            r = release.FakeRunner()
+            r.cargo_text = release.write_version(CARGO, release.parse_tag("0.1.2"))
+            r.when(["gh", "release", "view"], stdout='{"isPrerelease":true}')
+            r.when(["git", "status"], stdout="")
+            r.when(["git", "fetch"], stdout="")
+            r.when(["git", "checkout"], stdout="")
+            r.when(["git", "push"], stdout="")
+            release.cmd_start(r, tag="0.1.2", repo_root=root, ci=True)
+            self.assertFalse(any(c[:2] == ["git", "tag"] or "--force" in c for c in r.calls))
+            r.cargo_text = CARGO
+            with self.assertRaises(ValueError):
+                release.cmd_start(r, tag="0.1.2", repo_root=root, ci=True)
+            r.when(["gh", "release", "view"], stdout='{"isPrerelease":false}')
+            with self.assertRaises(ValueError):
+                release.cmd_start(r, tag="0.1.2", repo_root=root, ci=True)
 
 
 class FinishTest(unittest.TestCase):
@@ -405,7 +342,7 @@ class FinishTest(unittest.TestCase):
             ],
             stdout="",
         )
-        r.when(["git", "rev-parse", "refs/tags/0.1.2"], stdout="off123\n")
+        r.when(["git", "rev-parse", "refs/tags/0.1.2^{commit}"], stdout="off123\n")
         r.when(
             ["git", "merge-base", "--is-ancestor", "off123", "origin/main"],
             rc=0 if on_main else 1,
@@ -442,7 +379,7 @@ class FinishTest(unittest.TestCase):
         r = self._base()
         self._wire_rebase_ok(r)
         release.cmd_finish(r, tag="0.1.2")
-        self.assertIn(["gh", "release", "edit", "0.1.2", "--prerelease=false"], r.calls)
+        self.assertNotIn(["gh", "release", "edit", "0.1.2", "--prerelease=false"], r.calls)
         self.assertFalse(any(c == ["git", "push", "origin", "main"] for c in r.calls))
         self.assertFalse(
             any(c == ["git", "push", "--force-with-lease", "origin", "dev"] for c in r.calls)
