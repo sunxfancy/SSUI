@@ -237,9 +237,10 @@ overrides:
       arch: x64
       backend: cpu
     packages:
-      torch: '==2.2.2'
-      torchvision: '==0.17.2'
-      torchaudio: '==2.2.2'
+      # Native source builds: upstream stopped publishing Intel wheels after 2.2.2.
+      torch: '==2.8.0+ssui.cpu'
+      torchvision: '==0.23.0+ssui.cpu'
+      torchaudio: '==2.8.0+ssui.cpu'
       numpy: <2
       # Last Numba/LLVM pair with official CPython 3.12 macOS Intel wheels.
       numba: '==0.62.1'

@@ -145,7 +145,7 @@
     "test:rigging:smoke": "node dependencies/venv.cjs python scripts/rigging_smoke.py",
     "build:rigging:cuda": "node dependencies/venv.cjs python scripts/build_rigging_cuda.py",
     "test:rigging:cuda": "node dependencies/venv.cjs python scripts/rigging_cuda_check.py",
-    "test:runtime": "node --test dependencies/tests/runtime.test.cjs"
+    "test:runtime": "node --test dependencies/tests/*.test.cjs"
   },
   "devDependencies": {
     "@axe-core/playwright": "^4.10.2",

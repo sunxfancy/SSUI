@@ -157,7 +157,7 @@ jobs:
         run: python3 -m unittest discover -s scripts/tests -p "test_*.py" -v
 
       - name: Test shared runtime selection
-        run: node --test dependencies/tests/runtime.test.cjs
+        run: yarn test:runtime
 
       - name: Check release version consistency
         timeout-minutes: 5

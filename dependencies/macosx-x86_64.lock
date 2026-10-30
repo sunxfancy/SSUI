@@ -697,7 +697,7 @@ tokenizers==0.22.2
     # via
     #   -r dependencies/requirements-macosx-x86_64.txt
     #   transformers
-torch==2.2.2
+torch==2.8.0+ssui.cpu
     # via
     #   -r dependencies/requirements-macosx-x86_64.txt
     #   accelerate
@@ -712,11 +712,11 @@ torch==2.2.2
     #   torchaudio
     #   torchsde
     #   torchvision
-torchaudio==2.2.2
+torchaudio==2.8.0+ssui.cpu
     # via -r dependencies/requirements-macosx-x86_64.txt
 torchsde==0.2.6
     # via -r dependencies/requirements-macosx-x86_64.txt
-torchvision==0.17.2
+torchvision==0.23.0+ssui.cpu
     # via
     #   -r dependencies/requirements-macosx-x86_64.txt
     #   clip-anytorch

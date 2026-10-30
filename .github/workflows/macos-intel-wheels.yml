@@ -7,7 +7,7 @@ on:
         default: ''
   workflow_dispatch:
   push:
-    branches: ['codex/windows-arm64-release']
+    branches: [dev]
     paths:
       - '.github/workflows/macos-intel-wheels.yml'
       - 'scripts/build_macos_intel_wheels.py'
@@ -31,7 +31,6 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: python3 scripts/find_native_wheels.py
       - name: Install pinned standalone Python
-        if: steps.reuse.outputs.reused != 'true'
         run: node dependencies/bootstrap.cjs --github-env
       - name: Install native build prerequisites
         if: steps.reuse.outputs.reused != 'true'
@@ -43,6 +42,12 @@ jobs:
         run: python scripts/build_macos_intel_wheels.py
       - name: Verify source wheel manifest
         run: node dependencies/native_wheels.cjs native-wheels
+      - name: Verify portable native libraries
+        run: python scripts/verify_macos_wheels.py
+      - name: Resolve the Intel dependency lock with the native wheels
+        run: |
+          cp dependencies/macosx-x86_64.lock native-wheels/macosx-x86_64.lock
+          uv pip compile dependencies/requirements-macosx-x86_64.txt --find-links native-wheels --python-version 3.12.8 --python-platform x86_64-apple-darwin --index-strategy unsafe-best-match --emit-index-url -o native-wheels/macosx-x86_64.lock
       - name: Preserve native wheels
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02

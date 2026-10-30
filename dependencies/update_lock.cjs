@@ -25,8 +25,10 @@ function parseArgs(args = process.argv.slice(2)) {
 function compileArgs(target, requirementsFile, lockFile, noUpgrade = false) {
   const profile = profileFromName(target);
   const python = pythonDistribution(profile);
+  const nativeWheels = require('./native_wheels.cjs').wheelhouseFor(profile.dependencyTarget);
   return ['pip', 'compile', requirementsFile, '-o', lockFile,
     '--python-platform', python.triple, '--python-version', python.version,
+    ...(nativeWheels ? ['--find-links', nativeWheels] : []),
     ...(profile.binaryOnly ? ['--no-build', '--index-strategy', 'unsafe-best-match'] : []),
     // uv preserves existing pins by default; there is no --no-upgrade flag.
     ...(noUpgrade ? [] : ['--upgrade'])];

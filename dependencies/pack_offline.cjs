@@ -174,6 +174,8 @@ function downloadPackages(python, lockFile, destDir, constraintsPath, binaryOnly
     '--prefer-binary',
   ];
   if (binaryOnly) args.push('--only-binary', ':all:');
+  const nativeWheels = require('./native_wheels.cjs').wheelhouseFor(path.basename(lockFile, '.lock'));
+  if (nativeWheels) args.push('--find-links', nativeWheels);
   console.log(`\n> ${python} ${args.join(' ')}`);
   const res = spawnSync(python, args, { stdio: 'inherit', env: pipEnv(constraintsPath) });
   if (res.error) throw res.error;

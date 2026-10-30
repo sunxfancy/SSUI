@@ -23,6 +23,7 @@ concurrency:
 
 permissions:
   contents: read
+  actions: read
 
 jobs:
   start:
@@ -169,12 +170,26 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf libglib2.0-dev pkg-config xvfb libgl1-mesa-dev libx11-dev
 
+      - name: Download native Intel macOS wheels
+        if: matrix.id == 'macos-x86_64'
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+        with:
+          name: macos-intel-wheels
+          path: ${{ runner.temp }}/native-wheels
+      - name: Verify Intel wheel manifest
+        if: matrix.id == 'macos-x86_64'
+        run: |
+          node dependencies/native_wheels.cjs "$RUNNER_TEMP/native-wheels"
+          echo "SSUI_NATIVE_WHEELHOUSE=$RUNNER_TEMP/native-wheels" >> "$GITHUB_ENV"
+
       - name: Install requirements
         timeout-minutes: 30
         shell: bash
         run: |
           if [ '${{ matrix.id }}' = windows-arm64 ]; then
             uv pip install --no-build -r dependencies/${{ steps.runtime.outputs.lock }} --index-strategy unsafe-best-match
+          elif [ '${{ matrix.id }}' = macos-x86_64 ]; then
+            uv pip install --find-links "$SSUI_NATIVE_WHEELHOUSE" -r dependencies/${{ steps.runtime.outputs.lock }} --index-strategy unsafe-best-match --build-constraint dependencies/build-constraints.txt
           else
             uv pip install -r dependencies/${{ steps.runtime.outputs.lock }} --index-strategy unsafe-best-match --build-constraint dependencies/build-constraints.txt
           fi

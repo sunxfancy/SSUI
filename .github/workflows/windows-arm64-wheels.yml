@@ -17,6 +17,9 @@ on:
       - 'scripts/runtime_config.py'
       - 'scripts/check_runtime.py'
       - '.github/workflows/windows-arm64-wheels.yml'
+      - '.github/workflows/macos-intel-wheels.yml'
+      - 'scripts/build_macos_intel_wheels.py'
+      - 'scripts/verify_macos_wheels.py'
   pull_request:
     paths:
       - 'dependencies/**'
@@ -24,8 +27,12 @@ on:
       - 'scripts/runtime_config.py'
       - 'scripts/check_runtime.py'
       - '.github/workflows/windows-arm64-wheels.yml'
+      - '.github/workflows/macos-intel-wheels.yml'
+      - 'scripts/build_macos_intel_wheels.py'
+      - 'scripts/verify_macos_wheels.py'
 permissions:
   contents: read
+  actions: read
 concurrency:
   group: windows-arm64-wheels-${{ github.ref }}
   cancel-in-progress: ${{ github.event_name == 'push' }}
@@ -68,7 +75,13 @@ jobs:
           if-no-files-found: warn
           retention-days: 30
 
+  macos-wheels:
+    uses: ./.github/workflows/macos-intel-wheels.yml
+    with:
+      ref: ${{ inputs.ref || github.ref }}
+
   additional-runtimes:
+    needs: macos-wheels
     name: Verify ${{ matrix.id }} dependencies
     runs-on: ${{ matrix.os }}
     timeout-minutes: 45
@@ -97,12 +110,25 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y libgl1-mesa-dev libx11-dev
+      - name: Download verified Intel wheels
+        if: matrix.id == 'macos-x86_64'
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+        with:
+          name: macos-intel-wheels
+          path: native-wheels
+      - name: Check Intel wheel manifest
+        if: matrix.id == 'macos-x86_64'
+        run: node dependencies/native_wheels.cjs native-wheels
       - name: Install the full native dependency lock
         timeout-minutes: 25
         env:
           UV_HTTP_TIMEOUT: 600
         run: |
-          uv pip install --index-strategy unsafe-best-match --build-constraint dependencies/build-constraints.txt -r dependencies/${{ steps.runtime.outputs.lock }}
+          if [ '${{ matrix.id }}' = macos-x86_64 ]; then
+            uv pip install --find-links native-wheels --index-strategy unsafe-best-match --build-constraint dependencies/build-constraints.txt -r dependencies/${{ steps.runtime.outputs.lock }}
+          else
+            uv pip install --index-strategy unsafe-best-match --build-constraint dependencies/build-constraints.txt -r dependencies/${{ steps.runtime.outputs.lock }}
+          fi
           uv pip check
       - name: Verify Python and native inference kernels
         run: python scripts/check_runtime.py --target ${{ matrix.id }}

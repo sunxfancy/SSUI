@@ -66,9 +66,16 @@ Python 3.12.8 / 20241219，uv 固定为 0.13.5。
 Linux ARM64 使用独立的 `linux-arm64.lock`，原生 CPU PyTorch 2.8.0 /
 torchvision 0.23.0 / torchaudio 2.8.0，不复用 x86_64 CUDA 锁文件。
 Linux 构建任务在安装依赖前安装 GL/X11 编译头文件。
-macOS Intel 使用独立的 `macosx-x86_64.lock`（PyTorch 2.2.2、NumPy 1.x），
-避免复用没有 Intel wheel 的 PyTorch 2.4.1；Numba 0.62.1 / llvmlite 0.45.1
-固定为仍提供 Intel wheel 的组合。Apple Silicon 保留已有锁文件。
+macOS Intel 使用独立的 `macosx-x86_64.lock`。官方最后一版 Intel PyTorch
+2.2.2 缺少当前 diffusers 所需 API，因此 `macos-intel-wheels.yml` 在原生
+runner 从固定源码 commit 构建 PyTorch 2.8.0、torchvision 0.23.0 和
+torchaudio 2.8.0（版本后缀 `+ssui.cpu`），保留 CPU/Gloo API，不启用 CUDA/MPS。
+构建报告记录源码、版本和 wheel 哈希；同一配方的已验证产物可复用。新虚拟
+环境验证 Torch、NMS、音频重采样和 PNG 编解码，并隐藏构建环境中的 Torch，
+检查动态库可搬移性。发布任务把这三个 wheel 内置到安装包，用户无需编译。
+开发/离线打包前下载 `macos-intel-wheels` artifact，设置
+`SSUI_NATIVE_WHEELHOUSE` 为解压目录。NumPy 1.x、Numba 0.62.1 / llvmlite
+0.45.1 保留 Intel 二进制兼容性。Apple Silicon 保留已有锁文件。
 
 Windows ARM64 使用 `windows-arm64-cpu.lock` 的原生 CPU PyTorch 2.9.1
 及配套 torchvision、源码编译的 torchaudio、VTK、OpenCV、PyMeshFix、

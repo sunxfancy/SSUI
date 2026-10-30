@@ -1,6 +1,6 @@
 import { exit, relaunch } from '@tauri-apps/plugin-process';
 import { load } from '@tauri-apps/plugin-store';
-import { appDataDir, homeDir, join, resolveResource } from '@tauri-apps/api/path';
+import { appDataDir, homeDir, join, dirname, resolveResource } from '@tauri-apps/api/path';
 import { open } from '@tauri-apps/plugin-dialog';
 import { platform, arch } from '@tauri-apps/plugin-os';
 import { makeRuntimeTarget, dependencyProfile, pythonDistribution } from './runtimeTarget';
@@ -234,7 +234,7 @@ export class TauriInstallerProvider implements IInstallerProvider {
                 {
                     path: pipPath,
                     cwd: installDir,
-                    args:  ['install', '-r', resourcePath,
+                    args:  ['install', '-r', resourcePath, '--find-links', await dirname(resourcePath),
                         ...(dependencyProfile(await this.detectRuntimeTarget()).binaryOnly ? ['--only-binary=:all:'] : [])]
                 }
             );

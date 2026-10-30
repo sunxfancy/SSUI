@@ -48,10 +48,10 @@ sentencepiece==0.2.0
 spandrel>=0.4.1
 tiktoken>=0.9.0
 tokenizers>=0.20.0
-torch==2.2.2
-torchaudio==2.2.2
+torch==2.8.0+ssui.cpu
+torchaudio==2.8.0+ssui.cpu
 torchsde==0.2.6
-torchvision==0.17.2
+torchvision==0.23.0+ssui.cpu
 transformers>=4.51.3,<5
 transformers_stream_generator==0.0.4
 trimesh>=4.6.5
