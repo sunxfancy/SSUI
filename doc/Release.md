@@ -67,7 +67,8 @@ Linux ARM64 使用独立的 `linux-arm64.lock`，原生 CPU PyTorch 2.8.0 /
 torchvision 0.23.0 / torchaudio 2.8.0，不复用 x86_64 CUDA 锁文件。
 Linux 构建任务在安装依赖前安装 GL/X11 编译头文件。
 macOS Intel 使用独立的 `macosx-x86_64.lock`（PyTorch 2.2.2、NumPy 1.x），
-避免复用没有 Intel wheel 的 PyTorch 2.4.1。Apple Silicon 保留已有锁文件。
+避免复用没有 Intel wheel 的 PyTorch 2.4.1；Numba 0.62.1 / llvmlite 0.45.1
+固定为仍提供 Intel wheel 的组合。Apple Silicon 保留已有锁文件。
 
 Windows ARM64 使用 `windows-arm64-cpu.lock` 的原生 CPU PyTorch 2.9.1
 及配套 torchvision、源码编译的 torchaudio、VTK、OpenCV、PyMeshFix、

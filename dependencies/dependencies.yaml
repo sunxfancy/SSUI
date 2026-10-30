@@ -241,3 +241,6 @@ overrides:
       torchvision: '==0.17.2'
       torchaudio: '==2.2.2'
       numpy: <2
+      # Last Numba/LLVM pair with official CPython 3.12 macOS Intel wheels.
+      numba: '==0.62.1'
+      llvmlite: '==0.45.1'

@@ -19,10 +19,12 @@ huggingface_hub[hf-transfer,hf_xet]>=0.31
 igraph>=0.11.8
 imageio[ffmpeg]>=2.37.0
 kornia>=0.8.0
+llvmlite==0.45.1
 matplotlib>=3.10.1
 mediapipe>=0.10.21
 modelscope==1.26.0
 moderngl>=5.12.0
+numba==0.62.1
 numpy<2
 omegaconf==2.3.0
 onnx>=1.17.0

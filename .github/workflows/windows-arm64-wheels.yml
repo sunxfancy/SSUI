@@ -9,10 +9,17 @@ on:
         default: ''
   workflow_dispatch:
   push:
-    branches: ['codex/windows-arm64-release']
+    branches: [dev]
     paths:
       - 'dependencies/**'
       - 'scripts/*arm64*'
+      - 'scripts/audit_native_binaries.py'
+      - 'scripts/runtime_config.py'
+      - 'scripts/check_runtime.py'
+      - '.github/workflows/windows-arm64-wheels.yml'
+  pull_request:
+    paths:
+      - 'dependencies/**'
       - 'scripts/audit_native_binaries.py'
       - 'scripts/runtime_config.py'
       - 'scripts/check_runtime.py'
@@ -24,6 +31,7 @@ concurrency:
   cancel-in-progress: ${{ github.event_name == 'push' }}
 jobs:
   verify:
+    name: Verify Windows ARM64 dependencies
     runs-on: windows-11-arm
     timeout-minutes: 90
     steps:
@@ -98,3 +106,5 @@ jobs:
           uv pip check
       - name: Verify Python and native inference kernels
         run: python scripts/check_runtime.py --target ${{ matrix.id }}
+      - name: Verify native LLVM JIT
+        run: python -c "import numba, numpy as np; f = numba.njit(lambda x:(x*x).sum()); assert f(np.arange(10)) == 285; assert f.nopython_signatures"
