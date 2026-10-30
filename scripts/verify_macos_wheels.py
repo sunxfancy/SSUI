@@ -1,6 +1,7 @@
 """Exercise built wheels in a fresh venv while the build venv's Torch is hidden."""
 from pathlib import Path
 import os
+import re
 import subprocess
 import sys
 import sysconfig
@@ -12,6 +13,19 @@ def main():
     subprocess.run([sys.executable, '-m', 'venv', str(python.parents[1])], check=True)
     wheels = sorted(str(p) for p in (root / 'native-wheels').glob('*.whl'))
     subprocess.run([str(python), '-m', 'pip', 'install', 'numpy==1.26.4', *wheels], check=True)
+    site = Path(subprocess.check_output([str(python), '-c',
+        "import sysconfig; print(sysconfig.get_paths()['platlib'])"], text=True).strip())
+    for package in ('torch', 'torchvision', 'torchaudio'):
+        for library in (site / package).rglob('*'):
+            if library.suffix not in ('.so', '.dylib'):
+                continue
+            links = subprocess.check_output(['otool', '-L', str(library)], text=True)
+            paths = [line.strip().split(' (', 1)[0] for line in links.splitlines()[1:]]
+            commands = subprocess.check_output(['otool', '-l', str(library)], text=True)
+            paths += re.findall(r'cmd LC_RPATH\s+cmdsize \d+\s+path (.*?) \(offset', commands)
+            for dependency in paths:
+                if dependency.startswith('/') and not dependency.startswith(('/usr/lib/', '/System/Library/')):
+                    raise RuntimeError(f'Non-portable dynamic library reference: {library}: {dependency}')
     original = Path(sysconfig.get_paths()['platlib']) / 'torch'
     hidden = original.with_name('torch-build-hidden')
     if original.exists():
