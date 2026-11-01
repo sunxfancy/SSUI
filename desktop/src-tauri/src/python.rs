@@ -451,7 +451,9 @@ mod native_cuda_tests {
         std::fs::write(prefix.join("bin/nvcc"), "").unwrap();
         std::fs::write(root.join(".venv/native-cuda/runtime.json"),
             serde_json::json!({"prefix": prefix}).to_string()).unwrap();
-        let output = python_command("/usr/bin/python3", root.to_str().unwrap())
+        // Debug builds only wrap interpreters owned by this installation.
+        let python = root.join(".venv/bin/python");
+        let output = python_command(python.to_str().unwrap(), root.to_str().unwrap())
             .args(["-c", "import os,sys; print(os.environ['CUDA_HOME']); print(sys.argv[1])", "argument with spaces"])
             .output().unwrap();
         let _ = std::fs::remove_dir_all(&root);
