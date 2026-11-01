@@ -1,0 +1,27 @@
+{
+  "torch": "2.16.0.dev20261026+cu134",
+  "cuda": "13.4",
+  "gpu": "NVIDIA RTX Spark N1X (6144-core Blackwell RTX GPU)",
+  "python": "3.13.15",
+  "architecture": "ARM64",
+  "packages": {
+    "torch-cluster": "1.6.3",
+    "torch-scatter": "2.1.2",
+    "pytorch3d": "0.7.9",
+    "flash-attn": "2.8.3",
+    "cumm": "0.7.11",
+    "spconv": "2.3.8",
+    "bpy": "5.2.3",
+    "transformers": "4.51.3",
+    "pyrender": "0.1.45",
+    "freetype-py": "2.5.1",
+    "pyglet": "2.1.19"
+  },
+  "checks": {
+    "pyg_fps_and_segment_csr": "passed",
+    "pytorch3d_native_knn_and_transforms": "passed",
+    "flash_attention_native_forward": "passed",
+    "spconv_native_sparse_convolution": "passed",
+    "pyrender_native_offscreen_depth": "passed"
+  }
+}

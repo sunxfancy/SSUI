@@ -1,4 +1,5 @@
-import torch
+from backend.util.devices import TorchDevice
+from backend.quantization.workflow import int8_quantizer, quantize_manager_components
 
 from ssui.annotation import param
 from ssui.base import Prompt, Image
@@ -14,8 +15,12 @@ class CogVideoModel:
         self.model_manager = model_manager
 
     @staticmethod
-    def load() -> "CogVideoModel":
-        model_manager = ModelManager()
+    def load(quantization: str = "none") -> "CogVideoModel":
+        quantize = int8_quantizer(quantization)
+        device = TorchDevice.choose_torch_device()
+        model_manager = ModelManager(
+            torch_dtype=TorchDevice.choose_torch_dtype(device), device="cpu" if quantization != "none" else str(device)
+        )
         download_models(["CogVideoX-5B"])
         model_manager.load_models(
             [
@@ -23,9 +28,11 @@ class CogVideoModel:
                 "models/CogVideo/CogVideoX-5b/text_encoder",
                 "models/CogVideo/CogVideoX-5b/vae/diffusion_pytorch_model.safetensors",
             ],
-            torch_dtype=torch.float16,
-            device="cuda",
         )
+        if quantization != "none":
+            quantize_manager_components(model_manager, quantize, ("cog_dit", "flux_text_encoder_2"))
+            model_manager.to(str(device))
+            model_manager.device = str(device)
         return CogVideoModel(model_manager)
 
 

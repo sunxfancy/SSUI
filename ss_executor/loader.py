@@ -1,6 +1,7 @@
 import os
 import yaml
 from pydantic import BaseModel, Field
+from ss_executor.project import search_project_root
 
 from ss_executor.sandbox import Sandbox, NoSandbox
 
@@ -16,7 +17,20 @@ class SSLoader:
         """加载模块"""
         self.current_file_path = os.path.abspath(path)
         self._allow_extension_packages()
+        self._allow_sibling_modules()
         self.executor.load(path)
+
+    def _allow_sibling_modules(self):
+        """Allow conventional Python modules beside the active workflow script."""
+        if not hasattr(self.executor, "allow_modules"):
+            return
+        directory = os.path.dirname(self.current_file_path)
+        modules = [
+            filename[:-3] for filename in os.listdir(directory)
+            if filename.endswith(".py") and filename[:-3].isidentifier()
+        ]
+        self.executor.allow_modules(modules)
+        self.executor.add_import_path(directory)
 
     def _allow_extension_packages(self):
         """动态放行扩展提供的 SDK 包与项目声明的 ssui_* 依赖。
@@ -135,11 +149,3 @@ class SSProject(BaseModel):
             deps_map[name] = version
             
         return deps_map
-
-def search_project_root(path):
-    while True:
-        if os.path.exists(os.path.join(path, "ssproject.yaml")):
-            return path
-        path = os.path.dirname(path)
-        if path == os.path.dirname(path):
-            return None

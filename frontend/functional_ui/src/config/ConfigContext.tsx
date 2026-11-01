@@ -1,12 +1,12 @@
 import React, {
     createContext,
-    useCallback,
     useContext,
     useEffect,
     useRef,
-    useState,
+    useSyncExternalStore,
 } from 'react';
 import { ConfigService } from './configService';
+import { ConfigStore } from './configStore';
 import { applyTheme, watchSystemTheme } from './theme';
 import { ConfigSaveStatus, DEFAULT_UI_CONFIG, UiConfig } from './types';
 
@@ -14,81 +14,47 @@ export interface ConfigContextValue {
     config: UiConfig;
     loaded: boolean;
     saveStatus: ConfigSaveStatus;
+    saveError: string | null;
     updateConfig: (patch: Partial<UiConfig>) => void;
     saveConfig: () => Promise<void>;
+    resetConfig: () => void;
 }
 
 const ConfigContext = createContext<ConfigContextValue>({
     config: DEFAULT_UI_CONFIG,
     loaded: false,
     saveStatus: 'saved',
+    saveError: null,
     updateConfig: () => {},
     saveConfig: async () => {},
+    resetConfig: () => {},
 });
 
 export const ConfigProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-    const serviceRef = useRef<ConfigService | null>(null);
-    if (!serviceRef.current) {
-        serviceRef.current = new ConfigService();
-    }
+    const storeRef = useRef<ConfigStore | null>(null);
+    if (!storeRef.current) storeRef.current = new ConfigStore(new ConfigService());
+    const store = storeRef.current;
+    const { config, loaded, saveStatus, saveError } = useSyncExternalStore(store.subscribe, store.getSnapshot);
+    const updateConfig = store.update;
+    const saveConfig = store.save;
+    const resetConfig = () => store.update(DEFAULT_UI_CONFIG);
 
-    const [config, setConfig] = useState<UiConfig>(DEFAULT_UI_CONFIG);
-    const [loaded, setLoaded] = useState(false);
-    const [saveStatus, setSaveStatus] = useState<ConfigSaveStatus>('saved');
-
-    const pendingPatchRef = useRef<Partial<UiConfig>>({});
-    const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-    const saveConfig = useCallback(async () => {
-        const patch = pendingPatchRef.current;
-        if (Object.keys(patch).length === 0) {
-            return;
-        }
-        pendingPatchRef.current = {};
-        if (saveTimerRef.current) {
-            clearTimeout(saveTimerRef.current);
-            saveTimerRef.current = null;
-        }
-
-        setSaveStatus('saving');
-        try {
-            const saved = await serviceRef.current!.save(patch);
-            setConfig(saved);
-            setSaveStatus('saved');
-        } catch (error) {
-            console.error('保存配置失败:', error);
-            // 保存失败时把补丁放回待保存队列，供下次 update/save 重试
-            pendingPatchRef.current = { ...patch, ...pendingPatchRef.current };
-            setSaveStatus('unsaved');
-        }
-    }, []);
-
-    const updateConfig = useCallback((patch: Partial<UiConfig>) => {
-        pendingPatchRef.current = { ...pendingPatchRef.current, ...patch };
-        setConfig(prev => ({ ...prev, ...patch }));
-        setSaveStatus('unsaved');
-
-        if (saveTimerRef.current) {
-            clearTimeout(saveTimerRef.current);
-        }
-        saveTimerRef.current = setTimeout(saveConfig, 500);
-    }, [saveConfig]);
-
-    // 启动时先按默认主题渲染，再加载持久化配置
     useEffect(() => {
-        applyTheme(DEFAULT_UI_CONFIG.theme);
-        let cancelled = false;
-        serviceRef.current!.load().then(cfg => {
-            if (cancelled) {
-                return;
+        void store.load();
+        // Flush the debounce queue when the provider leaves the page.
+        return () => { void store.save(); };
+    }, [store]);
+
+    useEffect(() => {
+        const beforeUnload = (event: BeforeUnloadEvent) => {
+            if (store.getSnapshot().saveStatus !== 'saved') {
+                event.preventDefault();
+                event.returnValue = '';
             }
-            setConfig(cfg);
-            setLoaded(true);
-        });
-        return () => {
-            cancelled = true;
         };
-    }, []);
+        window.addEventListener('beforeunload', beforeUnload);
+        return () => window.removeEventListener('beforeunload', beforeUnload);
+    }, [store]);
 
     useEffect(() => {
         if (loaded) {
@@ -107,16 +73,8 @@ export const ConfigProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         return unsubscribe;
     }, [loaded, config.theme]);
 
-    useEffect(() => {
-        return () => {
-            if (saveTimerRef.current) {
-                clearTimeout(saveTimerRef.current);
-            }
-        };
-    }, []);
-
     return (
-        <ConfigContext.Provider value={{ config, loaded, saveStatus, updateConfig, saveConfig }}>
+        <ConfigContext.Provider value={{ config, loaded, saveStatus, saveError, updateConfig, saveConfig, resetConfig }}>
             {children}
         </ConfigContext.Provider>
     );

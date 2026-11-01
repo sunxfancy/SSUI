@@ -1,4 +1,4 @@
-from ssui import workflow, Prompt, Image, Video
+from ssui import workflow, Prompt, Image, Video, Voice
 from ssui.annotation import param
 from ssui.config import SSUIConfig
 from ssui.controller import Input
@@ -9,7 +9,7 @@ import tweepy
 from datetime import datetime, timedelta
 import requests
 import json
-from ssui_voice.Cosyvoice import CosyvoiceModel, CosyvoiceGenerate
+from ssui_voice.Cosyvoice import CosyvoiceModel, GenVoice
 
 config = SSUIConfig()
 
@@ -75,8 +75,7 @@ def image2video(image: Image, prompt: Prompt, negative_prompt: Prompt) -> Video:
 def txt2voice(text: str) -> Voice:
     """将文本转换为语音"""
     model = CosyvoiceModel()
-    voice = CosyvoiceGenerate(config("Text to Speech"), model, text)
-    return Voice("mp3", voice, text, fps=16000)
+    return GenVoice(config("Text to Speech"), model, text)
 
 @workflow
 def twitter2video(username: str) -> Video:

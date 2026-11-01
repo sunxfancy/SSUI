@@ -7,7 +7,7 @@
 sd1:
   repo: "stable-diffusion-v1-5/stable-diffusion-v1-5"
   file: "v1-5-pruned-emaonly.safetensors"
-  revision: "main"
+  revision: "451f4fe16113bff5a5d2269ed5ad43b0592e9a14"
   size_gb: 4.0
   sha256: "6ce0161689b3853acaa03779ec93eafe75a02f4ced659bee03f50797806fa2fa"
 
@@ -84,17 +84,25 @@ trellis:
   size_gb: 10.0
   sha256: ""
 
+pixal3d:
+  repo: "TencentARC/Pixal3D"
+  snapshot: true
+  revision: "main"
+  size_gb: 24.0
+  sha256: ""
+
 diffsynth:
   sd1:
     repo: "Lykon/DreamShaper"
     file: "DreamShaper_8_pruned.safetensors"
     revision: "228d79cb20811466f5c5710aa91f05dabd0b8a14"
+
     size_gb: 2.0
     sha256: "879db523c30d3b9017143d56705015e15a2cb5628762c11d086fed9538abd7fd"
   animatediff:
     repo: "guoyww/animatediff"
     file: "mm_sd_v15_v2.ckpt"
-    revision: "main"
+    revision: "fdfe36afa161e51b3e9c24022b0e368d59e7345e"
     size_gb: 1.7
     sha256: "69ed0f5fef82b110aca51bcab73b21104242bc65d6ab4b8b2a2a94d31cad1bf0"
 
@@ -129,3 +137,9 @@ cogvideo2b:
   allow_patterns: ["model_index.json", "scheduler/*", "tokenizer/*", "text_encoder/*", "transformer/*", "vae/*"]
   size_gb: 13.8
   sha256: ""
+triposr:
+  repo: "stabilityai/TripoSR"
+  file: "model.ckpt"
+  revision: "5b521936b01fbe1890f6f9baed0254ab6351c04a"
+  size_gb: 1.68
+  sha256: "429e2c6b22a0923967459de24d67f05962b235f79cde6b032aa7ed2ffcd970ee"

@@ -1,3 +1,5 @@
+import { UIStateContext } from '../UIState';
+import { captureWorkflow, restoreWorkflow, WorkflowState } from './WorkflowState';
 import React from 'react';
 import { createRoot } from 'react-dom/client';
 import { NodeEditor, ClassicPreset } from 'rete';
@@ -31,9 +33,19 @@ import {
     Schemes,
 } from './Nodes';
 import './Workflow.css';
+import { filterPaletteItems, PALETTE_NODE_ITEMS, PaletteNodeKind } from './NodePalette';
 
 export interface WorkflowProps {
     path: string;
+}
+
+interface PythonOperator {
+    module: string;
+    name: string;
+    callable: string;
+    params: Record<string, string>;
+    returns: string[];
+    source: string;
 }
 
 interface ReroutePinData {
@@ -84,7 +96,7 @@ function ReroutePin(props: {
     );
 }
 
-const createEditor = async (container: HTMLElement) => {
+const createEditor = (path: string, stateContext: React.ContextType<typeof UIStateContext>) => async (container: HTMLElement) => {
     console.log("初始化工作流编辑器");
 
     const editor = new NodeEditor<Schemes>();
@@ -93,9 +105,38 @@ const createEditor = async (container: HTMLElement) => {
     const reactRender = new ReactPlugin<Schemes, AreaExtra>({ createRoot });
     const reroute = new ReroutePlugin<Schemes>();
 
-    const addNode = async (node: BaseNode) => {
+    const addNode = async (node: BaseNode, position = area.area.pointer) => {
         await editor.addNode(node);
-        await area.translate(node.id, area.area.pointer);
+        await area.translate(node.id, position);
+    };
+
+    const createPaletteNode = (kind: PaletteNodeKind): BaseNode | undefined => {
+        if (kind === 'input') return new InputNode(area);
+        if (kind === 'output') return new OutputNode(area);
+        if (kind === 'operator') return new OperatorNode('算子');
+        if (kind === 'definition') return new FunctionDefinitionNode(area);
+        const definition = editor.getNodes().find(
+            (node): node is FunctionDefinitionNode => node instanceof FunctionDefinitionNode
+        );
+        if (kind === 'call' && definition) return new FunctionCallNode(area, definition);
+        return undefined;
+    };
+
+    const createPythonOperator = (spec: PythonOperator) => new OperatorNode(
+        spec.name, undefined, {
+            callable: spec.callable,
+            module: spec.module,
+            params: spec.params,
+            returns: spec.returns,
+        }
+    );
+
+    const addPaletteNode = async (kind: PaletteNodeKind, position = area.area.pointer) => {
+        const node = createPaletteNode(kind);
+        if (!node) return false;
+        await addNode(node, position);
+        syncDefinitions();
+        return true;
     };
 
     const syncDefinitions = () => {
@@ -351,6 +392,19 @@ const createEditor = async (container: HTMLElement) => {
         return context;
     });
 
+    const saved = stateContext?.store.values[stateContext.key + '/graph'] as WorkflowState | undefined;
+    let restoreFailed = false;
+    if (saved) {
+        try { await restoreWorkflow(saved, editor, area, reroute); }
+        catch (error) {
+            restoreFailed = true;
+            const alert = document.createElement('div');
+            alert.setAttribute('role', 'alert');
+            alert.textContent = '工作流状态恢复失败，已保留原始数据。请检查版本后重新打开。';
+            container.appendChild(alert);
+            console.error(error);
+        }
+    } else {
     // 示例流程：一个函数定义框把 输入 → 算子 → 返回 框起来，
     // 框外的 输入/返回 节点通过函数调用节点使用该函数
     const definitionNode = new FunctionDefinitionNode(area, '图像生成');
@@ -398,53 +452,180 @@ const createEditor = async (container: HTMLElement) => {
 
     syncDefinitions();
 
-    setTimeout(() => {
-        AreaExtensions.zoomAt(area, editor.getNodes());
-    }, 1);
+    await AreaExtensions.zoomAt(area, editor.getNodes());
 
-    // 工具栏：方便添加节点
-    const toolbar = document.createElement('div');
-    toolbar.className = 'workflow-toolbar';
-    const addToolbarButton = (label: string, handler: () => void | Promise<void>) => {
-        const button = document.createElement('button');
-        button.className = 'workflow-toolbar-button';
-        button.textContent = label;
-        button.addEventListener('pointerdown', (e) => e.stopPropagation());
-        button.addEventListener('contextmenu', (e) => e.stopPropagation());
-        button.addEventListener('click', () => void handler());
-        toolbar.appendChild(button);
+    }
+    const saveState = () => {
+        if (!restoreFailed) stateContext?.store.set(stateContext.key + '/graph', captureWorkflow(editor, area, reroute));
     };
-    addToolbarButton('添加输入节点', () => addNode(new InputNode(area)));
-    addToolbarButton('添加返回节点', () => addNode(new OutputNode(area)));
-    addToolbarButton('添加算子节点', () => addNode(new OperatorNode('算子')));
-    addToolbarButton('添加函数定义', () => createDefinition());
-    const callButton = document.createElement('button');
-    callButton.className = 'workflow-toolbar-button';
-    callButton.textContent = '添加函数调用';
-    callButton.addEventListener('pointerdown', (e) => e.stopPropagation());
-    callButton.addEventListener('click', async () => {
-        const def = editor.getNodes().find(
-            (n): n is FunctionDefinitionNode => n instanceof FunctionDefinitionNode
-        );
-        if (!def) {
-            console.warn('请先创建函数定义，再添加函数调用');
-            return;
-        }
-        await addNode(new FunctionCallNode(area, def));
+    // Capture after editor mutations and React input handlers have completed.
+    let saveTimer: ReturnType<typeof setTimeout>;
+    const scheduleSave = () => { clearTimeout(saveTimer); saveTimer = setTimeout(saveState, 0); };
+    editor.addPipe(context => { scheduleSave(); return context; });
+    area.addPipe(context => {
+        if (['nodetranslated', 'translated', 'zoomed', 'rendered'].includes(context.type)) scheduleSave();
+        return context;
     });
-    toolbar.appendChild(callButton);
+    reroute.addPipe(context => { scheduleSave(); return context; });
+    container.addEventListener('input', scheduleSave);
+    container.addEventListener('pointerup', scheduleSave);
+    const flushState = () => { saveState(); void stateContext?.store.flush(true); };
+    window.addEventListener('pagehide', flushState);
+
+    // 可搜索节点抽屉：点击添加，或拖到画布的精确位置。
+    const toolbar = document.createElement('aside');
+    toolbar.className = 'workflow-palette';
+    toolbar.setAttribute('aria-label', '节点库');
+    toolbar.addEventListener('pointerdown', (event) => event.stopPropagation());
+    toolbar.addEventListener('contextmenu', (event) => event.stopPropagation());
+
+    const heading = document.createElement('div');
+    heading.className = 'workflow-palette-heading';
+    heading.innerHTML = '<strong>节点库</strong><span>拖入画布</span>';
+    toolbar.appendChild(heading);
+
+    const search = document.createElement('input');
+    search.className = 'workflow-palette-search';
+    search.type = 'search';
+    search.placeholder = '搜索节点或用途…';
+    search.setAttribute('aria-label', '搜索节点');
+    toolbar.appendChild(search);
+
+    const list = document.createElement('div');
+    list.className = 'workflow-palette-list';
+    toolbar.appendChild(list);
+
+    let pythonOperators: PythonOperator[] = [];
+    const renderPalette = () => {
+        list.replaceChildren();
+        const items = filterPaletteItems(search.value);
+        let currentGroup = '';
+        for (const item of items) {
+            if (item.group !== currentGroup) {
+                currentGroup = item.group;
+                const group = document.createElement('div');
+                group.className = 'workflow-palette-group';
+                group.textContent = currentGroup;
+                list.appendChild(group);
+            }
+            const card = document.createElement('button');
+            card.type = 'button';
+            card.className = `workflow-palette-card kind-${item.kind}`;
+            card.draggable = true;
+            card.dataset.nodeKind = item.kind;
+            card.innerHTML = `<span class="workflow-palette-card-title">${item.label}</span><span class="workflow-palette-card-description">${item.description}</span>`;
+            if (item.kind === 'call' && !editor.getNodes().some((node) => node instanceof FunctionDefinitionNode)) {
+                card.disabled = true;
+                card.title = '请先添加函数定义';
+            }
+            card.addEventListener('click', () => void addPaletteNode(item.kind).then(renderPalette));
+            card.addEventListener('dragstart', (event) => {
+                event.dataTransfer?.setData('application/x-ssui-node', item.kind);
+                if (event.dataTransfer) event.dataTransfer.effectAllowed = 'copy';
+            });
+            list.appendChild(card);
+        }
+        const query = search.value.trim().toLocaleLowerCase();
+        const matchingOperators = pythonOperators.filter((operator) =>
+            [operator.name, operator.module, operator.source, ...Object.keys(operator.params), ...Object.values(operator.params)]
+                .join(' ').toLocaleLowerCase().includes(query)
+        );
+        if (matchingOperators.length > 0) {
+            const group = document.createElement('div');
+            group.className = 'workflow-palette-group';
+            group.textContent = 'Python 与扩展';
+            list.appendChild(group);
+            for (const operator of matchingOperators) {
+                const card = document.createElement('button');
+                card.type = 'button';
+                card.className = 'workflow-palette-card kind-python';
+                card.draggable = true;
+                card.innerHTML = `<span class="workflow-palette-card-title">${operator.name}</span><span class="workflow-palette-card-description">${operator.source} · ${Object.keys(operator.params).length} 入 / ${operator.returns.length} 出</span>`;
+                card.addEventListener('click', () => void addNode(createPythonOperator(operator)));
+                card.addEventListener('dragstart', (event) => {
+                    event.dataTransfer?.setData('application/x-ssui-python-operator', JSON.stringify(operator));
+                    if (event.dataTransfer) event.dataTransfer.effectAllowed = 'copy';
+                });
+                list.appendChild(card);
+            }
+        }
+        if (items.length === 0 && matchingOperators.length === 0) {
+            const empty = document.createElement('div');
+            empty.className = 'workflow-palette-empty';
+            empty.textContent = '没有匹配的节点';
+            list.appendChild(empty);
+        }
+    };
+    search.addEventListener('input', renderPalette);
+    renderPalette();
+    fetch(`/api/flow/operators?flow_path=${encodeURIComponent(path)}`)
+        .then((response) => response.json())
+        .then((result: { operators?: PythonOperator[] }) => {
+            pythonOperators = result.operators ?? [];
+            renderPalette();
+        })
+        .catch(() => {
+            pythonOperators = [];
+            renderPalette();
+        });
+
+    const onDragOver = (event: DragEvent) => {
+        const transfer = event.dataTransfer;
+        if (transfer && Array.from(transfer.types).some((type) => type.startsWith('application/x-ssui-'))) {
+            event.preventDefault();
+            transfer.dropEffect = 'copy';
+            container.classList.add('workflow-drop-active');
+        }
+    };
+    const onDragLeave = (event: DragEvent) => {
+        if (!container.contains(event.relatedTarget as Node | null)) container.classList.remove('workflow-drop-active');
+    };
+    const onDrop = (event: DragEvent) => {
+        const kind = event.dataTransfer?.getData('application/x-ssui-node') as PaletteNodeKind;
+        const rawOperator = event.dataTransfer?.getData('application/x-ssui-python-operator');
+        container.classList.remove('workflow-drop-active');
+        if (!rawOperator && !PALETTE_NODE_ITEMS.some((item) => item.kind === kind)) return;
+        event.preventDefault();
+        const rect = container.getBoundingClientRect();
+        const transform = area.area.transform;
+        const position = {
+            x: (event.clientX - rect.left - transform.x) / transform.k,
+            y: (event.clientY - rect.top - transform.y) / transform.k,
+        };
+        if (rawOperator) {
+            try {
+                void addNode(createPythonOperator(JSON.parse(rawOperator) as PythonOperator), position);
+            } catch {
+                return;
+            }
+        } else {
+            void addPaletteNode(kind, position).then(renderPalette);
+        }
+    };
+    container.addEventListener('dragover', onDragOver);
+    container.addEventListener('dragleave', onDragLeave);
+    container.addEventListener('drop', onDrop);
+
     const clearButton = document.createElement('button');
-    clearButton.className = 'workflow-toolbar-button workflow-toolbar-clear';
+    clearButton.className = 'workflow-palette-clear';
     clearButton.textContent = '清空画布';
     clearButton.addEventListener('pointerdown', (e) => e.stopPropagation());
-    clearButton.addEventListener('click', () => void editor.clear());
+    clearButton.addEventListener('click', () => void editor.clear().then(renderPalette));
     toolbar.appendChild(clearButton);
     container.appendChild(toolbar);
 
     return {
         destroy: () => {
+            clearTimeout(saveTimer);
+            saveState();
+            window.removeEventListener('pagehide', flushState);
+            container.removeEventListener('input', scheduleSave);
+            container.removeEventListener('pointerup', scheduleSave);
             window.removeEventListener('keydown', onKeyDown);
             window.removeEventListener('keyup', onKeyUp);
+            container.removeEventListener('dragover', onDragOver);
+            container.removeEventListener('dragleave', onDragLeave);
+            container.removeEventListener('drop', onDrop);
             toolbar.remove();
             area.destroy();
         },
@@ -452,7 +633,9 @@ const createEditor = async (container: HTMLElement) => {
 };
 
 export const Workflow: React.FC<WorkflowProps> = ({ path }) => {
-    const [ref, editor] = useRete(createEditor)
+    const stateContext = React.useContext(UIStateContext);
+    const factory = React.useMemo(() => createEditor(path, stateContext), [path, stateContext?.store]);
+    const [ref, editor] = useRete(factory)
     return (
         <div className="workflow-ui" style={{ width: '100%', height: '100vh', position: 'relative' }}>
             <div ref={ref} style={{ width: '100%', height: '100%', position: 'absolute', top: 0, left: 0 }} />

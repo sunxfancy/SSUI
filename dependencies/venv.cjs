@@ -1,30 +1,24 @@
 #!/usr/bin/env node
-const { spawn } = require('child_process');
-const path = require('path');
 const fs = require('fs');
-const isWin = process.platform === 'win32';
-
-// 根据操作系统选择正确的路径
-const current_path = path.resolve(__dirname, '..');
-const venvPath = isWin ? path.join(current_path, '.venv', 'Scripts') : path.join(current_path, '.venv', 'bin');
-const cmd = path.join(venvPath, process.argv[2]);
-
-var detached = false;
-// if (process.argv[2] === 'fastapi') {
-//     detached = true;
-// }
-
-// 获取传递给脚本的其余参数
-const args = process.argv.slice(3);
-
-// 执行命令
+const path = require('path');
+const { spawn } = require('child_process');
+const { resolveConfig, executable } = require('./dev_config.cjs');
+const env = resolveConfig();
+const name = process.argv[2];
+if (!name) {
+  console.error('Usage: node dependencies/venv.cjs <command> [args]');
+  process.exit(1);
+}
 const native = path.join(__dirname, 'native_cuda.py');
-const managed = !isWin && fs.existsSync(native);
-const executable = managed ? path.join(venvPath, 'python') : cmd;
-const commandArgs = managed ? [native, 'exec', '--', cmd, ...args] : args;
-const proc = spawn(executable, commandArgs, { stdio: 'inherit', shell: false, detached: detached, windowsHide: true });
-proc.on('error', error => { console.error(error.message); process.exit(1); });
-proc.on('exit', (code, signal) => {
-  if (signal) process.kill(process.pid, signal);
-  else process.exit(code ?? 1);
+const local = path.resolve(env.SSUI_VENV_PATH) === path.resolve(__dirname, '../.venv');
+const managed = process.platform === 'linux' && local && fs.existsSync(native);
+const command = executable(name, env);
+const args = process.argv.slice(3);
+const proc = spawn(managed ? executable('python', env) : command, managed ? [native, 'exec', '--', command, ...args] : args, {
+  stdio: 'inherit', shell: false, windowsHide: true, env,
 });
+proc.on('error', error => {
+  console.error(`Cannot run ${name} in ${env.SSUI_VENV_PATH}: ${error.message}`);
+  process.exit(1);
+});
+proc.on('exit', code => process.exit(code === null ? 1 : code));

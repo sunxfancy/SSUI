@@ -85,6 +85,7 @@ def main() -> int:
     parser.add_argument("--image", default=None, help="首帧图片路径（fl2va）")
     parser.add_argument("--last-image", default=None, help="尾帧图片路径（fl2va）")
     parser.add_argument("--num-frames", type=int, default=124, help="帧数（自动取整到 17n+5，5-15 秒@24fps）")
+    parser.add_argument("--num-inference-steps", type=int, default=50)
     parser.add_argument("--height", type=int, default=None, help="短边建议 768，需为 32 的倍数")
     parser.add_argument("--width", type=int, default=None)
     parser.add_argument("--seed", type=int, default=42)
@@ -128,6 +129,7 @@ def main() -> int:
         call_kwargs = dict(
             prompt=args.prompt,
             num_frames=args.num_frames,
+            num_inference_steps=args.num_inference_steps,
             generator=torch.Generator().manual_seed(args.seed),
             output=["videos", "audio", "sampling_rate"],
         )

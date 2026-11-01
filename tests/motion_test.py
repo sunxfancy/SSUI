@@ -1,33 +1,39 @@
-import tempfile
-from pathlib import Path
+import os
+import sys
 import unittest
-from unittest.mock import patch
-import numpy as np
-from ssui.base import Prompt
-from ssui.config import SSUIConfig
-from ssui_motion.MDM import Motion, MDMModel, MDMTextToMotion
+
+from ss_executor.loader import SSLoader
 
 
-class MotionContractTest(unittest.TestCase):
-    def test_export_is_portable_without_pickle(self):
-        with tempfile.TemporaryDirectory() as tmp:
-            joints = np.arange(2 * 22 * 3).reshape(2, 22, 3).astype(np.float32)
-            path = str(Path(tmp) / 'motion.npz')
-            Motion(joints, 20.0, Path(tmp), 'walking').export(path)
-            with np.load(path, allow_pickle=False) as saved:
-                np.testing.assert_array_equal(saved['joints'], joints)
-                self.assertEqual(saved['fps'], 20.0)
-                self.assertEqual(str(saved['text']), 'walking')
+class MotionExtensionTest(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        motion_extension = os.path.abspath(
+            os.path.join(os.path.dirname(__file__), "..", "extensions", "Motion")
+        )
+        if motion_extension not in sys.path:
+            sys.path.insert(0, motion_extension)
 
-    def test_prepare_never_launches_inference(self):
-        config = SSUIConfig()
-        config.set_prepared(True)
-        with patch('ssui_motion.MDM.subprocess.run') as run:
-            result = MDMTextToMotion(config('Motion'), None, Prompt('walk'))
-        run.assert_not_called()
-        self.assertEqual(result.joints.shape, (0, 22, 3))
+    def test_kimodo_node_can_be_prepared_in_sandbox(self):
+        script_path = os.path.abspath(
+            os.path.join(
+                os.path.dirname(__file__),
+                "..",
+                "examples",
+                "advance",
+                "workflow-motion.py",
+            )
+        )
+        loader = SSLoader(use_sandbox=True)
+        loader.load(script_path)
+        loader.Execute()
 
-    def test_missing_official_repository_is_rejected(self):
-        with tempfile.TemporaryDirectory() as tmp:
-            with self.assertRaisesRegex(ValueError, 'repository'):
-                MDMModel.load(tmp, 'missing.pt')
+        config = loader.GetConfig("txt2motion_kimodo")
+        node_config = config["Kimodo Text To Motion"]
+
+        self.assertEqual(node_config["model"]["default"], "Kimodo-SOMA-RP-v1.1")
+        self.assertEqual(node_config["text_encoder_device"]["default"], "auto")
+
+
+if __name__ == "__main__":
+    unittest.main()

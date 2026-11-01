@@ -110,6 +110,11 @@ class SDXLLora:
         self.lora = lora
         self.weight = weight
     @staticmethod
+    def load_one(path: str, weight: float = 1.0) -> "SDXLLora":
+        lora_model = load_lora(getModelLoader(), Path(path), weight)
+        return SDXLLora(path=path, lora=lora_model, weight=weight)
+
+    @staticmethod
     def load(path: List[Path],weights: Optional[List[float]] = None) ->"List[SDXLLora]":
         if weights is not None and (len(path) != len(weights)):
             raise ValueError("LoRA paths list and weights list must have the same length")

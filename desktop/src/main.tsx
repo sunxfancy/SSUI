@@ -95,9 +95,11 @@ class Root extends Component<{}, RootState> {
     }
 
     return (
-      <BlueprintProvider>
-        {root?.path ? <App /> : <Install />}
-      </BlueprintProvider>
+      <div data-testid="desktop-root" data-app-state={root?.path ? "ready" : "install"}>
+        <BlueprintProvider>
+          {root?.path ? <App /> : <Install />}
+        </BlueprintProvider>
+      </div>
     );
   }
 }

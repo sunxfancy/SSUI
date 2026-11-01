@@ -1,0 +1,90 @@
+{
+  "python": "3.13.15",
+  "machine": "ARM64",
+  "torch": "2.16.0.dev20261026+cu134",
+  "cuda": "13.4",
+  "hip": null,
+  "checks": {
+    "cuda_tensor": {
+      "status": "passed"
+    },
+    "flex_gemm": {
+      "status": "passed"
+    },
+    "sparse_convolution": {
+      "status": "passed"
+    },
+    "cumesh": {
+      "status": "passed"
+    },
+    "nvdiffrast": {
+      "status": "passed"
+    },
+    "natten": {
+      "status": "passed"
+    },
+    "o_voxel": {
+      "status": "passed"
+    },
+    "opencv": {
+      "status": "passed"
+    },
+    "masked_preprocess": {
+      "status": "passed"
+    }
+  },
+  "packages": {
+    "torch": "2.16.0.dev20261026+cu134",
+    "torchvision": "0.30.0.dev20261026+cu134",
+    "flex-gemm": "1.0.0",
+    "cumesh": "0.0.1",
+    "nvdiffrast": "0.4.0",
+    "natten": "0.21.0",
+    "o-voxel": "0.0.1",
+    "triton-windows": "3.8.0.post29",
+    "opencv-python-headless": "4.11.0.86"
+  },
+  "gpu": "NVIDIA RTX Spark N1X (6144-core Blackwell RTX GPU)",
+  "capability": [
+    12,
+    1
+  ],
+  "sources": {
+    "cumesh": "JeffreyXiang/CuMesh@12289e1062f0603f2f0d0771b02e1395d247f26f",
+    "natten": "SHI-Labs/NATTEN@506816a1b6b6bb9557466f0411dc4f0bc256cb3c",
+    "o_voxel": "microsoft/TRELLIS.2@75fbf0183001ed9876c8dbb35de6b68552ee08bd",
+    "flex_gemm": "JeffreyXiang/FlexGEMM@6dd94a859c26ee8246888502eada3dd8ad85532e",
+    "pytorch": "NVIDIA/pytorch-windows-ci@woa-nightly-20261026-r40304259310",
+    "nvdiffrast": "NVlabs/nvdiffrast@253ac4fcea7de5f396371124af597e6cc957bfae",
+    "opencv": "opencv-python-headless 4.11.0.86 source sha256:996eb282ca4b43ec6a3972414de0e2331f5d9cda2b41091a49739c19fb843798",
+    "naf": "valeoai/NAF@37f2dfc180f2de53d98bd601109c0da0dd6b0f43"
+  },
+  "wheels": [
+    {
+      "sha256": "1d345d182c9907cce0f59fb27288a8ffc87bd8e7fe9c512bf74fc59559ce5415",
+      "file": "cumesh-0.0.1-cp313-cp313-win_arm64.whl"
+    },
+    {
+      "sha256": "576886a7f16c4b03587ac2ffc34139263235c842b234cf28f63b68ab6132bcb6",
+      "file": "flex_gemm-1.0.0-cp313-cp313-win_arm64.whl"
+    },
+    {
+      "sha256": "3dbeb4d34fe53bb1a39715f86e71600cf9dca7c84b33f69a59f791a212e8c9f2",
+      "file": "natten-0.21.0-cp313-cp313-win_arm64.whl"
+    },
+    {
+      "sha256": "ce5abf25d9d7c3ae1e7b0ae3a42091baf2d396cfaf80f3f9a0c38fa52dc3acc3",
+      "file": "nvdiffrast-0.4.0-cp313-cp313-win_arm64.whl"
+    },
+    {
+      "sha256": "7ad59105fb2a5cad1eb7cd2e58d902850e7dc25f0cf1077c710814f3548d66b8",
+      "file": "o_voxel-0.0.1-cp313-cp313-win_arm64.whl"
+    },
+    {
+      "sha256": "df04b916f8007244b8c5737a1408adad6859f00f36b1d680eaaaae6366343924",
+      "file": "opencv_python_headless-4.11.0.86-cp313-cp313-win_arm64.whl"
+    }
+  ],
+  "date": "2026-10-27",
+  "sparse_convolution_reference": "CPU FP64 dense convolution, GPU FP32 with TF32 disabled; cold autotuning and cached outputs compared"
+}

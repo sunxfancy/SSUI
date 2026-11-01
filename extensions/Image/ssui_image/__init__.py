@@ -1,3 +1,9 @@
+from backend.diffusers_compat import preload_attention_dispatch_for_torch_24
+
+
+preload_attention_dispatch_for_torch_24()
+
+
 # 从SD1.py导入所有类和函数
 from .SD1 import (
     getModelLoader,
@@ -22,6 +28,15 @@ from .SDXL import (
     SDXLLatentDecode
 )
 
+from .PixelArt import (
+    AgentPaintAsset,
+    PixelSrcAsset,
+    RenderAgentPaint,
+    RenderPixelSrc,
+    FinalizePixelArt,
+    finalize_pixel_art_image,
+)
+
 # 定义__all__列表，明确指定导出的符号
 __all__ = [
     # SD1模块中的类和函数
@@ -42,5 +57,11 @@ __all__ = [
     "SDXLLatent",
     "SDXLLora",
     "SDXLDenoise",
-    "SDXLLatentDecode"
+    "SDXLLatentDecode",
+    "AgentPaintAsset",
+    "PixelSrcAsset",
+    "RenderAgentPaint",
+    "RenderPixelSrc",
+    "FinalizePixelArt",
+    "finalize_pixel_art_image",
 ]

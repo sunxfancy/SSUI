@@ -1,3 +1,4 @@
+import { UIStateContext } from 'ssui_components';
 import React, { Component } from "react";
 import * as monaco from "monaco-editor";
 import EditorWorker from "monaco-editor/esm/vs/editor/editor.worker?worker";
@@ -22,6 +23,7 @@ interface CodeEditorState {
     saving: boolean;
     saveError: Error | null;
     savedAt: Date | null;
+    draftConflict?: boolean;
 }
 
 function currentMonacoTheme(): string {
@@ -29,8 +31,15 @@ function currentMonacoTheme(): string {
 }
 
 export class CodeEditor extends Component<CodeEditorProps, CodeEditorState> {
+    static contextType = UIStateContext;
+    declare context: React.ContextType<typeof UIStateContext>;
+    private contentReady = false;
+    private loadRequest?: AbortController;
     private containerRef: React.RefObject<HTMLDivElement>;
     private editor: monaco.editor.IStandaloneCodeEditor | null = null;
+    private version: string | null = null;
+    private generation = 0;
+    private savePending = false;
     private lastSavedContent = "";
     private themeObserver: MutationObserver | null = null;
 
@@ -51,13 +60,24 @@ export class CodeEditor extends Component<CodeEditorProps, CodeEditorState> {
         this.createEditor();
         this.loadContent();
         this.watchTheme();
+        window.addEventListener("beforeunload", this.handleBeforeUnload);
         window.addEventListener("keydown", this.handleKeyDown);
     }
 
+    componentDidUpdate(previous: CodeEditorProps) {
+        if (previous.path !== this.props.path) void this.loadContent();
+    }
+
     componentWillUnmount() {
+        this.generation++;
+        this.loadRequest?.abort();
+        this.saveViewState();
+        window.removeEventListener("beforeunload", this.handleBeforeUnload);
         window.removeEventListener("keydown", this.handleKeyDown);
         this.themeObserver?.disconnect();
+        const model = this.editor?.getModel();
         this.editor?.dispose();
+        model?.dispose();
         this.editor = null;
     }
 
@@ -67,6 +87,7 @@ export class CodeEditor extends Component<CodeEditorProps, CodeEditorState> {
         }
         this.editor = monaco.editor.create(this.containerRef.current, {
             value: "",
+            readOnly: true,
             language: "python",
             theme: currentMonacoTheme(),
             automaticLayout: true,
@@ -82,10 +103,18 @@ export class CodeEditor extends Component<CodeEditorProps, CodeEditorState> {
                 horizontalScrollbarSize: 10,
             },
         });
+        this.editor.onDidChangeCursorPosition(this.saveViewState);
+        this.editor.onDidScrollChange(this.saveViewState);
         this.editor.onDidChangeModelContent(() => {
             const value = this.editor?.getValue() ?? "";
+            if (!this.contentReady) return;
             this.setState({ dirty: value !== this.lastSavedContent });
+            this.context?.store.set('/draft', { base: this.lastSavedContent, content: value });
         });
+    };
+
+    saveViewState = () => {
+        if (this.contentReady && this.editor) this.context?.store.set('/editorView', this.editor.saveViewState());
     };
 
     watchTheme = (): void => {
@@ -99,22 +128,53 @@ export class CodeEditor extends Component<CodeEditorProps, CodeEditorState> {
     };
 
     loadContent = async (): Promise<void> => {
+        this.loadRequest?.abort();
+        const request = new AbortController();
+        this.loadRequest = request;
+        this.contentReady = false;
+        const generation = ++this.generation;
+        this.version = null;
+        this.editor?.updateOptions({ readOnly: true });
+        this.setState({ loading: true, loadError: null, dirty: false, savedAt: null, saveError: null });
         try {
-            const response = await fetch("/file?" + new URLSearchParams({
+            const response = await fetch("/file/text?" + new URLSearchParams({
                 path: this.props.path,
-            }));
+            }), { signal: request.signal });
             if (!response.ok) {
                 throw new Error(`Failed to load file (${response.status})`);
             }
-            const content = await response.text();
+            const snapshot = await response.json();
+            if (typeof snapshot?.content !== "string" || typeof snapshot?.version !== "string") {
+                throw new Error("Invalid file snapshot");
+            }
+            const content = snapshot.content;
+            if (generation !== this.generation) return;
+            this.version = snapshot.version;
+            this.editor?.updateOptions({ readOnly: false });
             this.lastSavedContent = content;
-            this.editor?.setValue(content);
-            this.setState({ loading: false, loadError: null, dirty: false });
+            if (!this.editor || request.signal.aborted) return;
+            const draft = this.context?.store.values['/draft'] as { base: string; content: string } | undefined;
+            const restored = draft && draft.content !== draft.base ? draft.content : content;
+            this.editor.setValue(restored);
+            const view = this.context?.store.values['/editorView'] as monaco.editor.ICodeEditorViewState | undefined;
+            if (view) this.editor.restoreViewState(view);
+            this.contentReady = true;
+            this.setState({ loading: false, loadError: null, dirty: restored !== content,
+                draftConflict: !!draft && draft.content !== draft.base && draft.base !== content });
         } catch (error) {
+            if (request.signal.aborted) return;
+            if (generation !== this.generation) return;
             this.setState({
                 loading: false,
                 loadError: error instanceof Error ? error : new Error("Unknown error"),
             });
+        }
+    };
+
+    handleBeforeUnload = (event: BeforeUnloadEvent): void => {
+        if (this.state.dirty || this.savePending) {
+            event.preventDefault();
+            event.returnValue = "";
         }
     };
 
@@ -126,10 +186,12 @@ export class CodeEditor extends Component<CodeEditorProps, CodeEditorState> {
     };
 
     handleSave = async (): Promise<void> => {
-        if (this.state.saving) {
+        if (this.savePending || this.state.loading || this.state.loadError || !this.editor || !this.version) {
             return;
         }
-        const content = this.editor?.getValue() ?? "";
+        const generation = this.generation;
+        this.savePending = true;
+        const content = this.editor.getValue();
         this.setState({ saving: true, saveError: null });
         try {
             const response = await fetch("/files/upload_json", {
@@ -140,20 +202,41 @@ export class CodeEditor extends Component<CodeEditorProps, CodeEditorState> {
                 body: JSON.stringify({
                     path: this.props.path,
                     content,
+                    expected_version: this.version,
                 }),
             });
             const data = await response.json().catch(() => null);
-            if (!response.ok || (data && data.error)) {
-                throw new Error((data && data.error) || `Save failed (${response.status})`);
+            if (response.status === 409) {
+                throw new Error("文件已被其他窗口或程序修改。本地修改已保留，请先备份，再重新加载磁盘版本并合并修改。");
             }
+            if (!response.ok || (data && data.error)) {
+                throw new Error((data && (data.error || data.detail)) || `Save failed (${response.status})`);
+            }
+            if (generation !== this.generation) return;
+            if (data?.success !== true || typeof data?.version !== "string") throw new Error("Invalid save response");
+            this.version = data.version;
             this.lastSavedContent = content;
-            this.setState({ saving: false, dirty: false, savedAt: new Date() });
+            const current = this.editor?.getValue() ?? content;
+            this.context?.store.set('/draft', { base: content, content: current });
+            this.setState({ saving: false, dirty: current !== content, draftConflict: false, savedAt: new Date() });
         } catch (error) {
+            if (generation !== this.generation) return;
             this.setState({
                 saving: false,
                 saveError: error instanceof Error ? error : new Error("Unknown error"),
             });
+        } finally {
+            this.savePending = false;
+            if (this.editor) this.setState({ saving: false });
         }
+    };
+
+    reloadFromDisk = (): void => {
+        if (this.savePending) return;
+        if (this.state.dirty && !window.confirm("重新加载将丢弃本地未保存修改。请先备份需要保留的内容。继续吗？")) return;
+        this.context?.store.set('/draft', undefined);
+        this.context?.store.set('/editorView', undefined);
+        void this.loadContent();
     };
 
     renderStatus = (): React.ReactNode => {
@@ -192,6 +275,7 @@ export class CodeEditor extends Component<CodeEditorProps, CodeEditorState> {
                     </div>
                     <div className="code-editor-header-actions">
                         <ViewSwitcher path={path} currentView="code_editor" />
+                        <Button disabled={loading || saving} onClick={this.reloadFromDisk}>Reload from disk</Button>
                         <Button
                             intent={Intent.PRIMARY}
                             icon="floppy-disk"
@@ -203,6 +287,7 @@ export class CodeEditor extends Component<CodeEditorProps, CodeEditorState> {
                         </Button>
                     </div>
                 </div>
+                {this.state.draftConflict && <div role="alert">已恢复未保存草稿；磁盘文件已发生变化，保存前请确认内容。</div>}
                 <div className="code-editor-status">{this.renderStatus()}</div>
                 <div className="code-editor-container" ref={this.containerRef} />
             </div>

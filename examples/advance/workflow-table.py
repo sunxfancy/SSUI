@@ -3,7 +3,7 @@ from ssui_image.Flux import FluxModel, FluxClip, FluxLatent, FluxDenoise, FluxLa
 from ssui.config import SSUIConfig
 from ssui_3dmodel.Trellis import TrellisModel, GenModel
 from typing import List, Tuple
-from PIL import Image, ImageDraw, ImageFont
+from PIL import Image as PILImage, ImageDraw, ImageFont
 import numpy as np
 import PIL.Image
 
@@ -77,7 +77,7 @@ def render_table_to_image(table_data: List[List[str]], cell_padding: int = 10, f
     total_height = sum(cell_heights)
     
     # 创建图片
-    image = PIL.Image.new('RGB', (total_width, total_height), 'white')
+    image = PILImage.new('RGB', (total_width, total_height), 'white')
     draw = ImageDraw.Draw(image)
     
     # 绘制表格

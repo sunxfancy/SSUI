@@ -1,5 +1,27 @@
 import { IController, IControllerProps } from "./IController";
-import { Alignment, Button, MenuItem, Slider, Switch } from "@blueprintjs/core";
+import { Alignment, Button, FormGroup, InputGroup, MenuItem, Slider, Switch } from "@blueprintjs/core";
+
+export class InputController extends IController<{ value: string }> {
+    state = { value: String(this.props.default ?? '') };
+
+    onExecute() {
+        return this.state.value;
+    }
+
+    render() {
+        const placeholder = this.props.params?.hints || '';
+        const sensitive = /token|key|secret|password/i.test(this.props.name || placeholder);
+        return <FormGroup helperText={placeholder}>
+            <InputGroup
+                fill
+                type={sensitive ? 'password' : 'text'}
+                value={this.state.value}
+                placeholder={placeholder}
+                onChange={event => this.setState({ value: event.target.value })}
+            />
+        </FormGroup>;
+    }
+}
 
 export class SliderController extends IController<{ value: number }> {
     constructor(props: IControllerProps) {
@@ -21,6 +43,7 @@ export class SliderController extends IController<{ value: number }> {
     render() {
         if (this.props.params?.labels == undefined) {
             return <Slider value={this.state.value}
+                handleHtmlProps={{ 'aria-label': this.props.name }}
                 min={this.props.params?.min ?? 0}
                 max={this.props.params?.max ?? 0}
                 stepSize={this.props.params?.step ?? 1}
@@ -28,6 +51,7 @@ export class SliderController extends IController<{ value: number }> {
                 onChange={this.setValue} />;
         } else {
             return <Slider value={this.state.value}
+                handleHtmlProps={{ 'aria-label': this.props.name }}
                 min={this.props.params?.min ?? 0}
                 max={this.props.params?.max ?? 0}
                 stepSize={this.props.params?.step ?? 1}
@@ -130,7 +154,8 @@ export class RandomController extends IController<{ value: number; userInput: bo
     };
 
     componentDidMount() {
-        if (this.props.params && this.props.params.default !== undefined) {
+        super.componentDidMount();
+        if (!this.context?.store.values[this.context.key] && this.props.params && this.props.params.default !== undefined) {
             this.setState({ value: this.props.params.default });
         }
     }
@@ -174,11 +199,12 @@ export class RandomController extends IController<{ value: number; userInput: bo
             <div className="functional-ui-random" style={{ display: 'flex', alignItems: 'center' }}>
                 <input
                     type="text"
+                    aria-label={this.props.name}
                     value={this.state.value}
                     onChange={this.handleInputChange}
                     style={{ marginRight: '8px', width: '120px' }}
                 />
-                <Button icon="random" onClick={this.generateRandom} minimal={true} />
+                <Button icon="random" aria-label={`Randomize ${this.props.name}`} onClick={this.generateRandom} minimal={true} />
             </div>
         );
     }
@@ -188,6 +214,7 @@ export class RandomController extends IController<{ value: number; userInput: bo
 import { registerController, ControllerRegister } from './IController';
 import { ItemPredicate, ItemRenderer, Select } from "@blueprintjs/select";
 [
+    { 'name': 'Input', 'component': InputController } as ControllerRegister,
     { 'name': 'Slider', 'component': SliderController } as ControllerRegister,
     { 'name': 'Switch', 'component': SwitchController } as ControllerRegister,
     { 'name': 'Select', 'component': SelectController } as ControllerRegister,

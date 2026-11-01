@@ -1,6 +1,6 @@
 import React, { Component } from "react";
-import { Section, SectionCard } from "@blueprintjs/core";
-import { ControllerRef } from "ssui_components";
+import { Callout, NonIdealState, Section, SectionCard, Spinner } from "@blueprintjs/core";
+import { ControllerRef, UIStateScope } from "ssui_components";
 import './Details.css';
 
 interface ScriptDetails {
@@ -12,6 +12,8 @@ interface ScriptDetails {
         };
     };
 }
+
+type PrepareResponse = ScriptDetails | { error: string };
 
 interface DetailsProps {
     path: string;
@@ -26,6 +28,8 @@ interface DetailsState {
 
 export class DetailsPanel extends Component<DetailsProps, DetailsState> {
     private refMap: Map<string, Map<string, React.RefObject<ControllerRef>>> = new Map();
+    private detailsRequest?: AbortController;
+    private requestVersion = 0;
 
     constructor(props: DetailsProps) {
         super(props);
@@ -46,9 +50,18 @@ export class DetailsPanel extends Component<DetailsProps, DetailsState> {
         }
     }
 
+    componentWillUnmount() {
+        this.requestVersion++;
+        this.detailsRequest?.abort();
+    }
+
     async fetchDetails(): Promise<void> {
+        const version = ++this.requestVersion;
         const { path, selected } = this.props;
-        console.log('DetailsPanel', path, selected);
+        this.detailsRequest?.abort();
+        const request = new AbortController();
+        this.detailsRequest = request;
+        this.refMap.clear();
 
         try {
             this.setState({ loading: true, error: null });
@@ -63,21 +76,26 @@ export class DetailsPanel extends Component<DetailsProps, DetailsState> {
                 },
                 body: JSON.stringify({
                     params: {}
-                })
+                }),
+                signal: request.signal,
             });
 
             if (!response.ok) {
                 throw new Error('Failed to fetch script details');
             }
 
-            const data = await response.json() as ScriptDetails;
-            console.log('Details', data);
-
+            const data = await response.json() as PrepareResponse;
+            if (version !== this.requestVersion) return;
+            if ('error' in data && typeof data.error === 'string') {
+                throw new Error(data.error);
+            }
             this.setState({
                 loading: false,
-                details: data
+                details: data as ScriptDetails
             });
         } catch (error) {
+            if (version !== this.requestVersion) return;
+            if (error instanceof DOMException && error.name === 'AbortError') return;
             this.setState({
                 loading: false,
                 error: error instanceof Error ? error : new Error('Unknown error')
@@ -112,6 +130,8 @@ export class DetailsPanel extends Component<DetailsProps, DetailsState> {
     }
 
     onExecute() {
+        if (this.state.loading) throw new Error("Details are still loading");
+        if (this.state.error) throw this.state.error;
         let result: any = {};
         for (const section of this.refMap.keys()) {
             result[section] = {};
@@ -132,13 +152,13 @@ export class DetailsPanel extends Component<DetailsProps, DetailsState> {
             >
                 {Object.entries(controls).map(([name, control]) => (
                     <SectionCard key={name}>
-                        <ControllerRef
+                        <UIStateScope name={`${section}/${name}/${control.controller}`}><ControllerRef
                             name={name}
                             type={control.controller}
                             params={control.args}
                             default={control.default}
                             ref={this.getRef(section, name)}
-                        />
+                        /></UIStateScope>
                     </SectionCard>
                 ))}
             </Section>
@@ -146,9 +166,26 @@ export class DetailsPanel extends Component<DetailsProps, DetailsState> {
     }
 
     renderContent = (details: ScriptDetails): React.ReactNode => {
+        if (Object.keys(details).length === 0) {
+            return (
+                <NonIdealState
+                    className="details-empty"
+                    icon="clean"
+                    title="无需高级参数"
+                    description="这个函数可以直接使用上方输入运行。"
+                />
+            );
+        }
+
         return (
             <div className="details-container">
-                <h3>Details</h3>
+                <div className="details-heading">
+                    <div>
+                        <span>Advanced controls</span>
+                        <h3>高级参数</h3>
+                    </div>
+                    <p>调整运行环境与生成策略</p>
+                </div>
                 <div className="details-scrollable">
                     {this.renderControllers(details)}
                 </div>
@@ -160,11 +197,11 @@ export class DetailsPanel extends Component<DetailsProps, DetailsState> {
         const { loading, error, details } = this.state;
 
         if (loading) {
-            return <p>Loading...</p>;
+            return <div className="details-loading"><Spinner size={20} /><span>正在准备参数…</span></div>;
         }
 
         if (error) {
-            return <p>Error: {error.message}</p>;
+            return <Callout intent="danger" icon="error" title="无法加载高级参数">{error.message}</Callout>;
         }
 
         return this.renderContent(details || {});

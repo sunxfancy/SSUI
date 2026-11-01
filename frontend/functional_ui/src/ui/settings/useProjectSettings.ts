@@ -20,7 +20,15 @@ const buildUserInput = (config: UiConfig): UserInputState => {
 };
 
 export const useProjectSettings = (_path: string) => {
-  const { config, saveStatus, updateConfig } = useConfig();
+  const {
+    config,
+    loaded,
+    saveStatus,
+    saveError,
+    updateConfig,
+    saveConfig,
+    resetConfig,
+  } = useConfig();
 
   const userInput = useMemo(() => buildUserInput(config), [config]);
 
@@ -38,7 +46,11 @@ export const useProjectSettings = (_path: string) => {
   return {
     uiConfig: settingsSchema,
     userInput,
+    loaded,
     saveStatus,
-    handleConfigChange
+    saveError,
+    handleConfigChange,
+    saveConfig,
+    resetConfig,
   };
 };

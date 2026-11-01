@@ -4,6 +4,8 @@ server:
   venv: shared
   dependencies:
     - numpy>=1.21.2
+    - omegaconf==2.3.0
+    - scikit-image>=0.25.2
   packages:
     - ssui_3dmodel
     - vendor
@@ -12,4 +14,3 @@ server:
 web_ui:
   dist: dist/
   main: main.js
-  

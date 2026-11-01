@@ -127,6 +127,11 @@ class FluxLora:
         self.lora = lora
         self.weight = weight
     @staticmethod
+    def load_one(path: str, weight: float = 0.75) -> "FluxLora":
+        lora_model = load_lora(getModelLoader(), Path(path), weight)
+        return FluxLora(path=path, lora=lora_model, weight=weight)
+
+    @staticmethod
     def load(path: List[Path],weights: Optional[List[float]] = None) ->"List[FluxLora]":
         if weights is not None and (len(path) != len(weights)):
             raise ValueError("LoRA paths list and weights list must have the same length")

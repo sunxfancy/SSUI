@@ -1,0 +1,85 @@
+{
+  "platform": "Windows-11-10.0.28000-SP0",
+  "python_platform": "win-arm64",
+  "device": "cpu",
+  "torch": "2.9.1+cpu",
+  "lock_sha256": "c3ec9d40032082731a0fb34eec222ba2f40a2156e4416c21d54f8a11e85c2648",
+  "checks": {
+    "qwen": {
+      "seconds": 43.094,
+      "result": [
+        "The capital of France is Paris.",
+        [
+          [
+            "Reply with one short sentence: what is the capital of France?",
+            "The capital of France is Paris."
+          ]
+        ]
+      ],
+      "status": "passed"
+    },
+    "pose": {
+      "seconds": 20.516,
+      "result": [
+        {
+          "type": "video",
+          "path": "<workspace>\\examples\\advance\\output\\video_4a5ced75ba30418c8f35f2386d8ef57d.mp4",
+          "fps": 5.0,
+          "metadata": {}
+        },
+        {
+          "type": "skeleton_animation",
+          "path": "<workspace>\\examples\\advance\\output\\skeleton_3aef04f9e632422aacf6c6c260e71e97.json",
+          "frames": 5,
+          "duration": 0.8,
+          "fps": 5.0,
+          "bvh_path": "<workspace>\\examples\\advance\\output\\skeleton_3aef04f9e632422aacf6c6c260e71e97.bvh",
+          "retarget_path": "<workspace>\\examples\\advance\\output\\skeleton_3aef04f9e632422aacf6c6c260e71e97.retarget.json",
+          "retarget_rmse": 0.012769571578405659
+        }
+      ],
+      "skeleton_sha256": "61cc9a79525fb5234df426ae819134fb2ecca68eade43b7090f6d207cd99ccd4",
+      "status": "passed"
+    },
+    "sd1": {
+      "status": "passed",
+      "submission": "Edge Functional UI -> HTTP -> scheduler -> native executor",
+      "model": "SD1.5 full pretrained checkpoint",
+      "precision": "float32",
+      "parameters": {
+        "width": 512,
+        "height": 512,
+        "scheduler": "ddim",
+        "steps": 4,
+        "CFG": 7.5,
+        "seed": 42
+      },
+      "image_size": [
+        512,
+        512
+      ],
+      "image_sha256": "bb800afb01edade585757414b076382c634ce9bc8e39a03570b255d31f0888ef",
+      "image_stddev": [
+        26.322031920920395,
+        20.753389991242333,
+        22.237989107990334
+      ],
+      "output": "<workspace>/examples/basic/output/image_20261024032822.png",
+      "http_file_fetch": "passed",
+      "browser": {
+        "function_discovery": "passed",
+        "controls": "passed",
+        "submission": "passed",
+        "final_preview": "unverified: browser connection disconnected while inference was running"
+      },
+      "observed_seconds_to_file_under_concurrent_validation": 539.079
+    }
+  },
+  "validation": {
+    "python_tests": 132,
+    "passed": 120,
+    "skipped": 12,
+    "native_probe_checks": 24,
+    "locked_packages": 249
+  }
+}

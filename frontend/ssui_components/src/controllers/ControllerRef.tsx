@@ -22,7 +22,7 @@ export class ControllerRef extends IComponent<ControllerRefProps> {
         let c = getController(this.props.type);
         return c ?
             <div><Label>{this.props.name}</Label>
-            {c.createController(this.props.params, this.props.default, this.ref)}</div> :
+            {c.createController(this.props.params, this.props.default, this.ref, this.props.name)}</div> :
             <div>Controller {this.props.type} not found</div>;
     }
 
@@ -30,4 +30,3 @@ export class ControllerRef extends IComponent<ControllerRefProps> {
         return this.ref.current?.onExecute();
     }
 }
-

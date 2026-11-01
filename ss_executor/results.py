@@ -36,6 +36,7 @@ def serialize_result(result, project_root):
             with iio.get_writer(str(path), fps=result._fps, codec='libx264',
                                 pixelformat='yuv420p', macro_block_size=1) as writer:
                 for frame in result._frames:
+                    frame = frame._image if isinstance(frame, Image) else frame
                     writer.append_data(np.asarray(frame.convert('RGB')))
         if isinstance(result, Video):
             for name, source in result._artifacts.items():

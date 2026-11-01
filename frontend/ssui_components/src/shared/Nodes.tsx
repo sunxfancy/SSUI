@@ -202,12 +202,14 @@ export class InputNode extends BaseNode {
         this.addControl('add', new ButtonControl('添加参数', () => this.addParameter()));
     }
 
-    addParameter(): ParamSpec {
-        const key = `param_${this.counter++}`;
+    addParameter(saved?: ParamSpec): ParamSpec {
+        const key = saved?.key ?? `param_${this.counter++}`;
+        if (saved) this.counter = Math.max(this.counter, Number(key.split("_").pop()) + 1);
         const spec: ParamSpec = {
             key,
             name: `参数 ${this.parameters.length + 1}`,
             type: 'string',
+            ...saved,
         };
         this.parameters.push(spec);
         this.addOutput(key, new ClassicPreset.Output(new ClassicPreset.Socket(spec.name), spec.name));
@@ -261,12 +263,14 @@ export class OutputNode extends BaseNode {
         this.addControl('add', new ButtonControl('添加返回值', () => this.addReturn()));
     }
 
-    addReturn(): ParamSpec {
-        const key = `return_${this.counter++}`;
+    addReturn(saved?: ParamSpec): ParamSpec {
+        const key = saved?.key ?? `return_${this.counter++}`;
+        if (saved) this.counter = Math.max(this.counter, Number(key.split("_").pop()) + 1);
         const spec: ParamSpec = {
             key,
             name: `返回值 ${this.returns.length + 1}`,
             type: 'string',
+            ...saved,
         };
         this.returns.push(spec);
         this.addInput(key, new ClassicPreset.Input(new ClassicPreset.Socket(spec.name), spec.name));
@@ -439,10 +443,33 @@ export function OutputNodeRender(props: {
 // ============ 算子（函数内部子元素示例） ============
 
 export class OperatorNode extends BaseNode {
-    constructor(name: string, refresh?: () => void) {
+    callable?: string;
+    module?: string;
+    inputTypes: Record<string, string> = {};
+    outputTypes: Record<string, string> = {};
+
+    constructor(
+        name: string,
+        refresh?: () => void,
+        spec?: { callable: string; module: string; params: Record<string, string>; returns: string[] }
+    ) {
         super(name);
-        this.addInput('input', new ClassicPreset.Input(new ClassicPreset.Socket('输入'), '输入'));
-        this.addOutput('output', new ClassicPreset.Output(new ClassicPreset.Socket('输出'), '输出'));
+        this.callable = spec?.callable;
+        this.module = spec?.module;
+        if (spec) {
+            Object.entries(spec.params).forEach(([key, type]) => {
+                this.inputTypes[key] = type;
+                this.addInput(key, new ClassicPreset.Input(new ClassicPreset.Socket(type), key));
+            });
+            spec.returns.forEach((type, index) => {
+                const key = spec.returns.length === 1 ? 'result' : `result_${index + 1}`;
+                this.outputTypes[key] = type;
+                this.addOutput(key, new ClassicPreset.Output(new ClassicPreset.Socket(type), key));
+            });
+        } else {
+            this.addInput('input', new ClassicPreset.Input(new ClassicPreset.Socket('输入'), '输入'));
+            this.addOutput('output', new ClassicPreset.Output(new ClassicPreset.Socket('输出'), '输出'));
+        }
         const nameControl = new NameControl(name, () => {});
         this.addControl(
             'name',

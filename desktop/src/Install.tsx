@@ -3,6 +3,7 @@ import { Dialog, Button, Checkbox, FormGroup, InputGroup, Intent, Classes, Progr
 import { IInstallerProvider } from './providers/IInstallerProvider';
 import { TauriInstallerProvider } from './providers/TauriInstallerProvider';
 import { invoke } from '@tauri-apps/api/core';
+import { dependencyProfile } from './providers/runtimeTarget';
 
 interface InstallPageState {
   isOpen: boolean;
@@ -196,22 +197,13 @@ class InstallPage extends React.Component<InstallPageProps, InstallPageState> {
       }
     }
 
-    // 根据平台选择正确的lock文件
-    if (currentPlatform === 'macos') {
-      lockFile = 'dependencies/macosx.lock';
-      this.setState({ shellOutput: this.state.shellOutput + '检测到macOS系统，使用macosx.lock...\n' });
-    } else if (currentPlatform === 'windows') {
-      lockFile = 'dependencies/windows.lock';
-      this.setState({ shellOutput: this.state.shellOutput + '检测到Windows系统，使用windows.lock...\n' });
-    } else if (currentPlatform === 'linux') {
-      lockFile = 'dependencies/linux.lock';
-      this.setState({ shellOutput: this.state.shellOutput + '检测到Linux系统，使用linux.lock...\n' });
-    } else {
-      this.setState({ shellOutput: this.state.shellOutput + `不支持的平台: ${currentPlatform}\n` });
-      return;
-    }
-
     try {
+      const target = await this.provider.detectRuntimeTarget();
+      const profile = dependencyProfile(target);
+      lockFile = `dependencies/${profile.dependencyTarget}.lock`;
+      this.setState(prev => ({ shellOutput: prev.shellOutput
+        + `安装目标: ${target.os} / ${target.arch} / ${target.backend}\n`
+        + (profile.experimental ? '此目标为实验支持，语音、视频、3D 和部分图像流程的依赖尚未齐全。\n' : '') }));
       // 1. 检查Python是否已安装
       this.setState(prev => ({
         shellOutput: prev.shellOutput + '正在检查Python是否已安装...\n',

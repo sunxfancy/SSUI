@@ -148,13 +148,31 @@ async function main() {
   
   // 确保目标目录存在
   ensureDirectoryExists(targetDir);
+  const { wheelhouseFor } = require('../../dependencies/native_wheels.cjs');
+  const { getCurrentTarget } = require('../../dependencies/platform.cjs');
+  const nativeWheels = wheelhouseFor(getCurrentTarget());
+  // Remove stale wheels when switching build targets in the same checkout.
+  for (const name of fs.readdirSync(targetDir)) {
+    if (name.endsWith('.whl') || name === 'native-wheels.json') fs.unlinkSync(path.join(targetDir, name));
+  }
+  if (nativeWheels) {
+    const manifest = require('../../dependencies/native_wheels.cjs').verifyWheelhouse(nativeWheels);
+    for (const wheel of manifest.wheels) copyFile(path.join(nativeWheels, wheel.filename), path.join(targetDir, wheel.filename));
+    copyFile(path.join(nativeWheels, 'manifest.json'), path.join(targetDir, 'native-wheels.json'));
+  }
+
   
-  // Ship every platform lock plus native bootstrap resources.
-  for (const filename of fs.readdirSync(sourceDir)) {
-    if (filename.endsWith('.lock') || ['native_cuda.py', 'native-cuda-linux.yaml', 'native-cuda-linux.explicit.txt',
-        'requirements-native-cuda-linux.txt', 'requirements-motion.txt', 'build-constraints.txt'].includes(filename)) {
-      copyFile(path.join(sourceDir, filename), path.join(targetDir, filename));
-    }
+  for (const filename of ['native_cuda.py', 'native-cuda-linux.yaml', 'native-cuda-linux.explicit.txt', 'requirements-native-cuda-linux.txt', 'requirements-motion.txt', 'build-constraints.txt']) {
+    copyFile(path.join(sourceDir, filename), path.join(targetDir, filename));
+  }
+
+  // All packaged dependency sets come from the same OS / arch / backend registry.
+  const { profiles } = require('../../dependencies/runtime-targets.json');
+  for (const { dependencyTarget } of profiles) {
+    const source = path.join(sourceDir, `${dependencyTarget}.lock`);
+    if (!fs.existsSync(source)) throw new Error(`缺少依赖锁文件: ${source}`);
+    copyFile(source, path.join(targetDir, `${dependencyTarget}.lock`));
+
   }
 
   // touch 一个文件
@@ -181,7 +199,7 @@ async function main() {
   }
 
   for (const filename of ['workflow-wan21.py', 'workflow-cogvideo2b.py',
-      'workflow-text-to-3d.py', 'workflow-motion.py']) {
+      'workflow-text-to-3d.py', 'workflow-mdm.py']) {
     copyFile(path.resolve(__dirname, '../../examples/advance', filename), path.join(workflowTargetDir, filename));
   }
   // 创建app.tar.gz压缩包

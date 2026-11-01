@@ -1,9 +1,10 @@
-import React, { Component } from 'react';
-import { Label, Button, Card, Elevation, Collapse, Callout } from "@blueprintjs/core";
+import React from 'react';
+import { Button, Callout, Collapse, Icon, MenuItem, NonIdealState, Spinner, Tag } from "@blueprintjs/core";
 import { ItemPredicate, ItemRenderer, Select } from "@blueprintjs/select";
-import { MenuItem } from "@blueprintjs/core";
-import { ComponentTabRef } from "ssui_components";
+import { ComponentTabRef, PersistentComponent, UIStateScope } from "ssui_components";
+import type { ApiComponents } from "ssui_components";
 import { DetailsPanel } from "./Details";
+import { ContextEditor, SessionAccess, SharedSettings, useSessions } from '../conversation/SessionState';
 import { registerUIProvider, UIProvider } from '../UIProvider';
 import { useConfig } from '../../config';
 import { ViewSwitcher } from "../common/ViewSwitcher";
@@ -12,34 +13,11 @@ import "normalize.css";
 import "@blueprintjs/core/lib/css/blueprint.css";
 import "@blueprintjs/icons/lib/css/blueprint-icons.css";
 
-interface Callable {
-    rank: number;
-    name: string;
-}
-
-interface Params {
-    params: {
-        [key: string]: string;
-    },
-    returns: {
-        [key: string]: string;
-    }
-}
-
-interface FunctionMeta {
-    [key: string]: Params
-}
-interface ScriptMeta {
-    root_path: string;
-    functions: FunctionMeta;
-}
-
-interface FunctionalUIProps {
-    path: string;
-    /** 页面打开时是否自动展开详细面板（来自用户配置） */
-    autoOpenDetails?: boolean;
-}
-
+interface Callable { rank: number; name: string; }
+type Params = ApiComponents['schemas']['ScriptFunctionInfo'];
+type ScriptMeta = ApiComponents['schemas']['ScriptMeta'];
+type FunctionMeta = ScriptMeta['functions'];
+interface FunctionalUIProps { path: string; autoOpenDetails?: boolean; sessions?: SessionAccess | null; }
 interface FunctionalUIState {
     functions: FunctionMeta | null;
     loading: boolean;
@@ -48,279 +26,262 @@ interface FunctionalUIState {
     isOpen: boolean;
     root_path: string;
     running: boolean;
-    executionError: string | null;
+    runError: string | null;
+    hasRun: boolean;
 }
 
-export class FunctionalUI extends Component<FunctionalUIProps, FunctionalUIState> {
-    constructor(props: FunctionalUIProps) {
-        super(props);
-        this.state = {
-            functions: null,
-            loading: true,
-            error: null,
-            selectedFunc: undefined,
-            isOpen: false,
-            root_path: '',
-            running: false,
-            executionError: null,
-        };
+export class FunctionalUI extends PersistentComponent<FunctionalUIProps, FunctionalUIState> {
+    protected persistedFields: (keyof FunctionalUIState)[] = ['selectedFunc', 'isOpen'];
+    state: FunctionalUIState = {
+        functions: null, loading: true, error: null, selectedFunc: undefined,
+        isOpen: Boolean(this.props.autoOpenDetails), root_path: '', running: false,
+        runError: null, hasRun: false,
+    };
+
+    private refInputs = new Map<string, React.RefObject<ComponentTabRef>>();
+    private refOutputs = new Map<string, React.RefObject<ComponentTabRef>>();
+    private details: React.RefObject<DetailsPanel> = React.createRef();
+    private runPending = false;
+    private metaRequest?: AbortController;
+    private executeRequest?: AbortController;
+
+    componentDidMount() { super.componentDidMount(); this.queryScriptMeta(); }
+
+    componentDidUpdate(prevProps: FunctionalUIProps) {
+        super.componentDidUpdate();
+        if (prevProps.path !== this.props.path) this.queryScriptMeta();
+        if (!prevProps.autoOpenDetails && this.props.autoOpenDetails) this.setState({ isOpen: true });
     }
 
-    refInputs: Map<string, React.RefObject<ComponentTabRef>> = new Map();
-    refOutputs: Map<string, React.RefObject<ComponentTabRef>> = new Map();
-    details: React.RefObject<DetailsPanel> = React.createRef();
-
-    componentDidMount() {
-        this.queryScriptMeta();
-        if (this.props.autoOpenDetails) {
-            this.setState({ isOpen: true });
-        }
+    componentWillUnmount() {
+        this.metaRequest?.abort();
+        this.executeRequest?.abort();
     }
 
     async queryScriptMeta(): Promise<void> {
+        this.metaRequest?.abort();
+        this.executeRequest?.abort();
+        const request = new AbortController();
+        this.metaRequest = request;
+        this.runPending = false;
+        this.refInputs.clear();
+        this.refOutputs.clear();
+        this.setState({ loading: true, error: null, functions: null, running: false, runError: null, hasRun: false });
         try {
-            const response = await fetch('/api/script?' + new URLSearchParams({
-                script_path: this.props.path
-            }));
-
-            if (!response.ok) {
-                throw new Error('Failed to fetch script meta');
-            }
-
+            const response = await fetch('/api/script?' + new URLSearchParams({ script_path: this.props.path }), { signal: request.signal });
+            if (!response.ok) throw new Error(`无法读取脚本信息（${response.status}）`);
             const data = await response.json() as ScriptMeta;
-            this.setState({
-                functions: data.functions,
-                loading: false,
-                error: null,
-                root_path: data.root_path
-            });
-            console.log(this.state);
+            if (request !== this.metaRequest || request.signal.aborted) return;
+            if (!data.functions || typeof data.functions !== 'object') throw new Error('Invalid script metadata');
+            for (const meta of Object.values(data.functions)) {
+                if (typeof meta === 'string') continue;
+                if (!meta || typeof meta.params !== 'object' || !meta.params || !Array.isArray(meta.returns) ||
+                    !Object.values(meta.params).every(value => typeof value === 'string') ||
+                    !meta.returns.every(value => typeof value === 'string')) throw new Error('Invalid function metadata');
+            }
+            const names = this.getFunctionNames(data.functions);
+            if (this.state.selectedFunc && !names.includes(this.state.selectedFunc.name)) this.setState({ selectedFunc: undefined });
+            this.setState({ functions: data.functions, loading: false, error: null, root_path: data.root_path ?? '' });
         } catch (error) {
-            this.setState({
-                loading: false,
-                error: error instanceof Error ? error : new Error('Unknown error')
-            });
+            if (request !== this.metaRequest || request.signal.aborted) return;
+            if (error instanceof DOMException && error.name === 'AbortError') return;
+            this.setState({ loading: false, error: error instanceof Error ? error : new Error('读取脚本时发生未知错误') });
         }
     }
 
-    getRef = (index: string, container: Map<string, React.RefObject<ComponentTabRef>>): React.RefObject<ComponentTabRef> => {
-        if (container.has(index)) {
-            return container.get(index) ?? React.createRef<ComponentTabRef>();
-        }
+    getRef = (key: string, container: Map<string, React.RefObject<ComponentTabRef>>) => {
+        const existing = container.get(key);
+        if (existing) return existing;
+        const ref = React.createRef<ComponentTabRef>();
+        container.set(key, ref);
+        return ref;
+    };
 
-        const newRef = React.createRef<ComponentTabRef>();
-        container.set(index, newRef);
-        return newRef;
-    }
+    getFunctionNames = (meta: FunctionMeta) => Object.entries(meta)
+        .filter(([, value]) => typeof value !== 'string')
+        .map(([key]) => key);
 
-    handleSelectFunc = (func: Callable): void => {
-        this.setState({ selectedFunc: func });
-    }
+    handleSelectFunc = (func: Callable) => {
+        if (this.runPending) return;
+        this.executeRequest?.abort();
+        this.refInputs.clear();
+        this.refOutputs.clear();
+        this.setState({ selectedFunc: func, running: false, runError: null, hasRun: false });
+    };
 
-    toggleDetails = (): void => {
-        this.setState(prevState => ({ isOpen: !prevState.isOpen }));
-    }
+    toggleDetails = () => this.setState(state => ({ isOpen: !state.isOpen }));
 
     handleRun = async (): Promise<void> => {
-        const { functions, selectedFunc } = this.state;
-        if (!functions) return;
-        const selected = selectedFunc?.name ?? Object.keys(functions)[0];
-        this.setState({ running: true, executionError: null });
+        const { functions, selectedFunc, loading } = this.state;
+        if (!functions || loading || this.runPending) return;
+        const selected = selectedFunc?.name ?? this.getFunctionNames(functions)[0];
+        const meta = functions[selected];
+        if (!meta || typeof meta === 'string') return;
+        const conversation = meta.conversation;
+        const snapshot = conversation ? this.props.sessions?.get(selected, conversation) : undefined;
+        this.executeRequest?.abort();
+        const request = new AbortController();
+        this.executeRequest = request;
+        this.runPending = true;
+        this.setState({ running: true, runError: null });
         try {
-            const params: { [key: string]: any } = {};
-            for (const key of Object.keys(functions[selected].params)) {
-                params[key] = this.refInputs.get(key)?.current?.onExecute();
+            const params: Record<string, unknown> = {};
+            for (const key of Object.keys(meta.params)) {
+                if (conversation && key === conversation.context_param) {
+                    if (!snapshot) throw new Error('共享会话尚未准备好');
+                    params[key] = snapshot.context;
+                    continue;
+                }
+                const input = this.refInputs.get(key)?.current;
+                if (!input) throw new Error(`Input is not ready: ${key}`);
+                params[key] = input.onExecute();
             }
             const details = this.details.current?.onExecute() ?? {};
-            const response = await fetch('/api/execute?' + new URLSearchParams({
-                script_path: this.props.path, callable: selected,
-            }), {
+            const response = await fetch('/api/execute?' + new URLSearchParams({ script_path: this.props.path, callable: selected }), {
                 method: 'POST', headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ params, details }),
+                body: JSON.stringify({ params, details }), signal: request.signal,
             });
-            const data = await response.json();
-            if (!response.ok || !Array.isArray(data)) {
-                throw new Error(String(data.error ?? data.detail ?? 'Generation failed').split('\n')[0]);
+            if (!response.ok) throw new Error((await response.text()) || `执行失败（${response.status}）`);
+            const data = await response.json() as unknown;
+            if (request !== this.executeRequest || request.signal.aborted) return;
+            if (!Array.isArray(data)) {
+                const message = data && typeof data === 'object' && 'error' in data
+                    ? String((data as { error: unknown }).error)
+                    : '执行器返回了无法识别的结果格式';
+                throw new Error(message);
             }
-            data.forEach((item, index) => {
-                if (item != null) this.getRef(index.toString(), this.refOutputs).current?.onUpdate(item);
-            });
+            const outputNames = meta.returns.map((_type, index) => String(index));
+            if (data.length !== outputNames.length) throw new Error('Unexpected output count');
+            if (conversation && snapshot) {
+                const prompt = params[conversation.prompt_param];
+                if (typeof prompt !== 'string') throw new Error('对话输入必须是文本');
+                this.props.sessions!.commit(selected, conversation, snapshot, prompt, data);
+            }
+            data.forEach((item, index) => this.refOutputs.get(outputNames[index])?.current?.onUpdate(item));
+            this.setState({ runError: null, hasRun: true });
         } catch (error) {
-            this.setState({ executionError: error instanceof Error ? error.message : String(error) });
+            if (request === this.executeRequest && !request.signal.aborted) {
+                this.setState({ runError: error instanceof Error ? error.message : String(error) });
+            }
         } finally {
-            this.setState({ running: false });
+            if (request === this.executeRequest) {
+                this.runPending = false;
+                if (!request.signal.aborted) this.setState({ running: false });
+            }
         }
-    }
+    };
 
-    renderSelect = (meta: FunctionMeta): JSX.Element => {
-        const { selectedFunc } = this.state;
-        const first = Object.keys(meta)[0];
-        const keys = Object.keys(meta).map((key, idx) => ({ name: key, rank: idx + 1 } as Callable));
-
-        const filterFunc: ItemPredicate<Callable> = (query, func, _index, exactMatch) => {
-            const normalizedTitle = func.name.toLowerCase();
-            const normalizedQuery = query.toLowerCase();
-
-            if (exactMatch) {
-                return normalizedTitle === normalizedQuery;
-            } else {
-                return `${func.rank}. ${normalizedTitle}`.indexOf(normalizedQuery) >= 0;
-            }
-        };
-
-        const renderFunc: ItemRenderer<Callable> = (func, { handleClick, handleFocus, modifiers }) => {
-            if (!modifiers.matchesPredicate) {
-                return null;
-            }
-            return (
-                <MenuItem
-                    active={modifiers.active}
-                    disabled={modifiers.disabled}
-                    key={func.rank}
-                    onClick={handleClick}
-                    onFocus={handleFocus}
-                    roleStructure="listoption"
-                    text={`${func.rank}. ${func.name}`}
-                />
-            );
-        };
-
+    renderSelect = (names: string[]): JSX.Element => {
+        const items = names.map((name, index) => ({ name, rank: index + 1 }));
+        const filter: ItemPredicate<Callable> = (query, func, _index, exact) =>
+            exact ? func.name.toLowerCase() === query.trim().toLowerCase() : func.name.toLowerCase().includes(query.trim().toLowerCase());
+        const renderer: ItemRenderer<Callable> = (func, { handleClick, handleFocus, modifiers }) => modifiers.matchesPredicate ? (
+            <MenuItem active={modifiers.active} disabled={modifiers.disabled} key={func.name} icon="function" label={`#${func.rank}`}
+                onClick={handleClick} onFocus={handleFocus} roleStructure="listoption" text={func.name} />
+        ) : null;
         return (
-            <Select<Callable>
-                items={keys}
-                itemPredicate={filterFunc}
-                itemRenderer={renderFunc}
-                noResults={<MenuItem disabled={true} text="No results." roleStructure="listoption" />}
-                onItemSelect={this.handleSelectFunc}
-            >
-                <Button
-                    className="functional-ui-select"
-                    text={selectedFunc?.name ?? first}
-                    rightIcon="double-caret-vertical"
-                />
+            <Select<Callable> items={items} itemPredicate={filter} itemRenderer={renderer}
+                popoverTargetProps={{ 'aria-label': 'Select function' }}
+                noResults={<MenuItem disabled text="没有匹配的函数" roleStructure="listoption" />}
+                onItemSelect={this.handleSelectFunc} popoverProps={{ minimal: true, matchTargetWidth: true }}>
+                <Button disabled={this.state.running} className="functional-ui-select" alignText="left" icon="function"
+                    text={this.state.selectedFunc?.name ?? names[0]} rightIcon="chevron-down" />
             </Select>
         );
-    }
+    };
 
-    renderInputs = (meta: Params): JSX.Element => {
-        return (
-            <div>
-                {Object.entries(meta.params).map(([key, value]) => (
-                    <Card key={key} elevation={Elevation.TWO} className="functional-ui-card">
-                        <ComponentTabRef
-                            name={key}
-                            root_path={this.state.root_path}
-                            script_path={this.props.path}
-                            type={value}
-                            port='input'
-                            ref={this.getRef(key, this.refInputs)}
-                        />
-                    </Card>
-                ))}
-            </div>
+    renderPorts = (meta: Params, port: 'input' | 'output', functionName: string): JSX.Element => {
+        const entries: [string, string][] = port === 'input'
+            ? Object.entries(meta.params).filter(([name]) => name !== meta.conversation?.context_param)
+            : meta.returns.map((type, index) => [String(index), type]);
+        const refs = port === 'input' ? this.refInputs : this.refOutputs;
+        if (!entries.length) return (
+            <div className="functional-ui-empty-port"><Icon icon={port === 'input' ? 'inbox' : 'export'} size={18} />
+                <span>{port === 'input' ? '此函数无需输入' : '此函数没有返回值'}</span></div>
         );
-    }
-
-    renderOutputs = (meta: Params): JSX.Element => {
-
-        return (
-            <div>
-                {Object.entries(meta.returns).map(([key, value]) => (
-                    <Card key={key} elevation={Elevation.TWO} className="functional-ui-card">
-                        <ComponentTabRef
-                            name={'output_' + key}
-                            root_path={this.state.root_path}
-                            script_path={this.props.path}
-                            type={value}
-                            port='output'
-                            ref={this.getRef(key, this.refOutputs)}
-                        />
-                    </Card>
-                ))}
-            </div>
-        );
-    }
+        return <div className="functional-ui-port-list">{entries.map(([name, type], index) => (
+            <section className="functional-ui-card" key={`${functionName}-${port}-${name}`}>
+                <div className="functional-ui-card-index">{String(index + 1).padStart(2, '0')}</div>
+                <SharedSettings name={`${functionName}/${port}/${name}`}><ComponentTabRef name={port === 'output' ? `output_${name}` : name} root_path={this.state.root_path}
+                    script_path={this.props.path} type={type} port={port} ref={this.getRef(name, refs)} /></SharedSettings>
+            </section>
+        ))}</div>;
+    };
 
     renderContent = (meta: FunctionMeta): JSX.Element => {
-        const { selectedFunc, isOpen } = this.state;
-        const { path } = this.props;
-
-        const keys = Object.keys(meta).filter(key => key !== "error");
-        if (keys.length === 0) {
-            const message = typeof meta["error"] === "string"
-                ? meta["error"]
-                : "该文件不是可用的 Python 脚本";
-            return <p>Error: {message}</p>;
+        const names = this.getFunctionNames(meta);
+        if (!names.length) {
+            const message = typeof meta.error === 'string' ? meta.error : '该文件中没有可运行的 Python 函数';
+            return <NonIdealState icon="search" title="没有可运行函数" description={message} />;
         }
-
-        const selected = selectedFunc?.name ?? keys[0];
-
-        return (
-            <div>
-                {this.renderSelect(meta)}
-                <div className="functional-ui-container">
-                    <div className="functional-ui-input">
-                        Input
-                        {this.renderInputs(meta[selected])}
-                    </div>
-                    <div className="functional-ui-button">
-                        <Button intent="primary" text="Run" loading={this.state.running} onClick={this.handleRun} />
-                    </div>
-                    <div className="functional-ui-output">
-                        Output
-                        {this.renderOutputs(meta[selected])}
+        const selected = this.state.selectedFunc?.name ?? names[0];
+        const selectedMeta = meta[selected];
+        if (!selectedMeta || typeof selectedMeta === 'string') {
+            return <NonIdealState icon="error" title="函数信息无效" description="脚本返回了无法识别的函数定义。" />;
+        }
+        const inputCount = Object.keys(selectedMeta.params).length;
+        const outputCount = selectedMeta.returns.length;
+        return <div className="functional-ui-workspace">
+            <section className="functional-ui-commandbar" aria-label="运行配置">
+                <div className="functional-ui-function-picker"><span className="functional-ui-label">运行函数</span>{this.renderSelect(names)}</div>
+                <div className="functional-ui-meta" aria-label="函数摘要">
+                    <Tag minimal icon="import">{inputCount} 个输入</Tag><Tag minimal icon="export">{outputCount} 个输出</Tag>
+                </div>
+                <Button className="functional-ui-details-toggle" minimal icon="settings"
+                    rightIcon={this.state.isOpen ? 'chevron-up' : 'chevron-down'} onClick={this.toggleDetails}
+                    aria-expanded={this.state.isOpen}>高级参数</Button>
+            </section>
+            <Collapse isOpen={this.state.isOpen} keepChildrenMounted><div className="functional-ui-details-shell">
+                <SharedSettings name={`${selected}/details`}><DetailsPanel key={`${this.props.path}:${selected}`} path={this.props.path} selected={selected} ref={this.details} /></SharedSettings>
+            </div></Collapse>
+            {this.state.runError && <Callout role="alert" className="functional-ui-run-error" intent="danger" icon="error" title="运行失败">{this.state.runError}</Callout>}
+            {selectedMeta.conversation && <ContextEditor name={selected} conversation={selectedMeta.conversation} disabled={this.state.running} />}
+            <div className="functional-ui-stage">
+                <section className="functional-ui-column functional-ui-column-input">
+                    <header className="functional-ui-column-header"><div><span className="functional-ui-eyebrow">Configure</span><h2>输入</h2></div><span>{inputCount}</span></header>
+                    {this.renderPorts(selectedMeta, 'input', selected)}
+                </section>
+                <div className="functional-ui-run-rail"><div className="functional-ui-rail-line" />
+                    <Button className="functional-ui-run-button" intent="primary" icon={this.state.running ? undefined : 'play'}
+                        onClick={this.handleRun} disabled={this.state.running} aria-label={this.state.running ? '正在运行' : `运行 ${selected}`}>
+                        {this.state.running ? <Spinner size={18} /> : '运行'}
+                    </Button>
+                    <div className={`functional-ui-run-status${this.state.hasRun ? ' is-complete' : ''}`}>
+                        {this.state.hasRun ? <><Icon icon="tick-circle" size={14} /> 已完成</> : 'READY'}
                     </div>
                 </div>
-                {this.state.executionError && <Callout intent="danger" title="Generation failed">{this.state.executionError}</Callout>}
-                <Button intent="primary" onClick={this.toggleDetails}>
-                    {isOpen ? "Hide Details" : "Show Details"}
-                </Button>
-                <Collapse isOpen={isOpen} keepChildrenMounted={true}>
-                    <DetailsPanel path={path} selected={selected} ref={this.details} />
-                </Collapse>
+                <section className="functional-ui-column functional-ui-column-output">
+                    <header className="functional-ui-column-header"><div><span className="functional-ui-eyebrow">Inspect</span><h2>结果</h2></div><span>{outputCount}</span></header>
+                    {this.renderPorts(selectedMeta, 'output', selected)}
+                </section>
             </div>
-        );
-    }
+        </div>;
+    };
 
     render(): JSX.Element {
-        const { path } = this.props;
-        const { functions, loading, error } = this.state;
-
-        return (
-            <div className='functional-ui-root'>
-                <div className="functional-ui-header">
-                    <div>
-                        <h1>Functional UI</h1>
-                        <p>Path: {path}</p>
-                    </div>
-                    <ViewSwitcher path={path} currentView="functional" />
-                </div>
-
-                {loading ? (
-                    <p>Loading...</p>
-                ) : error ? (
-                    <p>Error: {error.message}</p>
-                ) : functions ? (
-                    this.renderContent(functions)
-                ) : null}
-            </div>
-        );
+        const filename = this.props.path.split(/[\\/]/).pop() || '未选择脚本';
+        return <div className="functional-ui-root">
+            <header className="functional-ui-header"><div className="functional-ui-title-block">
+                <div className="functional-ui-mark" aria-hidden="true"><Icon icon="function" size={20} /></div>
+                <div><span className="functional-ui-kicker">FUNCTION CONSOLE</span><h1>{filename}</h1>
+                    <p title={this.props.path}>{this.props.path || '选择一个 Python 脚本开始'}</p></div>
+            </div><ViewSwitcher path={this.props.path} currentView="functional" /></header>
+            {this.state.loading ? <div className="functional-ui-loading"><Spinner size={28} /><span>正在分析脚本…</span></div>
+                : this.state.error ? <NonIdealState icon="error" title="无法打开脚本" description={this.state.error.message}
+                    action={<Button icon="refresh" onClick={() => this.queryScriptMeta()}>重试</Button>} />
+                : this.state.functions ? this.renderContent(this.state.functions) : null}
+        </div>;
     }
 }
 
 const FunctionalUIView: React.FC<FunctionalUIProps> = ({ path }) => {
     const { config } = useConfig();
-    return <FunctionalUI path={path} autoOpenDetails={config.auto_open_details} />;
+    return <FunctionalUI path={path} autoOpenDetails={config.auto_open_details} sessions={useSessions()} />;
 };
 
 export class FunctionalUIProvider implements UIProvider {
-    getName(): string {
-        return 'functional';
-    }
-
-    getUI(path: string): JSX.Element {
-        return <FunctionalUIView path={path} />;
-    }
+    getName(): string { return 'functional'; }
+    getUI(path: string): JSX.Element { return <FunctionalUIView path={path} />; }
 }
 
 export default FunctionalUI;

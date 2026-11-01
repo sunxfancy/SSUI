@@ -8,8 +8,10 @@ export interface ConfigItem {
   name: string;
   type: ConfigType;
   description: string;
+  placeholder?: string;
+  sensitive?: boolean;
   value?: any;
-  options?: string[]; // 用于enum类型
+  options?: { value: string; label: string }[]; // 用于enum类型
   items?: { key: string; value: string }[]; // 用于dict类型
   listItems?: string[]; // 用于list类型
 }
@@ -37,5 +39,5 @@ export interface UserInputState {
 export interface ProjectSettingsState {
   uiConfig: ConfigGroup[];  // 界面配置
   userInput: UserInputState;  // 用户输入状态
-  saveStatus: 'saved' | 'saving' | 'unsaved';
-} 
+  saveStatus: 'saved' | 'saving' | 'unsaved' | 'error';
+}

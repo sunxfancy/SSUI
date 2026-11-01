@@ -6,6 +6,8 @@ Stable Scripts UI
 Stable Scripts UI is a web-based user interface for `Stable Scripts` - a kind of python scripts can easily reproduce the same results created by other users to run GenAI models.
 
 Linux installation, CUDA setup and validation: [Linux guide](doc/Linux.md).
+Developers can use the [module guide](doc/Modules.md) to find each package's documentation, plus the [build guide](doc/BuildSystem.en.md) and [testing guide](doc/Testing.md).
+
 
 
 ![Desktop Version](doc/images/presentation.png)
@@ -62,6 +64,7 @@ Currently supported models:
 - SD1
 - SDXL
 - Flux
+- FLUX.2 Klein (text-to-image and single/multi-reference editing)
 
 A Stable Script must contains 3 parts:
 

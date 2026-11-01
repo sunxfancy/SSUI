@@ -155,7 +155,9 @@ class ModelService:
             }
         else:
             # 复制文件
-            new_model_path = os.path.join(self.resources_dir, model_config.name)
+            model_dir = os.path.abspath(os.path.expanduser(os.environ.get("SSUI_MODEL_DIR", self.resources_dir)))
+            os.makedirs(model_dir, exist_ok=True)
+            new_model_path = os.path.join(model_dir, model_config.name)
             await aioshutil.copy(model_path, new_model_path)
             ModelInfoCache.set(model_path, model_config)
             return {
@@ -167,6 +169,26 @@ class ModelService:
                 "base_model": model_config.base,
                 "tags": tags,
             }
+
+    async def modelscope_download(self, repo_id, local_dir, client_id,
+                                  request_uuid, callback, finish_callback):
+        from server.modelscope import download_repository
+        loop = asyncio.get_running_loop()
+
+        def worker():
+            try:
+                download_repository(repo_id, local_dir, lambda data:
+                    loop.call_soon_threadsafe(callback, client_id, request_uuid,
+                                              "download_progress", data))
+            except Exception as exc:
+                loop.call_soon_threadsafe(finish_callback, client_id,
+                                          request_uuid, {"error": str(exc)})
+            else:
+                loop.call_soon_threadsafe(finish_callback, client_id,
+                                          request_uuid, {"path": local_dir})
+
+        threading.Thread(target=worker, daemon=True).start()
+        return {"message": "Download started"}
 
     async def hf_download(
         self,

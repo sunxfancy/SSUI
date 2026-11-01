@@ -1,11 +1,7 @@
 const { platform } = require('os');
 const { execSync } = require('child_process');
 
-// 所有支持的构建目标（平台 + 可选 GPU 变体），对应 requirements-<target>.txt / <target>.lock
-const ALL_TARGETS = ['windows', 'windows-amdgpu', 'macosx', 'linux', 'linux-amdgpu'];
-
-// 拥有 AMD GPU 变体的平台
-const AMDGPU_PLATFORMS = ['windows', 'linux'];
+const { config, detectRuntime, dependencyProfile } = require('./runtime_target.cjs');
 
 // 获取当前平台名
 function getPlatform() {
@@ -67,24 +63,23 @@ function getGPU() {
 
 // 所有构建目标
 function getAllTargets() {
-  return [...ALL_TARGETS];
+  return config.profiles.map(p => p.dependencyTarget);
 }
 
-// 当前平台下的所有目标（含 GPU 变体），用于在本机生成全部变体的锁文件
+// 当前 OS + CPU 架构的依赖配置，用于生成不同后端的锁文件。
 function getCurrentPlatformTargets() {
-  const plat = getPlatform();
-  return getAllTargets().filter(t => t === plat || t.startsWith(`${plat}-`));
+  const { target } = detectRuntime();
+  return config.profiles.filter(p => p.os === target.os && p.arch === target.arch)
+    .map(p => p.dependencyTarget);
 }
 
-// 根据平台 + GPU 推断当前应使用的目标名
-// AMD GPU 使用 <platform>-amdgpu 变体，其余（nvidia / intel / unknown）回退到默认平台目标
+// 兼容现有调用方：三维目标经注册表映射为已有依赖文件名。
 function getCurrentTarget() {
-  const plat = getPlatform();
-  const gpu = getGPU();
-  if (gpu === 'amd' && AMDGPU_PLATFORMS.includes(plat)) {
-    return `${plat}-amdgpu`;
-  }
-  return plat;
+  return dependencyProfile(getRuntimeTarget()).dependencyTarget;
+}
+
+function getRuntimeTarget() {
+  return detectRuntime({ gpu: process.env.SSUI_COMPUTE_BACKEND ? 'unknown' : getGPU() }).target;
 }
 
 module.exports = {
@@ -94,4 +89,5 @@ module.exports = {
   getAllTargets,
   getCurrentPlatformTargets,
   getCurrentTarget,
+  getRuntimeTarget,
 };

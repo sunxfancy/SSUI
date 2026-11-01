@@ -1,6 +1,7 @@
 import os
 import tempfile
 import unittest
+from unittest.mock import patch
 
 from server.config_service import ConfigService
 
@@ -25,7 +26,8 @@ class TestConfigService(unittest.TestCase):
         result = self.service.update_config(
             {"ui": {"theme": "dark", "auto_open_details": False}}
         )
-        self.assertIn("message", result)
+        self.assertEqual(result["ui"]["theme"], "dark")
+        self.assertFalse(result["ui"]["auto_open_details"])
 
         settings = self.service.get_settings()
         self.assertEqual(settings.ui.theme, "dark")
@@ -48,12 +50,28 @@ class TestConfigService(unittest.TestCase):
         result = self.service.update_config(
             {"ui": {"theme": "dark"}, "not_a_setting": 42}
         )
-        self.assertIn("message", result)
+        self.assertNotIn("not_a_setting", result)
         self.assertEqual(self.service.get_settings().ui.theme, "dark")
 
     def test_update_invalid_theme_raises(self):
         with self.assertRaises(Exception):
             self.service.update_config({"ui": {"theme": "neon"}})
+
+    def test_update_invalid_ui_shape_raises(self):
+        with self.assertRaises(ValueError):
+            self.service.update_config({"ui": "dark"})
+
+    def test_failed_write_does_not_change_in_memory_settings(self):
+        with patch.object(self.service, "_write_settings", side_effect=OSError("disk full")):
+            with self.assertRaises(OSError):
+                self.service.update_config({"ui": {"theme": "dark"}})
+        self.assertEqual(self.service.get_settings().ui.theme, "system")
+
+    def test_settings_instances_do_not_share_mutable_defaults(self):
+        another_path = os.path.join(self.tmp_dir, "another_config.json")
+        another = ConfigService(another_path)
+        self.service.get_settings().additional_model_dirs.append("models")
+        self.assertEqual(another.get_settings().additional_model_dirs, [])
 
 
 if __name__ == "__main__":

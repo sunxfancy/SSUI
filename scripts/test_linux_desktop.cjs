@@ -61,7 +61,7 @@ async function setInput(selector,value) {
   await evaluate(`const input=document.querySelector(arguments[0]);if(!input)throw Error(arguments[0]);Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value').set.call(input,arguments[1]);input.dispatchEvent(new Event('input',{bubbles:true}));`,[selector,value]);
 }
 async function clickText(text,selector='button') {
-  await evaluate(`const item=Array.from(document.querySelectorAll(arguments[1])).find(x=>x.innerText.trim()===arguments[0]);if(!item)throw Error('Missing '+arguments[0]);item.click();`,[text,selector]);
+  await evaluate(`const item=Array.from(document.querySelectorAll(arguments[1])).find(x=>(x.innerText.trim()===arguments[0] || (arguments[0]==='Run' && x.innerText.trim()==='运行')));if(!item)throw Error('Missing '+arguments[0]);item.click();`,[text,selector]);
 }
 for (const signal of ['SIGTERM','SIGINT']) process.on(signal,()=>{stop().finally(()=>process.exit(1))});
 (async()=>{
@@ -154,7 +154,8 @@ for (const signal of ['SIGTERM','SIGINT']) process.on(signal,()=>{stop().finally
   const iframe=await until(()=>request('/session/'+session+'/elements',
     {using:'css selector',value:'iframe'}).then(items=>items[0]));
   await request('/session/'+session+'/frame',{id:iframe});
-  await until(()=>evaluate("return Array.from(document.querySelectorAll('button')).some(x=>x.innerText.trim()==='Run')"));
+  await until(()=>evaluate("return Array.from(document.querySelectorAll('button')).some(x=>['Run','运行'].includes(x.innerText.trim()))"));
+  await clickText('GLBPreview', '[role="tab"]');
   await clickText('Run');
   await until(()=>evaluate("return document.querySelector('video')?.getAttribute('src') && document.querySelector('model-viewer')?.getAttribute('src')"),90000);
   const playback=await request('/session/'+session+'/execute/async',{script:"const done=arguments[arguments.length-1];const video=document.querySelector('video');video.muted=true;video.play().then(()=>done('playing')).catch(e=>done({error:e.message}));",args:[]});

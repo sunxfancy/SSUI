@@ -6,7 +6,7 @@ import { registerComponent, ComponentRegister } from '../ComponentsManager';
 type Field = { key: string; label: string; optional?: boolean };
 const folder: Field = { key: 'model_path', label: 'Model folder' };
 const specs: { name: string; type: string; fields: Field[] }[] = [
-    { name: 'Wan21ModelLoader', type: 'ssui_video.Wan21.Wan21Model', fields: [folder] },
+    { name: 'Wan21ModelLoader', type: 'ssui_video.Wan21Resident.Wan21Model', fields: [folder] },
     { name: 'CogVideo2BModelLoader', type: 'ssui_video.CogVideo2B.CogVideo2BModel', fields: [folder] },
     { name: 'ShapEModelLoader', type: 'ssui_3dmodel.ShapE.ShapEModel', fields: [folder] },
     { name: 'TrellisModelLoader', type: 'ssui_3dmodel.Trellis.TrellisModel', fields: [folder,

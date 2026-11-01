@@ -18,6 +18,8 @@ CUDA 已通过真实张量运算检查。模型文件与生成产物位于当前
 | 3D | TRELLIS image-large | SSUI 节点、12+12 步采样、1024 纹理烘焙；37,030 顶点、45,567 三角面；纹理 GLB 重读通过 | `.build/model-results/trellis/sample.glb`、`preview.png` |
 | 动作 | MDM HumanML 50 steps | 2 秒、20 FPS、40 帧、22 关节；轨迹非静止；NPZ 无 pickle 重读和视频解码通过 | `.build/model-results/mdm-*/motion.npz`、`samples_00_to_00.mp4` |
 
+下表为合并前依赖环境的留存实测；dev 0.3.0 的 Diffusers/Transformers 版本已经变化，未把旧结果作为新依赖的全量 GPU 验收。
+
 这是各类别代表模型的真实端到端验证，不代表所有已声明的模型都已通过，也不代表质量与最新旗舰模型相当。
 MDM 输出的是骨骼关节轨迹，尚不包含 FBX/BVH 转换、角色绑定和重定向。
 
@@ -51,7 +53,7 @@ yarn test
 `examples/advance/workflow-motion.py`。现有 SD1 工作流仍可使用。
 上述模型回归覆盖 SDK 节点到文件输出；Linux 桌面安装与交互另见 [Linux 安装与验收](Linux.md)。
 
-默认 `yarn test`：共 81 项，79 项通过、2 项跳过；包含真实 MP4 编解码、GLB 重读、动作 NPZ 保留和 IPv4/IPv6 执行器地址和推理期间通信响应回归。
+合并前默认 `yarn test`：共 81 项，79 项通过、2 项跳过；包含真实 MP4 编解码、GLB 重读、动作 NPZ 保留和 IPv4/IPv6 执行器地址和推理期间通信响应回归。
 
 ## 本次修复
 

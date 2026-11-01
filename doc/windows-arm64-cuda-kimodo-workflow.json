@@ -1,0 +1,31 @@
+{
+  "status": "passed",
+  "seconds": 37.575,
+  "prompt": "A person walks forward and waves their right hand.",
+  "frames": 120,
+  "joints": 77,
+  "fps": 30.0,
+  "duration": 4.0,
+  "steps": 50,
+  "root_displacement_m": 5.984785079956055,
+  "inference_device": "cuda:0",
+  "torch": "2.16.0.dev20261026+cu134",
+  "cuda": "13.4",
+  "postprocessed": false,
+  "sha256": {
+    "motion.json": "4f152c0013ff1a8458a50e6e687bf2cdf0fde92ce2c08c1ebb8a23e6a1261da0",
+    "motion.npz": "a7b80c6b3e8fbc165b550e6aa5a6cab11f630890a5f955da1ebd45f2352428f1",
+    "motion.bvh": "b126f705015b7274c98bdfd3355f519b55c0e9be56fa3e20a2014bd46492065f"
+  },
+  "bvh_roundtrip": {
+    "status": "passed",
+    "frames": 120,
+    "joints": 77,
+    "max_error_m": 0.00013601567954743058,
+    "rmse_m": 9.40162795465809E-06
+  },
+  "text_encoder_base": "raducius/Llama-3-8B-Instruct-LLM2Vec-mntp-merged@01417d622e8a85d6f4b308dac0e37d478a9a87d1",
+  "visual_inspection": "passed",
+  "repeat_seconds": 41.21,
+  "repeat_sha256_matches": true
+}

@@ -71,3 +71,14 @@ GPU 可用性以 CUDA 实际运算为准；PCI 设备存在或 torch 能导入�
 可通过 `SSUI_TAURI_DRIVER` / `SSUI_WEBKIT_DRIVER` 指定工具路径。测试解压实际 Debian 包，在隔离配置目录中
 通过真实安装向导创建环境、自动启动后端，并从工作流选择器复制视频和 3D 示例；测试产物保留在 `.build/desktop-linux-smoke/`。
 默认不调用这些有网络和 GPU 开销的测试。
+
+## 2026-11-01 与 dev 0.3.0 合并
+
+保留统一的 OS/架构运行时配置、共享开发环境、新动作协议及现有模型加载器。
+这里增加的 MDM 示例为 `workflow-mdm.py`，原 `workflow-motion.py` 继续使用 Kimodo。
+Wan 的 GPU 常驻版本放在 `ssui_video.Wan21Resident`，与现有跨平台 `Wan21` 入口共存。
+GLBPreview 是附加输出页签，现有部件预览、质量报告与导出入口保留。
+自定义 `SSUI_VENV_PATH` 的共享环境不自动安装本地 `.venv` 的原生栈。
+
+历史 GPU 推理和 Debian 原生桌面记录基于合并前环境，不能等同于当前 dev 依赖版本全部通过 GPU 验收。
+合并后已重新检查 Python 回归、前端构建及组件/功能 UI/桌面测试，结果见 PR 描述。

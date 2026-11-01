@@ -6,6 +6,7 @@ export default {
   moduleNameMapper: {
     '^(\\.{1,2}/.*)\\.js$': '$1',
     '\\.module\\.css$': '<rootDir>/test/styleMock.js',
+    '\\.css$': '<rootDir>/test/styleMock.js',
   },
   transform: {
     '^.+\\.tsx?$': [

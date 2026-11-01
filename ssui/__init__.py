@@ -5,17 +5,22 @@
 """
 
 from .annotation import workflow
-from .base import Image, Mesh, Noise, Prompt, Video, Voice
+from .base import Audio, Image, Mesh, MotionClip, Noise, PoseFrame, PoseLandmark, Prompt, SkeletonAnimation, Video, Voice
 from .config import SSUIConfig
 from .controller import Input, Random, Select, Slider, Switch
 
 __all__ = [
     "workflow",
+    "Audio",
     "Image",
     "Mesh",
+    "MotionClip",
     "Noise",
     "Prompt",
     "Video",
+    "PoseLandmark",
+    "PoseFrame",
+    "SkeletonAnimation",
     "Voice",
     "SSUIConfig",
     "Input",

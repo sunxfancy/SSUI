@@ -1,10 +1,11 @@
 import argparse
 import uvicorn
 import os
-from server.server import app
+import importlib.util
 
 def main():
-    os.environ["HF_HUB_ENABLE_HF_TRANSFER"] = "1"
+    os.environ.setdefault("HF_HUB_ENABLE_HF_TRANSFER",
+                          "1" if importlib.util.find_spec("hf_transfer") else "0")
 
     parser = argparse.ArgumentParser()
     parser.add_argument("--dev", action="store_true", help="Enable development mode with auto-reload")
@@ -15,7 +16,15 @@ def main():
     args = parser.parse_args()
     host = args.host or os.environ.get("SSUI_SERVER_HOST", "localhost")
     port = args.port or int(os.environ.get("SSUI_SERVER_PORT", "7422"))
-    uvicorn.run(app, host=host, port=port, reload=args.dev)
+    if args.dev:
+        uvicorn.run(
+            "server.server:app", host=host, port=port, reload=True,
+            reload_excludes=[os.path.abspath(path) for path in (".build", ".venv", "node_modules", ".git")],
+        )
+    else:
+        from server.server import app
+
+        uvicorn.run(app, host=host, port=port)
 
 if __name__ == "__main__":
     main()

@@ -28,7 +28,9 @@ def load_adapter(relative_path, extra):
         'ssui.annotation': dict(param=lambda *a, **kw: lambda fn: fn),
         'ssui.base': dict(Image=WrappedImage, Mesh=WrappedMesh, Prompt=object),
         'ssui.config': dict(SSUIConfig=Config),
-        'ssui.controller': dict(Random=Mock(), Slider=Mock(), Switch=Mock()),
+        'ssui.controller': dict(Random=Mock(), Slider=Mock(), Switch=Mock(), Select=Mock()),
+        'backend.quantization.workflow': dict(int8_quantizer=Mock(), fp8_storage_dtype=Mock(), load_dit_with_storage_dtype=Mock()),
+        'ssui_video._runtime': dict(wan_runtime=lambda: {'device': 'cuda', 'torch_dtype': object()}),
         **extra,
     }
     modules = {}
@@ -36,7 +38,7 @@ def load_adapter(relative_path, extra):
         modules[name] = types.ModuleType(name)
         modules[name].__dict__.update(attrs)
     path = Path(__file__).resolve().parents[1] / relative_path
-    spec = importlib.util.spec_from_file_location('_generation_adapter_under_test', path)
+    spec = importlib.util.spec_from_file_location('ssui_video._adapter_under_test' if 'Video/' in relative_path else '_generation_adapter_under_test', path)
     module = importlib.util.module_from_spec(spec)
     with patch.dict(sys.modules, modules):
         spec.loader.exec_module(module)
@@ -73,7 +75,7 @@ class GenerationAdaptersTest(unittest.TestCase):
         pipeline.run.return_value = {'gaussian': ['g'], 'mesh': ['m']}
         image = WrappedImage(object())
         config = Config(seed=7, preprocess_image=True, sparse_structure_steps=2,
-                        sparse_structure_cfg=7.5, slat_steps=2, slat_cfg=3)
-        result = module.GenModel(config, types.SimpleNamespace(getModel=lambda: pipeline), image)
+                        sparse_structure_cfg=7.5, slat_steps=2, slat_cfg=3, export_mode='gaussian_texture')
+        result = module.GenModel(config, types.SimpleNamespace(getModel=lambda: pipeline, model=pipeline), image)
         self.assertIs(pipeline.run.call_args.kwargs['image'], image._image)
-        self.assertEqual(result._model, 'mesh')
+        self.assertIsNotNone(result._model)

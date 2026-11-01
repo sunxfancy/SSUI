@@ -1,0 +1,6 @@
+.workflow-loader { display: grid; gap: 10px; }
+.workflow-loader .bp5-form-group { margin: 0; }
+.workflow-loader-heading, .workflow-loader-status, .workflow-loader-row { display: flex; align-items: center; gap: 10px; }
+.workflow-loader-heading { justify-content: space-between; color: var(--ssui-fg-muted, #667085); font-size: 12px; }
+.workflow-loader-status { color: var(--ssui-fg-muted, #667085); font-size: 12px; }
+.workflow-loader-row { align-items: flex-start; justify-content: space-between; flex-wrap: wrap; }

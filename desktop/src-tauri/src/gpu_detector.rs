@@ -151,6 +151,7 @@ mod tests {
     use super::*;
 
     #[test]
+    #[ignore = "requires a GPU and working vendor driver; run explicitly on hardware runners"]
     fn test_detect_gpus() {
         let result = detect_gpu();
         assert!(result.is_ok(), "GPU检测应该成功执行");

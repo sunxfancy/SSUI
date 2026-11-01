@@ -1,14 +1,12 @@
-from ssui import workflow, Prompt, Video
+from ssui import MotionClip, Prompt, workflow
 from ssui.config import SSUIConfig
-from ssui_motion.MDM import MDMModel, MDMTextToMotion
+from ssui_motion.Kimodo import GenerateKimodoMotion
+
 
 config = SSUIConfig()
 
 
 @workflow
-def text_to_motion(model: MDMModel, prompt: Prompt) -> Video:
-    """Generate HumanML joint trajectories, retain motion.npz, and show preview."""
-    motion = MDMTextToMotion(config('Generate motion'), model, prompt)
-    if config.is_prepare():
-        return Video('mp4', [], fps=20)
-    return motion.preview()
+def txt2motion_kimodo(prompt: Prompt) -> MotionClip:
+    """Generate and preview 3D human or robot motion with NVIDIA Kimodo."""
+    return GenerateKimodoMotion(config("Kimodo Text To Motion"), prompt)

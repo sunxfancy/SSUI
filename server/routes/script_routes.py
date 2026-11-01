@@ -2,9 +2,20 @@ from typing import Any, Dict
 
 from fastapi import APIRouter, Request
 
-from ss_executor import search_project_root
+from ss_executor.project import search_project_root
+from server.models import DynamicResult, ScriptMeta
 
 router = APIRouter()
+
+
+@router.post("/api/flow/compile")
+async def compile_flow(request: Request, flow_path: str):
+    return request.app.state.script_service.compile_flow(flow_path)
+
+
+@router.get("/api/flow/operators")
+async def flow_operators(request: Request, flow_path: str):
+    return request.app.state.script_service.get_flow_operators(flow_path)
 
 
 @router.get("/api/version")
@@ -17,7 +28,7 @@ async def device(request: Request):
     return request.app.state.script_service.get_device_info()
 
 
-@router.get("/api/script")
+@router.get("/api/script", response_model=ScriptMeta)
 async def script(request: Request, script_path: str):
     result: Dict[str, Any] = {}
     result["functions"] = request.app.state.script_service.get_script_functions(
@@ -27,14 +38,14 @@ async def script(request: Request, script_path: str):
     return result
 
 
-@router.post("/api/prepare")
+@router.post("/api/prepare", response_model=DynamicResult)
 async def prepare(request: Request, script_path: str, callable: str):
     return await request.app.state.script_service.prepare_script(
         script_path, callable
     )
 
 
-@router.post("/api/execute")
+@router.post("/api/execute", response_model=DynamicResult)
 async def execute(
     request: Request,
     script_path: str,

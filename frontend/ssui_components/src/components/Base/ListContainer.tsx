@@ -1,3 +1,4 @@
+import { UIStateScope } from '../../UIState';
 import { Button, Card, Tabs, Tab } from '@blueprintjs/core';
 import { IComponent } from '../IComponent';
 import { getComponentsByType, PythonType } from '../ComponentsManager';
@@ -13,9 +14,11 @@ interface ListContainerProps {
 
 interface ListItem {
     key: number;
+    selected?: string;
 }
 
 export class ListContainer extends IComponent<ListContainerProps, { items: ListItem[] }> {
+    protected persistedFields: ('items')[] = ['items'];
     private nextKey: number = 0;
     private itemRefs: { [key: number]: React.RefObject<ComponentRef> } = {};
 
@@ -27,7 +30,8 @@ export class ListContainer extends IComponent<ListContainerProps, { items: ListI
     }
 
     handleAdd = () => {
-        const key = this.nextKey++;
+        const key = Math.max(Date.now(), this.nextKey, ...this.state.items.map(item => item.key + 1));
+        this.nextKey = key + 1;
         this.setState(prevState => ({
             items: [...prevState.items, { key }]
         }));
@@ -60,7 +64,7 @@ export class ListContainer extends IComponent<ListContainerProps, { items: ListI
     };
 
     renderItem(item: ListItem, subType: PythonType): ReactNode {
-        const components = getComponentsByType(subType.type).filter(c => c.port == this.props.port);
+        const components = getComponentsByType(subType.type, this.props.port);
         const commonProps = {
             port: this.props.port,
             root_path: this.props.root_path,
@@ -70,13 +74,14 @@ export class ListContainer extends IComponent<ListContainerProps, { items: ListI
 
         if (components.length > 1) {
             return (
-                <Tabs key={item.key}>
+                <Tabs key={item.key} selectedTabId={item.selected || components[0]?.name}
+                    onChange={selected => this.setState(state => ({ items: state.items.map(entry => entry.key === item.key ? { ...entry, selected: String(selected) } : entry) }))}>
                     {components.map(c => (
                         <Tab
                             key={c.name}
                             id={c.name}
                             title={c.name}
-                            panel={<ComponentRef ref={this.getItemRef(item.key)} name={c.name} type={c.type} {...commonProps} />}
+                            panel={<ComponentRef ref={this.getItemRef(item.key)} name={c.name} type={subType.type} {...commonProps} />}
                         />
                     ))}
                 </Tabs>
@@ -88,7 +93,7 @@ export class ListContainer extends IComponent<ListContainerProps, { items: ListI
                 <ComponentRef
                     ref={this.getItemRef(item.key)}
                     name={component.name}
-                    type={component.type}
+                    type={subType.type}
                     {...commonProps}
                 />
             );
@@ -99,7 +104,7 @@ export class ListContainer extends IComponent<ListContainerProps, { items: ListI
     render(): ReactNode {
         const { items } = this.state;
         const { type_args } = this.props;
-        const subType = type_args[0];
+        const subType = type_args?.[0] ?? { type: 'typing.Any' };
         return (
             <div>
                 <div style={{ marginBottom: '10px' }}>
@@ -107,7 +112,7 @@ export class ListContainer extends IComponent<ListContainerProps, { items: ListI
                         <Card key={item.key} elevation={1} style={{ marginBottom: '5px', padding: '8px' }}>
                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                                 <div style={{ flex: 1 }}>
-                                    {this.renderItem(item, subType)}
+                                    <UIStateScope name={String(item.key)}>{this.renderItem(item, subType)}</UIStateScope>
                                 </div>
                                 <div style={{ display: 'flex', gap: '2px', marginLeft: '8px' }}>
                                     <Button
