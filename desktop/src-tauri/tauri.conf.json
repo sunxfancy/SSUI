@@ -39,7 +39,22 @@
       "workflow/canvas-drawing/*",
       "workflow/image-generation/*",
       "workflow/video-generation/*",
-      "workflow/speech-synthesis/*"
-    ]
+      "workflow/speech-synthesis/*",
+      "workflow/txt2img/basic/*"
+    ],
+    "linux": {
+      "deb": {
+        "depends": [
+          "git",
+          "gstreamer1.0-libav",
+          "gstreamer1.0-plugins-good"
+        ]
+      }
+    }
+  },
+  "plugins": {
+    "fs": {
+      "requireLiteralLeadingDot": false
+    }
   }
 }

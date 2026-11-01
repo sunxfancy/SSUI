@@ -171,6 +171,22 @@ fn set_proxy_for_python(cmd: &mut Command, proxy_url: &str) {
     }
 }
 
+// All Python entrypoints share the same verified native environment as the CLI.
+fn python_command(path: &str, cwd: &str) -> Command {
+    #[cfg(target_os = "linux")]
+    {
+        let root = std::path::Path::new(cwd);
+        let bootstrap = root.join("dependencies/native_cuda.py");
+        let python = root.join(".venv/bin/python");
+        if bootstrap.is_file() && python.is_file() {
+            let mut command = Command::new(python);
+            command.arg(bootstrap).args(["exec", "--", path]);
+            return command;
+        }
+    }
+    Command::new(path)
+}
+
 // 用来运行pip，所以要设置代理
 #[tauri::command]
 pub async fn run_python(path: &str, cwd: &str, args: Vec<&str>) -> Result<String, String> {
@@ -179,7 +195,7 @@ pub async fn run_python(path: &str, cwd: &str, args: Vec<&str>) -> Result<String
 
     // 创建基本命令
     let create_cmd = |use_proxy: bool| -> Command {
-        let mut cmd = Command::new(path);
+        let mut cmd = python_command(path, cwd);
         cmd.args(args.clone())
             .current_dir(cwd)
             .env("PYTHONIOENCODING", "utf-8");
@@ -262,9 +278,8 @@ pub fn run_python_background(
         .as_secs();
 
     // 从参数中提取一个标识符，用于日志文件名
-    let args_identifier = if !args.is_empty() {
-        // 使用第二个参数作为标识符的一部分
-        args[1].replace(|c: char| !c.is_alphanumeric(), "_")
+    let args_identifier = if let Some(identifier) = args.get(1).or_else(|| args.first()) {
+        identifier.replace(|c: char| !c.is_alphanumeric(), "_")
     } else {
         "no_args".to_string()
     };
@@ -281,7 +296,7 @@ pub fn run_python_background(
     let error_log_file =
         File::create(&error_log_path).map_err(|e| format!("无法创建错误日志文件: {}", e))?;
 
-    let child = Command::new(path)
+    let child = python_command(path, cwd)
         .args(args.clone())
         .current_dir(cwd)
         .stdout(log_file)
@@ -453,9 +468,8 @@ impl ProcessManager {
 // 启动Python进程并返回Child对象
 fn spawn_python_process(path: &str, cwd: &str, args: Vec<&str>) -> Result<Child, String> {
     // 从参数中提取一个标识符，用于日志文件名
-    let args_identifier = if !args.is_empty() {
-        // 使用第二个参数作为标识符的一部分
-        args[1].replace(|c: char| !c.is_alphanumeric(), "_")
+    let args_identifier = if let Some(identifier) = args.get(1).or_else(|| args.first()) {
+        identifier.replace(|c: char| !c.is_alphanumeric(), "_")
     } else {
         "no_args".to_string()
     };
@@ -476,7 +490,7 @@ fn spawn_python_process(path: &str, cwd: &str, args: Vec<&str>) -> Result<Child,
     let error_log_file =
         File::create(&error_log_path).map_err(|e| format!("无法创建错误日志文件: {}", e))?;
 
-    let mut cmd = Command::new(path);
+    let mut cmd = python_command(path, cwd);
     cmd.args(args.clone())
         .current_dir(cwd)
         .stdout(log_file)
@@ -500,4 +514,33 @@ pub fn get_dev_root() -> Result<String, String> {
     let current_dir = current_dir.parent().ok_or("无法获取上级目录")?;
     let current_dir = current_dir.parent().ok_or("无法获取上级目录")?;
     Ok(current_dir.to_string_lossy().into_owned())
+}
+
+#[cfg(all(test, target_os = "linux"))]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn desktop_python_uses_managed_cuda_environment() {
+        let root = std::env::temp_dir().join(format!("ssui-native-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&root);
+        std::fs::create_dir_all(root.join("dependencies")).unwrap();
+        std::fs::create_dir_all(root.join(".venv/bin")).unwrap();
+        std::fs::create_dir_all(root.join(".venv/native-cuda")).unwrap();
+        std::fs::create_dir_all(root.join("compiler with spaces/bin")).unwrap();
+        std::fs::write(root.join("dependencies/native_cuda.py"),
+            include_str!("../../../dependencies/native_cuda.py")).unwrap();
+        std::os::unix::fs::symlink("/usr/bin/python3", root.join(".venv/bin/python")).unwrap();
+        let prefix = root.join("compiler with spaces");
+        std::fs::write(prefix.join("bin/nvcc"), "").unwrap();
+        std::fs::write(root.join(".venv/native-cuda/runtime.json"),
+            serde_json::json!({"prefix": prefix}).to_string()).unwrap();
+        let output = python_command("/usr/bin/python3", root.to_str().unwrap())
+            .args(["-c", "import os,sys; print(os.environ['CUDA_HOME']); print(sys.argv[1])", "argument with spaces"])
+            .output().unwrap();
+        let _ = std::fs::remove_dir_all(&root);
+        assert!(output.status.success(), "{}", String::from_utf8_lossy(&output.stderr));
+        let stdout = String::from_utf8(output.stdout).unwrap();
+        assert_eq!(stdout.lines().collect::<Vec<_>>(), vec![prefix.to_str().unwrap(), "argument with spaces"]);
+    }
 }

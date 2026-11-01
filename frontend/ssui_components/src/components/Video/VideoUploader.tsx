@@ -35,7 +35,7 @@ const VideoUploader = forwardRef((props: VideoUploaderProps, ref) => {
             });
 
             const data = await response.json();
-            
+
             if (data.success) {
                 setVideo(data.path);
                 setUploading(false);
@@ -53,7 +53,7 @@ const VideoUploader = forwardRef((props: VideoUploaderProps, ref) => {
     const preview = () => {
         if (video) {
             return <div>
-                <img src={'/file?path=' + video} alt="preview" style={{ maxWidth: '100%', height: 'auto' }} />
+                <video controls playsInline src={'/file?path=' + encodeURIComponent(video)} style={{ maxWidth: '100%', height: 'auto' }} />
             </div>
         }
     }
@@ -61,8 +61,8 @@ const VideoUploader = forwardRef((props: VideoUploaderProps, ref) => {
     return (
         <div>
             <h5>视频上传</h5>
-            <input 
-                type="file" 
+            <input
+                type="file"
                 accept="video/*"
                 onChange={handleFileChange}
                 disabled={uploading}
@@ -76,31 +76,33 @@ const VideoUploader = forwardRef((props: VideoUploaderProps, ref) => {
 
 const VideoPreview = forwardRef((props, ref) => {
     const [video, setVideo] = useState<string>('');
+    const [artifacts, setArtifacts] = useState<{ name: string; path: string }[]>([]);
 
     useImperativeHandle(ref, () => {
         return {
             onUpdate: (data: any) => {
                 console.log('VideoPreview onUpdate:', data);
                 setVideo(data.path);
+                setArtifacts(data.artifacts || []);
             }
         }
     }, []);
 
     return (
         <div>
-            {video != '' ? 
-                <img 
-                    src={'/file?path=' + video} 
-                    alt="placeholder" 
-                    style={{ 
-                        maxWidth: '100%', 
-                        height: 'auto', 
+            {video != '' ?
+                <video controls playsInline
+                    src={'/file?path=' + encodeURIComponent(video)}
+                    style={{
+                        maxWidth: '100%',
+                        height: 'auto',
                         display: 'block',
                         margin: '0 auto'
-                    }} 
-                /> : 
+                    }}
+                /> :
                 <p>No video</p>
             }
+            {artifacts.map(file => <a key={file.path} href={'/file?path=' + encodeURIComponent(file.path)} download={file.name}>{file.name}</a>)}
         </div>
     );
 });

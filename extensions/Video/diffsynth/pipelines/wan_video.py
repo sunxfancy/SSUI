@@ -568,7 +568,9 @@ def model_fn_wan_video(
         clip_embdding = dit.img_emb(clip_feature)
         context = torch.cat([clip_embdding, context], dim=1)
     
-    x, (f, h, w) = dit.patchify(x)
+    x = dit.patchify(x)
+    f, h, w = x.shape[2:]
+    x = rearrange(x, 'b c f h w -> b (f h w) c').contiguous()
     
     # Reference image
     if reference_latents is not None:

@@ -1,4 +1,3 @@
-from transformers import Qwen2_5_VLModel
 import torch
 from typing import Optional, Union
 
@@ -6,7 +5,7 @@ from typing import Optional, Union
 class QwenImageTextEncoder(torch.nn.Module):
     def __init__(self):
         super().__init__()
-        from transformers import Qwen2_5_VLConfig
+        from transformers import Qwen2_5_VLConfig, Qwen2_5_VLModel
         config = Qwen2_5_VLConfig(**{
             "architectures": [
                 "Qwen2_5_VLForConditionalGeneration"

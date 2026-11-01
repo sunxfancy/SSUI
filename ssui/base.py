@@ -10,9 +10,10 @@ class Mesh():
         self._model = model
 
 class Video():
-    def __init__(self, format: str, frames: list[PIL.Image.Image] = None, fps: int = 30):
+    def __init__(self, format: str, frames: list[PIL.Image.Image | Image] = None, fps: int = 30, artifacts: dict[str, str] = None):
+        self._artifacts = artifacts or {}
         self._format = format
-        self._frames = frames
+        self._frames = None if frames is None else [frame._image if isinstance(frame, Image) else frame for frame in frames]
         self._fps = fps
 
 class Audio():

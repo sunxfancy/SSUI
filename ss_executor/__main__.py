@@ -22,7 +22,7 @@ for dir in os.listdir(extensions_root):
 
 
 from ss_executor.loader import SSLoader, search_project_root
-from ssui.base import Image
+from ss_executor.results import serialize_result
 from ss_executor.sandbox import Sandbox
 from ss_executor.model import KillMessage, TaskStatus, Task, ExecutorRegister, RegisterResponse, UpdateStatus, TaskResult, ExeMessage
 import traceback
@@ -37,7 +37,7 @@ class Executor:
         )
         self.current_task: Optional[Task] = None
         self.is_running = True
-        
+
     async def connect(self):
         """连接到调度器服务器"""
         while self.is_running:
@@ -63,14 +63,14 @@ class Executor:
                             logger.error(f"注册失败: 收到未知消息类型")
                     except Exception as e:
                         logger.error(f"解析注册响应失败: {e}")
-                    
+
                     # 开始接收任务
                     await self._handle_messages(websocket)
-                    
+
             except Exception as e:
                 logger.error(f"连接错误: {e}")
                 await asyncio.sleep(5)  # 等待5秒后重试
-                
+
     async def _handle_messages(self, websocket):
         """处理来自调度器的消息"""
         while self.is_running:
@@ -92,7 +92,7 @@ class Executor:
             except Exception as e:
                 logger.error(f"处理消息时出错: {e} \n{traceback.format_exc()}")
                 break
-                
+
     async def _handle_task(self, websocket, task: Task):
         """处理单个任务"""
         logger.info(f"开始执行任务 {task.task_id}")
@@ -104,66 +104,9 @@ class Executor:
                 status=TaskStatus.RUNNING
             )
             await websocket.send(status_update.model_dump_json())
-            
-            # 执行任务
-            loader = SSLoader(use_sandbox=task.use_sandbox)
-            loader.load(task.script)
-            loader.Execute()
 
-            if task.is_prepare:
-                # 执行prepare pass
-                result = loader.GetConfig(task.callable)
-                print("执行器结果：")
-                print(result)
-            else:
-                # 执行execute pass
-                def convert_param(param: dict): 
-                    name = param['function']
-                    params = param['params']
-
-                    # 动态导入并获取属性,支持任意层级的包/模块/类/函数访问
-                    parts = name.split('.')
-                    current = __import__(parts[0])
-                    for part in parts[1:]:
-                        current = getattr(current, part)
-                    return current(**params)
-
-                def find_callable(loader: SSLoader, callable: str):
-                    for func, param_types, return_type in loader.callables:
-                        if func.__name__ == callable:
-                            return func, param_types, return_type
-                    raise ValueError(f"未找到可调用函数: {callable}")
-                
-                func, param_types, return_type = find_callable(loader, task.callable)
-                print(task.script, task.callable, task.params, task.details)
-                new_params = {}
-                for name, param in task.params.items():
-                    print(name, param)
-                    new_params[name] = convert_param(param)
-
-                def convert_return(result):
-                    if isinstance(result, tuple):
-                        return [convert_return(r) for r in result]
-                    
-                    if isinstance(result, Image):
-                        current_time = datetime.datetime.now()
-                        project_root = search_project_root(os.path.dirname(task.script))
-                        output_dir = os.path.join(project_root, "output")
-                        if not os.path.exists(output_dir):
-                            os.makedirs(output_dir)
-                        path = os.path.join(output_dir, "image_" + current_time.strftime("%Y%m%d%H%M%S") + ".png")
-                        result._image.save(path)
-                        return {"type": "image", "path": path}
-                # 注入配置
-                loader.config._update = task.details
-                # 执行
-                result = func(**new_params)
-
-                # 确保返回一个数组
-                if not isinstance(result, tuple):
-                    result = (result,)
-
-                result = convert_return(result)
+            # Keep WebSocket heartbeats responsive during synchronous GPU inference.
+            result = await asyncio.to_thread(self._execute_task, task)
 
             # 发送任务完成状态和结果
             task_result = TaskResult(
@@ -172,7 +115,7 @@ class Executor:
                 result=jsonable_encoder(result)
             )
             await websocket.send(task_result.model_dump_json())
-            
+
         except Exception as e:
             # 发送任务失败状态
             task_result = TaskResult(
@@ -181,10 +124,60 @@ class Executor:
                 error=str(e) + '\n' + traceback.format_exc()
             )
             await websocket.send(task_result.model_dump_json())
-            
+
         finally:
             self.current_task = None
-            
+
+    def _execute_task(self, task: Task):
+        # 执行任务
+        loader = SSLoader(use_sandbox=task.use_sandbox)
+        loader.load(task.script)
+        loader.Execute()
+
+        if task.is_prepare:
+            # 执行prepare pass
+            result = loader.GetConfig(task.callable)
+            print("执行器结果：")
+            print(result)
+        else:
+            # 执行execute pass
+            def convert_param(param: dict):
+                name = param['function']
+                params = param['params']
+
+                # 动态导入并获取属性,支持任意层级的包/模块/类/函数访问
+                parts = name.split('.')
+                current = __import__(parts[0])
+                for part in parts[1:]:
+                    current = getattr(current, part)
+                return current(**params)
+
+            def find_callable(loader: SSLoader, callable: str):
+                for func, param_types, return_type in loader.callables:
+                    if func.__name__ == callable:
+                        return func, param_types, return_type
+                raise ValueError(f"未找到可调用函数: {callable}")
+
+            func, param_types, return_type = find_callable(loader, task.callable)
+            print(task.script, task.callable, task.params, task.details)
+            new_params = {}
+            for name, param in task.params.items():
+                print(name, param)
+                new_params[name] = convert_param(param)
+
+            # 注入配置
+            loader.config._update = task.details
+            # 执行
+            result = func(**new_params)
+
+            # 确保返回一个数组
+            if not isinstance(result, tuple):
+                result = (result,)
+
+            result = serialize_result(result, search_project_root(os.path.dirname(task.script)))
+
+        return result
+
 def main():
     print("executor_main.py 启动")
     import ssui

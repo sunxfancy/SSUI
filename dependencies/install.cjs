@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-const { execSync } = require('child_process');
+const { execSync, execFileSync } = require('child_process');
 const { platform } = require('os');
 const { join } = require('path');
 const { existsSync } = require('fs');
@@ -17,7 +17,7 @@ function runInstallScript() {
 
   try {
     // 获取当前工作目录
-    const rootDir = process.cwd();
+    const rootDir = join(__dirname, '..');
     
     // 检测操作系统类型
     const isWindows = platform() === 'win32';
@@ -37,15 +37,13 @@ function runInstallScript() {
     
     // 执行相应的安装脚本
     if (isWindows) {
-      execSync(scriptPath, { stdio: 'inherit' });
+      execSync(`"${scriptPath}"`, { stdio: 'inherit', cwd: rootDir });
     } else {
-      // 确保shell脚本有执行权限
-      execSync(`chmod +x "${scriptPath}"`, { stdio: 'inherit' });
-      execSync(scriptPath, { stdio: 'inherit' });
+      execFileSync('bash', [scriptPath], { stdio: 'inherit', cwd: rootDir });
     }
 
-    execSync('yarn requirements', { stdio: 'inherit' });
-    execSync('yarn install-requirements', { stdio: 'inherit' });
+    execSync('yarn requirements', { stdio: 'inherit', cwd: rootDir });
+    execSync('yarn install-requirements', { stdio: 'inherit', cwd: rootDir });
     
     console.log('安装脚本执行完成');
   } catch (error) {

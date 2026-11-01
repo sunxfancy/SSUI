@@ -6,3 +6,6 @@ import './Loader/ControlNetLoader';
 import './Base/ListContainer';
 import './Base/StringEditor';
 import './Base/PromptEditor';
+
+import './Mesh/MeshPreview';
+import './Loader/LocalModelLoader';

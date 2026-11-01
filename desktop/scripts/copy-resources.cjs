@@ -23,7 +23,12 @@ const packDirsJsOutput = [
 ];
 
 const packFiles = [
-  'extensions/Readme.md'
+  'extensions/Readme.md',
+  'dependencies/native_cuda.py',
+  'dependencies/native-cuda-linux.yaml',
+  'dependencies/native-cuda-linux.explicit.txt',
+  'dependencies/requirements-native-cuda-linux.txt',
+  'dependencies/requirements-motion.txt'
 ];
 
 // 确保目标目录存在
@@ -144,22 +149,12 @@ async function main() {
   // 确保目标目录存在
   ensureDirectoryExists(targetDir);
   
-  // 复制Windows lock文件
-  const windowsLockSource = path.join(sourceDir, 'windows.lock');
-  const windowsLockTarget = path.join(targetDir, 'windows.lock');
-  if (fs.existsSync(windowsLockSource)) {
-    copyFile(windowsLockSource, windowsLockTarget);
-  } else {
-    console.warn(`警告: 源文件不存在 - ${windowsLockSource}`);
-  }
-  
-  // 复制MacOS lock文件
-  const macosLockSource = path.join(sourceDir, 'macosx.lock');
-  const macosLockTarget = path.join(targetDir, 'macosx.lock');
-  if (fs.existsSync(macosLockSource)) {
-    copyFile(macosLockSource, macosLockTarget);
-  } else {
-    console.warn(`警告: 源文件不存在 - ${macosLockSource}`);
+  // Ship every platform lock plus native bootstrap resources.
+  for (const filename of fs.readdirSync(sourceDir)) {
+    if (filename.endsWith('.lock') || ['native_cuda.py', 'native-cuda-linux.yaml', 'native-cuda-linux.explicit.txt',
+        'requirements-native-cuda-linux.txt', 'requirements-motion.txt', 'build-constraints.txt'].includes(filename)) {
+      copyFile(path.join(sourceDir, filename), path.join(targetDir, filename));
+    }
   }
 
   // touch 一个文件
@@ -185,6 +180,10 @@ async function main() {
     console.warn(`警告: 示例目录不存在 - ${workflowSourceDir}`);
   }
 
+  for (const filename of ['workflow-wan21.py', 'workflow-cogvideo2b.py',
+      'workflow-text-to-3d.py', 'workflow-motion.py']) {
+    copyFile(path.resolve(__dirname, '../../examples/advance', filename), path.join(workflowTargetDir, filename));
+  }
   // 创建app.tar.gz压缩包
   await createTarball();
 }

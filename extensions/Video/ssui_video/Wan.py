@@ -31,7 +31,8 @@ class WanVideoModel:
 
 @param("seed", Random(), default=42)
 @param("tiled", Switch(), default=True)
-@param("num_frames", Slider(1, 200, 1), default=50)
+@param("num_frames", Slider(1, 200, 1), default=49)
+@param("num_inference_steps", Slider(1, 100, 1), default=50)
 def WanImageTextToVideo(config: SSUIConfig, base_model: WanVideoModel, image: Image, prompt: Prompt, negative_prompt: Prompt) -> list[Image]:
     if config.is_prepare():
         return [Image()]
@@ -43,7 +44,8 @@ def WanImageTextToVideo(config: SSUIConfig, base_model: WanVideoModel, image: Im
     video = pipe(
         prompt=prompt.text,
         negative_prompt=negative_prompt.text,
-        num_inference_steps=config["num_frames"],
+        num_frames=config["num_frames"],
+        num_inference_steps=config["num_inference_steps"],
         input_image=image._image,
         # You can input `end_image=xxx` to control the last frame of the video.
         # The model will automatically generate the dynamic content between `input_image` and `end_image`.

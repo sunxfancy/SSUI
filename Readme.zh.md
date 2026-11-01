@@ -5,6 +5,8 @@ Stable Scripts UI
 
 Stable Scripts UI 是一个基于网页的用户界面，用于 `Stable Scripts` - 一种可以被其他用户轻松复现相同结果的 Python 脚本，用于运行生成式AI模型。
 
+Linux 安装、CUDA 环境与实测范围见 [Linux 安装与验收](doc/Linux.md)。
+
 ![Desktop Version](doc/images/presentation.png)
 
 

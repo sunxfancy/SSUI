@@ -2,9 +2,9 @@ import { exit, relaunch } from '@tauri-apps/plugin-process';
 import { load } from '@tauri-apps/plugin-store';
 import { appDataDir, homeDir, join, resolveResource } from '@tauri-apps/api/path';
 import { open } from '@tauri-apps/plugin-dialog';
-import { platform } from '@tauri-apps/plugin-os';
+import { platform, arch } from '@tauri-apps/plugin-os';
 import { IInstallerProvider, CommandInfo } from './IInstallerProvider';
-import { exists, readDir, writeTextFile, remove } from '@tauri-apps/plugin-fs';
+import { exists, readDir, readTextFile, writeTextFile, remove } from '@tauri-apps/plugin-fs';
 import { invoke } from '@tauri-apps/api/core';
 
 export class TauriInstallerProvider implements IInstallerProvider {
@@ -49,7 +49,7 @@ export class TauriInstallerProvider implements IInstallerProvider {
 
     async checkPythonInstalled(installDir: string): Promise<CommandInfo> {
         const currentPlatform = await this.detectPlatform();
-        const pythonPath = await join(installDir, currentPlatform === 'windows' ? '.venv\\python\\python.exe' : '.venv/bin/python3');
+        const pythonPath = await join(installDir, currentPlatform === 'windows' ? '.venv\\python\\python.exe' : '.venv/python/bin/python3');
 
         try {
             // 检查Python可执行文件是否存在
@@ -91,9 +91,9 @@ export class TauriInstallerProvider implements IInstallerProvider {
         if (currentPlatform === 'windows') {
             architecture = 'x86_64-pc-windows-msvc';
         } else if (currentPlatform === 'macos') {
-            architecture = 'aarch64-apple-darwin';
+            architecture = (await arch()) === 'x86_64' ? 'x86_64-apple-darwin' : 'aarch64-apple-darwin';
         } else if (currentPlatform === 'linux') {
-            architecture = 'x86_64-unknown-linux-gnu';
+            architecture = (await arch()) === 'aarch64' ? 'aarch64-unknown-linux-gnu' : 'x86_64-unknown-linux-gnu';
         }
 
         try {
@@ -154,7 +154,7 @@ export class TauriInstallerProvider implements IInstallerProvider {
 
     async createVirtualEnv(installDir: string): Promise<CommandInfo> {
         const currentPlatform = await this.detectPlatform();
-        const pythonPath = await join(installDir, currentPlatform === 'windows' ? '.venv\\python\\python.exe' : '.venv/bin/python3');
+        const pythonPath = await join(installDir, currentPlatform === 'windows' ? '.venv\\python\\python.exe' : '.venv/python/bin/python3');
 
         try {
             const output = await invoke('run_python',
@@ -178,11 +178,11 @@ export class TauriInstallerProvider implements IInstallerProvider {
 
     async checkPackagesInstalled(installDir: string): Promise<CommandInfo> {
         // 检查安装完成标记文件
-        const completionMarker = await join(installDir,'venv', '.packages_installed');
+        const completionMarker = await join(installDir,'.venv', '.packages_installed');
 
         try {
             const markerExists = await exists(completionMarker);
-            if (markerExists) {
+            if (markerExists && (await readTextFile(completionMarker)).trim() === 'base-v2') {
                 return {
                     success: true,
                     message: '依赖包已安装'
@@ -202,16 +202,15 @@ export class TauriInstallerProvider implements IInstallerProvider {
 
     async installPackages(installDir: string, lockFile: string): Promise<CommandInfo> {
         const currentPlatform = await this.detectPlatform();
-        const pipPath = currentPlatform === 'windows'
-            ? `${installDir}\\.venv\\Scripts\\pip.exe`
-            : `${installDir}/.venv/bin/pip`;
+        const pythonPath = await join(installDir, currentPlatform === 'windows'
+            ? '.venv/Scripts/python.exe' : '.venv/bin/python');
 
         const completionMarker = await join(installDir,'.venv', '.packages_installed');
 
         try {
 
             // 如果标记不存在，检查pip是否可用
-            const pipExists = await exists(pipPath);
+            const pipExists = await exists(pythonPath);
             if (!pipExists) {
                 return {
                     success: false,
@@ -221,16 +220,28 @@ export class TauriInstallerProvider implements IInstallerProvider {
 
             const resourcePath = await resolveResource(await join('resources', lockFile));
 
-            const output = await invoke('run_python', 
-                {
-                    path: pipPath,
-                    cwd: installDir,
-                    args:  ['install', '-r', resourcePath]
-                }
-            );
+            // Match the CLI resolver, cache and isolated-build constraints.
+            await invoke('run_python', {
+                path: pythonPath, cwd: installDir,
+                args: ['-m', 'pip', 'install', 'uv==0.6.11', 'packaging==24.1']
+            });
+            const constraints = await resolveResource('resources/dependencies/build-constraints.txt');
+            const output = await invoke('run_python', {
+                path: pythonPath, cwd: installDir,
+                args: ['-m', 'uv', 'pip', 'install', '--python', pythonPath, '-r', resourcePath,
+                    '--index-strategy', 'unsafe-best-match', '--build-constraint', constraints]
+            });
             console.log('安装依赖包: ' + output);
+            if (currentPlatform === 'linux') {
+                const nativeScript = await resolveResource('resources/dependencies/native_cuda.py');
+                await invoke('run_python', {
+                    path: pythonPath, cwd: installDir,
+                    args: [nativeScript, '--root', installDir, 'install']
+                });
+            }
 
-            await writeTextFile(completionMarker, '');
+
+            await writeTextFile(completionMarker, 'base-v2');
 
             return {
                 success: true,
@@ -361,7 +372,7 @@ export class TauriInstallerProvider implements IInstallerProvider {
             );
             console.log('离线安装依赖包: ' + output);
 
-            await writeTextFile(completionMarker, '');
+            await writeTextFile(completionMarker, 'base-v2');
 
             return {
                 success: true,
@@ -406,6 +417,7 @@ export class TauriInstallerProvider implements IInstallerProvider {
         console.log(entries);
         const extensionInstallPath = await join(installConfig.path, 'extensions');
         for (const entry of entries) {
+            if (!entry.isFile || !entry.name.endsWith('.tar.gz')) continue;
             const output = await invoke('unpack_app', {
                 tar_path: await join(extensionsPath, entry.name),
                 target_path: extensionInstallPath

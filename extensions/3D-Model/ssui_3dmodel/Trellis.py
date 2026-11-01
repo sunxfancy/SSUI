@@ -20,8 +20,11 @@ class TrellisModel:
         return self.model
 
     @staticmethod
-    def load(model_path: str):
-        model = TrellisImageTo3DPipeline.from_pretrained(model_path)
+    def load(model_path: str, dinov2_repository: str = "", dinov2_weights: str = ""):
+        options = {}
+        if dinov2_repository: options["image_cond_repo"] = dinov2_repository
+        if dinov2_weights: options["image_cond_weights"] = dinov2_weights
+        model = TrellisImageTo3DPipeline.from_pretrained(model_path, **options)
         model.cuda()
         return TrellisModel(model_path, model)
 
@@ -60,7 +63,7 @@ def GenModel(
     }
 
     outputs = model.getModel().run(
-        image=image,
+        image=image._image,
         sparse_structure_sampler_params=sparse_structure_sampler_params,
         slat_sampler_params=slat_sampler_params,
         formats=["mesh", "gaussian"],

@@ -1,43 +1,47 @@
-import unittest
-import sys
-import os
 import argparse
+from pathlib import Path
+import subprocess
+import sys
+import unittest
+
 
 def run_all_tests():
-    """运行tests目录下的所有测试用例"""
-    # 获取tests目录的路径
-    tests_dir = os.path.dirname(os.path.abspath(__file__))
-    
-    # 将tests目录添加到Python路径中
-    sys.path.insert(0, os.path.dirname(tests_dir))
+    """Run contracts and real inference in separate processes.
 
-    from tests.utils import add_extension_paths
+    Contract tests install fake third-party modules at import time. Importing
+    them before real-model discovery can turn a GPU regression into a fake pass.
+    Selected tests must also be loaded without discovering unrelated modules.
+    """
+    tests_dir = Path(__file__).resolve().parent
+    sys.path.insert(0, str(tests_dir.parent))
+    from tests.utils import add_extension_paths, should_run_model_tests
     add_extension_paths()
-    
-    # 发现所有测试用例
-    loader = unittest.TestLoader()
-    suite = loader.discover(tests_dir, pattern='*_test.py')
-    
-    # 添加命令行参数解析
+
     parser = argparse.ArgumentParser(description='运行测试')
     parser.add_argument('--test', type=str, help='指定要运行的单个测试名称')
     args = parser.parse_args()
-    
-    # 根据参数决定运行哪些测试
+    loader = unittest.TestLoader()
+    runner = unittest.TextTestRunner(verbosity=2)
     if args.test:
-        # 只运行指定的测试
-        specific_test = unittest.defaultTestLoader.loadTestsFromName(args.test)
-        runner = unittest.TextTestRunner(verbosity=2)
-        result = runner.run(specific_test)
-    else:
-        # 运行所有测试
-        runner = unittest.TextTestRunner(verbosity=2)
-        result = runner.run(suite)
-    
-    # 返回测试结果，用于确定退出码
-    return result.wasSuccessful()
+        name = args.test if args.test.startswith("tests.") else f"tests.{args.test}"
+        return runner.run(loader.loadTestsFromName(name)).wasSuccessful()
+
+    # Do not recurse into model/: each test module gets a clean interpreter below.
+    suite = unittest.TestSuite(
+        loader.loadTestsFromName(f'tests.{path.stem}')
+        for path in sorted(tests_dir.glob('*_test.py'))
+    )
+    success = runner.run(suite).wasSuccessful()
+    if should_run_model_tests():
+        for path in sorted((tests_dir / 'model').glob('*_test.py')):
+            result = subprocess.run(
+                [sys.executable, str(Path(__file__).resolve()), '--test',
+                 f'tests.model.{path.stem}'],
+                cwd=tests_dir.parent,
+            )
+            success = result.returncode == 0 and success
+    return success
+
 
 if __name__ == '__main__':
-    success = run_all_tests()
-    # 如果测试失败，使用非零退出码
-    sys.exit(0 if success else 1) 
+    sys.exit(0 if run_all_tests() else 1)

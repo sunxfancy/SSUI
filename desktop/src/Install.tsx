@@ -203,10 +203,12 @@ class InstallPage extends React.Component<InstallPageProps, InstallPageState> {
     } else if (currentPlatform === 'windows') {
       lockFile = 'dependencies/windows.lock';
       this.setState({ shellOutput: this.state.shellOutput + '检测到Windows系统，使用windows.lock...\n' });
+    } else if (currentPlatform === 'linux') {
+      lockFile = 'dependencies/linux.lock';
+      this.setState({ shellOutput: this.state.shellOutput + '检测到Linux系统，使用linux.lock...\n' });
     } else {
-      // 假设Linux或其他系统使用macosx.lock
-      lockFile = 'dependencies/macosx.lock';
-      this.setState({ shellOutput: this.state.shellOutput + `检测到${currentPlatform}系统，使用macosx.lock作为默认选择...\n` });
+      this.setState({ shellOutput: this.state.shellOutput + `不支持的平台: ${currentPlatform}\n` });
+      return;
     }
 
     try {

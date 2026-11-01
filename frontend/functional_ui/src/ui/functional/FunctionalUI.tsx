@@ -1,5 +1,5 @@
 import React, { Component } from 'react';
-import { Label, Button, Card, Elevation, Collapse } from "@blueprintjs/core";
+import { Label, Button, Card, Elevation, Collapse, Callout } from "@blueprintjs/core";
 import { ItemPredicate, ItemRenderer, Select } from "@blueprintjs/select";
 import { MenuItem } from "@blueprintjs/core";
 import { ComponentTabRef } from "ssui_components";
@@ -47,6 +47,8 @@ interface FunctionalUIState {
     selectedFunc: Callable | undefined;
     isOpen: boolean;
     root_path: string;
+    running: boolean;
+    executionError: string | null;
 }
 
 export class FunctionalUI extends Component<FunctionalUIProps, FunctionalUIState> {
@@ -59,6 +61,8 @@ export class FunctionalUI extends Component<FunctionalUIProps, FunctionalUIState
             selectedFunc: undefined,
             isOpen: false,
             root_path: '',
+            running: false,
+            executionError: null,
         };
     }
 
@@ -117,51 +121,35 @@ export class FunctionalUI extends Component<FunctionalUIProps, FunctionalUIState
         this.setState(prevState => ({ isOpen: !prevState.isOpen }));
     }
 
-    handleRun = (): void => {
-        const { functions, selectedFunc, isOpen } = this.state;
-        const { path } = this.props;
-
+    handleRun = async (): Promise<void> => {
+        const { functions, selectedFunc } = this.state;
         if (!functions) return;
-
         const selected = selectedFunc?.name ?? Object.keys(functions)[0];
-        const meta = functions[selected];
-
-        // 收集输入参数
-        const params: { [key: string]: any } = {};
-        for (const [key, value] of Object.entries(meta.params)) {
-            console.log(this.refInputs.get(key)?.current);
-            params[key] = this.refInputs.get(key)?.current?.onExecute();
-        }
-        console.log('params', params);
-
-        // 收集Details的数据
-        const details = this.details.current?.onExecute();
-        console.log('details', details);
-
-        // 执行API调用
-        fetch('/api/execute?' + new URLSearchParams({
-            script_path: path,
-            callable: selected,
-        }), {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({ params, details }),
-        }).then(res => {
-            if (res.ok) {
-                res.json().then(data => {
-                    // 更新输出组件
-                    for (let i = 0; i < data.length; i++) {
-                        const item = data[i];
-                        const outputComponent = this.getRef(i.toString(), this.refOutputs).current;
-                        if (outputComponent) {
-                            outputComponent.onUpdate(item);
-                        }
-                    }
-                });
+        this.setState({ running: true, executionError: null });
+        try {
+            const params: { [key: string]: any } = {};
+            for (const key of Object.keys(functions[selected].params)) {
+                params[key] = this.refInputs.get(key)?.current?.onExecute();
             }
-        });
+            const details = this.details.current?.onExecute() ?? {};
+            const response = await fetch('/api/execute?' + new URLSearchParams({
+                script_path: this.props.path, callable: selected,
+            }), {
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ params, details }),
+            });
+            const data = await response.json();
+            if (!response.ok || !Array.isArray(data)) {
+                throw new Error(String(data.error ?? data.detail ?? 'Generation failed').split('\n')[0]);
+            }
+            data.forEach((item, index) => {
+                if (item != null) this.getRef(index.toString(), this.refOutputs).current?.onUpdate(item);
+            });
+        } catch (error) {
+            this.setState({ executionError: error instanceof Error ? error.message : String(error) });
+        } finally {
+            this.setState({ running: false });
+        }
     }
 
     renderSelect = (meta: FunctionMeta): JSX.Element => {
@@ -276,13 +264,14 @@ export class FunctionalUI extends Component<FunctionalUIProps, FunctionalUIState
                         {this.renderInputs(meta[selected])}
                     </div>
                     <div className="functional-ui-button">
-                        <Button intent="primary" text="Run" onClick={this.handleRun} />
+                        <Button intent="primary" text="Run" loading={this.state.running} onClick={this.handleRun} />
                     </div>
                     <div className="functional-ui-output">
                         Output
                         {this.renderOutputs(meta[selected])}
                     </div>
                 </div>
+                {this.state.executionError && <Callout intent="danger" title="Generation failed">{this.state.executionError}</Callout>}
                 <Button intent="primary" onClick={this.toggleDetails}>
                     {isOpen ? "Hide Details" : "Show Details"}
                 </Button>

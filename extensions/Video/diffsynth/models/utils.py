@@ -80,7 +80,11 @@ def load_state_dict_from_safetensors(file_path, torch_dtype=None, device="cpu"):
 
 
 def load_state_dict_from_bin(file_path, torch_dtype=None, device="cpu"):
-    state_dict = torch.load(file_path, map_location=device, weights_only=True)
+    # Map modern checkpoints instead of allocating all UMT5 weights in RAM.
+    # Legacy pickle checkpoints remain supported without mmap.
+    import zipfile
+    use_mmap = str(device) == "cpu" and zipfile.is_zipfile(file_path)
+    state_dict = torch.load(file_path, map_location=device, weights_only=True, mmap=use_mmap)
     if torch_dtype is not None:
         for i in state_dict:
             if isinstance(state_dict[i], torch.Tensor):

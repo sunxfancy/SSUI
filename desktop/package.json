@@ -11,7 +11,8 @@
     "storybook": "sb dev -p 6006",
     "copy-resources": "node scripts/copy-resources.cjs",
     "prebuild": "yarn copy-resources",
-    "predev": "yarn copy-resources"
+    "predev": "yarn copy-resources",
+    "test:rust": "cargo test --manifest-path src-tauri/Cargo.toml --lib"
   },
   "dependencies": {
     "@blueprintjs/core": "^5.16.2",

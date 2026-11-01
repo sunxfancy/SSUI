@@ -4,6 +4,9 @@ server:
   venv: shared
   dependencies:
     - numpy>=1.21.2
+  packages:
+    - ssui_3dmodel
+    - vendor
   main: extension.py
 
 web_ui:

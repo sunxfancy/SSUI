@@ -5,6 +5,8 @@ Stable Scripts UI
 
 Stable Scripts UI is a web-based user interface for `Stable Scripts` - a kind of python scripts can easily reproduce the same results created by other users to run GenAI models.
 
+Linux installation, CUDA setup and validation: [Linux guide](doc/Linux.md).
+
 
 ![Desktop Version](doc/images/presentation.png)
 

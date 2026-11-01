@@ -19,7 +19,7 @@
       "icon": "draw",
       "fileList": [
         "ssproject.yaml",
-        "workflow-canvas.py",
+        "example.canvas",
         "workflow-sd1.py",
         "workflow-sdxl.py",
         "workflow-flux.py"
@@ -31,7 +31,9 @@
       "description": "基于 AI 模型生成与编辑视频的工作流",
       "icon": "video",
       "fileList": [
-        "ssproject.yaml"
+        "ssproject.yaml",
+        "workflow-wan21.py",
+        "workflow-cogvideo2b.py"
       ]
     },
     {
@@ -41,6 +43,26 @@
       "icon": "volume-up",
       "fileList": [
         "ssproject.yaml"
+      ]
+    },
+    {
+      "id": "3d-generation",
+      "title": "3D 模型生成",
+      "description": "Shap-E 文本生成网格",
+      "icon": "cube",
+      "fileList": [
+        "ssproject.yaml",
+        "workflow-text-to-3d.py"
+      ]
+    },
+    {
+      "id": "motion-generation",
+      "title": "动作生成",
+      "description": "MDM 骨骼关节轨迹与视频预览",
+      "icon": "walk",
+      "fileList": [
+        "ssproject.yaml",
+        "workflow-motion.py"
       ]
     }
   ],

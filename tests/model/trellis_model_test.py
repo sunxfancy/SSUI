@@ -1,35 +1,37 @@
 import os
-import tempfile
 import unittest
+from pathlib import Path
 
-import torch
 from PIL import Image as PILImage
 
-from tests.utils import download_if_needed, should_run_model_tests
+from tests.utils import download_if_needed, should_run_model_tests, model_output_dir
 
 
 @unittest.skipUnless(should_run_model_tests(), "需要 SSUI_RUN_MODEL_TESTS=1")
 class TestTrellisModel(unittest.TestCase):
     def test_trellis(self):
-        from trellis.pipelines import TrellisImageTo3DPipeline
-        from trellis.utils import postprocessing_utils
+        import numpy as np
+        import trimesh
+        from ssui.base import Image
+        from ssui.config import SSUIConfig
+        from ssui_3dmodel.Trellis import TrellisModel, GenModel
 
-        download_if_needed("trellis")
-        pipeline = TrellisImageTo3DPipeline.from_pretrained("jetx/trellis-image-large")
-        if torch.cuda.is_available():
-            pipeline.cuda()
-
-        outputs = pipeline.run(PILImage.new("RGB", (256, 256)), seed=1)
-        self.assertIn("gaussian", outputs)
-        self.assertIn("mesh", outputs)
-
-        with tempfile.TemporaryDirectory() as tmp:
-            glb = postprocessing_utils.to_glb(
-                outputs["gaussian"][0],
-                outputs["mesh"][0],
-                simplify=0.95,
-                texture_size=256,
-            )
+        model_dir = download_if_needed("trellis")
+        model = TrellisModel.load(
+            str(model_dir),
+            dinov2_repository=os.environ.get('SSUI_DINOV2_REPO'),
+            dinov2_weights=os.environ.get('SSUI_DINOV2_WEIGHTS'),
+        )
+        with PILImage.open(Path(__file__).resolve().parents[1] / "typical_building_building.png") as source:
+            image = Image(source.copy())
+        config = SSUIConfig()
+        config("Generate 3D")['sparse_structure_steps'] = 12
+        config("Generate 3D")['slat_steps'] = 12
+        mesh = GenModel(config("Generate 3D"), model, image)
+        with model_output_dir("trellis") as tmp:
             path = os.path.join(tmp, "sample.glb")
-            glb.export(path)
-            self.assertTrue(os.path.exists(path))
+            mesh._model.export(path)
+            reloaded = trimesh.load(path, force="mesh")
+            self.assertGreater(len(reloaded.vertices), 0)
+            self.assertGreater(len(reloaded.faces), 0)
+            self.assertTrue(np.isfinite(reloaded.vertices).all())
