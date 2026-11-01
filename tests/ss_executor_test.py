@@ -87,26 +87,15 @@ class TestSSLoader(unittest.TestCase):
         import numpy as np
         frames = [Image(PILImage.new("RGB", (32, 16), "red")),
                   PILImage.new("RGB", (32, 16), "blue")]
-        with tempfile.TemporaryDirectory() as root, patch("cv2.VideoWriter") as factory:
-            writer = factory.return_value
-            writer.isOpened.return_value = True
+        import imageio.v3 as iio
+        with tempfile.TemporaryDirectory() as root:
             result = convert_task_return(Video(frames=frames, fps=8), self._task_script(root))
             self.assertEqual(result["type"], "video")
-            self.assertEqual(factory.call_args.args[2:], (8.0, (32, 16)))
-            self.assertEqual(writer.write.call_count, 2)
-            np.testing.assert_array_equal(writer.write.call_args_list[0].args[0][0, 0], [0, 0, 255])
-            np.testing.assert_array_equal(writer.write.call_args_list[1].args[0][0, 0], [255, 0, 0])
-            writer.release.assert_called_once()
-        with tempfile.TemporaryDirectory() as root, patch("cv2.VideoWriter") as factory, \
-             patch("imageio.v2.get_writer") as fallback:
-            factory.return_value.isOpened.return_value = False
-            convert_task_return(Video(frames=frames, fps=8), self._task_script(root))
-            writes = fallback.return_value.__enter__.return_value.append_data.call_args_list
-            self.assertEqual(len(writes), 2)
-            np.testing.assert_array_equal(writes[0].args[0][0, 0], [255, 0, 0])
-            np.testing.assert_array_equal(writes[1].args[0][0, 0], [0, 0, 255])
-            factory.return_value.release.assert_called_once()
-        
+            self.assertEqual(result["fps"], 8)
+            decoded = list(iio.imiter(result["path"]))
+            self.assertEqual(len(decoded), 2)
+            self.assertGreater(decoded[0][0, 0, 0], 200)
+            self.assertGreater(decoded[1][0, 0, 2], 200)
 
 class TestSSProject(unittest.TestCase):
     def setUp(self):

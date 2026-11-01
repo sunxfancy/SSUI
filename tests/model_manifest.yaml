@@ -16,16 +16,18 @@ sdxl:
   file: "sd_xl_base_1.0.safetensors"
   revision: "main"
   size_gb: 6.9
-  sha256: ""
+  sha256: "31e35c80fc4829d14f90153f4c74cd59c90b779f6afe05a74cd6120b893f7e5b"
 
 flux:
   transformer:
+    download_backend: "hub"
     repo: "InvokeAI/flux_schnell"
     file: "transformer/bnb_nf4/flux1-schnell-bnb_nf4.safetensors"
-    revision: "main"
-    size_gb: 10.0
-    sha256: ""
+    revision: "903e6040821e414eea855a788df1e412a7d31198"
+    size_gb: 6.7
+    sha256: "621dd1cd7d8ae63b3a13e8a2dde9c2e391a363343333e182a8f1cba1e291b848"
   t5_encoder:
+    download_backend: "hub"
     repo: "InvokeAI/t5-v1_1-xxl"
     file: "bnb_llm_int8/text_encoder_2/bnb_llm_int8_model.safetensors"
     extra_files:
@@ -35,10 +37,11 @@ flux:
       - "bnb_llm_int8/tokenizer_2/tokenizer.json"
       - "bnb_llm_int8/tokenizer_2/tokenizer_config.json"
     return_dir: "bnb_llm_int8"
-    revision: "main"
-    size_gb: 3.0
-    sha256: ""
+    revision: "2bf7affd7c006520a5c6705600f6ea438ad16533"
+    size_gb: 4.9
+    sha256: "a9ea786ff6105e97572d4f3ea94677b178ded1bdf20244b2fcba59ae89f5c753"
   clip:
+    download_backend: "hub"
     repo: "InvokeAI/clip-vit-large-patch14-text-encoder"
     file: "bfloat16/text_encoder/model.safetensors"
     extra_files:
@@ -48,15 +51,16 @@ flux:
       - "bfloat16/tokenizer/tokenizer_config.json"
       - "bfloat16/tokenizer/vocab.json"
     return_dir: "bfloat16"
-    revision: "main"
+    revision: "fe3587b5e74953569ad1e46fa810d6d4681db71e"
     size_gb: 0.3
-    sha256: ""
+    sha256: "893d67a23f4693ed42cdab4cbad7fe3e727cf59609c40da28a46b5470f9ed082"
   vae:
+    download_backend: "hub"
     repo: "auroraintech/flux-vae"
     file: "ae.safetensors"
-    revision: "main"
+    revision: "7a20ce2e130d2fe89cabf5087dd4f5df7a3fde12"
     size_gb: 0.3
-    sha256: ""
+    sha256: "afc8e28272cd15db3919bacdb6918ce9c1ed22e96cb12c4d5ed0fba823529e38"
 
 cosyvoice:
   repo: "iic/CosyVoice2-0.5B"
@@ -73,9 +77,10 @@ llm:
   sha256: ""
 
 trellis:
-  repo: "jetx/trellis-image-large"
+  repo: "microsoft/TRELLIS-image-large"
   snapshot: true
-  revision: "main"
+  allow_patterns: ["pipeline.json", "ckpts/*.json", "ckpts/*.safetensors"]
+  revision: "25e0d31ffbebe4b5a97464dd851910efc3002d96"
   size_gb: 10.0
   sha256: ""
 
@@ -88,9 +93,10 @@ pixal3d:
 
 diffsynth:
   sd1:
-    repo: "Yntec/Dreamshaper8"
-    file: "dreamshaper_8.safetensors"
-    revision: "9b7fee79ae78b56b182d03bc17ab5f73446c8f97"
+    repo: "Lykon/DreamShaper"
+    file: "DreamShaper_8_pruned.safetensors"
+    revision: "228d79cb20811466f5c5710aa91f05dabd0b8a14"
+
     size_gb: 2.0
     sha256: "879db523c30d3b9017143d56705015e15a2cb5628762c11d086fed9538abd7fd"
   animatediff:
@@ -108,6 +114,29 @@ stdgen:
     local: "StdGEN/StdGEN-multiview-1024"
     note: "上游模型位置待确认，请手动放入 TEST_DATA_DIR"
 
+shap_e:
+  repo: "openai/shap-e"
+  snapshot: true
+  revision: "7bd337afdea1c17842e1c3cc45c4e268356dba40"
+  allow_patterns: ["*.json", "*.txt", "*.fp16.safetensors", "shap_e_renderer/*.bin"]
+  size_gb: 2.0
+  sha256: ""
+
+wan21:
+  repo: "Wan-AI/Wan2.1-T2V-1.3B"
+  snapshot: true
+  revision: "37ec512624d61f7aa208f7ea8140a131f93afc9a"
+  allow_patterns: ["*.pth", "*.safetensors", "config.json", "google/umt5-xxl/*"]
+  size_gb: 15.0
+  sha256: ""
+
+cogvideo2b:
+  repo: "zai-org/CogVideoX-2b"
+  snapshot: true
+  revision: "1137dacfc2c9c012bed6a0793f4ecf2ca8e7ba01"
+  allow_patterns: ["model_index.json", "scheduler/*", "tokenizer/*", "text_encoder/*", "transformer/*", "vae/*"]
+  size_gb: 13.8
+  sha256: ""
 triposr:
   repo: "stabilityai/TripoSR"
   file: "model.ckpt"

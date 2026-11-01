@@ -1,0 +1,2 @@
+# Canonical pins shared with the Linux model installer.
+-r ../../dependencies/requirements-motion.txt

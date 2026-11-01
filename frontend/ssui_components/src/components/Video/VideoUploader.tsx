@@ -36,7 +36,7 @@ const VideoUploader = forwardRef((props: VideoUploaderProps, ref) => {
             });
 
             const data = await response.json();
-            
+
             if (data.success) {
                 setVideo(data.path);
                 setUploading(false);
@@ -62,8 +62,8 @@ const VideoUploader = forwardRef((props: VideoUploaderProps, ref) => {
     return (
         <div>
             <h5>视频上传</h5>
-            <input 
-                type="file" 
+            <input
+                type="file"
                 accept="video/*"
                 onChange={handleFileChange}
                 disabled={uploading}
@@ -77,6 +77,7 @@ const VideoUploader = forwardRef((props: VideoUploaderProps, ref) => {
 
 const VideoPreview = forwardRef((props, ref) => {
     const [video, setVideo] = useUIState<string>('video', '');
+    const [artifacts, setArtifacts] = useUIState<{name: string; path: string}[]>('artifacts', []);
     const [metadata, setMetadata] = useUIState<Record<string, string | number | null>>('metadata', {});
 
     useImperativeHandle(ref, () => {
@@ -85,12 +86,14 @@ const VideoPreview = forwardRef((props, ref) => {
                 console.log('VideoPreview onUpdate:', data);
                 setVideo(data.path);
                 setMetadata(data.metadata || {});
+                setArtifacts(data.artifacts || []);
             }
         }
     }, []);
 
     return (
         <div>
+            {artifacts.map(item => <a key={item.path} href={'/file?path=' + encodeURIComponent(item.path)} download>{item.name}</a>)}
             {video != '' ? <>
                 <video
                     src={'/file?path=' + encodeURIComponent(video)}

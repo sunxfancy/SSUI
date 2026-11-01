@@ -240,7 +240,12 @@ export class TauriInstallerProvider implements IInstallerProvider {
             );
             console.log('安装依赖包: ' + output);
 
-            await writeTextFile(completionMarker, '');
+            if (currentPlatform === 'linux') {
+                const native = await resolveResource('resources/dependencies/native_cuda.py');
+                await invoke('run_python', {path: `${installDir}/.venv/bin/python`, cwd: installDir,
+                    args: [native, '--root', installDir, 'install']});
+            }
+            await writeTextFile(completionMarker, 'base-v2');
 
             return {
                 success: true,

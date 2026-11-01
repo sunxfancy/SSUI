@@ -23,7 +23,12 @@ const packDirsJsOutput = [
 ];
 
 const packFiles = [
-  'extensions/Readme.md'
+  'extensions/Readme.md',
+  'dependencies/native_cuda.py',
+  'dependencies/native-cuda-linux.yaml',
+  'dependencies/native-cuda-linux.explicit.txt',
+  'dependencies/requirements-native-cuda-linux.txt',
+  'dependencies/requirements-motion.txt'
 ];
 
 // 确保目标目录存在
@@ -157,12 +162,17 @@ async function main() {
   }
 
   
+  for (const filename of ['native_cuda.py', 'native-cuda-linux.yaml', 'native-cuda-linux.explicit.txt', 'requirements-native-cuda-linux.txt', 'requirements-motion.txt', 'build-constraints.txt']) {
+    copyFile(path.join(sourceDir, filename), path.join(targetDir, filename));
+  }
+
   // All packaged dependency sets come from the same OS / arch / backend registry.
   const { profiles } = require('../../dependencies/runtime-targets.json');
   for (const { dependencyTarget } of profiles) {
     const source = path.join(sourceDir, `${dependencyTarget}.lock`);
     if (!fs.existsSync(source)) throw new Error(`缺少依赖锁文件: ${source}`);
     copyFile(source, path.join(targetDir, `${dependencyTarget}.lock`));
+
   }
 
   // touch 一个文件
@@ -188,6 +198,18 @@ async function main() {
     console.warn(`警告: 示例目录不存在 - ${workflowSourceDir}`);
   }
 
+  for (const filename of ['workflow-wan21.py', 'workflow-cogvideo2b.py',
+      'workflow-text-to-3d.py', 'workflow-motion.py', 'workflow-mdm.py']) {
+    copyFile(path.resolve(__dirname, '../../examples/advance', filename), path.join(workflowTargetDir, filename));
+  }
+  // The picker reads a shared directory; retain the newer per-preset sources too.
+  const picker = JSON.parse(fs.readFileSync(path.resolve(__dirname, '../src-tauri/workflow/data.json'), 'utf8'));
+  for (const workflow of [...picker.officialWorkflows, ...picker.communityWorkflows]) {
+    for (const file of workflow.fileList || []) {
+      const source = path.resolve(__dirname, '../src-tauri/workflow', workflow.id, file);
+      if (fs.existsSync(source)) copyFile(source, path.join(workflowTargetDir, file));
+    }
+  }
   // 创建app.tar.gz压缩包
   await createTarball();
 }

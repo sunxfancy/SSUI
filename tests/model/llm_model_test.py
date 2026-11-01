@@ -8,12 +8,12 @@ class TestLLMModel(unittest.TestCase):
     def test_llm(self):
         from transformers import AutoModelForCausalLM, AutoTokenizer
 
-        download_if_needed("llm")
+        model_dir = str(download_if_needed("llm"))
         tokenizer = AutoTokenizer.from_pretrained(
-            "Qwen/Qwen-7B-Chat", trust_remote_code=True
+            model_dir, trust_remote_code=True
         )
         model = AutoModelForCausalLM.from_pretrained(
-            "Qwen/Qwen-7B-Chat", device_map="auto", trust_remote_code=True
+            model_dir, device_map="auto", trust_remote_code=True
         ).eval()
 
         response, history = model.chat(tokenizer, "你好", history=None)

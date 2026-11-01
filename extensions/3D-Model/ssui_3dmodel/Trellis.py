@@ -23,7 +23,7 @@ class TrellisModel:
         return self.model
 
     @staticmethod
-    def load(model_path: str, quantization: str = "none"):
+    def load(model_path: str, quantization: str = "none", dinov2_repository: str = None, dinov2_weights: str = None):
         quantize = int8_quantizer(quantization)
         if torch.version.hip:
             raise RuntimeError(
@@ -48,7 +48,7 @@ class TrellisModel:
             os.environ.setdefault("SPARSE_BACKEND", "flex_gemm")
         from trellis.pipelines.trellis_image_to_3d import TrellisImageTo3DPipeline
 
-        model = TrellisImageTo3DPipeline.from_pretrained(model_path)
+        model = TrellisImageTo3DPipeline.from_pretrained(model_path, dinov2_repository=dinov2_repository, dinov2_weights=dinov2_weights)
         if quantization != "none":
             for name in ("sparse_structure_flow_model", "slat_flow_model", "image_cond_model"):
                 quantize(model.models[name])

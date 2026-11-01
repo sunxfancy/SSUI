@@ -35,9 +35,10 @@ class Mesh():
         return Mesh(trimesh.load(path, force="scene"))
 
 class Video():
-    def __init__(self, format: str = "mp4", frames: list[PIL.Image.Image] = None, fps: float = 30, video: str = None, path: str = None, metadata: dict[str, Any] = None):
+    def __init__(self, format: str = "mp4", frames: list[PIL.Image.Image] = None, fps: float = 30, video: str = None, path: str = None, metadata: dict[str, Any] = None, artifacts: dict[str, str] = None):
         self._format = format
         self._frames = frames
+        self._artifacts = artifacts or {}
         self._fps = fps
         # Upload components historically send {"video": path}; ``path`` is the
         # clearer spelling for programmatic callers.  Keep both compatible.

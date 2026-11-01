@@ -17,3 +17,5 @@ import './Base/PromptEditor';
 import './Loader/WorkflowLoaders';
 import './Loader/Pixal3DLoader';
 import './Loader/TextModelLoader';
+import './Mesh/GLBPreview';
+import './Loader/LocalModelLoader';

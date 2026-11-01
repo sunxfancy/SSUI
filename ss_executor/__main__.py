@@ -66,63 +66,16 @@ def convert_task_return(result, task_script):
     """Convert executor results into scheduler-safe values."""
     if isinstance(result, tuple):
         return [convert_task_return(item, task_script) for item in result]
-    if isinstance(result, Image):
-        current_time = datetime.datetime.now()
-        task_project_root = search_project_root(os.path.dirname(task_script))
-        output_dir = os.path.join(task_project_root, "output")
-        os.makedirs(output_dir, exist_ok=True)
-        path = os.path.join(
-            output_dir,
-            "image_" + current_time.strftime("%Y%m%d%H%M%S") + ".png",
-        )
-        result._image.save(path)
-        return {"type": "image", "path": path}
+    if isinstance(result, Image) or (isinstance(result, Video) and result.frames):
+        from ss_executor.results import serialize_result
+        payload = serialize_result(result, search_project_root(os.path.dirname(task_script)))
+        if isinstance(result, Video):
+            payload.update(fps=result.fps, metadata=result.metadata)
+        return payload
     if isinstance(result, Video):
-        if result.path and not result.frames:
-            return {
-                "type": "video",
-                "path": result.path,
-                "metadata": result.metadata,
-            }
-        if not result.frames:
-            raise ValueError("Video result contains neither a path nor frames")
-        import cv2
-        import numpy as np
-
-        # Video nodes may return SSUI Images or raw PIL images.
-        frames = [frame._image if isinstance(frame, Image) else frame for frame in result.frames]
-
-        task_project_root = search_project_root(os.path.dirname(task_script))
-        output_dir = os.path.join(task_project_root, "output")
-        os.makedirs(output_dir, exist_ok=True)
-        path = os.path.join(output_dir, f"video_{uuid.uuid4().hex}.mp4")
-        width, height = frames[0].size
-        writer = cv2.VideoWriter(
-            path,
-            cv2.VideoWriter_fourcc(*"mp4v"),
-            float(result.fps),
-            (width, height),
-        )
-        if not writer.isOpened():
-            writer.release()
-            import imageio.v2 as imageio
-
-            with imageio.get_writer(path, fps=float(result.fps), codec="libx264", macro_block_size=1) as fallback:
-                for frame in frames:
-                    fallback.append_data(np.asarray(frame.convert("RGB")))
-        else:
-            try:
-                for frame in frames:
-                    rgb = np.asarray(frame.convert("RGB"))
-                    writer.write(cv2.cvtColor(rgb, cv2.COLOR_RGB2BGR))
-            finally:
-                writer.release()
-        return {
-            "type": "video",
-            "path": path,
-            "fps": result.fps,
-            "metadata": result.metadata,
-        }
+        if result.path:
+            return {"type": "video", "path": result.path, "metadata": result.metadata}
+        raise ValueError("Video result contains neither a path nor frames")
     if isinstance(result, MotionClip):
         if not result.path or not os.path.isfile(result.path):
             raise ValueError("Generated motion has no preview manifest")

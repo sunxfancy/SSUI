@@ -45,7 +45,7 @@ class TrellisImageTo3DPipeline(Pipeline):
         self._init_image_cond_model(image_cond_model)
 
     @staticmethod
-    def from_pretrained(path: str) -> "TrellisImageTo3DPipeline":
+    def from_pretrained(path: str, image_cond_repo: str = None, image_cond_weights: str = None) -> "TrellisImageTo3DPipeline":
         """
         Load a pretrained model.
 
@@ -65,17 +65,28 @@ class TrellisImageTo3DPipeline(Pipeline):
 
         new_pipeline.slat_normalization = args['slat_normalization']
 
-        new_pipeline._init_image_cond_model(args['image_cond_model'])
+        new_pipeline._init_image_cond_model(args['image_cond_model'], image_cond_repo, image_cond_weights)
 
         return new_pipeline
     
-    def _init_image_cond_model(self, name: str):
+    def _init_image_cond_model(self, name: str, local_repo: str = None, local_weights: str = None):
         """
         Initialize the image conditioning model.
         """
-        dinov2_model = torch.hub.load(
-            'facebookresearch/dinov2:7764ea0f912e53c92e82eb78a2a1631e92725fc8', name,
-            pretrained=True, trust_repo=True, skip_validation=True)
+        import os
+        local_repo = local_repo or os.environ.get('SSUI_DINOV2_REPO')
+        local_weights = local_weights or os.environ.get('SSUI_DINOV2_WEIGHTS')
+        source = local_repo or 'facebookresearch/dinov2'
+        source_kind = 'local' if local_repo else 'github'
+        if local_weights:
+            from accelerate import init_empty_weights
+            with init_empty_weights():
+                dinov2_model = torch.hub.load(source, name, source=source_kind, pretrained=False)
+            state = torch.load(local_weights, map_location='cpu', mmap=True, weights_only=True)
+            dinov2_model.load_state_dict(state, assign=True)
+        else:
+            dinov2_model = torch.hub.load(source, name, source=source_kind, pretrained=True)
+
         dinov2_model.eval()
         self.models['image_cond_model'] = dinov2_model
         transform = transforms.Compose([

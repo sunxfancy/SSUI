@@ -25,7 +25,7 @@ try {
     const binaryOnly = dependencyProfile(getRuntimeTarget()).binaryOnly ? ' --only-binary :all:' : '';
     const nativeWheels = require('./native_wheels.cjs').wheelhouseFor(getCurrentTarget());
     console.log(`Installing requirements from: ${requirementsFile}`);
-    
+
     // 使用 venv.cjs 来执行 uv pip 命令
     // --index-strategy unsafe-best-match: 锁文件中 torch 的 extra-index-url 排在前，
     // 但部分包（如 importlib-metadata）只在 PyPI 上，uv 默认只查第一个 index。
@@ -36,15 +36,18 @@ try {
         ...(nativeWheels ? ['--find-links', nativeWheels] : [])], {
         stdio: 'inherit', env: devEnv, cwd: root
     });
-    
+
     // Shared venvs must not pin imports to one worktree through editable installs.
     if (path.resolve(devEnv.SSUI_VENV_PATH) === path.join(root, '.venv')) {
         execSync(`node "${path.join(__dirname, 'venv.cjs')}" python -m pip install -e .`, {
             stdio: 'inherit', env: devEnv, cwd: root
         });
     }
+    if (process.env.SSUI_SKIP_NATIVE_CUDA !== '1' && path.resolve(devEnv.SSUI_VENV_PATH) === path.join(root, '.venv')) {
+        execFileSync(process.execPath, [path.join(__dirname, 'venv.cjs'), 'python', path.join(__dirname, 'native_cuda.py'), 'install'], {stdio: 'inherit', env: devEnv, cwd: root});
+    }
     console.log('Requirements installed successfully!');
 } catch (error) {
     console.error('Error installing requirements:', error.message);
     process.exit(1);
-} 
+}

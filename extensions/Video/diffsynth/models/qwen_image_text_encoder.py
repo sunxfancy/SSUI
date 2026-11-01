@@ -14,6 +14,7 @@ class QwenImageTextEncoder(torch.nn.Module):
                 "QwenImageTextEncoder requires Transformers with Qwen2.5-VL support. "
                 "Install a compatible Transformers version to use Qwen Image."
             ) from exc
+
         config = Qwen2_5_VLConfig(**{
             "architectures": [
                 "Qwen2_5_VLForConditionalGeneration"

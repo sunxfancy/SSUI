@@ -1,8 +1,7 @@
 import os
-import tempfile
 import unittest
 
-from tests.utils import download_if_needed, should_run_model_tests
+from tests.utils import download_if_needed, should_run_model_tests, model_output_dir
 
 
 @unittest.skipUnless(should_run_model_tests(), "需要 SSUI_RUN_MODEL_TESTS=1")
@@ -31,7 +30,7 @@ class TestSD1Model(unittest.TestCase):
         latent = SD1Denoise(config("Denoise"), model, latent, positive, negative)
         image = SD1LatentDecode(config("Latent to Image"), model, latent)
 
-        with tempfile.TemporaryDirectory() as tmp:
+        with model_output_dir("sd1") as tmp:
             output = os.path.join(tmp, "result.png")
             image._image.save(output)
             self.assertTrue(os.path.exists(output))
@@ -63,7 +62,7 @@ class TestSDXLModel(unittest.TestCase):
         latent = SDXLDenoise(config("Denoise"), model, latent, positive, negative)
         image = SDXLLatentDecode(config("Latent to Image"), model, latent)
 
-        with tempfile.TemporaryDirectory() as tmp:
+        with model_output_dir("sdxl") as tmp:
             output = os.path.join(tmp, "result_sdxl.png")
             image._image.save(output)
             self.assertTrue(os.path.exists(output))
@@ -100,7 +99,7 @@ class TestFluxModel(unittest.TestCase):
         latent = FluxDenoise(config("Denoise"), model, latent, positive, negative)
         image = FluxLatentDecode(config("Latent to Image"), model, latent)
 
-        with tempfile.TemporaryDirectory() as tmp:
+        with model_output_dir("flux") as tmp:
             output = os.path.join(tmp, "result_flux.png")
             image._image.save(output)
             self.assertTrue(os.path.exists(output))
