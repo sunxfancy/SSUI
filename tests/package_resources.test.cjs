@@ -8,7 +8,7 @@ const resources = path.join(root, 'desktop/src-tauri/resources');
 
 test('desktop archives contain SDKs and vendored runtimes', async () => {
   for (const [name, required] of [
-    ['Video', ['ssui_video/Wan21.py', 'ssui_video/CogVideo2B.py', 'diffsynth/__init__.py']],
+    ['Video', ['ssui_video/Wan21.py', 'ssui_video/Wan21Resident.py', 'ssui_video/CogVideo2B.py', 'diffsynth/__init__.py']],
     ['3D-Model', ['ssui_3dmodel/Trellis.py', 'ssui_3dmodel/ShapE.py', 'vendor/trellis/__init__.py']],
     ['Motion', ['ssui_motion/MDM.py', 'ssui_motion/mdm_runner.py']]
   ]) {
@@ -34,5 +34,12 @@ test('every workflow picker entry resolves to a bundled example', () => {
     for (const file of workflow.fileList) {
       assert.ok(fs.statSync(path.join(root,'desktop/src-tauri/workflow/txt2img/basic',file)).isFile(), `${workflow.id}/${file}`);
     }
+  }
+});
+
+test('extension manifests have no duplicate YAML keys', () => {
+  const yaml = require('yaml');
+  for (const name of ['Video', '3D-Model', 'Motion']) {
+    yaml.parse(fs.readFileSync(path.join(root, 'extensions', name, 'ssextension.yaml'), 'utf8'), {uniqueKeys: true});
   }
 });

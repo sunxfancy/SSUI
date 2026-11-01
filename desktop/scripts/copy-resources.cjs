@@ -199,8 +199,16 @@ async function main() {
   }
 
   for (const filename of ['workflow-wan21.py', 'workflow-cogvideo2b.py',
-      'workflow-text-to-3d.py', 'workflow-mdm.py']) {
+      'workflow-text-to-3d.py', 'workflow-motion.py', 'workflow-mdm.py']) {
     copyFile(path.resolve(__dirname, '../../examples/advance', filename), path.join(workflowTargetDir, filename));
+  }
+  // The picker reads a shared directory; retain the newer per-preset sources too.
+  const picker = JSON.parse(fs.readFileSync(path.resolve(__dirname, '../src-tauri/workflow/data.json'), 'utf8'));
+  for (const workflow of [...picker.officialWorkflows, ...picker.communityWorkflows]) {
+    for (const file of workflow.fileList || []) {
+      const source = path.resolve(__dirname, '../src-tauri/workflow', workflow.id, file);
+      if (fs.existsSync(source)) copyFile(source, path.join(workflowTargetDir, file));
+    }
   }
   // 创建app.tar.gz压缩包
   await createTarball();
