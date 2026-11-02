@@ -1,3 +1,4 @@
+import gc
 import tempfile
 import unittest
 from pathlib import Path
@@ -110,6 +111,10 @@ class TextLoRAIntegrationTest(unittest.TestCase):
             self.assertFalse(any("lora_" in name for name, _ in plain.model.named_parameters()))
             zero = TextModel.load(str(base), "nonexistent-adapter", 0, device="cpu", local_files_only=True)
             self.assertFalse(any("lora_" in name for name, _ in zero.model.named_parameters()))
+            # CPU safetensors may retain memory mappings. Windows cannot unlink
+            # the temporary weights while these models/tensor views own them.
+            del loaded, plain, zero, layer, original_layer, adapted, model, parameter
+            gc.collect()
 
     def test_qwen_llama_and_encoder_decoder_local_roundtrips(self):
         from tokenizers import Tokenizer
@@ -137,3 +142,5 @@ class TextLoRAIntegrationTest(unittest.TestCase):
                 config["max_new_tokens"] = 2
                 config["temperature"] = 0
                 self.assertIsInstance(Generate(config, loaded, "hello"), str)
+                del loaded
+                gc.collect()
