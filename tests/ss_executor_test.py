@@ -5,12 +5,11 @@ import tempfile
 import yaml
 from pathlib import Path
 from ss_executor.loader import SSLoader, SSProject, search_project_root
-from ss_executor.__main__ import convert_task_param, convert_task_return
-from ss_executor.model import Task
+from ss_executor.__main__ import Executor, convert_task_param, convert_task_return
+from ss_executor.model import Task, TaskStatus
 from ss_executor.scheduler import TaskScheduler
 from ssui.base import Audio, Image, Mesh, Video, Voice
 from unittest.mock import patch
-from tests.utils import should_run_model_tests
 
 class TestSSLoader(unittest.TestCase):
     def setUp(self):
@@ -150,13 +149,50 @@ class TestScheduler(unittest.TestCase):
         self.assertEqual(task2.script, "test.py")
         self.assertEqual(task2.callable, "test")
 
-    @unittest.skipIf(not should_run_model_tests(), "Skipping integration test")
     def test_scheduler_async(self):
-        scheduler = TaskScheduler()
+        # Exercise real registration, workflow execution and result delivery without
+        # an external worker, fixed port, GPU or downloaded model.
         async def run_scheduler():
-            await scheduler.start()
-            await scheduler.run_task(Task(script="test.py", callable="test"))
-            await scheduler.stop()
+            scheduler = TaskScheduler()
+            worker = None
+            executor = None
+            with tempfile.TemporaryDirectory() as root:
+                Path(root, "ssproject.yaml").write_text(
+                    "ssui_version: 0.3.0\ndependencies: []\n", encoding="utf-8"
+                )
+                script = Path(root, "workflow.py")
+                script.write_text(
+                    "from ssui import workflow\n"
+                    "from ssui.config import SSUIConfig\n"
+                    "config = SSUIConfig()\n"
+                    "@workflow\n"
+                    "def greet(name: str) -> str:\n"
+                    "    return 'hello ' + name\n",
+                    encoding="utf-8",
+                )
+                try:
+                    with patch.dict(os.environ, {
+                        "SSUI_SCHEDULER_HOST": "127.0.0.1",
+                        "SSUI_SCHEDULER_PORT": "0",
+                    }):
+                        await scheduler.start()
+                    port = scheduler.server.sockets[0].getsockname()[1]
+                    executor = Executor(f"ws://127.0.0.1:{port}/")
+                    worker = asyncio.create_task(executor.connect())
+                    task = Task(script=str(script), callable="greet", params={"name": "SSUI"})
+                    result = await asyncio.wait_for(scheduler.run_task(task), timeout=15)
+                    self.assertEqual(result, ["hello SSUI"])
+                    self.assertEqual(task.status, TaskStatus.COMPLETED)
+                    self.assertTrue(scheduler.executors)
+                finally:
+                    if executor is not None:
+                        executor.is_running = False
+                    try:
+                        await asyncio.wait_for(scheduler.stop(), timeout=5)
+                    finally:
+                        if worker is not None:
+                            worker.cancel()
+                            await asyncio.gather(worker, return_exceptions=True)
         asyncio.run(run_scheduler())
 
 
