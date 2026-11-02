@@ -42,6 +42,11 @@ yarn package:debug # 调试版本，会包含完整的调试信息, 网页端也
 
 打包好的文件在`desktop/src-tauri/target/{debug/release}/bundle`目录下。
 
+Linux 下这两个命令默认只生成 AppImage，产物位于 `bundle/appimage/`。
+Tauri 会自动加载 `desktop/src-tauri/tauri.linux.conf.json`，无需额外参数。
+不同 CPU 架构需要分别构建。运行时先执行 `chmod +x <文件名>.AppImage`，
+再直接启动该文件。
+
 ## 发布
 
 发布流程由 CI 自动完成（`release.yml`，与 EVEngine 相同的发布体系）：
