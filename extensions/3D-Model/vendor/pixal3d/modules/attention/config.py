@@ -1,6 +1,8 @@
 from typing import *
+import torch
 
-BACKEND = 'flash_attn' 
+# PyTorch SDPA works on ROCm without an external FlashAttention build.
+BACKEND = 'sdpa' if torch.version.hip else 'flash_attn'
 DEBUG = False
 
 def __from_env():

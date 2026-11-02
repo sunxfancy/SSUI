@@ -1,11 +1,12 @@
 import os
 import tempfile
 import unittest
+from pathlib import Path
 
 import torch
 from PIL import Image as PILImage
 
-from tests.utils import download_if_needed, should_run_model_tests
+from tests.utils import should_run_model_tests
 
 
 @unittest.skipUnless(should_run_model_tests(), "需要 SSUI_RUN_MODEL_TESTS=1")
@@ -18,9 +19,13 @@ class TestPixal3DModel(unittest.TestCase):
         from ssui.base import Image
         from ssui.config import SSUIConfig
         from ssui_3dmodel.Pixal3D import GenPixal3DModel, Pixal3DModel
+        from ssui_3dmodel.runtime import require_glb_runtime
 
-        model_path = download_if_needed("pixal3d")
-        model = Pixal3DModel.load(str(model_path), low_vram=True)
+        # Check native plugins before the multi-GB snapshot download.
+        require_glb_runtime()
+        # Load only the checkpoints referenced by the single-image pipeline;
+        # downloading the whole snapshot also fetches unused multi-view weights.
+        model = Pixal3DModel.load(low_vram=True)
         config = SSUIConfig()
         config.set_prepared(False)
         node_config = config("Generate Pixal3D Model")
@@ -31,7 +36,7 @@ class TestPixal3DModel(unittest.TestCase):
         mesh = GenPixal3DModel(
             node_config,
             model,
-            Image(PILImage.new("RGB", (512, 512), "white")),
+            Image(PILImage.open(Path(__file__).parents[1] / "typical_building_building.png")),
         )
         with tempfile.TemporaryDirectory() as tmp:
             path = os.path.join(tmp, "pixal3d.glb")

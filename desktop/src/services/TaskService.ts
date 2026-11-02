@@ -1,15 +1,7 @@
 import GlobalStateManager from './GlobalState';
+import type { ApiComponents } from 'ssui_components';
 
-export interface QueueTask {
-    id: string;
-    kind: 'download' | 'generation';
-    name: string;
-    status: 'waiting' | 'processing' | 'completed' | 'failed' | 'cancelled';
-    progress: number;
-    createdAt: number;
-    error?: string | null;
-    meta?: Record<string, any>;
-}
+export type QueueTask = ApiComponents['schemas']['TaskInfo'];
 
 /**
  * 任务队列服务：封装 /api/tasks 的 REST 接口与 websocket task_update 订阅。
@@ -19,6 +11,8 @@ class TaskService {
     private ws: WebSocket | null = null;
     private listeners: ((task: QueueTask) => void)[] = [];
 
+    public constructor(private readonly baseUrl?: string) {}
+
     public static getInstance(): TaskService {
         if (!TaskService.instance) {
             TaskService.instance = new TaskService();
@@ -27,6 +21,7 @@ class TaskService {
     }
 
     private getBaseUrl(): string {
+        if (this.baseUrl) return this.baseUrl;
         const rootState = GlobalStateManager.getInstance().getRootState();
         const host = rootState?.host || 'localhost';
         const port = rootState?.port || 7422;
@@ -56,6 +51,16 @@ class TaskService {
         });
         const data = await response.json();
         return data.success === true;
+    }
+
+    public async retryTask(id: string): Promise<string> {
+        const response = await fetch(`${this.getBaseUrl()}/api/tasks/${encodeURIComponent(id)}/retry`, {
+            method: 'POST'
+        });
+        if (!response.ok) throw new Error(`Failed to retry task: ${response.status}`);
+        const data = await response.json();
+        if (!data.success || !data.task_id) throw new Error('Failed to retry task');
+        return data.task_id;
     }
 
     public async clearCompleted(): Promise<void> {

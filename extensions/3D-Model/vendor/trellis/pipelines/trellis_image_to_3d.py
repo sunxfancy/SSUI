@@ -8,7 +8,6 @@ from tqdm import tqdm
 from easydict import EasyDict as edict
 from torchvision import transforms
 from PIL import Image
-import rembg
 from .base import Pipeline
 from . import samplers
 from ..modules import sparse as sp
@@ -46,7 +45,7 @@ class TrellisImageTo3DPipeline(Pipeline):
         self._init_image_cond_model(image_cond_model)
 
     @staticmethod
-    def from_pretrained(path: str) -> "TrellisImageTo3DPipeline":
+    def from_pretrained(path: str, image_cond_repo: str = None, image_cond_weights: str = None) -> "TrellisImageTo3DPipeline":
         """
         Load a pretrained model.
 
@@ -66,15 +65,28 @@ class TrellisImageTo3DPipeline(Pipeline):
 
         new_pipeline.slat_normalization = args['slat_normalization']
 
-        new_pipeline._init_image_cond_model(args['image_cond_model'])
+        new_pipeline._init_image_cond_model(args['image_cond_model'], image_cond_repo, image_cond_weights)
 
         return new_pipeline
     
-    def _init_image_cond_model(self, name: str):
+    def _init_image_cond_model(self, name: str, local_repo: str = None, local_weights: str = None):
         """
         Initialize the image conditioning model.
         """
-        dinov2_model = torch.hub.load('facebookresearch/dinov2', name, pretrained=True)
+        import os
+        local_repo = local_repo or os.environ.get('SSUI_DINOV2_REPO')
+        local_weights = local_weights or os.environ.get('SSUI_DINOV2_WEIGHTS')
+        source = local_repo or 'facebookresearch/dinov2'
+        source_kind = 'local' if local_repo else 'github'
+        if local_weights:
+            from accelerate import init_empty_weights
+            with init_empty_weights():
+                dinov2_model = torch.hub.load(source, name, source=source_kind, pretrained=False)
+            state = torch.load(local_weights, map_location='cpu', mmap=True, weights_only=True)
+            dinov2_model.load_state_dict(state, assign=True)
+        else:
+            dinov2_model = torch.hub.load(source, name, source=source_kind, pretrained=True)
+
         dinov2_model.eval()
         self.models['image_cond_model'] = dinov2_model
         transform = transforms.Compose([
@@ -101,11 +113,15 @@ class TrellisImageTo3DPipeline(Pipeline):
             if scale < 1:
                 input = input.resize((int(input.width * scale), int(input.height * scale)), Image.Resampling.LANCZOS)
             if getattr(self, 'rembg_session', None) is None:
+                import rembg
                 self.rembg_session = rembg.new_session('u2net')
+            import rembg
             output = rembg.remove(input, session=self.rembg_session)
         output_np = np.array(output)
         alpha = output_np[:, :, 3]
         bbox = np.argwhere(alpha > 0.8 * 255)
+        if bbox.size == 0:
+            raise ValueError("TRELLIS input has no visible foreground after background removal.")
         bbox = np.min(bbox[:, 1]), np.min(bbox[:, 0]), np.max(bbox[:, 1]), np.max(bbox[:, 0])
         center = (bbox[0] + bbox[2]) / 2, (bbox[1] + bbox[3]) / 2
         size = max(bbox[2] - bbox[0], bbox[3] - bbox[1])

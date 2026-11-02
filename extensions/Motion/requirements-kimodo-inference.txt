@@ -1,0 +1,24 @@
+# Inference/export only; the optional web demo and motion_correction are separate.
+transformers==5.1.0
+huggingface-hub>=1.3,<2
+tokenizers>=0.22,<=0.23.0
+peft==0.18.1
+hydra-core>=1.3
+omegaconf>=2.3
+numpy>=1.23
+scipy>=1.10
+urllib3>=2.6.3
+boto3
+einops>=0.7
+tqdm>=4
+packaging>=21
+pydantic>=2
+filelock>=3.20.3
+trimesh>=3.21.7
+pillow>=10
+safetensors>=0.4.3
+accelerate>=1.1
+typer-slim
+bvhio==1.5.4
+pyglm==2.8.2
+spatial-transform==1.3.3

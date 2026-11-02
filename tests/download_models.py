@@ -30,38 +30,63 @@ def data_dir() -> Path:
 
 
 def _download_file(entry, dest: Path):
+    """Publish complete downloads atomically; interrupted files stay partial."""
+    import hashlib
+
     dest.parent.mkdir(parents=True, exist_ok=True)
+    expected_hash = entry.get("sha256") or ""
+
+    def digest(path):
+        value = hashlib.sha256()
+        with path.open("rb") as source:
+            for chunk in iter(lambda: source.read(1024 * 1024), b""):
+                value.update(chunk)
+        return value.hexdigest()
+
     if dest.exists() and dest.stat().st_size > 0:
+        if expected_hash and digest(dest) != expected_hash:
+            raise RuntimeError(f"sha256 校验失败: {dest}")
         print(f"已存在，跳过: {dest}")
         return
 
-    url = (
-        f"https://huggingface.co/{entry['repo']}/resolve/"
-        f"{entry.get('revision', 'main')}/{entry['file']}"
-    )
-    print(f"下载: {url}")
-    with requests.get(url, stream=True) as response:
-        response.raise_for_status()
-        with open(dest, "wb") as f, tqdm(
-            total=int(response.headers.get("content-length", 0)),
-            unit="B",
-            unit_scale=True,
-        ) as pbar:
-            for chunk in response.iter_content(chunk_size=8192):
-                if chunk:
-                    f.write(chunk)
-                    pbar.update(len(chunk))
+    if entry.get("download_backend") == "hub":
+        from huggingface_hub import hf_hub_download
+        # The Hub cache resumes interrupted GB-scale transfers and publishes
+        # completed files atomically. Keep SHA validation common to both paths.
+        root = dest
+        for _ in Path(entry["file"]).parts:
+            root = root.parent
+        downloaded = Path(hf_hub_download(
+            entry["repo"], entry["file"], revision=entry.get("revision", "main"),
+            local_dir=str(root),
+        ))
+        if expected_hash and digest(downloaded) != expected_hash:
+            raise RuntimeError(f"sha256 校验失败: {downloaded}")
+        return
 
-    sha256 = entry.get("sha256") or ""
-    if sha256:
-        import hashlib
-
-        actual = hashlib.sha256(dest.read_bytes()).hexdigest()
-        if actual != sha256:
+    url = (f"https://huggingface.co/{entry['repo']}/resolve/"
+           f"{entry.get('revision', 'main')}/{entry['file']}")
+    partial = dest.with_name(dest.name + ".partial")
+    try:
+        with requests.get(url, stream=True, timeout=(20, 120)) as response:
+            response.raise_for_status()
+            expected_size = int(response.headers.get("content-length", 0))
+            received = 0
+            with partial.open("wb") as output, tqdm(
+                total=expected_size or None, unit="B", unit_scale=True
+            ) as progress:
+                for chunk in response.iter_content(chunk_size=1024 * 1024):
+                    if chunk:
+                        output.write(chunk)
+                        received += len(chunk)
+                        progress.update(len(chunk))
+            if not received or (expected_size and received != expected_size):
+                raise RuntimeError(f"下载不完整: {dest} ({received}/{expected_size})")
+        if expected_hash and digest(partial) != expected_hash:
             raise RuntimeError(f"sha256 校验失败: {dest}")
-        print(f"sha256 校验通过: {dest}")
-    else:
-        print(f"警告: 清单未提供 sha256，跳过校验: {dest}")
+        os.replace(partial, dest)
+    finally:
+        partial.unlink(missing_ok=True)
 
 
 def _download_snapshot(entry, dest: Path):
@@ -72,6 +97,7 @@ def _download_snapshot(entry, dest: Path):
         entry["repo"],
         revision=entry.get("revision", "main"),
         local_dir=str(dest),
+        allow_patterns=entry.get("allow_patterns"),
     )
     print(f"快照下载完成: {dest}")
 
@@ -99,7 +125,7 @@ def download_entry(model_key, sub_key=None):
     dest = base / entry["file"]
     _download_file(entry, dest)
     for extra in entry.get("extra_files", []):
-        extra_entry = {**entry, "file": extra}
+        extra_entry = {**entry, "file": extra, "sha256": ""}
         _download_file(extra_entry, base / extra)
     if entry.get("return_dir"):
         return base / entry["return_dir"]

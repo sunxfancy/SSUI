@@ -1,3 +1,4 @@
+import { useUIState } from '../../UIState';
 import React, { useState, forwardRef, useImperativeHandle } from 'react';
 import { Callout, FileInput, NonIdealState, Spinner, Tag } from '@blueprintjs/core';
 import { registerComponent, ComponentRegister } from '../ComponentsManager';
@@ -8,7 +9,7 @@ type AudioUploaderProps = {
 }
 
 const AudioUploader = forwardRef((props: AudioUploaderProps, ref) => {
-    const [audio, setAudio] = useState<string>('');
+    const [audio, setAudio] = useUIState<string>('audio', '');
     const [uploading, setUploading] = useState<boolean>(false);
     const [error, setError] = useState<string | null>(null);
 
@@ -73,8 +74,8 @@ const AudioUploader = forwardRef((props: AudioUploaderProps, ref) => {
 });
 
 const AudioPreview = forwardRef((_props, ref) => {
-    const [audio, setAudio] = useState<string>('');
-    const [metadata, setMetadata] = useState<{ format?: string; sample_rate?: number; text?: string }>({});
+    const [audio, setAudio] = useUIState<string>('audio', '');
+    const [metadata, setMetadata] = useUIState<{ format?: string; sample_rate?: number; text?: string }>('metadata', {});
 
     useImperativeHandle(ref, () => {
         return {

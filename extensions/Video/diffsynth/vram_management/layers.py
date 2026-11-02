@@ -1,3 +1,4 @@
+from ..device_utils import device_memory, GIB
 import torch, copy
 from ..models.utils import init_weights_on_device
 
@@ -13,8 +14,8 @@ class AutoTorchModule(torch.nn.Module):
         super().__init__()
         
     def check_free_vram(self):
-        gpu_mem_state = torch.cuda.mem_get_info(self.computation_device)
-        used_memory = (gpu_mem_state[1] - gpu_mem_state[0]) / (1024 ** 3)
+        _, used_bytes = device_memory(self.computation_device)
+        used_memory = used_bytes / GIB
         return used_memory < self.vram_limit
 
     def offload(self):
@@ -46,6 +47,9 @@ class AutoWrappedModule(AutoTorchModule):
         self.vram_limit = vram_limit
         self.state = 0
 
+    def copy_for_computation(self):
+        return copy.deepcopy(self.module).to(dtype=self.computation_dtype, device=self.computation_device)
+
     def forward(self, *args, **kwargs):
         if self.state == 2:
             module = self.module
@@ -56,8 +60,21 @@ class AutoWrappedModule(AutoTorchModule):
                 self.keep()
                 module = self.module
             else:
-                module = copy.deepcopy(self.module).to(dtype=self.computation_dtype, device=self.computation_device)
+                module = self.copy_for_computation()
         return module(*args, **kwargs)
+
+
+class AutoWrappedEmbedding(AutoWrappedModule):
+    def copy_for_computation(self):
+        # UMT5's embedding is ~2 GiB: deepcopy on CPU before .to(GPU) creates
+        # an unnecessary full RAM copy. Transfer directly from mapped weights.
+        module = copy.copy(self.module)
+        module._parameters = dict(self.module._parameters)
+        module.weight = torch.nn.Parameter(
+            cast_to(self.module.weight, self.computation_dtype, self.computation_device),
+            requires_grad=self.module.weight.requires_grad,
+        )
+        return module
     
 
 class WanAutoCastLayerNorm(torch.nn.LayerNorm, AutoTorchModule):
@@ -87,6 +104,14 @@ class WanAutoCastLayerNorm(torch.nn.LayerNorm, AutoTorchModule):
             else:
                 weight = None if self.weight is None else cast_to(self.weight, self.computation_dtype, self.computation_device)
                 bias = None if self.bias is None else cast_to(self.bias, self.computation_dtype, self.computation_device)
+        if x.device.type in ("cpu", "mps"):
+            # CPU rejects FP32 activations with BF16 affine parameters;
+            # Torch 2.4 MPS has no autocast. Normalize both in FP32.
+            return torch.nn.functional.layer_norm(
+                x.float(), self.normalized_shape,
+                None if weight is None else weight.float(),
+                None if bias is None else bias.float(), self.eps,
+            ).type_as(x)
         with torch.amp.autocast(device_type=x.device.type):
             x = torch.nn.functional.layer_norm(x.float(), self.normalized_shape, weight, bias, self.eps).type_as(x)
         return x

@@ -1,75 +1,35 @@
-#!/bin/bash
-
-# Create .venv folder
-mkdir -p .venv
-
-# Check if Python already exists
-if [ ! -f ".venv/python/bin/python3" ]; then
-    # Set Python version and release date
-    PYTHON_VERSION="3.12.8"
-    RELEASE_DATE="20241219"
-    
-    # Check operating system type
-    OS_TYPE=$(uname -s)
-    ARCHITECTURE=$(uname -m)
-    
-    # Set download parameters based on OS and architecture
-    if [ "$OS_TYPE" = "Darwin" ]; then
-        # macOS
-        if [ "$ARCHITECTURE" = "x86_64" ]; then
-            ARCH="x86_64-apple-darwin"
-        elif [ "$ARCHITECTURE" = "arm64" ]; then
-            ARCH="aarch64-apple-darwin"
+#!/usr/bin/env bash
+set -euo pipefail
+cd "$(dirname "$0")/.."
+VENV_DIR="${SSUI_VENV_PATH:-.venv}"
+mkdir -p "$VENV_DIR"
+if [ ! -x "$VENV_DIR/bin/python" ]; then
+    if [ ! -x "$VENV_DIR/python/bin/python3" ]; then
+        if [ -n "${SSUI_PYTHON_TRIPLE:-}" ]; then
+            SSUI_PY_ARCH="$SSUI_PYTHON_TRIPLE"
         else
-            echo "Unsupported architecture: $ARCHITECTURE"
-            exit 1
+            case "$(uname -s):$(uname -m)" in
+                Linux:x86_64) SSUI_PY_ARCH=x86_64-unknown-linux-gnu ;;
+                Linux:aarch64) SSUI_PY_ARCH=aarch64-unknown-linux-gnu ;;
+                Darwin:x86_64) SSUI_PY_ARCH=x86_64-apple-darwin ;;
+                Darwin:arm64) SSUI_PY_ARCH=aarch64-apple-darwin ;;
+                *) echo 'Unsupported OS/architecture' >&2; exit 1 ;;
+            esac
         fi
-    elif [ "$OS_TYPE" = "Linux" ]; then
-        # Linux
-        if [ "$ARCHITECTURE" = "x86_64" ]; then
-            ARCH="x86_64-unknown-linux-gnu"
-        elif [ "$ARCHITECTURE" = "aarch64" ]; then
-            ARCH="aarch64-unknown-linux-gnu"
-        else
-            echo "Unsupported architecture: $ARCHITECTURE"
-            exit 1
-        fi
-    else
-        echo "Unsupported operating system: $OS_TYPE"
-        exit 1
+        SSUI_PY_VERSION="${SSUI_PYTHON_VERSION:-3.12.8}"
+        SSUI_PY_RELEASE="${SSUI_PYTHON_RELEASE:-20241219}"
+        SSUI_PY_ARCHIVE=$(mktemp "$VENV_DIR/python.XXXXXX.tar.gz")
+        trap 'rm -f "$SSUI_PY_ARCHIVE"' EXIT
+        SSUI_PY_URL="https://github.com/astral-sh/python-build-standalone/releases/download/${SSUI_PY_RELEASE}/cpython-${SSUI_PY_VERSION}+${SSUI_PY_RELEASE}-${SSUI_PY_ARCH}-install_only_stripped.tar.gz"
+        curl --fail --location --retry 3 --connect-timeout 20 "$SSUI_PY_URL" -o "$SSUI_PY_ARCHIVE"
+        tar -xzf "$SSUI_PY_ARCHIVE" -C "$VENV_DIR"
+        rm -f "$SSUI_PY_ARCHIVE"
+        trap - EXIT
     fi
-    https://github.com/astral-sh/python-build-standalone/releases/download/20241219/cpython-3.12.8+20241219-${ARCH}-install_only_stripped.tar.gz
-    
-    # Set download URLs
-    DOWNLOAD_URL="https://github.com/astral-sh/python-build-standalone/releases/download/${RELEASE_DATE}/cpython-${PYTHON_VERSION}+${RELEASE_DATE}-${ARCH}-install_only_stripped.tar.gz"
-    CHINA_MIRROR="https://gitee.com/Swordtooth/ssui_assets/releases/download/v0.0.2/cpython-${PYTHON_VERSION}%${RELEASE_DATE}-${ARCH}-install_only_stripped.tar.gz"
-
-    # Download and extract Python
-    echo "Downloading Python from ${DOWNLOAD_URL}..."
-    if ! curl -L "${DOWNLOAD_URL}" -o .venv/python.tar.gz; then
-        echo "Failed to download from primary source, trying Chinese mirror..."
-        if ! curl -L "${CHINA_MIRROR}" -o .venv/python.tar.gz; then
-            echo "Failed to download from Chinese mirror as well, please check your network connection or download Python manually."
-            exit 1
-        fi
-    fi
-    
-    # Extract files
-    tar -xzf .venv/python.tar.gz -C .venv
-    rm .venv/python.tar.gz
+    "$VENV_DIR/python/bin/python3" -m venv "$VENV_DIR"
 fi
-
-# Check if virtual environment already exists
-if [ ! -f ".venv/bin/python" ]; then
-    # Create virtual environment
-    echo "Creating virtual environment..."
-    .venv/python/bin/python3 -m venv .venv
+if [ ! -x "$VENV_DIR/bin/uv" ]; then
+    "$VENV_DIR/bin/python" -m pip install "uv==${SSUI_UV_VERSION:-0.6.11}" packaging==24.1
 fi
-
-# Check and install uv tool
-if [ ! -f ".venv/bin/uv" ]; then
-    echo "Installing uv tool..."
-    .venv/bin/python -m pip install uv==0.6.11 packaging==24.1
-fi
-
-echo "Installation completed!" 
+"$VENV_DIR/bin/python" --version
+echo 'Python environment ready'

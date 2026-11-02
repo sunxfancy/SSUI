@@ -44,8 +44,8 @@ export class Viewport {
             
             return produce(this, draft => {
                 draft.position = {
-                    x: draft.position.x - dx,
-                    y: draft.position.y - dy
+                    x: draft.position.x + dx,
+                    y: draft.position.y + dy
                 };
                 draft.lastPointerPosition = { ...pointerPosition };
             });

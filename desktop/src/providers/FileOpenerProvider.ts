@@ -17,7 +17,7 @@ export class FileOpenerProvider {
   // 私有构造函数，防止外部直接实例化
   private constructor() {
     const rootState = GlobalStateManager.getInstance().getRootState();
-    this.message = new Message(rootState?.host || "localhost", rootState?.port || 7420);
+    this.message = new Message(rootState?.host || "localhost", rootState?.port || 7422);
   }
 
   /**

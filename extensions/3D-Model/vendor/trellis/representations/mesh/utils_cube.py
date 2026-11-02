@@ -1,4 +1,5 @@
 import torch
+from ...modules.sparse.topology import unique_rows, count_indices
 cube_corners = torch.tensor([[0, 0, 0], [1, 0, 0], [0, 1, 0], [1, 1, 0], [0, 0, 1], [
         1, 0, 1], [0, 1, 1], [1, 1, 1]], dtype=torch.int)
 cube_neighbor = torch.tensor([[1, 0, 0], [-1, 0, 0], [0, 1, 0], [0, -1, 0], [0, 0, 1], [0, 0, -1]])
@@ -18,7 +19,7 @@ def construct_dense_grid(res, device='cuda'):
 
 def construct_voxel_grid(coords):
     verts = (cube_corners.unsqueeze(0).to(coords) + coords.unsqueeze(1)).reshape(-1, 3)
-    verts_unique, inverse_indices = torch.unique(verts, dim=0, return_inverse=True)
+    verts_unique, inverse_indices, _ = unique_rows(verts)
     cubes = inverse_indices.reshape(-1, 8)
     return verts_unique, cubes
 
@@ -33,6 +34,15 @@ def cubes_to_verts(num_verts, cubes, value, reduce='mean'):
     """
     M = value.shape[2] # number of channels
     reduced = torch.zeros(num_verts, M, device=cubes.device)
+    if value.device.type == 'mps':
+        if reduce not in ('mean', 'sum'):
+            raise NotImplementedError(f'MPS cube aggregation: {reduce}')
+        index = cubes.flatten().long()
+        reduced.index_add_(0, index, value.flatten(0, 1).to(reduced.dtype))
+        if reduce == 'mean':
+            counts = count_indices(index, num_verts)
+            reduced = reduced / counts.clamp_min(1).unsqueeze(1)
+        return reduced
     return torch.scatter_reduce(reduced, 0, 
         cubes.unsqueeze(-1).expand(-1, -1, M).flatten(0, 1), 
         value.flatten(0, 1), reduce=reduce, include_self=False)

@@ -43,6 +43,7 @@ export class SliderController extends IController<{ value: number }> {
     render() {
         if (this.props.params?.labels == undefined) {
             return <Slider value={this.state.value}
+                handleHtmlProps={{ 'aria-label': this.props.name }}
                 min={this.props.params?.min ?? 0}
                 max={this.props.params?.max ?? 0}
                 stepSize={this.props.params?.step ?? 1}
@@ -50,6 +51,7 @@ export class SliderController extends IController<{ value: number }> {
                 onChange={this.setValue} />;
         } else {
             return <Slider value={this.state.value}
+                handleHtmlProps={{ 'aria-label': this.props.name }}
                 min={this.props.params?.min ?? 0}
                 max={this.props.params?.max ?? 0}
                 stepSize={this.props.params?.step ?? 1}
@@ -152,7 +154,8 @@ export class RandomController extends IController<{ value: number; userInput: bo
     };
 
     componentDidMount() {
-        if (this.props.params && this.props.params.default !== undefined) {
+        super.componentDidMount();
+        if (!this.context?.store.values[this.context.key] && this.props.params && this.props.params.default !== undefined) {
             this.setState({ value: this.props.params.default });
         }
     }
@@ -196,11 +199,12 @@ export class RandomController extends IController<{ value: number; userInput: bo
             <div className="functional-ui-random" style={{ display: 'flex', alignItems: 'center' }}>
                 <input
                     type="text"
+                    aria-label={this.props.name}
                     value={this.state.value}
                     onChange={this.handleInputChange}
                     style={{ marginRight: '8px', width: '120px' }}
                 />
-                <Button icon="random" onClick={this.generateRandom} minimal={true} />
+                <Button icon="random" aria-label={`Randomize ${this.props.name}`} onClick={this.generateRandom} minimal={true} />
             </div>
         );
     }

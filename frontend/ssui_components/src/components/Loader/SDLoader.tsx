@@ -1,4 +1,5 @@
-import React, { Component } from 'react';
+import React from 'react';
+import { PersistentComponent } from '../../UIState';
 
 interface SDModel {
     name: string;
@@ -7,7 +8,8 @@ interface SDModel {
     tags?: string[];
 }
 function getModelLoader(type: 'sd-1' | 'sdxl', secondary_tag?: string, functionName?: string) {
-    return class SDModelLoader extends Component {
+    return class SDModelLoader extends PersistentComponent<{}, any> {
+    protected persistedFields = ['filePath'];
         state = {
             filePath: '',
             models: [] as SDModel[],
@@ -16,6 +18,7 @@ function getModelLoader(type: 'sd-1' | 'sdxl', secondary_tag?: string, functionN
         };
 
         componentDidMount() {
+        super.componentDidMount();
             this.fetchModels();
         }
 
@@ -106,7 +109,8 @@ function getModelLoader(type: 'sd-1' | 'sdxl', secondary_tag?: string, functionN
 }
 
 
-class FluxModelLoader extends Component {
+class FluxModelLoader extends PersistentComponent<{}, any> {
+    protected persistedFields = ['modelPath', 't5EncoderPath', 'clipPath', 'vaePath'];
     state = {
         modelPath: '',
         t5EncoderPath: '',
@@ -121,6 +125,7 @@ class FluxModelLoader extends Component {
     };
 
     componentDidMount() {
+        super.componentDidMount();
         this.fetchModels();
     }
 
@@ -214,7 +219,8 @@ class FluxModelLoader extends Component {
 
 }
 
-class Flux2KleinModelLoader extends Component {
+class Flux2KleinModelLoader extends PersistentComponent<{}, any> {
+    protected persistedFields = ['modelPath', 'cpuOffload', 'dtype'];
     state = {
         modelPath: '',
         cpuOffload: true,
@@ -225,6 +231,7 @@ class Flux2KleinModelLoader extends Component {
     };
 
     componentDidMount() {
+        super.componentDidMount();
         this.fetchModels();
     }
 

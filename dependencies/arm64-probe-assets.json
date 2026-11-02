@@ -1,0 +1,6 @@
+{
+  "face_landmarker.task": {"url": "https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/1/face_landmarker.task", "sha256": "64184e229b263107bc2b804c6625db1341ff2bb731874b0bcc2fe6544e0bc9ff"},
+  "pose_landmarker_lite.task": {"url": "https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_lite/float16/1/pose_landmarker_lite.task", "sha256": "59929e1d1ee95287735ddd833b19cf4ac46d29bc7afddbbf6753c459690d574a"},
+  "portrait.jpg": {"url": "https://storage.googleapis.com/mediapipe-assets/portrait.jpg", "sha256": "a6f11efaa834706db23f275b6115058fa87fc7f14362681e6abe14e82749de3e"},
+  "pose.jpg": {"url": "https://storage.googleapis.com/mediapipe-assets/pose.jpg", "sha256": "c8a830ed683c0276d713dd5aeda28f415f10cd6291972084a40d0d8b934ed62b"}
+}

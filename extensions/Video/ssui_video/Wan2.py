@@ -1,4 +1,6 @@
+from ._runtime import wan_runtime
 import torch
+from backend.quantization.workflow import fp8_storage_dtype, load_dit_with_storage_dtype
 
 from ssui.annotation import param
 from ssui.base import Prompt, Image
@@ -12,7 +14,7 @@ from modelscope import snapshot_download
 # 相比仓库原有的 Wan2.1-Fun-1.3B，14B 在动作质量、语义跟随与细节上明显更强，
 # 是当前 vendored diffsynth 能直接跑的最高质量开源视频模型之一。
 # 显存建议：24GB+ 显卡（DiT 在 CPU 侧加载，配合显存管理按需换入）；
-# 可将 torch_dtype 改为 torch.float8_e4m3fn 以启用 FP8 量化、降低显存占用。
+# load(quantization="fp8") 只压缩 DiT 存储，计算精度由运行时选择。
 WAN2_T2V_MODEL_ID = "Wan-AI/Wan2.1-T2V-14B"
 WAN2_T2V_LIGHT_MODEL_ID = "Wan-AI/Wan2.1-T2V-1.3B"  # 共享 UMT5 文本编码器与 VAE
 WAN2_I2V_MODEL_ID = "Wan-AI/Wan2.1-I2V-14B-720P"
@@ -26,17 +28,21 @@ class Wan2T2VModel:
         self.model_manager = model_manager
 
     @staticmethod
-    def load() -> "Wan2T2VModel":
-        model_manager = ModelManager()
+    def load(quantization: str = "none") -> "Wan2T2VModel":
+        runtime = wan_runtime()
+        fp8_storage_dtype(quantization, runtime["torch_dtype"], device=runtime["device"])
+        model_manager = ModelManager(device="cpu", torch_dtype=runtime["torch_dtype"])
         snapshot_download(WAN2_T2V_MODEL_ID, local_dir="models/" + WAN2_T2V_MODEL_ID)
         snapshot_download(WAN2_T2V_LIGHT_MODEL_ID, local_dir="models/" + WAN2_T2V_LIGHT_MODEL_ID)
-        model_manager.load_models(
+        load_dit_with_storage_dtype(
+            model_manager,
             [
                 "models/" + WAN2_T2V_MODEL_ID + "/diffusion_pytorch_model.safetensors",
                 "models/" + WAN2_T2V_LIGHT_MODEL_ID + "/models_t5_umt5-xxl-enc-bf16.pth",
                 "models/" + WAN2_T2V_LIGHT_MODEL_ID + "/Wan2.1_VAE.pth",
             ],
-            torch_dtype=torch.bfloat16,  # 可改为 torch.float8_e4m3fn 启用 FP8 量化
+            quantization=quantization,
+            torch_dtype=runtime["torch_dtype"],
             device="cpu",
         )
         return Wan2T2VModel(model_manager)
@@ -49,19 +55,23 @@ class Wan2I2VModel:
         self.model_manager = model_manager
 
     @staticmethod
-    def load() -> "Wan2I2VModel":
-        model_manager = ModelManager()
+    def load(quantization: str = "none") -> "Wan2I2VModel":
+        runtime = wan_runtime()
+        fp8_storage_dtype(quantization, runtime["torch_dtype"], device=runtime["device"])
+        model_manager = ModelManager(device="cpu", torch_dtype=runtime["torch_dtype"])
         snapshot_download(WAN2_I2V_MODEL_ID, local_dir="models/" + WAN2_I2V_MODEL_ID)
         snapshot_download(WAN2_T2V_LIGHT_MODEL_ID, local_dir="models/" + WAN2_T2V_LIGHT_MODEL_ID)
         snapshot_download(WAN2_I2V_CLIP_MODEL_ID, local_dir="models/" + WAN2_I2V_CLIP_MODEL_ID)
-        model_manager.load_models(
+        load_dit_with_storage_dtype(
+            model_manager,
             [
                 "models/" + WAN2_I2V_MODEL_ID + "/diffusion_pytorch_model.safetensors",
                 "models/" + WAN2_T2V_LIGHT_MODEL_ID + "/models_t5_umt5-xxl-enc-bf16.pth",
                 "models/" + WAN2_T2V_LIGHT_MODEL_ID + "/Wan2.1_VAE.pth",
                 "models/" + WAN2_I2V_CLIP_MODEL_ID + "/models_clip_open-clip-xlm-roberta-large-vit-huge-14.pth",
             ],
-            torch_dtype=torch.bfloat16,  # 可改为 torch.float8_e4m3fn 启用 FP8 量化
+            quantization=quantization,
+            torch_dtype=runtime["torch_dtype"],
             device="cpu",
         )
         return Wan2I2VModel(model_manager)
@@ -70,6 +80,7 @@ class Wan2I2VModel:
 @param("seed", Random(), default=42)
 @param("num_frames", Slider(1, 200, 1), default=81)
 @param("num_inference_steps", Slider(1, 100, 1), default=50)
+@param("cfg_scale", Slider(1, 10, 0.1), default=5)
 @param("height", Slider(16, 1280, 16), default=480)
 @param("width", Slider(16, 1280, 16), default=832)
 @param("tiled", Switch(), default=True)
@@ -80,9 +91,9 @@ def Wan2TextToVideo(
         return [Image()]
 
     pipe = WanVideoPipeline.from_model_manager(
-        base_model.model_manager, torch_dtype=torch.bfloat16, device="cuda"
+        base_model.model_manager, **wan_runtime()
     )
-    pipe.enable_vram_management(num_persistent_param_in_dit=None)
+    pipe.enable_vram_management(num_persistent_param_in_dit=0)
     video = pipe(
         prompt=prompt.text,
         negative_prompt=negative_prompt.text,
@@ -90,6 +101,7 @@ def Wan2TextToVideo(
         width=config["width"],
         num_frames=config["num_frames"],
         num_inference_steps=config["num_inference_steps"],
+        cfg_scale=config["cfg_scale"],
         seed=config["seed"],
         tiled=config["tiled"],
     )
@@ -114,9 +126,9 @@ def Wan2ImageToVideo(
         return [Image()]
 
     pipe = WanVideoPipeline.from_model_manager(
-        base_model.model_manager, torch_dtype=torch.bfloat16, device="cuda"
+        base_model.model_manager, **wan_runtime()
     )
-    pipe.enable_vram_management(num_persistent_param_in_dit=None)
+    pipe.enable_vram_management(num_persistent_param_in_dit=0)
     video = pipe(
         prompt=prompt.text,
         negative_prompt=negative_prompt.text,

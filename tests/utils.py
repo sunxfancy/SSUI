@@ -1,10 +1,9 @@
 import os
 import sys
-import hashlib
-import requests
 import yaml
 from pathlib import Path
-from tqdm import tqdm
+from contextlib import contextmanager
+import tempfile
 
 
 def add_extension_paths():
@@ -79,53 +78,33 @@ def download_if_needed(model_key: str, sub_key: str | None = None) -> Path:
             entry["repo"],
             revision=entry.get("revision", "main"),
             local_dir=str(local_dir),
+            allow_patterns=entry.get("allow_patterns"),
         )
         return local_dir
 
     dest_path = data_dir / entry["file"]
     dest_path.parent.mkdir(parents=True, exist_ok=True)
 
-    if not dest_path.exists() or dest_path.stat().st_size == 0:
-        print(f"下载模型: {dest_path}")
-        url = (
-            f"https://huggingface.co/{entry['repo']}/resolve/"
-            f"{entry.get('revision', 'main')}/{entry['file']}"
-        )
-        response = requests.get(url, stream=True)
-        response.raise_for_status()
-        total_size = int(response.headers.get("content-length", 0))
-        with open(dest_path, "wb") as f, tqdm(
-            total=total_size, unit="B", unit_scale=True
-        ) as pbar:
-            for chunk in response.iter_content(chunk_size=8192):
-                if chunk:
-                    f.write(chunk)
-                    pbar.update(len(chunk))
-
-        sha256 = entry.get("sha256") or ""
-        if sha256:
-            actual = hashlib.sha256(dest_path.read_bytes()).hexdigest()
-            if actual != sha256:
-                raise RuntimeError(f"sha256 校验失败: {dest_path}")
-    else:
-        print(f"模型已存在: {dest_path}")
-
+    from tests.download_models import _download_file
+    _download_file(entry, dest_path)
     for extra in entry.get("extra_files", []):
-        extra_path = data_dir / extra
-        extra_path.parent.mkdir(parents=True, exist_ok=True)
-        if not extra_path.exists() or extra_path.stat().st_size == 0:
-            url = (
-                f"https://huggingface.co/{entry['repo']}/resolve/"
-                f"{entry.get('revision', 'main')}/{extra}"
-            )
-            response = requests.get(url, stream=True)
-            response.raise_for_status()
-            with open(extra_path, "wb") as f:
-                for chunk in response.iter_content(chunk_size=8192):
-                    if chunk:
-                        f.write(chunk)
+        extra_entry = {**entry, "file": extra, "sha256": ""}
+        _download_file(extra_entry, data_dir / extra)
 
     if entry.get("return_dir"):
         return data_dir / entry["return_dir"]
     return dest_path
 
+
+
+@contextmanager
+def model_output_dir(name: str):
+    """Optionally retain real inference artifacts for inspection."""
+    root = os.environ.get("SSUI_MODEL_OUTPUT_DIR")
+    if root:
+        dest = Path(root).resolve() / name
+        dest.mkdir(parents=True, exist_ok=True)
+        yield str(dest)
+    else:
+        with tempfile.TemporaryDirectory() as tmp:
+            yield tmp

@@ -56,8 +56,12 @@ def from_pretrained(path: str, **kwargs):
 
     with open(config_file, 'r') as f:
         config = json.load(f)
-    model = __getattr__(config['name'])(**config['args'], **kwargs)
-    model.load_state_dict(load_file(model_file))
+    # Avoid allocating a second full parameter set on 16 GB hosts. Safetensors
+    # maps checkpoint pages and assign=True preserves those tensors directly.
+    from accelerate import init_empty_weights
+    with init_empty_weights():
+        model = __getattr__(config['name'])(**config['args'], **kwargs)
+    model.load_state_dict(load_file(model_file), assign=True)
 
     return model
 

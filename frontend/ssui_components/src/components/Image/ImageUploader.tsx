@@ -7,6 +7,7 @@ type ImageUploaderState = {
 }
 
 export class ImageUploader extends IComponent<{ script_path: string }, ImageUploaderState> {
+    protected persistedFields: ('image')[] = ['image'];
     constructor(props: { script_path: string }) {
         super(props);
         this.state = { 
@@ -73,6 +74,7 @@ export class ImageUploader extends IComponent<{ script_path: string }, ImageUplo
             <h5>Image Upload</h5>
             <input 
                 type="file" 
+                aria-label="Upload image"
                 accept="image/*"
                 onChange={this.handleFileChange}
                 disabled={this.state.uploading}
@@ -89,6 +91,7 @@ type ImagePreviewState = {
 }
 
 export class ImagePreview extends IComponent<{}, ImagePreviewState> {
+    protected persistedFields: 'image'[] = ['image'];
     constructor(props: {}) {
         super(props);
         this.state = { image: '' };

@@ -1,5 +1,6 @@
 from ssui import workflow, Prompt, Image, Video
 from ssui.config import SSUIConfig
+from ssui.quantization import FP8Quantization, Int8Quantization
 from ssui_video.Wan2 import Wan2T2VModel, Wan2TextToVideo, Wan2I2VModel, Wan2ImageToVideo
 from ssui_video.Wan22 import (
     Wan22TI2VModel,
@@ -21,10 +22,11 @@ config = SSUIConfig()
 @workflow
 def txt2vid_wan2(prompt: Prompt, negative_prompt: Prompt) -> Video:
     """Wan 2.1-14B 文生视频（本地，推荐 24GB+ 显存）。"""
+    quantization = FP8Quantization(config("Wan2T2VModel Options"))
     if config.is_prepare():
         model = Wan2T2VModel()
     else:
-        model = Wan2T2VModel.load()
+        model = Wan2T2VModel.load(quantization=quantization)
     video = Wan2TextToVideo(config("Generate Video"), model, prompt, negative_prompt)
     return Video("mp4", video, fps=16)
 
@@ -32,10 +34,11 @@ def txt2vid_wan2(prompt: Prompt, negative_prompt: Prompt) -> Video:
 @workflow
 def img2vid_wan2(image: Image, prompt: Prompt, negative_prompt: Prompt, end_image: Image = None) -> Video:
     """Wan 2.1-I2V-14B-720P 图生视频（可选尾帧控制，本地）。"""
+    quantization = FP8Quantization(config("Wan2I2VModel Options"))
     if config.is_prepare():
         model = Wan2I2VModel()
     else:
-        model = Wan2I2VModel.load()
+        model = Wan2I2VModel.load(quantization=quantization)
     video = Wan2ImageToVideo(config("Generate Video"), model, image, prompt, negative_prompt, end_image)
     return Video("mp4", video, fps=16)
 
@@ -43,10 +46,11 @@ def img2vid_wan2(image: Image, prompt: Prompt, negative_prompt: Prompt, end_imag
 @workflow
 def img2vid_hunyuan(image: Image, prompt: Prompt) -> Video:
     """HunyuanVideo I2V-720p 图生视频（本地）。"""
+    quantization = FP8Quantization(config("HunyuanImageToVideoModel Options"))
     if config.is_prepare():
         model = HunyuanImageToVideoModel()
     else:
-        model = HunyuanImageToVideoModel.load()
+        model = HunyuanImageToVideoModel.load(quantization=quantization)
     video = HunyuanImageToVideo(config("Generate Video"), model, image, prompt)
     return Video("mp4", video, fps=24)
 
@@ -54,10 +58,11 @@ def img2vid_hunyuan(image: Image, prompt: Prompt) -> Video:
 @workflow
 def txt2vid_cogvideo(prompt: Prompt, negative_prompt: Prompt) -> Video:
     """CogVideoX-5B 文生视频（本地，低显存选择）。"""
+    quantization = Int8Quantization(config("CogVideoModel Options"))
     if config.is_prepare():
         model = CogVideoModel()
     else:
-        model = CogVideoModel.load()
+        model = CogVideoModel.load(quantization=quantization)
     video = CogVideoTextToVideo(config("Generate Video"), model, prompt, negative_prompt)
     return Video("mp4", video, fps=8)
 
@@ -65,10 +70,11 @@ def txt2vid_cogvideo(prompt: Prompt, negative_prompt: Prompt) -> Video:
 @workflow
 def txt2vid_wan22(prompt: Prompt, negative_prompt: Prompt) -> Video:
     """Wan 2.2-TI2V-5B 文生视频（本地，推荐 24GB+ 显存，diffsynth 1.1.9）。"""
+    quantization = FP8Quantization(config("Wan22TI2VModel Options"))
     if config.is_prepare():
         model = Wan22TI2VModel()
     else:
-        model = Wan22TI2VModel.load()
+        model = Wan22TI2VModel.load(quantization=quantization)
     video = Wan22TextToVideo(config("Generate Video"), model, prompt, negative_prompt)
     return Video("mp4", video, fps=16)
 
@@ -76,10 +82,11 @@ def txt2vid_wan22(prompt: Prompt, negative_prompt: Prompt) -> Video:
 @workflow
 def img2vid_wan22(image: Image, prompt: Prompt, negative_prompt: Prompt, end_image: Image = None) -> Video:
     """Wan 2.2-TI2V-5B 图生视频（可选尾帧，本地，推荐 24GB+ 显存）。"""
+    quantization = FP8Quantization(config("Wan22TI2VModel Options"))
     if config.is_prepare():
         model = Wan22TI2VModel()
     else:
-        model = Wan22TI2VModel.load()
+        model = Wan22TI2VModel.load(quantization=quantization)
     video = Wan22ImageToVideo(config("Generate Video"), model, image, prompt, negative_prompt, end_image)
     return Video("mp4", video, fps=16)
 
@@ -87,10 +94,11 @@ def img2vid_wan22(image: Image, prompt: Prompt, negative_prompt: Prompt, end_ima
 @workflow
 def txt2vid_wan22_a14b(prompt: Prompt, negative_prompt: Prompt) -> Video:
     """Wan 2.2-T2V-A14B 文生视频（MoE 双专家，建议 48GB+ 显存）。"""
+    quantization = FP8Quantization(config("Wan22T2VA14BModel Options"))
     if config.is_prepare():
         model = Wan22T2VA14BModel()
     else:
-        model = Wan22T2VA14BModel.load()
+        model = Wan22T2VA14BModel.load(quantization=quantization)
     video = Wan22T2VA14BTextToVideo(config("Generate Video"), model, prompt, negative_prompt)
     return Video("mp4", video, fps=16)
 
@@ -98,10 +106,11 @@ def txt2vid_wan22_a14b(prompt: Prompt, negative_prompt: Prompt) -> Video:
 @workflow
 def img2vid_wan22_a14b(image: Image, prompt: Prompt, negative_prompt: Prompt, end_image: Image = None) -> Video:
     """Wan 2.2-I2V-A14B 图生视频（可选尾帧，建议 48GB+ 显存）。"""
+    quantization = FP8Quantization(config("Wan22I2VA14BModel Options"))
     if config.is_prepare():
         model = Wan22I2VA14BModel()
     else:
-        model = Wan22I2VA14BModel.load()
+        model = Wan22I2VA14BModel.load(quantization=quantization)
     video = Wan22I2VA14BImageToVideo(config("Generate Video"), model, image, prompt, negative_prompt, end_image)
     return Video("mp4", video, fps=16)
 

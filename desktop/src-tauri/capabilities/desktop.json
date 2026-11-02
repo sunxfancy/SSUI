@@ -9,7 +9,6 @@
     "main"
   ],
   "permissions": [
-    "updater:default",
     "upload:default",
     "window-state:default",
     "store:default",

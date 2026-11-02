@@ -2,7 +2,7 @@ import fs from 'fs-extra';
 import path from 'path';
 import { execSync } from 'child_process';
 import chalk from 'chalk';
-import tar from 'tar';
+import * as tar from 'tar';
 import YAML from 'yaml';
 
 export async function packageExtension(outputDir?: string): Promise<void> {
@@ -66,7 +66,12 @@ export async function packageExtension(outputDir?: string): Promise<void> {
             for (const pack of config.server.packages) {
               const packageFile = path.join(currentDir, pack);
               if (fs.existsSync(packageFile)) {
-                await fs.copy(packageFile, path.join(extensionDir, pack));
+                await fs.copy(packageFile, path.join(extensionDir, pack), {
+                  filter: (source) => {
+                    const name = path.basename(source);
+                    return name !== '__pycache__' && !name.endsWith('.pyc');
+                  },
+                });
               }
             }
           }
@@ -112,4 +117,4 @@ export async function packageExtension(outputDir?: string): Promise<void> {
     console.error(chalk.red('打包扩展失败:'), error);
     process.exit(1);
   }
-} 
+}

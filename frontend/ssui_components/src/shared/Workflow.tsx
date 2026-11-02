@@ -1,3 +1,5 @@
+import { UIStateContext } from '../UIState';
+import { captureWorkflow, restoreWorkflow, WorkflowState } from './WorkflowState';
 import React from 'react';
 import { createRoot } from 'react-dom/client';
 import { NodeEditor, ClassicPreset } from 'rete';
@@ -94,7 +96,7 @@ function ReroutePin(props: {
     );
 }
 
-const createEditor = (path: string) => async (container: HTMLElement) => {
+const createEditor = (path: string, stateContext: React.ContextType<typeof UIStateContext>) => async (container: HTMLElement) => {
     console.log("初始化工作流编辑器");
 
     const editor = new NodeEditor<Schemes>();
@@ -390,6 +392,19 @@ const createEditor = (path: string) => async (container: HTMLElement) => {
         return context;
     });
 
+    const saved = stateContext?.store.values[stateContext.key + '/graph'] as WorkflowState | undefined;
+    let restoreFailed = false;
+    if (saved) {
+        try { await restoreWorkflow(saved, editor, area, reroute); }
+        catch (error) {
+            restoreFailed = true;
+            const alert = document.createElement('div');
+            alert.setAttribute('role', 'alert');
+            alert.textContent = '工作流状态恢复失败，已保留原始数据。请检查版本后重新打开。';
+            container.appendChild(alert);
+            console.error(error);
+        }
+    } else {
     // 示例流程：一个函数定义框把 输入 → 算子 → 返回 框起来，
     // 框外的 输入/返回 节点通过函数调用节点使用该函数
     const definitionNode = new FunctionDefinitionNode(area, '图像生成');
@@ -437,9 +452,25 @@ const createEditor = (path: string) => async (container: HTMLElement) => {
 
     syncDefinitions();
 
-    setTimeout(() => {
-        AreaExtensions.zoomAt(area, editor.getNodes());
-    }, 1);
+    await AreaExtensions.zoomAt(area, editor.getNodes());
+
+    }
+    const saveState = () => {
+        if (!restoreFailed) stateContext?.store.set(stateContext.key + '/graph', captureWorkflow(editor, area, reroute));
+    };
+    // Capture after editor mutations and React input handlers have completed.
+    let saveTimer: ReturnType<typeof setTimeout>;
+    const scheduleSave = () => { clearTimeout(saveTimer); saveTimer = setTimeout(saveState, 0); };
+    editor.addPipe(context => { scheduleSave(); return context; });
+    area.addPipe(context => {
+        if (['nodetranslated', 'translated', 'zoomed', 'rendered'].includes(context.type)) scheduleSave();
+        return context;
+    });
+    reroute.addPipe(context => { scheduleSave(); return context; });
+    container.addEventListener('input', scheduleSave);
+    container.addEventListener('pointerup', scheduleSave);
+    const flushState = () => { saveState(); void stateContext?.store.flush(true); };
+    window.addEventListener('pagehide', flushState);
 
     // 可搜索节点抽屉：点击添加，或拖到画布的精确位置。
     const toolbar = document.createElement('aside');
@@ -585,6 +616,11 @@ const createEditor = (path: string) => async (container: HTMLElement) => {
 
     return {
         destroy: () => {
+            clearTimeout(saveTimer);
+            saveState();
+            window.removeEventListener('pagehide', flushState);
+            container.removeEventListener('input', scheduleSave);
+            container.removeEventListener('pointerup', scheduleSave);
             window.removeEventListener('keydown', onKeyDown);
             window.removeEventListener('keyup', onKeyUp);
             container.removeEventListener('dragover', onDragOver);
@@ -597,7 +633,8 @@ const createEditor = (path: string) => async (container: HTMLElement) => {
 };
 
 export const Workflow: React.FC<WorkflowProps> = ({ path }) => {
-    const factory = React.useMemo(() => createEditor(path), [path]);
+    const stateContext = React.useContext(UIStateContext);
+    const factory = React.useMemo(() => createEditor(path, stateContext), [path, stateContext?.store]);
     const [ref, editor] = useRete(factory)
     return (
         <div className="workflow-ui" style={{ width: '100%', height: '100vh', position: 'relative' }}>

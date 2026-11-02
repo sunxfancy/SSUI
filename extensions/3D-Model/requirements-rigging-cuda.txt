@@ -1,0 +1,11 @@
+# Modern inference stack; torch/torchvision inherited from the verified CUDA base.
+bpy==5.2.3
+numpy
+scipy
+trimesh
+pyyaml
+rich
+easydict
+einops
+huggingface_hub
+safetensors

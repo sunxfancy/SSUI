@@ -10,7 +10,7 @@ server:
     - transformers>=4.54,<4.56
   packages:
     - ssui_video
-
+    - diffsynth
   main: extension.py
 
 web_ui:

@@ -1,0 +1,14 @@
+{
+  "status": "passed",
+  "engine": "trellis2",
+  "device": "NVIDIA RTX Spark N1X (6144-core Blackwell RTX GPU)",
+  "version": "2.16.0.dev20261026+cu134",
+  "seconds": 331.055,
+  "vertices": 4313400,
+  "faces": 8672102,
+  "bytes": 173080620,
+  "sha256": "3b1ced8a0f9f8f02981efa87cf24e9086b23f54029ddba9093b8c8532054bf27",
+  "input_sha256": "6959e517ee4bc6852791f69bd6ece696a435abcda8321727c07db8daf7f457cf",
+  "export_mode": "vertex_colors",
+  "visual_inspection": "passed"
+}

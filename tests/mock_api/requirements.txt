@@ -1,0 +1,8 @@
+# Minimal deterministic frontend-test server dependencies.
+# Versions mirror dependencies/linux.lock and dependencies/macosx.lock.
+fastapi==0.115.6
+httpx==0.28.1
+python-multipart==0.0.20
+pyyaml==6.0.2
+uvicorn==0.34.2
+websockets==15.0.1

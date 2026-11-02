@@ -7,6 +7,7 @@ import './components.css';
 type Scalar = string | number | boolean | null;
 
 class StringEditor extends IComponent<{}, { value: string }> {
+    protected persistedFields: ('value')[] = ['value'];
     state = { value: '' };
     override onExecute() { return this.state.value; }
     override render() {
@@ -15,6 +16,7 @@ class StringEditor extends IComponent<{}, { value: string }> {
 }
 
 class NumberEditor extends IComponent<{ integer?: boolean }, { value: number }> {
+    protected persistedFields: ('value')[] = ['value'];
     state = { value: 0 };
     override onExecute() { return this.props.integer ? Math.trunc(this.state.value) : this.state.value; }
     override render() {
@@ -32,6 +34,7 @@ class IntegerEditor extends NumberEditor {
 }
 
 class BooleanEditor extends IComponent<{}, { value: boolean }> {
+    protected persistedFields: ('value')[] = ['value'];
     state = { value: false };
     override onExecute() { return this.state.value; }
     override render() {
@@ -41,6 +44,7 @@ class BooleanEditor extends IComponent<{}, { value: boolean }> {
 }
 
 class ScalarPreview extends IComponent<{}, { value: Scalar }> {
+    protected persistedFields: 'value'[] = ['value'];
     state: { value: Scalar } = { value: null };
     override onUpdate(value: Scalar) { this.setState({ value }); }
     override render() {
@@ -52,6 +56,7 @@ class ScalarPreview extends IComponent<{}, { value: Scalar }> {
 }
 
 class JsonEditor extends IComponent<{ type: string }, { value: string; error?: string }> {
+    protected persistedFields: ('value')[] = ['value'];
     state = { value: '', error: undefined as string | undefined };
     override onExecute() {
         if (!this.state.value.trim()) return null;
@@ -74,6 +79,7 @@ class JsonEditor extends IComponent<{ type: string }, { value: string; error?: s
 }
 
 class JsonPreview extends IComponent<{ type: string }, { value: unknown }> {
+    protected persistedFields: 'value'[] = ['value'];
     state: { value: unknown } = { value: undefined };
     override onUpdate(value: unknown) { this.setState({ value }); }
     override render() {

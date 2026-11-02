@@ -20,12 +20,9 @@ yarn dev:desktop
 yarn dev
 ```
 
-或者在项目根目录运行：
-```
-yarn dev:desktop_ui
-```
+根目录的 `yarn build:desktop_ui` 只构建桌面 UI。若要启动独立的 UI 开发服务器，请在本目录运行 `yarn dev`。
 
-独立开发某个react控件，可以启动storyboard：
+独立开发某个 React 控件，可以启动 Storybook：
 ```
 yarn storybook
 ```

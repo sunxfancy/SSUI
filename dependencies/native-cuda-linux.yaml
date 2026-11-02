@@ -1,0 +1,11 @@
+# Workspace-local compiler environment for Torch 2.4.1+cu124 native model ops.
+channels:
+  - conda-forge
+  - nvidia
+dependencies:
+  - cuda-nvcc=12.4.131
+  - cuda-cudart-dev=12.4.127
+  - cuda-cccl=12.4.127
+  - gcc_linux-64=12.4.0
+  - gxx_linux-64=12.4.0
+  - sysroot_linux-64=2.17

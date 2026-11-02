@@ -1,74 +1,88 @@
-import { Message } from 'ssui_components';
 import { DEFAULT_UI_CONFIG, UiConfig } from './types';
 
 const STORAGE_KEY = 'ssui.ui_config.v1';
 
-function readCache(): Partial<UiConfig> | null {
+export function validateUiConfig(value: unknown): Partial<UiConfig> {
+    if (!value || typeof value !== 'object' || Array.isArray(value)) return {};
+    const source = value as Record<string, unknown>;
+    const result: Partial<UiConfig> = {};
+    if (source.theme === 'system' || source.theme === 'light' || source.theme === 'dark') result.theme = source.theme;
+    if (typeof source.auto_open_details === 'boolean') result.auto_open_details = source.auto_open_details;
+    if (typeof source.external_code_editor === 'string') result.external_code_editor = source.external_code_editor;
+    if (typeof source.civitai_token === 'string') result.civitai_token = source.civitai_token;
+    return result;
+}
+
+function readCache(): Partial<UiConfig> {
     try {
-        const raw = localStorage.getItem(STORAGE_KEY);
-        return raw ? JSON.parse(raw) as Partial<UiConfig> : null;
-    } catch (error) {
-        console.error('读取本地配置缓存失败:', error);
-        return null;
+        return validateUiConfig(JSON.parse(localStorage.getItem(STORAGE_KEY) ?? 'null'));
+    } catch {
+        return {};
     }
 }
 
 function writeCache(config: UiConfig): void {
     try {
         localStorage.setItem(STORAGE_KEY, JSON.stringify(config));
-    } catch (error) {
-        console.error('写入本地配置缓存失败:', error);
+    } catch {
+        // Persistent server state remains authoritative when browser storage is unavailable.
     }
 }
 
-function normalizeUiConfig(ui?: Partial<UiConfig> | null): UiConfig {
-    const cached = readCache();
-    return {
-        ...DEFAULT_UI_CONFIG,
-        ...(cached ?? {}),
-        ...(ui ?? {}),
-    };
+async function request(path: string, data?: unknown): Promise<any> {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 15000);
+    try {
+        const response = await fetch(`/${path}`, {
+            method: data === undefined ? 'GET' : 'POST',
+            headers: data === undefined ? undefined : { 'Content-Type': 'application/json' },
+            body: data === undefined ? undefined : JSON.stringify(data),
+            signal: controller.signal,
+        });
+        if (!response.ok) throw new Error(`Config request failed (${response.status})`);
+        const result = await response.json();
+        if (!result || typeof result !== 'object' || Array.isArray(result)) throw new Error('Invalid config response');
+        if (result.error) throw new Error(String(result.error));
+        return result;
+    } finally {
+        clearTimeout(timeout);
+    }
 }
 
-/**
- * 用户配置服务：以服务端 `/config/` 为持久化来源，
- * 本地 localStorage 仅作为启动时的快速缓存与离线回退。
- */
+/** Server persistence with validated local cache as an offline fallback. */
 export class ConfigService {
-    private message: Message;
+    private current: UiConfig = { ...DEFAULT_UI_CONFIG };
 
-    constructor(message?: Message) {
-        this.message = message ?? new Message();
-    }
+    constructor(private message = {
+        get: (path: string) => request(path),
+        post: (path: string, data: unknown) => request(path, data),
+    }) {}
 
     async load(): Promise<UiConfig> {
+        this.current = { ...DEFAULT_UI_CONFIG, ...readCache() };
         try {
             const data = await this.message.get('config/');
-            const config = normalizeUiConfig(data?.ui as Partial<UiConfig> | undefined);
-            writeCache(config);
-            return config;
-        } catch (error) {
-            console.error('加载配置失败，使用本地缓存/默认值:', error);
-            return normalizeUiConfig(null);
+            if (data?.error) throw new Error(String(data.error));
+            this.current = { ...this.current, ...validateUiConfig(data?.ui) };
+            writeCache(this.current);
+        } catch {
+            // Loading offline must not prevent editing and retrying a subsequent save.
         }
+        return this.current;
     }
 
-    /**
-     * 先同步写入本地缓存，确保用户在自动保存计时结束前关闭页面时也不会丢失修改。
-     */
     cache(patch: Partial<UiConfig>): UiConfig {
-        const config = normalizeUiConfig({ ...readCache(), ...patch });
+        const config = { ...this.current, ...readCache(), ...validateUiConfig(patch) };
         writeCache(config);
         return config;
     }
 
     async save(patch: Partial<UiConfig>): Promise<UiConfig> {
-        const response = await this.message.post('config/', { ui: patch });
-        const serverConfig = response?.ui as Partial<UiConfig> | undefined;
-        const config = normalizeUiConfig(
-            serverConfig ?? { ...readCache(), ...patch }
-        );
-        writeCache(config);
-        return config;
+        const validated = validateUiConfig(patch);
+        const result = await this.message.post('config/', { ui: validated });
+        if (result?.error) throw new Error(String(result.error));
+        this.current = { ...this.current, ...validated };
+        writeCache(this.current);
+        return this.current;
     }
 }

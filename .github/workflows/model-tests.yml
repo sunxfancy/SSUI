@@ -8,7 +8,6 @@ on:
 
 env:
   SSUI_RUN_MODEL_TESTS: "1"
-  TEST_DATA_DIR: "${{ runner.temp }}/ssui_test_models"
 
 jobs:
   model-tests:
@@ -16,6 +15,10 @@ jobs:
     runs-on: hf-jobs-t4-small
     steps:
       - uses: actions/checkout@v4
+
+      - name: Configure model cache directory
+        shell: bash
+        run: echo "TEST_DATA_DIR=$RUNNER_TEMP/ssui_test_models" >> "$GITHUB_ENV"
 
       - name: Set up Python
         uses: actions/setup-python@v5
