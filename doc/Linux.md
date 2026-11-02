@@ -49,7 +49,7 @@ yarn test:package-resources
 
 默认扩展归档包括 Image、Video、Audio、3D-Model、Motion；Video/3D 归档必须包含 SDK 和 vendor 源码。
 安装器给 Linux 使用 `linux.lock`，通过独立 Python 创建 `.venv`，安装包解压后即可从桌面选择示例工作流。
-Debian 包声明 Git 和 GStreamer 视频解码插件依赖；请通过包管理器安装，以同时补齐这些运行库。
+默认生成 AppImage；添加执行权限后直接运行。Git 和 GStreamer 视频解码插件仍需通过系统包管理器准备。
 桌面在线安装使用与源码相同的 UV 版本、依赖锁和隔离构建约束。
 离线基础包安装保持离线行为，不会隐式联网准备 CUDA 工具链；原生扩展需要预装或另行在线准备。
 
@@ -68,7 +68,7 @@ GPU 可用性以 CUDA 实际运算为准；PCI 设备存在或 torch 能导入�
 完整桌面交互与模型质量验收必须另行记录，不能用默认单元测试或程序存活代替。
 
 真实桌面自动化入口是 `yarn test:desktop:linux`，需要 `tauri-driver`、WebKitWebDriver、Xvfb 和 dbus-run-session。
-可通过 `SSUI_TAURI_DRIVER` / `SSUI_WEBKIT_DRIVER` 指定工具路径。测试解压实际 Debian 包，在隔离配置目录中
+可通过 `SSUI_TAURI_DRIVER` / `SSUI_WEBKIT_DRIVER` 指定工具路径。测试解压实际 AppImage，在隔离配置目录中
 通过真实安装向导创建环境、自动启动后端，并从工作流选择器复制视频和 3D 示例；测试产物保留在 `.build/desktop-linux-smoke/`。
 默认不调用这些有网络和 GPU 开销的测试。
 

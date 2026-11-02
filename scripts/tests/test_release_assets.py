@@ -13,7 +13,7 @@ class AssetsTest(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             for target in TARGETS:
-                extension = {'windows': '.exe', 'macos': '.dmg', 'linux': '.deb'}[target.split('-')[0]]
+                extension = {'windows': '.exe', 'macos': '.dmg', 'linux': '.AppImage'}[target.split('-')[0]]
                 f = root / f'ssui-v1.0.0-{target}{extension}'
                 f.write_bytes(target.encode())
                 (root / (target + '.json')).write_text(json.dumps(dict(target=target, name=f.name, tag='v1.0.0', sha='a'*40, sha256=digest(f))))
@@ -26,6 +26,23 @@ class AssetsTest(unittest.TestCase):
             (root / (target + '.json')).unlink()
             with self.assertRaises(ValueError):
                 verify(root, 'v1.0.0', 'a'*40)
+
+    def test_collect_linux_appimage_for_each_architecture(self):
+        from unittest.mock import patch
+        from release_assets import collect
+        for arch in ('x86_64', 'arm64'):
+            with self.subTest(arch=arch), tempfile.TemporaryDirectory() as tmp:
+                root = Path(tmp)
+                bundle = root / 'bundle' / 'appimage'
+                bundle.mkdir(parents=True)
+                (bundle / 'ssui.AppImage').write_bytes(b'AppImage payload')
+                output = root / 'assets'
+                with patch('release_assets.platform.machine', return_value=arch), patch('release_assets.binary_arch', return_value=arch):
+                    collect(root / 'bundle', output, f'linux-{arch}', 'v1.0.0', 'a'*40, root / 'ssui')
+                asset = output / f'ssui-v1.0.0-linux-{arch}.AppImage'
+                self.assertEqual(asset.read_bytes(), b'AppImage payload')
+                record = json.loads((output / f'linux-{arch}.json').read_text())
+                self.assertEqual(record['sha256'], digest(asset))
 
     def test_executable_headers(self):
         with tempfile.TemporaryDirectory() as tmp:

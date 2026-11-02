@@ -120,14 +120,14 @@ jobs:
             arch: x86_64
             target: x86_64-unknown-linux-gnu
             id: linux-x86_64
-            bundles: deb
+            bundles: appimage
             binary: desktop/src-tauri/target/x86_64-unknown-linux-gnu/release/ssui
           - os: ubuntu-24.04-arm
             platform: linux
             arch: arm64
             target: aarch64-unknown-linux-gnu
             id: linux-arm64
-            bundles: deb
+            bundles: appimage
             binary: desktop/src-tauri/target/aarch64-unknown-linux-gnu/release/ssui
 
     steps:
@@ -332,14 +332,14 @@ jobs:
             arch: x86_64
             target: x86_64-unknown-linux-gnu
             id: linux-x86_64
-            bundles: deb
+            bundles: appimage
             binary: desktop/src-tauri/target/x86_64-unknown-linux-gnu/release/ssui
           - os: ubuntu-24.04-arm
             platform: linux
             arch: arm64
             target: aarch64-unknown-linux-gnu
             id: linux-arm64
-            bundles: deb
+            bundles: appimage
             binary: desktop/src-tauri/target/aarch64-unknown-linux-gnu/release/ssui
 
     steps:
@@ -361,7 +361,7 @@ jobs:
         if: runner.os == 'Linux'
         run: |
           sudo apt-get update
-          sudo apt-get install -y xvfb
+          sudo apt-get install -y xvfb libwebkit2gtk-4.1-0 libayatana-appindicator3-1 librsvg2-2 gstreamer1.0-plugins-good gstreamer1.0-plugins-bad
       - name: Smoke test installed app (NSIS)
         if: runner.os == 'Windows'
         timeout-minutes: 15
@@ -395,11 +395,14 @@ jobs:
           test -n "$BIN" || { echo "error: no executable found in $APP" >&2; exit 1; }
           node scripts/smoke_app.cjs "$BIN"
 
-      - name: Smoke test installed app (DEB)
+      - name: Smoke test packaged app (AppImage)
         if: runner.os == 'Linux'
         run: |
-          sudo apt-get install -y ./candidate/*.deb
-          xvfb-run -a node scripts/smoke_app.cjs /usr/bin/ssui
+          set -euo pipefail
+          images=(candidate/*.AppImage)
+          test "${#images[@]}" -eq 1
+          chmod +x "${images[0]}"
+          APPIMAGE_EXTRACT_AND_RUN=1 xvfb-run -a node scripts/smoke_app.cjs "${images[0]}"
 
 
   finish:

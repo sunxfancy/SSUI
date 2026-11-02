@@ -14,7 +14,7 @@
    复用现有 CI，然后在六个原生 runner 上检查运行时前置条件、安装依赖、
    Debug 构建、测试、Release 打包、检查二进制架构。
 4. 六个新的 consumer runner 下载构建产物并实际安装：Windows NSIS、
-   macOS DMG、Linux DEB。安装后的程序必须存活通过冒烟窗口。
+   macOS DMG、Linux AppImage。安装后的程序必须存活通过冒烟窗口。
    此检查不等同于模型推理、完整安装向导或 UI 功能验收。
 5. 六个目标全部成功后，汇总版本、源码 SHA、文件哈希到
    `release-manifest.json` 和 `SHA256SUMS`，上传候选 Release。
@@ -39,8 +39,8 @@
 | windows-arm64 | windows-11-arm | NSIS .exe |
 | macos-x86_64 | macos-15-intel | .dmg |
 | macos-arm64 | macos-15 | .dmg |
-| linux-x86_64 | ubuntu-24.04 | .deb |
-| linux-arm64 | ubuntu-24.04-arm | .deb |
+| linux-x86_64 | ubuntu-24.04 | .AppImage |
+| linux-arm64 | ubuntu-24.04-arm | .AppImage |
 
 统一命名：`ssui-vX.Y.Z-<platform>-<architecture>.<extension>`。
 Linux 当前构建基线为 Ubuntu 24.04，不承诺兼容更老的 glibc/WebKit。

@@ -41,6 +41,12 @@ yarn package:debug # Debug version, includes complete debugging information, web
 
 The packaged files are located in the `desktop/src-tauri/target/{debug/release}/bundle` directory.
 
+On Linux, both commands produce only an AppImage in the `bundle/appimage/`
+directory. Tauri automatically loads `desktop/src-tauri/tauri.linux.conf.json`;
+no extra arguments are needed. Build separately for each CPU architecture.
+To run the AppImage, grant it execute permission with `chmod +x <file>.AppImage`
+and launch it directly.
+
 ## Release
 
 For release, use GitHub's release feature to upload the packaged files to the release. 

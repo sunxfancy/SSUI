@@ -1,6 +1,17 @@
 项目打包发布
 ===============
 
+## Linux 打包
+
+```bash
+yarn package:linux
+# 调试包：yarn package:debug
+```
+
+Linux 默认只生成 AppImage，产物位于 `desktop/src-tauri/target/{debug/release}/bundle/appimage/`。
+Tauri 自动加载 `desktop/src-tauri/tauri.linux.conf.json`，不同 CPU 架构需要分别构建。
+运行时先执行 `chmod +x <文件名>.AppImage`，再直接启动该文件。
+
 ## 发布
 
 发布采用六个原生桌面目标：Windows、macOS、Linux × x86_64 / ARM64。

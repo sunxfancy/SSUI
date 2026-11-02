@@ -154,7 +154,7 @@
     "test:package-resources": "node --test tests/package_resources.test.cjs",
     "test:desktop:rust": "yarn workspace ssui-desktop test:rust",
     "test:desktop:linux": "node scripts/test_linux_desktop.cjs",
-    "package:linux": "yarn build:frontend && yarn build:extension_builder && yarn ext:package && yarn build:desktop --bundles deb",
+    "package:linux": "yarn build:frontend && yarn build:extension_builder && yarn ext:package && yarn build:desktop --bundles appimage",
     "ext:package_3D": "cd extensions/3D-Model && node ../../extension_builder/dist/index.js package -o ../../desktop/src-tauri/resources/extensions/",
     "ext:package_Motion": "cd extensions/Motion && node ../../extension_builder/dist/index.js package -o ../../desktop/src-tauri/resources/extensions/"
   },

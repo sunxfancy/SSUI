@@ -68,15 +68,18 @@ for (const signal of ['SIGTERM','SIGINT']) process.on(signal,()=>{stop().finally
   assert.equal(process.platform,'linux');
   fs.mkdirSync(install,{recursive:true});fs.mkdirSync(project,{recursive:true});
   if (!app) {
-    const directory=path.join(root,'.build/linux-desktop-target/release/bundle/deb');
-    const candidates=fs.readdirSync(directory).filter(x=>x.endsWith('.deb')).map(x=>path.join(directory,x));
+    const directory=path.join(root,'.build/linux-desktop-target/release/bundle/appimage');
+    const candidates=fs.readdirSync(directory).filter(x=>x.endsWith('.AppImage')).map(x=>path.join(directory,x));
     candidates.sort((a,b)=>fs.statSync(b).mtimeMs-fs.statSync(a).mtimeMs);
-    const deb=process.env.SSUI_LINUX_DEB || candidates[0];
-    assert.ok(deb,'Build the Debian package first');
+    const image=process.env.SSUI_LINUX_APPIMAGE || candidates[0];
+    assert.ok(image,'Build the AppImage package first');
     const extractedRoot=path.join(artifact,'installed-app');
-    const extraction=spawnSync('dpkg-deb',['-x',deb,extractedRoot],{encoding:'utf8'});
+    fs.mkdirSync(extractedRoot,{recursive:true});
+    fs.chmodSync(image,0o755);
+    const extraction=spawnSync(image,['--appimage-extract'],{cwd:extractedRoot,encoding:'utf8'});
     assert.equal(extraction.status,0,extraction.stderr);
-    app=path.join(extractedRoot,'usr/bin/ssui');
+    appdir=path.join(extractedRoot,'squashfs-root');
+    app=path.join(appdir,'usr/bin/ssui');
   }
   assert.ok(fs.existsSync(app),app);
   console.log('ARTIFACTS',artifact);

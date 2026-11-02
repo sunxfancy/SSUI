@@ -37,7 +37,7 @@ def collect(root, output, target, tag, sha, binary):
     host = {'AMD64': 'x86_64', 'aarch64': 'arm64', 'ARM64': 'arm64'}.get(platform.machine(), platform.machine())
     if host != expected or binary_arch(binary) != expected:
         raise ValueError('host or executable architecture does not match release target')
-    pattern = {'windows': 'nsis/*.exe', 'macos': 'dmg/*.dmg', 'linux': 'deb/*.deb'}[target.split('-')[0]]
+    pattern = {'windows': 'nsis/*.exe', 'macos': 'dmg/*.dmg', 'linux': 'appimage/*.AppImage'}[target.split('-')[0]]
     files = sorted(root.glob(pattern))
     if len(files) != 1:
         raise ValueError(f'expected exactly one installer for {target}, found {len(files)}')
@@ -57,7 +57,7 @@ def verify(directory, tag, sha):
         name = r['name']
         if Path(name).name != name or '/' in name or '\\' in name:
             raise ValueError('invalid asset name')
-        extension = {'windows': '.exe', 'macos': '.dmg', 'linux': '.deb'}[r['target'].split('-')[0]]
+        extension = {'windows': '.exe', 'macos': '.dmg', 'linux': '.AppImage'}[r['target'].split('-')[0]]
         if name != f"ssui-{tag}-{r['target']}{extension}":
             raise ValueError('asset name does not match its release target')
         if r['tag'] != tag or r['sha'] != sha:
