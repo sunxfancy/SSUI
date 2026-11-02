@@ -28,5 +28,17 @@ export default defineConfig(async () => ({
       // 3. tell vite to ignore watching `src-tauri`
       ignored: ["**/src-tauri/**"],
     },
+    // WebView2 能打开本页（1420），但直连 localhost:7422 会得到
+    // ERR_CONNECTION_REFUSED。API 与功能页都经这里转发到后端。
+    proxy: {
+      "/api": { target: "http://127.0.0.1:7422", changeOrigin: true },
+      "/config": { target: "http://127.0.0.1:7422", changeOrigin: true },
+      "/file": { target: "http://127.0.0.1:7422", changeOrigin: true },
+      "/files": { target: "http://127.0.0.1:7422", changeOrigin: true },
+      "/extension": { target: "http://127.0.0.1:7422", changeOrigin: true },
+      "/functional_ui": { target: "http://127.0.0.1:7422", changeOrigin: true },
+      "/res": { target: "http://127.0.0.1:7422", changeOrigin: true },
+      "/ws": { target: "ws://127.0.0.1:7422", ws: true, changeOrigin: true },
+    },
   },
 }));
