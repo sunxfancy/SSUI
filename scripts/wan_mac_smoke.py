@@ -44,7 +44,8 @@ def text_stage(args):
     prompter = WanPrompter(str(args.model_dir / 'google/umt5-xxl'))
     ids, mask = prompter.tokenizer([args.prompt, args.negative], return_mask=True, add_special_tokens=True)
     with torch.inference_mode():
-        x = model.token_embedding(ids).to(args.device, dtype=torch.bfloat16)
+        model.token_embedding.to(args.device, dtype=torch.bfloat16)
+        x = model.token_embedding(ids.to(args.device))
         model.token_embedding.to('meta')
         mask = mask.to(args.device)
         for index, block in enumerate(model.blocks):

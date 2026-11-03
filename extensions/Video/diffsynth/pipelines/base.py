@@ -1,4 +1,5 @@
 import torch
+from ..device_utils import empty_device_cache
 import numpy as np
 from PIL import Image
 from torchvision.transforms import GaussianBlur
@@ -118,7 +119,7 @@ class BasePipeline(torch.nn.Module):
                 else:
                     model.to(self.device)
         # fresh the cuda cache
-        torch.cuda.empty_cache()
+        empty_device_cache(self.device)
 
     
     def generate_noise(self, shape, seed=None, device="cpu", dtype=torch.float16):
