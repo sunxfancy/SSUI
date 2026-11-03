@@ -12,7 +12,7 @@ export const defaultRoutes = {
     'GET /api/tasks': { items: [] },
     'GET /files/image': [],
     'GET /files/script': ['/mock/drawing.py'],
-    'POST /files/upload': { path: sampleImage },
+    'POST /files/upload': { success: true, path: sampleImage },
     'GET /config/': { ui: {} },
     'POST /config/': {},
 };

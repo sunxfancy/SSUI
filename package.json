@@ -108,7 +108,7 @@
     "docker-run": "docker run -it --gpus all -p 7422:7422 ssui-docker",
     "storybook": "storybook dev -p 6006",
     "build:storybook": "storybook build",
-    "test:storybook": "node --test .storybook/mocks/api.test.mjs",
+    "test:storybook": "node --test .storybook/mocks/api.test.mjs .storybook/coverage.test.mjs",
     "probe:arm64": "node dependencies/venv.cjs python dependencies/probe_arm64.py",
     "probe:pixal3d-gpu": "node dependencies/venv.cjs python dependencies/probe_pixal3d_gpu.py",
     "probe:trellis-gpu": "node dependencies/venv.cjs python dependencies/probe_trellis_gpu.py",
