@@ -2,6 +2,8 @@ import os
 from contextlib import asynccontextmanager
 
 from server.generation_bridge import GenerationBridge, router as generation_router
+from server.agent_bridge import router as agent_router
+from server.agent_catalog import router as agent_catalog_router
 
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
@@ -95,6 +97,8 @@ def create_app(
     app.include_router(websocket_routes.router)
     app.include_router(task_routes.router)
     app.include_router(generation_router)
+    app.include_router(agent_router)
+    app.include_router(agent_catalog_router)
 
     # 对于静态数据的请求，使用文件资源管理器
     settings = config_service.get_settings()

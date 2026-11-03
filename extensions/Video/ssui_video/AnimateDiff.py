@@ -1,4 +1,5 @@
 from backend.lora import validate_lora, apply_manager_lora
+from ssui.model_memory import ModelMemoryOptions, configure_diffsynth_manager, run_pipeline
 import os
 from pathlib import Path
 from diffsynth import (
@@ -26,8 +27,10 @@ class AnimateDiffModel:
         quantization: str = "none",
         lora_path: str = "",
         lora_weight: float = 1.0,
+        *, cpu_offload: bool = False,
     ):
         validate_lora(lora_path, lora_weight)
+        options = ModelMemoryOptions(quantization, cpu_offload)
         quantize = int8_quantizer(quantization)
         if bool(checkpoint_path) != bool(motion_path):
             raise ValueError("Provide both checkpoint_path and motion_path, or neither")
@@ -39,7 +42,7 @@ class AnimateDiffModel:
         # Load models
         device = TorchDevice.choose_torch_device()
         self.model_manager = ModelManager(
-            torch_dtype=TorchDevice.choose_torch_dtype(device), device="cpu" if quantization != "none" else str(device)
+            torch_dtype=TorchDevice.choose_torch_dtype(device), device="cpu" if quantization != "none" or cpu_offload else str(device)
         )
         self.model_manager.load_models(
             [
@@ -51,23 +54,22 @@ class AnimateDiffModel:
         apply_manager_lora(self.model_manager, lora_path, lora_weight)
         if quantization != "none":
             quantize_manager_components(self.model_manager, quantize, ("sd_unet", "sd_text_encoder"))
-            self.model_manager.to(str(device))
-            self.model_manager.device = str(device)
+        configure_diffsynth_manager(self.model_manager, options, str(device), quantize=False)
 
     @staticmethod
     def load(checkpoint_path: str = "", motion_path: str = "", quantization: str = "none",
-             lora_path: str = "", lora_weight: float = 1.0) -> "AnimateDiffModel":
-        return AnimateDiffModel(checkpoint_path, motion_path, quantization, lora_path, lora_weight)
+             lora_path: str = "", lora_weight: float = 1.0, *, cpu_offload: bool = False) -> "AnimateDiffModel":
+        return AnimateDiffModel(checkpoint_path, motion_path, quantization, lora_path, lora_weight, cpu_offload=cpu_offload)
 
     @staticmethod
-    def load_local(quantization: str = "none", lora_path: str = "", lora_weight: float = 1.0) -> "AnimateDiffModel":
+    def load_local(quantization: str = "none", lora_path: str = "", lora_weight: float = 1.0, *, cpu_offload: bool = False) -> "AnimateDiffModel":
         """Load the verified local weights used by the Mac example workflow."""
         root = Path(__file__).resolve().parents[3] / "models/video-smoke"
         checkpoint = Path(os.environ.get("SSUI_ANIMATEDIFF_CHECKPOINT", root / "sd1/dreamshaper_8.safetensors"))
         motion = Path(os.environ.get("SSUI_ANIMATEDIFF_MOTION", root / "animatediff/mm_sd_v15_v2.ckpt"))
         if not checkpoint.is_file() or not motion.is_file():
             raise FileNotFoundError("Download AnimateDiff weights first: yarn test:video:smoke --download-only")
-        return AnimateDiffModel(str(checkpoint), str(motion), quantization=quantization, lora_path=lora_path, lora_weight=lora_weight)
+        return AnimateDiffModel(str(checkpoint), str(motion), quantization=quantization, lora_path=lora_path, lora_weight=lora_weight, cpu_offload=cpu_offload)
 
 
 @param("width", Slider(64, 1024, 64), default=256)
@@ -88,7 +90,9 @@ def AnimateDiffTextToVideo(
 
     # Text -> Image
     pipe_image = SDImagePipeline.from_model_manager(base_model.model_manager)
-    image = pipe_image(
+    if getattr(base_model.model_manager, "memory_options", ModelMemoryOptions()).cpu_offload:
+        pipe_image.enable_cpu_offload()
+    image = run_pipeline(pipe_image,
         prompt=prompt.text,
         seed=config["seed"],
         negative_prompt=negative_prompt.text,
@@ -100,7 +104,9 @@ def AnimateDiffTextToVideo(
 
     # Text + Image -> Video (6GB VRAM is enough!)
     pipe = SDVideoPipeline.from_model_manager(base_model.model_manager)
-    output_video = pipe(
+    if getattr(base_model.model_manager, "memory_options", ModelMemoryOptions()).cpu_offload:
+        pipe.enable_cpu_offload()
+    output_video = run_pipeline(pipe,
         prompt=prompt.text,
         seed=config["seed"],
         negative_prompt=negative_prompt.text,

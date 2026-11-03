@@ -1,4 +1,5 @@
 from backend.lora import validate_lora, apply_manager_lora
+from ssui.model_memory import ModelMemoryOptions, configure_diffsynth_manager, run_pipeline
 from ._runtime import wan_runtime
 import torch
 from backend.quantization.workflow import fp8_storage_dtype, load_dit_with_storage_dtype
@@ -29,10 +30,12 @@ class Wan2T2VModel:
         self.model_manager = model_manager
 
     @staticmethod
-    def load(quantization: str = "none", lora_path: str = "", lora_weight: float = 1.0) -> "Wan2T2VModel":
+    def load(quantization: str = "none", lora_path: str = "", lora_weight: float = 1.0, *, cpu_offload: bool = True) -> "Wan2T2VModel":
         validate_lora(lora_path, lora_weight)
+        options = ModelMemoryOptions(quantization, cpu_offload, allow_fp8=True)
+        storage_mode = "none" if quantization == "int8" else quantization
         runtime = wan_runtime()
-        fp8_storage_dtype(quantization, runtime["torch_dtype"], device=runtime["device"])
+        fp8_storage_dtype(storage_mode, runtime["torch_dtype"], device=runtime["device"])
         model_manager = ModelManager(device="cpu", torch_dtype=runtime["torch_dtype"])
         snapshot_download(WAN2_T2V_MODEL_ID, local_dir="models/" + WAN2_T2V_MODEL_ID)
         snapshot_download(WAN2_T2V_LIGHT_MODEL_ID, local_dir="models/" + WAN2_T2V_LIGHT_MODEL_ID)
@@ -43,11 +46,12 @@ class Wan2T2VModel:
                 "models/" + WAN2_T2V_LIGHT_MODEL_ID + "/models_t5_umt5-xxl-enc-bf16.pth",
                 "models/" + WAN2_T2V_LIGHT_MODEL_ID + "/Wan2.1_VAE.pth",
             ],
-            quantization=quantization,
+            quantization=storage_mode,
             torch_dtype=runtime["torch_dtype"],
             device="cpu",
         )
         apply_manager_lora(model_manager, lora_path, lora_weight)
+        configure_diffsynth_manager(model_manager, options, runtime["device"])
         return Wan2T2VModel(model_manager)
 
 
@@ -58,10 +62,12 @@ class Wan2I2VModel:
         self.model_manager = model_manager
 
     @staticmethod
-    def load(quantization: str = "none", lora_path: str = "", lora_weight: float = 1.0) -> "Wan2I2VModel":
+    def load(quantization: str = "none", lora_path: str = "", lora_weight: float = 1.0, *, cpu_offload: bool = True) -> "Wan2I2VModel":
         validate_lora(lora_path, lora_weight)
+        options = ModelMemoryOptions(quantization, cpu_offload, allow_fp8=True)
+        storage_mode = "none" if quantization == "int8" else quantization
         runtime = wan_runtime()
-        fp8_storage_dtype(quantization, runtime["torch_dtype"], device=runtime["device"])
+        fp8_storage_dtype(storage_mode, runtime["torch_dtype"], device=runtime["device"])
         model_manager = ModelManager(device="cpu", torch_dtype=runtime["torch_dtype"])
         snapshot_download(WAN2_I2V_MODEL_ID, local_dir="models/" + WAN2_I2V_MODEL_ID)
         snapshot_download(WAN2_T2V_LIGHT_MODEL_ID, local_dir="models/" + WAN2_T2V_LIGHT_MODEL_ID)
@@ -74,11 +80,12 @@ class Wan2I2VModel:
                 "models/" + WAN2_T2V_LIGHT_MODEL_ID + "/Wan2.1_VAE.pth",
                 "models/" + WAN2_I2V_CLIP_MODEL_ID + "/models_clip_open-clip-xlm-roberta-large-vit-huge-14.pth",
             ],
-            quantization=quantization,
+            quantization=storage_mode,
             torch_dtype=runtime["torch_dtype"],
             device="cpu",
         )
         apply_manager_lora(model_manager, lora_path, lora_weight)
+        configure_diffsynth_manager(model_manager, options, runtime["device"])
         return Wan2I2VModel(model_manager)
 
 
@@ -98,8 +105,13 @@ def Wan2TextToVideo(
     pipe = WanVideoPipeline.from_model_manager(
         base_model.model_manager, **wan_runtime()
     )
-    pipe.enable_vram_management(num_persistent_param_in_dit=0)
-    video = pipe(
+    options = getattr(base_model.model_manager, "memory_options", ModelMemoryOptions(cpu_offload=True))
+    if options.cpu_offload:
+        if options.quantization == "int8":
+            pipe.enable_cpu_offload()
+        else:
+            pipe.enable_vram_management(num_persistent_param_in_dit=0)
+    video = run_pipeline(pipe,
         prompt=prompt.text,
         negative_prompt=negative_prompt.text,
         height=config["height"],
@@ -133,8 +145,13 @@ def Wan2ImageToVideo(
     pipe = WanVideoPipeline.from_model_manager(
         base_model.model_manager, **wan_runtime()
     )
-    pipe.enable_vram_management(num_persistent_param_in_dit=0)
-    video = pipe(
+    options = getattr(base_model.model_manager, "memory_options", ModelMemoryOptions(cpu_offload=True))
+    if options.cpu_offload:
+        if options.quantization == "int8":
+            pipe.enable_cpu_offload()
+        else:
+            pipe.enable_vram_management(num_persistent_param_in_dit=0)
+    video = run_pipeline(pipe,
         prompt=prompt.text,
         negative_prompt=negative_prompt.text,
         input_image=image._image,

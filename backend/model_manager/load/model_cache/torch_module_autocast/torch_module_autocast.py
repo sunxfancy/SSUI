@@ -2,6 +2,9 @@ from typing import TypeVar
 
 import torch
 
+from ssui.native_quantization import Int8Linear
+from backend.model_manager.load.model_cache.torch_module_autocast.custom_modules.custom_int8_linear import CustomInt8Linear
+
 from backend.flux.modules.layers import RMSNorm
 from backend.model_manager.load.model_cache.torch_module_autocast.custom_modules.custom_conv1d import (
     CustomConv1d,
@@ -27,6 +30,7 @@ from backend.model_manager.load.model_cache.torch_module_autocast.custom_modules
 
 AUTOCAST_MODULE_TYPE_MAPPING: dict[type[torch.nn.Module], type[torch.nn.Module]] = {
     torch.nn.Linear: CustomLinear,
+    Int8Linear: CustomInt8Linear,
     torch.nn.Conv1d: CustomConv1d,
     torch.nn.Conv2d: CustomConv2d,
     torch.nn.GroupNorm: CustomGroupNorm,

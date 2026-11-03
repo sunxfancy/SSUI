@@ -1,4 +1,8 @@
-import {useRef, useState} from 'react';
+import {useEffect, useRef, useState} from 'react';
+import { connectAgent, agentObject, agentString } from 'ssui_components';
+import { desktopAgentCommands } from './services/AgentCommands';
+import { getApiBaseUrl } from './services/apiBase';
+import i18n from './i18n/i18n';
 import {WorkSpace} from './components/WorkSpace'
 import TabWindowManager from './components/TabWindowManager/index.tsx';
 import { Allotment } from "allotment";
@@ -23,6 +27,25 @@ const App = () => {
     const tabWindowManagerRef = useRef<TabWindowManager>(null)
     const modelManagerProvider = useRef<ModelManagerProvider>(new ModelManagerProvider())
     const extensionsProviderRef = useRef<ExtensionsProvider>(new ExtensionsProvider())
+    const workspaceRef = useRef(currentWorkspace);
+    workspaceRef.current = currentWorkspace;
+    useEffect(() => connectAgent('SSUI Desktop', [...desktopAgentCommands(),
+        { name: 'desktop.state', description: 'Read workspace and open tab layout.', readOnly: true,
+            inputSchema: agentObject(), run: () => ({ workspace: workspaceRef.current, layout: tabWindowManagerRef.current?.state.model.toJson() }) },
+        { name: 'desktop.workspace', description: 'Open a workspace directory.',
+            inputSchema: agentObject({ path: agentString }), run: ({ path }) => { setCurrentWorkspace(path); return path; } },
+        { name: 'desktop.open_file', description: 'Open a script, flow, canvas or media file in its registered editor.',
+            inputSchema: agentObject({ path: agentString }), run: ({ path }) => onFileOpen(path) },
+        { name: 'desktop.navigate', description: 'Select workspace/models/queue/extensions sidebar.',
+            inputSchema: agentObject({ section: { enum: ['workspace', 'models', 'queue', 'extensions'] } }),
+            run: ({ section }) => setNavIndex(['workspace', 'models', 'queue', 'extensions'].indexOf(section)) },
+        { name: 'desktop.settings', description: 'Open application settings.', inputSchema: agentObject(), run: () => openSettings() },
+        { name: 'desktop.add_model', description: 'Open model search/download page.', inputSchema: agentObject(), run: () => addModel() },
+        { name: 'desktop.language', description: 'Change application language.', inputSchema: agentObject({ language: { enum: ['zh-cn', 'en-us'] } }), run: ({ language }) => i18n.changeLanguage(language).then(() => language) },
+        { name: 'desktop.close_tab', description: 'Close an open tab by ID from desktop.state.', inputSchema: agentObject({ id: agentString }), run: ({ id }) => tabWindowManagerRef.current?.handleTabClose(id) },
+        { name: 'desktop.close_other_tabs', description: 'Close all other tabs in the tab group.', inputSchema: agentObject({ id: agentString }), run: ({ id }) => tabWindowManagerRef.current?.closeOtherTabs(id) },
+        { name: 'desktop.close_all_tabs', description: 'Close all open tabs.', inputSchema: agentObject(), run: () => tabWindowManagerRef.current?.closeAllTabs() },
+    ], getApiBaseUrl()), []);
 
 
     const onOpenWorkspace = () => {

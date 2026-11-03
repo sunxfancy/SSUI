@@ -1,4 +1,5 @@
 import os
+import importlib.util
 import shutil
 import subprocess
 import sys
@@ -8,7 +9,7 @@ import uuid
 from ssui.annotation import param
 from ssui.base import Prompt, Image, Video
 from ssui.config import SSUIConfig
-from ssui.controller import Random, Slider, Select
+from ssui.controller import Random, Slider, Select, Switch
 
 
 # MiniMax H3（33B 全模态 DiT，开源版最接近 Seedance 2.0 的效果）本地节点。
@@ -59,6 +60,7 @@ def _run_h3(
     output = os.path.join(output_dir, f"h3_{uuid.uuid4().hex}.mp4")
     try:
         quantization = config["quantization"]
+        cpu_offload = config["cpu_offload"] if "cpu_offload" in config else True
         runner = H3_NF4_RUNNER if quantization == "nf4" else H3_RUNNER
         cmd = [
             _h3_python(),
@@ -85,6 +87,12 @@ def _run_h3(
                 "--model-id", H3_MODEL_ID,
                 "--quantization", quantization,
             ]
+        if quantization != "nf4":
+            cmd += ["--cpu-offload" if cpu_offload else "--no-cpu-offload"]
+            if quantization == "int8":
+                cmd += ["--quantizer-path", importlib.util.find_spec("ssui.native_quantization").origin]
+        elif not cpu_offload:
+            raise ValueError("H3 NF4 backend requires CPU offload")
         if image is not None:
             first_path = os.path.join(tmpdir, "first.png")
             image._image.save(first_path)
@@ -126,6 +134,7 @@ def _run_h3(
 @param("height", Slider(32, 1536, 32), default=768)
 @param("width", Slider(32, 1536, 32), default=1344)
 @param("quantization", Select("none", "int8", "nf4"), default="none")
+@param("cpu_offload", Switch(), default=True)
 def H3TextToVideo(config: SSUIConfig, prompt: Prompt) -> Video:
     """MiniMax H3 文生视频（t2va，768p + 原生音频；独立 H3 venv 运行）。"""
     if config.is_prepare():
@@ -139,6 +148,7 @@ def H3TextToVideo(config: SSUIConfig, prompt: Prompt) -> Video:
 @param("height", Slider(32, 1536, 32), default=768)
 @param("width", Slider(32, 1536, 32), default=1344)
 @param("quantization", Select("none", "int8", "nf4"), default="none")
+@param("cpu_offload", Switch(), default=True)
 def H3ImageToVideo(
     config: SSUIConfig,
     image: Image,

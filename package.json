@@ -25,6 +25,12 @@
     "**/get-uri/basic-ftp": "^6.2.1"
   },
   "scripts": {
+    "start:mcp": "node dependencies/venv.cjs python -m server.mcp_server",
+    "start:agent": "node dependencies/venv.cjs python -m uvicorn server.agent_bridge:create_app --factory --host 127.0.0.1 --port 7424",
+    "install:mcp": "node dependencies/venv.cjs python -m pip install -e .[mcp]",
+    "test:mcp": "node dependencies/venv.cjs python -m unittest tests.mcp_server_test tests.mcp_catalog_test tests.agent_bridge_test -v",
+    "test:mcp:server": "node dependencies/venv.cjs python -m uvicorn tests.mcp_ui_app:app --host 127.0.0.1 --port 17424",
+    "test:mcp:ui": "playwright test --config playwright.mcp.config.ts",
     "probe:cumesh": "node dependencies/venv.cjs python -u scripts/probe_cumesh.py",
     "probe:large-sparse": "node dependencies/venv.cjs python -u scripts/probe_large_sparse.py",
     "prepare:cumesh-rocm": "node dependencies/venv.cjs python dependencies/prepare_cumesh_rocm.py",
@@ -108,7 +114,7 @@
     "docker-run": "docker run -it --gpus all -p 7422:7422 ssui-docker",
     "storybook": "storybook dev -p 6006",
     "build:storybook": "storybook build",
-    "test:storybook": "node --test .storybook/mocks/api.test.mjs",
+    "test:storybook": "node --test .storybook/mocks/api.test.mjs .storybook/coverage.test.mjs",
     "probe:arm64": "node dependencies/venv.cjs python dependencies/probe_arm64.py",
     "probe:pixal3d-gpu": "node dependencies/venv.cjs python dependencies/probe_pixal3d_gpu.py",
     "probe:trellis-gpu": "node dependencies/venv.cjs python dependencies/probe_trellis_gpu.py",

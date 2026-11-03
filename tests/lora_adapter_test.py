@@ -170,3 +170,25 @@ class LoraTests(unittest.TestCase):
             "lora_unet_proj.lora_up.weight": torch.ones(2, 1),
             "lora_unet_proj.lora_down.weight": torch.ones(1, 3)}, alpha=0.25)
         torch.testing.assert_close(converted["proj.weight"], torch.full((2, 3), 0.25))
+
+    def test_manager_lora_precedes_new_memory_policy(self):
+        fixtures = quant_tests.QuantizedAdapterTests()
+        fixtures.setUp()
+        for filename, names in (("Wan.py", ["WanVideoModel"]),
+                                ("Wan2.py", ["Wan2T2VModel", "Wan2I2VModel"]),
+                                ("Hunyuan.py", ["HunyuanVideoModel", "HunyuanImageToVideoModel"]),
+                                ("CogVideo.py", ["CogVideoModel"])):
+            module = load_adapter("extensions/Video/ssui_video/" + filename, fixtures.modules)
+            for name in names:
+                events = Mock()
+                with patch.object(module, "apply_manager_lora", events.lora), \
+                     patch.object(module, "configure_diffsynth_manager", events.memory), \
+                     patch.object(module, "int8_quantizer", return_value=Mock(), create=True), \
+                     patch.object(module, "quantize_manager_components", events.quantize, create=True):
+                    getattr(module, name).load(quantization="int8", cpu_offload=True,
+                                              lora_path=self.path, lora_weight=0.6)
+                self.assertEqual(events.mock_calls[0][0], "lora")
+                self.assertEqual(events.mock_calls[-1][0], "memory")
+                options = events.memory.call_args.args[1]
+                self.assertEqual(options.quantization, "int8")
+                self.assertTrue(options.cpu_offload)

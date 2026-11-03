@@ -1,3 +1,4 @@
+from ssui.model_memory import ModelMemoryOptions
 import PIL
 from pydantic import BaseModel, ConfigDict, Field
 from backend.model_manager.load.load_base import ModelLoaderConfig
@@ -128,7 +129,8 @@ def load_model_from_path(
 
 
 class ModelLoaderService:
-    def __init__(self):
+    def __init__(self, *, quantization: str = "none", cpu_offload: bool = False):
+        options = ModelMemoryOptions(quantization, cpu_offload)
         self._app_config = ModelLoaderConfig()
         self._ram_cache = ModelCache(
             execution_device_working_mem_gb=3,
@@ -138,6 +140,8 @@ class ModelLoaderService:
             max_vram_cache_size_gb=None,
             execution_device=TorchDevice.choose_torch_device(),
             logger=None,
+            model_transform=options.quantize,
+            offload_on_unlock=options.cpu_offload,
         )
 
     def load_model(

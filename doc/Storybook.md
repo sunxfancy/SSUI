@@ -20,7 +20,10 @@ yarn storybook
 - `Components`：桌面导航、工作区、标签、安装、扩展、任务队列、模型源。
 - `Components/Model adding`：完整添加模型页面，可切换预设、Civitai、Hugging Face、本地模型；子故事提供预设包、搜索结果、空结果、扫描和失败场景。本地选择目录、扫描、添加及 Civitai 下载通过内存 provider 演示；预设/Hugging Face 下载只模拟任务入队，不执行真实下载。
 - `Shared`：通过真实组件注册系统选择文本、数字、布尔、图片、列表等输入/输出组件。
+- `Shared/Registered editors`：每个已注册共享编辑器的独立入口，包含模型加载、音视频、Voice、3D、动作、Union/Optional，以及 seed 和 Pixal3D 图片变体。`Shared/Motion playback` 提供可播放的离线骨骼数据及空、加载、读取失败、非法数据场景；`Shared/Mesh quality` 提供正常、开放边界及退化面状态；`Shared/Context menu` 可右键操作并检查禁用项和关闭行为。
 - `Functional`：函数运行台（可点击运行）、高级参数、工作流编辑器、模型、设置、代码编辑器、图片预览。
+- `Functional/Conversation`：可发送消息及重置会话，另有加载、脚本不支持、读取失败、发送失败、非法回复场景。`Functional/View switcher` 覆盖 Python、Flow 和不支持的文件类型。
+- `Components/Model manager`：当前与旧版模型管理界面；`Components/Language selector`：独立语言选择入口。
 - `Extensions`：Image Canvas 与 example 插件。
 
 这是各 UI 的独立开发入口，不模拟模型推理。没有前端入口的 Python 插件（例如 Audio、Video）
@@ -93,10 +96,16 @@ fetch mock 不拦截 `<img>`、`<video>`、iframe、下载链接或第三方直�
 ## 验证
 
 ```bash
-yarn test:storybook    # 离线请求路由、错误、隔离及取消测试
+yarn test:storybook    # 注册编辑器故事完整性 + 离线请求路由、错误、隔离及取消测试
 yarn build:storybook   # 构建全部故事到 storybook-static
 ```
 
 CI 在 Linux 上执行上述两项，且放在 Python 环境配置之前。
 本地开发时检查 Ready / Empty / Loading / Error，并实际操作保存、执行等按钮。
 常规包构建仍使用根目录或各包 `package.json` 中的 yarn 命令。
+
+共享组件完整性检查通过 TypeScript AST 读取组件注册对象和本地模型 spec，检查每个注册名称是否有显式故事入口。
+组件变体、业务页面、组合界面的内部子组件仍需按实际行为维护故事；这个检查只保证注册入口不遗漏，不能证明所有状态和交互均已覆盖。
+Canvas 的 Toolbar、SidePanel、FloatingPanel、Details、Grid、GpuCanvas 在完整 Canvas 故事中组合开发；
+Functional Details、工作区 TreeIcon、控制器和状态 Provider 随其所属页面开发。
+应用 `main` 挂载入口、Tauri 原生窗口和 VS Code 宿主不作为独立 Storybook 组件，仍由集成测试验证。

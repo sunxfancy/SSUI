@@ -1,4 +1,5 @@
 import { UIStateContext } from 'ssui_components';
+import { connectAgent, agentObject, agentString } from 'ssui_components';
 import React, { Component } from "react";
 import * as monaco from "monaco-editor";
 import EditorWorker from "monaco-editor/esm/vs/editor/editor.worker?worker";
@@ -31,6 +32,7 @@ function currentMonacoTheme(): string {
 }
 
 export class CodeEditor extends Component<CodeEditorProps, CodeEditorState> {
+    private stopAgent?: () => void;
     static contextType = UIStateContext;
     declare context: React.ContextType<typeof UIStateContext>;
     private contentReady = false;
@@ -57,6 +59,20 @@ export class CodeEditor extends Component<CodeEditorProps, CodeEditorState> {
     }
 
     componentDidMount() {
+        this.stopAgent = connectAgent('Code editor: ' + this.props.path, [
+            { name: 'code.snapshot', description: 'Read current unsaved editor buffer, version and dirty status.', readOnly: true, inputSchema: agentObject(),
+                run: () => ({ content: this.editor?.getValue(), version: this.version, dirty: this.state.dirty, loading: this.state.loading }) },
+            { name: 'code.replace', description: 'Replace the live Monaco buffer while preserving undo history; requires exact current buffer.',
+                inputSchema: agentObject({ expectedContent: { type: 'string' }, content: { type: 'string' } }), run: ({ expectedContent, content }) => {
+                    if (this.state.loading || !this.editor?.getModel()) throw new Error('Editor not ready');
+                    if (this.editor.getValue() !== expectedContent) throw new Error('Buffer changed; read code.snapshot again');
+                    this.editor.pushUndoStop(); this.editor.executeEdits('mcp', [{ range: this.editor.getModel()!.getFullModelRange(), text: content }]); this.editor.pushUndoStop();
+                } },
+            { name: 'code.action', description: 'Run an existing Monaco editor action (format, undo, redo, find, fold, etc.).',
+                inputSchema: agentObject({ id: agentString }), run: async ({ id }) => { const action = this.editor?.getAction(id); if (!action) throw new Error('Unknown editor action'); await action.run(); } },
+            { name: 'code.actions', description: 'List available Monaco editor action IDs.', readOnly: true, inputSchema: agentObject(), run: () => this.editor?.getSupportedActions().map(action => ({ id: action.id, label: action.label })) },
+            { name: 'code.save', description: 'Save the current buffer using existing disk version conflict protection.', inputSchema: agentObject(), run: async () => { if (this.savePending || this.state.loading || this.state.loadError || !this.version) throw new Error('Editor not ready to save'); await this.handleSave(); await new Promise(resolve => setTimeout(resolve, 0)); if (this.state.saveError) throw this.state.saveError; return { dirty: this.state.dirty }; } },
+        ]);
         this.createEditor();
         this.loadContent();
         this.watchTheme();
@@ -69,6 +85,7 @@ export class CodeEditor extends Component<CodeEditorProps, CodeEditorState> {
     }
 
     componentWillUnmount() {
+        this.stopAgent?.();
         this.generation++;
         this.loadRequest?.abort();
         this.saveViewState();
