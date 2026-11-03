@@ -1,0 +1,67 @@
+import React from 'react';
+import type { Meta, StoryObj } from '@storybook/react';
+import { ComponentRef } from './ComponentRef';
+import './InternalComponents';
+
+const meta = {
+    title: 'Shared/Registered editors', component: ComponentRef,
+    args: { name: 'StringEditor', type: 'builtins.str', port: 'input', root_path: '/mock', script_path: '/mock/demo.py' },
+    render: args => <ComponentRef key={`${args.name}-${args.type}`} {...args} />,
+} satisfies Meta<typeof ComponentRef>;
+export default meta;
+type Story = StoryObj<typeof meta>;
+export const RandomSeed: Story = { args: { name: 'IntegerEditor', parameterName: 'seed', type: 'builtins.int' } };
+export const PixalImage: Story = { args: { name: 'ImageUploader', type: 'ssui.base.Image', script_path: '/mock/workflow-pixal3d.py' } };
+export const AgentPaintAssetLoader: Story = { args: {"name": "AgentPaintAssetLoader", "type": "ssui_image.PixelArt.AgentPaintAsset", "port": "input"} };
+export const BooleanEditor: Story = { args: {"name": "BooleanEditor", "type": "builtins.bool", "port": "input"} };
+export const BooleanPreview: Story = { args: {"name": "BooleanPreview", "type": "builtins.bool", "port": "output"} };
+export const CanvasInput: Story = { args: {"name": "CanvasInput", "type": "ssui.base.Image", "port": "input"} };
+export const CogVideo2BModelLoader: Story = { args: {"name": "CogVideo2BModelLoader", "type": "ssui_video.CogVideo2B.CogVideo2BModel", "port": "input"} };
+export const FloatEditor: Story = { args: {"name": "FloatEditor", "type": "builtins.float", "port": "input"} };
+export const FloatPreview: Story = { args: {"name": "FloatPreview", "type": "builtins.float", "port": "output"} };
+export const FluxLoraLoader: Story = { args: {"name": "FluxLoraLoader", "type": "ssui_image.Flux.FluxLora", "port": "input"} };
+export const GLBPreview: Story = { args: {"name": "GLBPreview", "type": "ssui.base.Mesh", "port": "output"} };
+export const IntegerEditor: Story = { args: {"name": "IntegerEditor", "type": "builtins.int", "port": "input"} };
+export const IntegerPreview: Story = { args: {"name": "IntegerPreview", "type": "builtins.int", "port": "output"} };
+export const JsonEditor: Story = { args: {"name": "JsonEditor", "type": "*", "port": "input"} };
+export const JsonPreview: Story = { args: {"name": "JsonPreview", "type": "*", "port": "output"} };
+export const MDMModelLoader: Story = { args: {"name": "MDMModelLoader", "type": "ssui_motion.MDM.MDMModel", "port": "input"} };
+export const MeshArtifact: Story = { args: {"name": "MeshArtifact", "type": "ssui.base.Mesh", "port": "output"} };
+export const MeshLoader: Story = { args: {"name": "MeshLoader", "type": "ssui.base.Mesh", "port": "input"} };
+export const MotionClipPreview: Story = { args: {"name": "MotionClipPreview", "type": "ssui.base.MotionClip", "port": "output"} };
+export const OptionalContainer: Story = { args: {"name": "OptionalContainer", "type": "typing.Optional", "port": "input", "type_args": [{"type": "builtins.str"}, {"type": "builtins.int"}]} };
+export const Pixal3DModelLoader: Story = { args: {"name": "Pixal3DModelLoader", "type": "ssui_3dmodel.Pixal3D.Pixal3DModel", "port": "input"} };
+export const PixelSrcAssetLoader: Story = { args: {"name": "PixelSrcAssetLoader", "type": "ssui_image.PixelArt.PixelSrcAsset", "port": "input"} };
+export const Qwen: Story = { args: {"name": "Qwen 模型", "type": "ssui_llm.Qwen.QwenModel", "port": "input"} };
+export const QwenImageEditModelLoader: Story = { args: {"name": "QwenImageEditModelLoader", "type": "ssui_video.QwenImage.QwenImageEditModel", "port": "input"} };
+export const QwenImageModelLoader: Story = { args: {"name": "QwenImageModelLoader", "type": "ssui_video.QwenImage.QwenImageModel", "port": "input"} };
+export const ShapEModelLoader: Story = { args: {"name": "ShapEModelLoader", "type": "ssui_3dmodel.ShapE.ShapEModel", "port": "input"} };
+export const SkeletonPreview: Story = { args: {"name": "SkeletonPreview", "type": "ssui.base.SkeletonAnimation", "port": "output"} };
+export const StringEditor: Story = { args: {"name": "StringEditor", "type": "builtins.str", "port": "input"} };
+export const StringPreview: Story = { args: {"name": "StringPreview", "type": "builtins.str", "port": "output"} };
+export const Trellis2ModelLoader: Story = { args: {"name": "Trellis2ModelLoader", "type": "ssui_3dmodel.Trellis2.Trellis2Model", "port": "input"} };
+export const TrellisModelLoader: Story = { args: {"name": "TrellisModelLoader", "type": "ssui_3dmodel.Trellis.TrellisModel", "port": "input"} };
+export const UnionContainer: Story = { args: {"name": "UnionContainer", "type": "typing.Union", "port": "input", "type_args": [{"type": "builtins.str"}, {"type": "builtins.int"}]} };
+export const UnionTypeContainer: Story = { args: {"name": "UnionTypeContainer", "type": "types.UnionType", "port": "input", "type_args": [{"type": "builtins.str"}, {"type": "builtins.int"}]} };
+export const Wan21ModelLoader: Story = { args: {"name": "Wan21ModelLoader", "type": "ssui_video.Wan21Resident.Wan21Model", "port": "input"} };
+export const TextModel: Story = { args: {"name": "文本模型", "type": "ssui_llm.Text.TextModel", "port": "input"} };
+export const AudioUploader: Story = { args: {"name": "AudioUploader", "type": "ssui.base.Audio", "port": "input"} };
+export const AudioPreview: Story = { args: {"name": "AudioPreview", "type": "ssui.base.Audio", "port": "output"} };
+export const VoiceUploader: Story = { args: {"name": "VoiceUploader", "type": "ssui.base.Voice", "port": "input"} };
+export const VoicePreview: Story = { args: {"name": "VoicePreview", "type": "ssui.base.Voice", "port": "output"} };
+export const ListContainer: Story = { args: {"name": "ListContainer", "type": "typing.List", "port": "input", "type_args": [{"type": "builtins.str"}]} };
+export const ImagePicker: Story = { args: {"name": "ImagePicker", "type": "ssui.base.Image", "port": "input"} };
+export const ImageUploader: Story = { args: {"name": "ImageUploader", "type": "ssui.base.Image", "port": "input"} };
+export const ImagePreview: Story = { args: {"name": "ImagePreview", "type": "ssui.base.Image", "port": "output"} };
+export const SD1ControlNetLoader: Story = { args: {"name": "SD1ControlNetLoader", "type": "ssui_image.SD1.SD1ControlNet", "port": "input"} };
+export const SDXLControlNetLoader: Story = { args: {"name": "SDXLControlNetLoader", "type": "ssui_image.SDXL.SDXLControlNet", "port": "input"} };
+export const FluxControlNetLoader: Story = { args: {"name": "FluxControlNetLoader", "type": "ssui_image.Flux.FluxControlNet", "port": "input"} };
+export const SD1ModelLoader: Story = { args: {"name": "SD1ModelLoader", "type": "ssui_image.SD1.SD1Model", "port": "input"} };
+export const SDXLModelLoader: Story = { args: {"name": "SDXLModelLoader", "type": "ssui_image.SDXL.SDXLModel", "port": "input"} };
+export const FluxModelLoader: Story = { args: {"name": "FluxModelLoader", "type": "ssui_image.Flux.FluxModel", "port": "input"} };
+export const Flux2KleinModelLoader: Story = { args: {"name": "Flux2KleinModelLoader", "type": "ssui_image.Flux2.Flux2KleinModel", "port": "input"} };
+export const SD1LoraLoader: Story = { args: {"name": "SD1LoraLoader", "type": "ssui_image.SD1.SD1Lora", "port": "input"} };
+export const SDXLLoraLoader: Story = { args: {"name": "SDXLLoraLoader", "type": "ssui_image.SDXL.SDXLLora", "port": "input"} };
+export const VideoUploader: Story = { args: {"name": "VideoUploader", "type": "ssui.base.Video", "port": "input"} };
+export const VideoPreview: Story = { args: {"name": "VideoPreview", "type": "ssui.base.Video", "port": "output"} };
+export const PromptEditor: Story = { args: {"name": "PromptEditor", "type": "ssui.base.Prompt", "port": "input"} };
