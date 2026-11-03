@@ -5,6 +5,7 @@ from ..schedulers.flow_match import FlowMatchScheduler
 from .base import BasePipeline
 from ..prompters import HunyuanVideoPrompter
 import torch
+from contextlib import nullcontext
 import torchvision.transforms as transforms
 from einops import rearrange
 import numpy as np
@@ -25,6 +26,14 @@ class HunyuanVideoPipeline(BasePipeline):
         self.vae_encoder: HunyuanVideoVAEEncoder = None
         self.model_names = ['text_encoder_1', 'text_encoder_2', 'dit', 'vae_decoder', 'vae_encoder']
         self.vram_management = False
+
+
+    def inference_autocast(self):
+        # Torch 2.4 has no MPS autocast; weights and inputs are cast explicitly.
+        device_type = torch.device(self.device).type
+        if device_type == "cuda":
+            return torch.autocast(device_type="cuda", dtype=self.torch_dtype)
+        return nullcontext()
 
 
     def enable_vram_management(self):
@@ -164,8 +173,8 @@ class HunyuanVideoPipeline(BasePipeline):
         if input_images is not None:
             self.load_models_to_device(['vae_encoder'])
             image_pixel_values, height, width = self.prepare_vae_images_inputs(input_images, i2v_resolution=i2v_resolution)
-            with torch.autocast(device_type=self.device, dtype=torch.float16, enabled=True):
-                image_latents = self.vae_encoder(image_pixel_values)
+            with self.inference_autocast():
+                image_latents = self.vae_encoder(image_pixel_values.to(self.torch_dtype))
 
         # Initialize noise
         rand_device = self.device if rand_device is None else rand_device
@@ -209,7 +218,7 @@ class HunyuanVideoPipeline(BasePipeline):
                 forward_func = lets_dance_hunyuan_video_i2v
 
             # Inference
-            with torch.autocast(device_type=self.device, dtype=self.torch_dtype):
+            with self.inference_autocast():
                 noise_pred_posi = forward_func(self.dit, latents, timestep, **prompt_emb_posi, **extra_input, **tea_cache_kwargs)
                 if cfg_scale != 1.0:
                     noise_pred_nega = forward_func(self.dit, latents, timestep, **prompt_emb_nega, **extra_input)

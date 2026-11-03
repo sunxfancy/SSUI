@@ -22,7 +22,7 @@ from ssui.controller import Random, Slider, Select, Switch
 #   SSUI_H3_MODEL_ID 模型仓库 id（默认 MiniMaxAI/MiniMax-H3）
 #   SSUI_H3_NF4_MODEL_ROOT  DiffSynth-Studio NF4 权重目录
 #   SSUI_H3_DIFFSYNTH_ROOT  当前 DiffSynth-Studio 源码 checkout（可选）
-H3_MODEL_ID = os.environ.get("SSUI_H3_MODEL_ID", "MiniMaxAI/MiniMax-H3")
+H3_MODEL_ID = os.environ.get("SSUI_H3_MODEL_ID", "models/h3-mac" if os.path.isdir("models/h3-mac") else "MiniMaxAI/MiniMax-H3")
 H3_PYTHON = os.environ.get("SSUI_H3_PYTHON", "")
 H3_RUNNER = os.path.join(os.path.dirname(__file__), "h3_runner.py")
 H3_NF4_RUNNER = os.path.join(os.path.dirname(__file__), "h3_nf4_runner.py")
@@ -38,6 +38,7 @@ def _h3_python() -> str:
     if H3_PYTHON:
         return H3_PYTHON
     candidates = [
+        os.path.join(".venv", "video-mps", "bin", "python"),
         os.path.join("h3-venv", "Scripts", "python.exe"),  # Windows
         os.path.join("h3-venv", "bin", "python"),          # Linux / macOS
     ]

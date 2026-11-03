@@ -2,6 +2,7 @@ from ..models import ModelManager, FluxTextEncoder2, CogDiT, CogVAEEncoder, CogV
 from ..prompters import CogPrompter
 from ..schedulers import EnhancedDDIMScheduler
 from .base import BasePipeline
+from ..vram_management import enable_vram_management, AutoWrappedLinear, AutoWrappedModule
 import torch
 from tqdm import tqdm
 from PIL import Image
@@ -22,6 +23,21 @@ class CogVideoPipeline(BasePipeline):
         self.vae_encoder: CogVAEEncoder = None
         self.vae_decoder: CogVAEDecoder = None
         self.model_names = ["text_encoder", "dit", "vae_encoder", "vae_decoder"]
+
+    def enable_vram_management(self):
+        # Keep DiT weights on the host; transfer only the current layer to MPS.
+        self.enable_cpu_offload()
+        self.dit.computation_device = self.device
+        self.dit.computation_dtype = self.torch_dtype
+        enable_vram_management(self.dit, module_map={
+            torch.nn.Linear: AutoWrappedLinear,
+            torch.nn.LayerNorm: AutoWrappedModule,
+            torch.nn.Conv3d: AutoWrappedModule,
+        }, module_config=dict(offload_device="cpu", onload_device="cpu",
+                              computation_device=self.device, offload_dtype=self.torch_dtype,
+                              onload_dtype=self.torch_dtype, computation_dtype=self.torch_dtype),
+                               vram_limit=0)
+
     
 
     def fetch_models(self, model_manager: ModelManager, prompt_refiner_classes=[]):
@@ -34,10 +50,10 @@ class CogVideoPipeline(BasePipeline):
 
 
     @staticmethod
-    def from_model_manager(model_manager: ModelManager, prompt_refiner_classes=[]):
+    def from_model_manager(model_manager: ModelManager, prompt_refiner_classes=[], device=None, torch_dtype=None):
         pipe = CogVideoPipeline(
-            device=model_manager.device,
-            torch_dtype=model_manager.torch_dtype
+            device=device or model_manager.device,
+            torch_dtype=torch_dtype or model_manager.torch_dtype
         )
         pipe.fetch_models(model_manager, prompt_refiner_classes)
         return pipe
@@ -109,6 +125,7 @@ class CogVideoPipeline(BasePipeline):
         # Extra input
         extra_input = self.prepare_extra_input(latents)
 
+        self.load_models_to_device(["dit"])
         # Denoise
         for progress_id, timestep in enumerate(progress_bar_cmd(self.scheduler.timesteps)):
             timestep = timestep.unsqueeze(0).to(self.device)

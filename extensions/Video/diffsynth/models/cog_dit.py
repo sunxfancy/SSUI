@@ -106,15 +106,16 @@ class CogDiTBlock(torch.nn.Module):
 
 
 class CogDiT(torch.nn.Module):
-    def __init__(self):
+    def __init__(self, dim=3072, text_dim=4096, time_dim=512, num_heads=48, num_layers=42):
         super().__init__()
-        self.patchify = CogPatchify(16, 3072, 2)
-        self.time_embedder = TimestepEmbeddings(3072, 512)
-        self.context_embedder = torch.nn.Linear(4096, 3072)
-        self.blocks = torch.nn.ModuleList([CogDiTBlock(3072, 512, 48) for _ in range(42)])
-        self.norm_final = torch.nn.LayerNorm((3072,), eps=1e-05, elementwise_affine=True)
-        self.norm_out = CogAdaLayerNorm(3072, 512, single=True)
-        self.proj_out = torch.nn.Linear(3072, 64, bias=True)
+        self.head_dim = dim // num_heads
+        self.patchify = CogPatchify(16, dim, 2)
+        self.time_embedder = TimestepEmbeddings(dim, time_dim)
+        self.context_embedder = torch.nn.Linear(text_dim, dim)
+        self.blocks = torch.nn.ModuleList([CogDiTBlock(dim, time_dim, num_heads) for _ in range(num_layers)])
+        self.norm_final = torch.nn.LayerNorm((dim,), eps=1e-05, elementwise_affine=True)
+        self.norm_out = CogAdaLayerNorm(dim, time_dim, single=True)
+        self.proj_out = torch.nn.Linear(dim, 64, bias=True)
 
 
     def get_resize_crop_region_for_grid(self, src, tgt_width, tgt_height):
@@ -215,7 +216,7 @@ class CogDiT(torch.nn.Module):
             (grid_height, grid_width), base_size_width, base_size_height
         )
         freqs_cos, freqs_sin = self.get_3d_rotary_pos_embed(
-            embed_dim=64,
+            embed_dim=self.head_dim,
             crops_coords=grid_crops_coords,
             grid_size=(grid_height, grid_width),
             temporal_size=num_frames,
@@ -290,11 +291,11 @@ class CogDiT(torch.nn.Module):
                 model_input=hidden_states,
                 tile_size=tile_size, tile_stride=tile_stride,
                 tile_device=hidden_states.device, tile_dtype=hidden_states.dtype,
-                computation_device=self.context_embedder.weight.device, computation_dtype=self.context_embedder.weight.dtype
+                computation_device=getattr(self, "computation_device", self.context_embedder.weight.device), computation_dtype=getattr(self, "computation_dtype", self.context_embedder.weight.dtype)
             )
         num_frames, height, width = hidden_states.shape[-3:]
         if image_rotary_emb is None:
-            image_rotary_emb = self.prepare_rotary_positional_embeddings(height, width, num_frames, device=self.context_embedder.weight.device)
+            image_rotary_emb = self.prepare_rotary_positional_embeddings(height, width, num_frames, device=hidden_states.device)
         hidden_states = self.patchify(hidden_states)
         time_emb = self.time_embedder(timestep, dtype=hidden_states.dtype)
         prompt_emb = self.context_embedder(prompt_emb)

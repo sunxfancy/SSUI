@@ -188,6 +188,73 @@ with torch.no_grad():
             seeded = pipe.generate_noise((1, 2, 2, 4, 4), seed=7, rand_device=device)
             torch.testing.assert_close(seeded, pipe.generate_noise((1, 2, 2, 4, 4), seed=7, rand_device=device))
         print("Wan 2.2 BF16/FP32 forward, memory budget and layer offloading passed:", wan_dtype)
+from diffsynth.models.cog_dit import CogDiT
+from diffsynth.pipelines.cog_video import CogVideoPipeline
+if torch.backends.mps.is_available():
+    cog = CogDiT(dim=128, text_dim=32, time_dim=64, num_heads=2, num_layers=1).eval()
+    inputs = dict(hidden_states=torch.randn(1, 16, 2, 4, 4), timestep=torch.ones(1), prompt_emb=torch.randn(1, 8, 32))
+    with torch.inference_mode():
+        reference = cog(**inputs)
+        pipe = CogVideoPipeline(device="mps", torch_dtype=torch.float32)
+        pipe.dit = cog
+        pipe.enable_vram_management()
+        pipe.load_models_to_device(["dit"])
+        inputs = {k: v.to("mps") for k, v in inputs.items()}
+        actual = cog(**inputs)
+        torch.testing.assert_close(actual.cpu(), reference, atol=0.002, rtol=0.002)
+        tiled = cog(**inputs, tiled=True, tile_size=(4, 4), tile_stride=(4, 4))
+        torch.testing.assert_close(tiled.cpu(), actual.cpu(), atol=0.002, rtol=0.002)
+        assert actual.device.type == tiled.device.type == "mps"
+        assert all(p.device.type == "cpu" for p in cog.parameters())
+    print("CogVideo complete tiny DiT, tiled MPS computation and CPU weight offload passed")
+
+# Real Hunyuan layers: CPU-held weights, MPS computations, no CUDA calls.
+from diffsynth.models.hunyuan_video_dit import HunyuanVideoDiT, IndividualTokenRefinerBlock
+from diffsynth.models.sd3_dit import RMSNorm
+from diffsynth.pipelines.hunyuan_video import HunyuanVideoPipeline
+if torch.backends.mps.is_available():
+    import copy
+    for dtype in (torch.float32, torch.bfloat16):
+        base = torch.nn.Sequential(torch.nn.Linear(24, 24), RMSNorm(24, eps=1e-6)).eval()
+        block = IndividualTokenRefinerBlock(hidden_size=24, num_heads=3).eval()
+        x, c = torch.randn(1, 4, 24), torch.randn(1, 24)
+        with torch.inference_mode():
+            expected = base(x)
+            expected_block = block(x, c)
+            HunyuanVideoDiT.enable_auto_offload(base, dtype=dtype, device="mps")
+            HunyuanVideoDiT.enable_auto_offload(block, dtype=dtype, device="mps")
+            with patch("torch.cuda.empty_cache", side_effect=AssertionError("CUDA call")):
+                actual = base(x.to("mps", dtype=dtype))
+                actual_block = block(x.to("mps", dtype=dtype), c.to("mps", dtype=dtype))
+            assert actual.device.type == actual_block.device.type == "mps"
+            assert all(p.device.type == "cpu" for p in block.parameters())
+            torch.testing.assert_close(actual.cpu().float(), expected, atol=0.05, rtol=0.05)
+            torch.testing.assert_close(actual_block.cpu().float(), expected_block, atol=0.05, rtol=0.05)
+    from diffsynth.pipelines.hunyuan_video import lets_dance_hunyuan_video
+    tiny = HunyuanVideoDiT(hidden_size=96, text_dim=24, num_double_blocks=1, num_single_blocks=1).eval()
+    inputs = dict(x=torch.randn(1, 16, 1, 4, 4), t=torch.ones(1),
+                  prompt_emb=torch.randn(1, 256, 24), text_mask=torch.ones(1, 256),
+                  pooled_prompt_emb=torch.randn(1, 768), guidance=torch.ones(1),
+                  freqs_cos=torch.ones(4, 4), freqs_sin=torch.zeros(4, 4))
+    with torch.inference_mode():
+        expected = lets_dance_hunyuan_video(tiny, **inputs)
+        HunyuanVideoDiT.enable_auto_offload(tiny, dtype=torch.bfloat16, device="mps")
+        actual = lets_dance_hunyuan_video(tiny, **{k: v.to("mps", dtype=torch.bfloat16) for k, v in inputs.items()})
+        assert actual.device.type == "mps"
+        torch.testing.assert_close(actual.cpu().float(), expected, atol=0.08, rtol=0.08)
+    print("Hunyuan complete tiny DiT denoising forward passed on MPS")
+    with HunyuanVideoPipeline(device="mps", torch_dtype=torch.bfloat16).inference_autocast():
+        assert (torch.ones(2, device="mps") + 1).device.type == "mps"
+    print("Hunyuan token refiner and offloaded Linear/RMSNorm passed on MPS FP32/BF16")
+with tempfile.TemporaryDirectory() as checkpoint_dir:
+    from diffsynth.models.utils import load_state_dict_from_bin
+    for modern in (True, False):
+        path = str(Path(checkpoint_dir) / (str(modern) + ".pt"))
+        expected = {"weight": torch.randn(3, 4)}
+        torch.save(expected, path, _use_new_zipfile_serialization=modern)
+        actual = load_state_dict_from_bin(path)
+        torch.testing.assert_close(actual["weight"], expected["weight"])
+
 with tempfile.TemporaryDirectory() as directory:
     path = Path(directory) / "smoke.mp4"
     imageio.mimwrite(path, [np.full((16, 16, 3), v, dtype=np.uint8) for v in (0, 128)], fps=2)

@@ -1,7 +1,7 @@
 from backend.lora import validate_lora, apply_manager_lora
 from ssui.model_memory import ModelMemoryOptions, configure_diffsynth_manager, run_pipeline
-from backend.util.devices import TorchDevice
 from backend.quantization.workflow import int8_quantizer, quantize_manager_components
+from ._runtime import wan_runtime
 
 from ssui.annotation import param
 from ssui.base import Prompt, Image
@@ -17,13 +17,15 @@ class CogVideoModel:
         self.model_manager = model_manager
 
     @staticmethod
-    def load(quantization: str = "none", lora_path: str = "", lora_weight: float = 1.0, *, cpu_offload: bool = False) -> "CogVideoModel":
+    def load(quantization: str = "none", lora_path: str = "", lora_weight: float = 1.0, *, cpu_offload: bool | None = None) -> "CogVideoModel":
         validate_lora(lora_path, lora_weight)
-        options = ModelMemoryOptions(quantization, cpu_offload)
         quantize = int8_quantizer(quantization)
-        device = TorchDevice.choose_torch_device()
+        runtime = wan_runtime()
+        device = runtime["device"]
+        options = ModelMemoryOptions(quantization, device == "mps" if cpu_offload is None else cpu_offload)
         model_manager = ModelManager(
-            torch_dtype=TorchDevice.choose_torch_dtype(device), device="cpu" if quantization != "none" or cpu_offload else str(device)
+            torch_dtype=runtime["torch_dtype"],
+            device="cpu" if options.cpu_offload or quantization != "none" else device,
         )
         download_models(["CogVideoX-5B"])
         model_manager.load_models(
@@ -41,7 +43,7 @@ class CogVideoModel:
 
 
 @param("seed", Random(), default=42)
-@param("num_frames", Slider(1, 200, 1), default=49)
+@param("num_frames", Slider(9, 201, 8), default=49)
 @param("num_inference_steps", Slider(1, 50, 1), default=20)
 @param("height", Slider(16, 1024, 16), default=480)
 @param("width", Slider(16, 1024, 16), default=720)
@@ -51,9 +53,15 @@ def CogVideoTextToVideo(
     if config.is_prepare():
         return [Image()]
 
-    pipe = CogVideoPipeline.from_model_manager(base_model.model_manager)
-    if getattr(base_model.model_manager, "memory_options", ModelMemoryOptions()).cpu_offload:
-        pipe.enable_cpu_offload()
+    if config["num_frames"] < 9 or config["num_frames"] % 8 != 1:
+        raise ValueError("CogVideo requires 8n+1 frames, at least 9, for causal VAE decoding")
+    pipe = CogVideoPipeline.from_model_manager(base_model.model_manager, **wan_runtime())
+    options = getattr(base_model.model_manager, "memory_options", ModelMemoryOptions(cpu_offload=True))
+    if options.cpu_offload:
+        if options.quantization == "int8":
+            pipe.enable_cpu_offload()
+        else:
+            pipe.enable_vram_management()
     video = run_pipeline(pipe,
         prompt=prompt.text,
         negative_prompt=negative_prompt.text,

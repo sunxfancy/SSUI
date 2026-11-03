@@ -13,9 +13,11 @@ VIDEO = Path(__file__).resolve().parents[1] / "extensions/Video/ssui_video"
 
 
 def load_node(name, diffsynth):
-    spec = importlib.util.spec_from_file_location("video_device_" + name, VIDEO / (name + ".py"))
+    package = types.ModuleType("video_device_nodes")
+    package.__path__ = [str(VIDEO)]
+    spec = importlib.util.spec_from_file_location("video_device_nodes." + name, VIDEO / (name + ".py"))
     module = importlib.util.module_from_spec(spec)
-    with patch.dict("sys.modules", {"diffsynth": diffsynth}):
+    with patch.dict("sys.modules", {"diffsynth": diffsynth, "video_device_nodes": package}):
         spec.loader.exec_module(module)
     return module
 
@@ -49,8 +51,7 @@ class VideoDeviceTest(unittest.TestCase):
         return mod
 
     def test_loaders_keep_manager_and_weights_on_selected_device(self):
-        for node_name, model_name in (("AnimateDiff", "AnimateDiffModel"),
-                                      ("CogVideo", "CogVideoModel")):
+        for node_name, model_name in (("AnimateDiff", "AnimateDiffModel"),):
             for device, dtype in (("cpu", torch.float32), ("mps", torch.float16),
                                   ("cuda:0", torch.float16)):
                 with self.subTest(node=node_name, device=device):
@@ -65,6 +66,24 @@ class VideoDeviceTest(unittest.TestCase):
                     self.assertIs(result.model_manager, stub.ModelManager.return_value)
                     # No per-load override may disagree with pipeline manager metadata.
                     self.assertEqual(result.model_manager.load_models.call_args.kwargs, {})
+
+    def test_cog_loads_on_cpu_for_mps_layer_offload(self):
+        stub = self.stub()
+        node = load_node("CogVideo", stub)
+        with patch.object(node, "wan_runtime", return_value={"device": "mps", "torch_dtype": torch.bfloat16}):
+            node.CogVideoModel.load()
+        stub.ModelManager.assert_called_once_with(device="cpu", torch_dtype=torch.bfloat16)
+
+    def test_cog_rejects_even_length_latent_short_clip(self):
+        from ssui.config import SSUIConfig
+        from ssui.base import Prompt
+        stub = self.stub()
+        node = load_node("CogVideo", stub)
+        config = SSUIConfig()("video")
+        config["num_frames"] = 5
+        with self.assertRaisesRegex(ValueError, "8n\+1"):
+            node.CogVideoTextToVideo(config, types.SimpleNamespace(model_manager=object()), Prompt("cat"), Prompt(""))
+        stub.CogVideoPipeline.from_model_manager.assert_not_called()
 
     def test_animatediff_local_weights_skip_download(self):
         stub = self.stub()
