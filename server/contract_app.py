@@ -5,6 +5,8 @@ run extension discovery, so schema generation does not require a GPU runtime.
 """
 
 from server.generation_bridge import router as generation_router
+from server.agent_bridge import router as agent_router
+from server.agent_catalog import router as agent_catalog_router
 
 from fastapi import FastAPI
 
@@ -29,6 +31,8 @@ def create_contract_app() -> FastAPI:
     app.include_router(extension_routes.router)
     app.include_router(task_routes.router)
     app.include_router(generation_router)
+    app.include_router(agent_router)
+    app.include_router(agent_catalog_router)
     return app
 
 

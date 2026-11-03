@@ -54,6 +54,7 @@ export default defineConfig(async ({ mode }) => {
         '/api': {
           target: 'http://localhost:7422',
           changeOrigin: true,
+          ws: true,
         },
         '/config': {
           target: 'http://localhost:7422',

@@ -9,3 +9,7 @@
 ## 验证和相关文档
 
 根目录的 `yarn test` 运行 Python 测试，`yarn test:contract` 验证模拟 API 契约，`yarn api:check` 检查 OpenAPI schema 与前端生成类型是否同步。修改接口后检查 `server/openapi.json` 和 `frontend/ssui_components/src/api/generated.ts`。整体关系见 [架构说明](../doc/Architecture.md)，前后端调用见 [通信说明](../doc/FrontendBackendCommunication.md)，执行器见 [Executor](../doc/Executor.md)。
+
+## Agent / MCP
+
+本地 Agent 接入见 [MCP Server](../doc/MCP.md)：`yarn install:mcp` 后配置 stdio 客户端，复用运行中的 SSUI 后端。
