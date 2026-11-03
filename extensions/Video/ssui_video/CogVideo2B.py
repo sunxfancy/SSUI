@@ -2,6 +2,7 @@
 
 The optional Int8 encoder saves VRAM but reduced motion in the measured A/B clip.
 """
+from backend.lora import validate_lora, apply_diffusers_lora
 from pathlib import Path
 import torch
 from ssui.annotation import param
@@ -15,7 +16,13 @@ class CogVideo2BModel:
         self.pipeline = pipeline
 
     @staticmethod
-    def load(model_path: str, quantized_t5_path: str = '') -> 'CogVideo2BModel':
+    def load(
+        model_path: str,
+        quantized_t5_path: str = '',
+        lora_path: str = '',
+        lora_weight: float = 1.0,
+    ) -> 'CogVideo2BModel':
+        validate_lora(lora_path, lora_weight)
         from diffusers import CogVideoXPipeline, CogVideoXTransformer3DModel, AutoencoderKLCogVideoX
         options = {}
         if quantized_t5_path:
@@ -45,6 +52,7 @@ class CogVideo2BModel:
                 device_map={'': 'cuda'}, low_cpu_mem_usage=True, local_files_only=True)
         pipeline = CogVideoXPipeline.from_pretrained(
             model_path, torch_dtype=torch.float16, local_files_only=True, **options).to('cuda')
+        apply_diffusers_lora(pipeline, lora_path, lora_weight)
         pipeline.vae.enable_slicing()
         pipeline.vae.enable_tiling()
         return CogVideo2BModel(pipeline)

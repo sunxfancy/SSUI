@@ -1,3 +1,4 @@
+from backend.lora import validate_lora, apply_manager_lora
 from ._runtime import wan_runtime
 import torch
 from backend.quantization.workflow import fp8_storage_dtype, load_dit_with_storage_dtype
@@ -15,7 +16,8 @@ class WanVideoModel:
         self.model_manager = model_manager
 
     @staticmethod
-    def load(quantization: str = "none") -> "WanVideoModel":
+    def load(quantization: str = "none", lora_path: str = "", lora_weight: float = 1.0) -> "WanVideoModel":
+        validate_lora(lora_path, lora_weight)
         runtime = wan_runtime()
         fp8_storage_dtype(quantization, runtime["torch_dtype"], device=runtime["device"])
         model_manager = ModelManager(device="cpu", torch_dtype=runtime["torch_dtype"])
@@ -34,6 +36,7 @@ class WanVideoModel:
             torch_dtype=runtime["torch_dtype"],
             device="cpu",
         )
+        apply_manager_lora(model_manager, lora_path, lora_weight)
         return WanVideoModel(model_manager)
 
 @param("seed", Random(), default=42)

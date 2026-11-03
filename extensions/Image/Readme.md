@@ -40,3 +40,12 @@ The CLI adapters do not download or bundle third-party executables. Install the
 chosen CLI on `PATH`, or pass its absolute executable path to the asset loader.
 Commands are executed without a shell and source files are validated before
 rendering.
+
+
+## FLUX.2 Klein LoRA
+
+FLUX.2 Klein 模型面板支持可选本地 LoRA 文件与权重，参数会随面板状态保存。
+Python 调用为 `Flux2KleinModel.load(model_path, lora_path="adapter.safetensors", lora_weight=0.8)`。
+留空或权重为 0 时沿用基础模型；非零适配器使用独立 Pipeline，不修改缓存的基础模型。
+适配器由 Diffusers 的 FLUX.2 加载器处理，必须匹配 Klein 的架构与版本，不能直接使用 FLUX.1 LoRA。
+当前入口接收一个本地权重文件，不提供训练。预训练模型搭配真实适配器的图像质量尚需单独验证。

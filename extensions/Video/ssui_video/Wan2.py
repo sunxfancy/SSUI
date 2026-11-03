@@ -1,3 +1,4 @@
+from backend.lora import validate_lora, apply_manager_lora
 from ._runtime import wan_runtime
 import torch
 from backend.quantization.workflow import fp8_storage_dtype, load_dit_with_storage_dtype
@@ -28,7 +29,8 @@ class Wan2T2VModel:
         self.model_manager = model_manager
 
     @staticmethod
-    def load(quantization: str = "none") -> "Wan2T2VModel":
+    def load(quantization: str = "none", lora_path: str = "", lora_weight: float = 1.0) -> "Wan2T2VModel":
+        validate_lora(lora_path, lora_weight)
         runtime = wan_runtime()
         fp8_storage_dtype(quantization, runtime["torch_dtype"], device=runtime["device"])
         model_manager = ModelManager(device="cpu", torch_dtype=runtime["torch_dtype"])
@@ -45,6 +47,7 @@ class Wan2T2VModel:
             torch_dtype=runtime["torch_dtype"],
             device="cpu",
         )
+        apply_manager_lora(model_manager, lora_path, lora_weight)
         return Wan2T2VModel(model_manager)
 
 
@@ -55,7 +58,8 @@ class Wan2I2VModel:
         self.model_manager = model_manager
 
     @staticmethod
-    def load(quantization: str = "none") -> "Wan2I2VModel":
+    def load(quantization: str = "none", lora_path: str = "", lora_weight: float = 1.0) -> "Wan2I2VModel":
+        validate_lora(lora_path, lora_weight)
         runtime = wan_runtime()
         fp8_storage_dtype(quantization, runtime["torch_dtype"], device=runtime["device"])
         model_manager = ModelManager(device="cpu", torch_dtype=runtime["torch_dtype"])
@@ -74,6 +78,7 @@ class Wan2I2VModel:
             torch_dtype=runtime["torch_dtype"],
             device="cpu",
         )
+        apply_manager_lora(model_manager, lora_path, lora_weight)
         return Wan2I2VModel(model_manager)
 
 

@@ -1,3 +1,4 @@
+from backend.lora import validate_lora, apply_manager_lora
 import torch
 from backend.quantization.workflow import fp8_storage_dtype
 
@@ -20,7 +21,8 @@ class HunyuanVideoModel:
         self.model_manager = model_manager
 
     @staticmethod
-    def load(quantization: str = "none") -> "HunyuanVideoModel":
+    def load(quantization: str = "none", lora_path: str = "", lora_weight: float = 1.0) -> "HunyuanVideoModel":
+        validate_lora(lora_path, lora_weight)
         storage_dtype = fp8_storage_dtype(quantization, torch.bfloat16)
         model_manager = ModelManager()
         download_models(["HunyuanVideo"])
@@ -42,6 +44,7 @@ class HunyuanVideoModel:
             torch_dtype=torch.float16,
             device="cpu",
         )
+        apply_manager_lora(model_manager, lora_path, lora_weight)
         return HunyuanVideoModel(model_manager)
 
 
@@ -51,17 +54,21 @@ class HunyuanVideoLoraModel:
         base_model: HunyuanVideoModel,
         model_id: str = "AI-ModelScope/walking_animation_hunyuan_video",
         origin_file_path: str = "kxsr_walking_anim_v1-5.safetensors",
+        lora_path: str = "",
+        lora_weight: float = 1.0,
     ):
-        # We support LoRA inference. You can use the following code to load your LoRA model.
-        # Example LoRA: https://civitai.com/models/1032126/walking-animation-hunyuan-video
-        download_customized_models(
-            model_id=model_id,
-            origin_file_path=origin_file_path,
-            local_dir="models/lora",
-        )[0]
-        base_model.model_manager.load_lora(
-            "models/lora/" + origin_file_path, lora_alpha=1.0
-        )
+        self.model_manager = base_model.model_manager
+        if not lora_path and lora_weight != 0:
+            import math
+            if not math.isfinite(lora_weight):
+                raise ValueError("LoRA weight must be finite")
+            download_customized_models(
+                model_id=model_id, origin_file_path=origin_file_path,
+                local_dir="models/lora",
+            )
+            lora_path = "models/lora/" + origin_file_path
+        apply_manager_lora(self.model_manager, lora_path, lora_weight)
+
 
 
 class HunyuanImageToVideoModel:
@@ -71,7 +78,8 @@ class HunyuanImageToVideoModel:
         self.model_manager = model_manager
 
     @staticmethod
-    def load(quantization: str = "none") -> "HunyuanImageToVideoModel":
+    def load(quantization: str = "none", lora_path: str = "", lora_weight: float = 1.0) -> "HunyuanImageToVideoModel":
+        validate_lora(lora_path, lora_weight)
         storage_dtype = fp8_storage_dtype(quantization, torch.bfloat16)
         model_manager = ModelManager()
         download_models(["HunyuanVideoI2V"])
@@ -90,6 +98,7 @@ class HunyuanImageToVideoModel:
             torch_dtype=torch.float16,
             device="cpu",
         )
+        apply_manager_lora(model_manager, lora_path, lora_weight)
         return HunyuanImageToVideoModel(model_manager)
 
 

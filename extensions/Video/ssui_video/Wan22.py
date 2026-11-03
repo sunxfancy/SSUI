@@ -1,3 +1,4 @@
+from backend.lora import validate_lora, apply_dit_lora
 from ._runtime import wan_runtime
 import os
 
@@ -42,7 +43,8 @@ class Wan22TI2VModel:
         self.pipe = pipe
 
     @staticmethod
-    def load(quantization: str = "none") -> "Wan22TI2VModel":
+    def load(quantization: str = "none", lora_path: str = "", lora_weight: float = 1.0) -> "Wan22TI2VModel":
+        validate_lora(lora_path, lora_weight)
         runtime = wan_runtime()
         storage_dtype = fp8_storage_dtype(quantization, runtime["torch_dtype"], device=runtime["device"])
         pipe = WanVideoPipeline.from_pretrained(
@@ -74,6 +76,7 @@ class Wan22TI2VModel:
                 local_model_path=LOCAL_MODEL_PATH,
             ),
         )
+        apply_dit_lora(pipe.dit, lora_path, lora_weight)
         pipe.enable_vram_management(num_persistent_param_in_dit=None)
         return Wan22TI2VModel(pipe)
 
@@ -85,7 +88,15 @@ class Wan22T2VA14BModel:
         self.pipe = pipe
 
     @staticmethod
-    def load(quantization: str = "none") -> "Wan22T2VA14BModel":
+    def load(
+        quantization: str = "none",
+        high_noise_lora_path: str = "",
+        high_noise_lora_weight: float = 1.0,
+        low_noise_lora_path: str = "",
+        low_noise_lora_weight: float = 1.0,
+    ) -> "Wan22T2VA14BModel":
+        validate_lora(high_noise_lora_path, high_noise_lora_weight)
+        validate_lora(low_noise_lora_path, low_noise_lora_weight)
         runtime = wan_runtime()
         storage_dtype = fp8_storage_dtype(quantization, runtime["torch_dtype"], device=runtime["device"])
         pipe = WanVideoPipeline.from_pretrained(
@@ -124,6 +135,8 @@ class Wan22T2VA14BModel:
                 local_model_path=LOCAL_MODEL_PATH,
             ),
         )
+        apply_dit_lora(pipe.dit, high_noise_lora_path, high_noise_lora_weight)
+        apply_dit_lora(pipe.dit2, low_noise_lora_path, low_noise_lora_weight)
         pipe.enable_vram_management(num_persistent_param_in_dit=None)
         return Wan22T2VA14BModel(pipe)
 
@@ -135,7 +148,15 @@ class Wan22I2VA14BModel:
         self.pipe = pipe
 
     @staticmethod
-    def load(quantization: str = "none") -> "Wan22I2VA14BModel":
+    def load(
+        quantization: str = "none",
+        high_noise_lora_path: str = "",
+        high_noise_lora_weight: float = 1.0,
+        low_noise_lora_path: str = "",
+        low_noise_lora_weight: float = 1.0,
+    ) -> "Wan22I2VA14BModel":
+        validate_lora(high_noise_lora_path, high_noise_lora_weight)
+        validate_lora(low_noise_lora_path, low_noise_lora_weight)
         runtime = wan_runtime()
         storage_dtype = fp8_storage_dtype(quantization, runtime["torch_dtype"], device=runtime["device"])
         pipe = WanVideoPipeline.from_pretrained(
@@ -174,6 +195,8 @@ class Wan22I2VA14BModel:
                 local_model_path=LOCAL_MODEL_PATH,
             ),
         )
+        apply_dit_lora(pipe.dit, high_noise_lora_path, high_noise_lora_weight)
+        apply_dit_lora(pipe.dit2, low_noise_lora_path, low_noise_lora_weight)
         pipe.enable_vram_management(num_persistent_param_in_dit=None)
         return Wan22I2VA14BModel(pipe)
 

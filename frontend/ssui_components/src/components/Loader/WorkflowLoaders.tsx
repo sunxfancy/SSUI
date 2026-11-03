@@ -1,3 +1,4 @@
+import { LoraFields, loraParams } from './LoraFields';
 import React from 'react';
 import { Callout, Checkbox, FileInput, FormGroup, InputGroup, NumericInput, Spinner, Tag } from '@blueprintjs/core';
 import { IComponent } from '../IComponent';
@@ -60,18 +61,19 @@ class UploadLoader extends IComponent<UploadLoaderProps, { path: string; executa
 }
 
 type QwenProps = { edit?: boolean };
-class QwenModelLoader extends IComponent<QwenProps, { modelId: string; lowVram: boolean; vramLimit: number }> {
-    protected persistedFields: ('modelId' | 'lowVram' | 'vramLimit')[] = ['modelId', 'lowVram', 'vramLimit'];
+class QwenModelLoader extends IComponent<QwenProps, { modelId: string; lowVram: boolean; vramLimit: number; loraPath: string; loraWeight: number }> {
+    protected persistedFields: ('modelId' | 'lowVram' | 'vramLimit' | 'loraPath' | 'loraWeight')[] = ['modelId', 'lowVram', 'vramLimit', 'loraPath', 'loraWeight'];
     state = {
         modelId: this.props.edit ? 'Qwen/Qwen-Image-Edit-2509' : 'Qwen/Qwen-Image',
         lowVram: true,
         vramLimit: 0,
+        loraPath: '', loraWeight: 1,
     };
 
     override onExecute(): Descriptor {
         return {
             function: this.props.edit ? 'ssui_video.QwenImage.QwenImageEditModel.load' : 'ssui_video.QwenImage.QwenImageModel.load',
-            params: { model_id: this.state.modelId, low_vram: this.state.lowVram, vram_limit_gib: this.state.vramLimit },
+            params: { model_id: this.state.modelId, low_vram: this.state.lowVram, vram_limit_gib: this.state.vramLimit, ...loraParams(this.state.loraPath, this.state.loraWeight) },
         };
     }
 
@@ -79,6 +81,8 @@ class QwenModelLoader extends IComponent<QwenProps, { modelId: string; lowVram: 
         return <div className="workflow-loader">
             <div className="workflow-loader-heading"><Tag minimal icon="cube">Qwen Image</Tag><span>{this.props.edit ? '图像编辑' : '文生图'}</span></div>
             <FormGroup label="模型 ID"><InputGroup fill value={this.state.modelId} onChange={event => this.setState({ modelId: event.target.value })} /></FormGroup>
+            <LoraFields path={this.state.loraPath} weight={this.state.loraWeight}
+                onPath={loraPath => this.setState({ loraPath })} onWeight={loraWeight => this.setState({ loraWeight })} />
             <div className="workflow-loader-row">
                 <Checkbox checked={this.state.lowVram} label="低显存模式" onChange={event => this.setState({ lowVram: event.currentTarget.checked })} />
                 <FormGroup label="显存上限 GiB" helperText="0 表示自动">
