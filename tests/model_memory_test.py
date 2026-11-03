@@ -180,18 +180,24 @@ class VideoLoaderMemoryTest(unittest.TestCase):
                 module = importlib.util.module_from_spec(spec)
                 spec.loader.exec_module(module)
                 for classname in classes:
-                    for quantization in recipes:
-                        for offload in [False, True]:
-                            with self.subTest(model=classname, quantization=quantization, offload=offload):
-                                cls = getattr(module, classname)
-                                load = cls if classname == 'AnimateDiffModel' else cls.load
-                                loaded = load(quantization=quantization, cpu_offload=offload)
-                                manager = loaded.model_manager
-                                self.assertEqual(manager.memory_options, ModelMemoryOptions(quantization, offload))
-                                self.assertTrue(all(device == 'cpu' for device in manager.load_devices))
-                                self.assertTrue(all(m.moves[-1] == ('cpu' if offload else str(manager.device)) for m in manager.model))
-                                if quantization == 'int8':
-                                    self.assertTrue(all(m._ssui_int8 for m in manager.model))
+                    # CogVideo/AnimateDiff load directly on the selected device
+                    # only when neither quantization nor offload needs CPU staging.
+                    devices = ('cpu', 'cuda', 'mps') if filename in ('CogVideo', 'AnimateDiff') else ('cpu',)
+                    for device in devices:
+                        with patch('backend.util.devices.TorchDevice.choose_torch_device', return_value=torch.device(device)):
+                            for quantization in recipes:
+                                for offload in [False, True]:
+                                    with self.subTest(model=classname, quantization=quantization, offload=offload, device=device):
+                                        cls = getattr(module, classname)
+                                        load = cls if classname == 'AnimateDiffModel' else cls.load
+                                        loaded = load(quantization=quantization, cpu_offload=offload)
+                                        manager = loaded.model_manager
+                                        self.assertEqual(manager.memory_options, ModelMemoryOptions(quantization, offload))
+                                        expected_load_device = device if filename in ('CogVideo', 'AnimateDiff') and quantization == 'none' and not offload else 'cpu'
+                                        self.assertEqual(manager.load_devices, [expected_load_device] * len(manager.load_devices))
+                                        self.assertTrue(all(m.moves[-1] == ('cpu' if offload else str(manager.device)) for m in manager.model))
+                                        if quantization == 'int8':
+                                            self.assertTrue(all(m._ssui_int8 for m in manager.model))
 
     def test_pipeline_failure_unloads_stages(self):
         from ssui.model_memory import run_pipeline
