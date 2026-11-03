@@ -1,3 +1,4 @@
+from ssui.model_memory import ModelMemoryOptions
 from typing import Optional, List, Union, Generator
 import torch
 import torchaudio
@@ -21,8 +22,11 @@ class CosyVoiceModel:
         return self.model
 
     @staticmethod
-    def load(model_path: str):
+    def load(model_path: str, *, quantization: str = "none", cpu_offload: bool = False):
+        options = ModelMemoryOptions(quantization, cpu_offload)
         model = CosyVoice2(model_path, load_jit=False, load_trt=False, fp16=False)
+        if quantization != "none" or cpu_offload:
+            options.configure([model.model.llm, model.model.flow, model.model.hift], device=model.model.device)
         return CosyVoiceModel(model_path, model)
 
 @param("seed", Random(), default=42)

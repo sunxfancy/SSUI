@@ -1,3 +1,4 @@
+from ssui.model_memory import ModelMemoryOptions
 from typing import Optional, List
 import os
 import platform
@@ -23,7 +24,7 @@ class TrellisModel:
         return self.model
 
     @staticmethod
-    def load(model_path: str, quantization: str = "none", dinov2_repository: str = None, dinov2_weights: str = None):
+    def load(model_path: str, quantization: str = "none", dinov2_repository: str = None, dinov2_weights: str = None, *, cpu_offload: bool = False):
         quantize = int8_quantizer(quantization)
         if torch.version.hip:
             raise RuntimeError(
@@ -52,7 +53,11 @@ class TrellisModel:
         if quantization != "none":
             for name in ("sparse_structure_flow_model", "slat_flow_model", "image_cond_model"):
                 quantize(model.models[name])
-        model.cuda()
+        if cpu_offload:
+            model._execution_device = torch.device("cuda")
+            ModelMemoryOptions(cpu_offload=True).configure(model.models.values(), device="cuda")
+        else:
+            model.cuda()
         return TrellisModel(model_path, model)
 
 

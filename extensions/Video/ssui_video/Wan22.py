@@ -1,3 +1,4 @@
+from ssui.model_memory import ModelMemoryOptions, run_pipeline
 from ._runtime import wan_runtime
 import os
 
@@ -42,9 +43,11 @@ class Wan22TI2VModel:
         self.pipe = pipe
 
     @staticmethod
-    def load(quantization: str = "none") -> "Wan22TI2VModel":
+    def load(quantization: str = "none", *, cpu_offload: bool = True) -> "Wan22TI2VModel":
+        options = ModelMemoryOptions(quantization, cpu_offload, allow_fp8=True)
+        storage_mode = "none" if quantization == "int8" else quantization
         runtime = wan_runtime()
-        storage_dtype = fp8_storage_dtype(quantization, runtime["torch_dtype"], device=runtime["device"])
+        storage_dtype = fp8_storage_dtype(storage_mode, runtime["torch_dtype"], device=runtime["device"])
         pipe = WanVideoPipeline.from_pretrained(
             **runtime,
             model_configs=[
@@ -74,7 +77,17 @@ class Wan22TI2VModel:
                 local_model_path=LOCAL_MODEL_PATH,
             ),
         )
-        pipe.enable_vram_management(num_persistent_param_in_dit=None)
+        if quantization == "int8":
+            for name, component in pipe.named_children():
+                if name in ("dit", "dit2", "text_encoder", "image_encoder"):
+                    options.quantize(component)
+                component.to("cpu" if cpu_offload else runtime["device"])
+            pipe.vram_management_enabled = cpu_offload
+        elif cpu_offload:
+            pipe.enable_vram_management(num_persistent_param_in_dit=None)
+        else:
+            pipe.to(runtime["device"])
+            pipe.vram_management_enabled = False
         return Wan22TI2VModel(pipe)
 
 
@@ -85,9 +98,11 @@ class Wan22T2VA14BModel:
         self.pipe = pipe
 
     @staticmethod
-    def load(quantization: str = "none") -> "Wan22T2VA14BModel":
+    def load(quantization: str = "none", *, cpu_offload: bool = True) -> "Wan22T2VA14BModel":
+        options = ModelMemoryOptions(quantization, cpu_offload, allow_fp8=True)
+        storage_mode = "none" if quantization == "int8" else quantization
         runtime = wan_runtime()
-        storage_dtype = fp8_storage_dtype(quantization, runtime["torch_dtype"], device=runtime["device"])
+        storage_dtype = fp8_storage_dtype(storage_mode, runtime["torch_dtype"], device=runtime["device"])
         pipe = WanVideoPipeline.from_pretrained(
             **runtime,
             model_configs=[
@@ -124,7 +139,17 @@ class Wan22T2VA14BModel:
                 local_model_path=LOCAL_MODEL_PATH,
             ),
         )
-        pipe.enable_vram_management(num_persistent_param_in_dit=None)
+        if quantization == "int8":
+            for name, component in pipe.named_children():
+                if name in ("dit", "dit2", "text_encoder", "image_encoder"):
+                    options.quantize(component)
+                component.to("cpu" if cpu_offload else runtime["device"])
+            pipe.vram_management_enabled = cpu_offload
+        elif cpu_offload:
+            pipe.enable_vram_management(num_persistent_param_in_dit=None)
+        else:
+            pipe.to(runtime["device"])
+            pipe.vram_management_enabled = False
         return Wan22T2VA14BModel(pipe)
 
 
@@ -135,9 +160,11 @@ class Wan22I2VA14BModel:
         self.pipe = pipe
 
     @staticmethod
-    def load(quantization: str = "none") -> "Wan22I2VA14BModel":
+    def load(quantization: str = "none", *, cpu_offload: bool = True) -> "Wan22I2VA14BModel":
+        options = ModelMemoryOptions(quantization, cpu_offload, allow_fp8=True)
+        storage_mode = "none" if quantization == "int8" else quantization
         runtime = wan_runtime()
-        storage_dtype = fp8_storage_dtype(quantization, runtime["torch_dtype"], device=runtime["device"])
+        storage_dtype = fp8_storage_dtype(storage_mode, runtime["torch_dtype"], device=runtime["device"])
         pipe = WanVideoPipeline.from_pretrained(
             **runtime,
             model_configs=[
@@ -174,7 +201,17 @@ class Wan22I2VA14BModel:
                 local_model_path=LOCAL_MODEL_PATH,
             ),
         )
-        pipe.enable_vram_management(num_persistent_param_in_dit=None)
+        if quantization == "int8":
+            for name, component in pipe.named_children():
+                if name in ("dit", "dit2", "text_encoder", "image_encoder"):
+                    options.quantize(component)
+                component.to("cpu" if cpu_offload else runtime["device"])
+            pipe.vram_management_enabled = cpu_offload
+        elif cpu_offload:
+            pipe.enable_vram_management(num_persistent_param_in_dit=None)
+        else:
+            pipe.to(runtime["device"])
+            pipe.vram_management_enabled = False
         return Wan22I2VA14BModel(pipe)
 
 
@@ -189,7 +226,7 @@ def Wan22TextToVideo(
 ) -> list[Image]:
     if config.is_prepare():
         return [Image()]
-    video = base_model.pipe(
+    video = run_pipeline(base_model.pipe,
         prompt=prompt.text,
         negative_prompt=negative_prompt.text if negative_prompt.text else WAN22_NEGATIVE_PROMPT,
         height=config["height"],
@@ -218,7 +255,7 @@ def Wan22ImageToVideo(
 ) -> list[Image]:
     if config.is_prepare():
         return [Image()]
-    video = base_model.pipe(
+    video = run_pipeline(base_model.pipe,
         prompt=prompt.text,
         negative_prompt=negative_prompt.text if negative_prompt.text else WAN22_NEGATIVE_PROMPT,
         input_image=image._image,
@@ -245,7 +282,7 @@ def Wan22T2VA14BTextToVideo(
 ) -> list[Image]:
     if config.is_prepare():
         return [Image()]
-    video = base_model.pipe(
+    video = run_pipeline(base_model.pipe,
         prompt=prompt.text,
         negative_prompt=negative_prompt.text if negative_prompt.text else WAN22_NEGATIVE_PROMPT,
         height=config["height"],
@@ -276,7 +313,7 @@ def Wan22I2VA14BImageToVideo(
 ) -> list[Image]:
     if config.is_prepare():
         return [Image()]
-    video = base_model.pipe(
+    video = run_pipeline(base_model.pipe,
         prompt=prompt.text,
         negative_prompt=negative_prompt.text if negative_prompt.text else WAN22_NEGATIVE_PROMPT,
         input_image=image._image,

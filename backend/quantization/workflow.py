@@ -1,8 +1,7 @@
 """Opt-in inference quantization shared by the 3D and video adapters.
 
-FP8 is a storage cast, not FP8 activation computation. INT8 uses TorchAO's
-per-channel weight-only recipe and keeps the original Linear forward methods
-(including Trellis SparseLinear). Optional dependencies are loaded on demand.
+FP8 is a storage cast, not FP8 activation computation. INT8 uses SSUI native per-channel weight-only storage. Numerical code is
+loaded on demand, so workflow preparation does not require Torch.
 """
 
 
@@ -32,51 +31,12 @@ def int8_quantizer(mode):
     validate_quantization(mode, ("none", "int8"))
     if mode == "none":
         return lambda model: model
-    try:
-        from importlib import import_module
-        from inspect import signature
-
-        ao = import_module("torchao.quantization")
-        quantize_ = ao.quantize_
-        config = getattr(ao, "Int8WeightOnlyConfig", None)
-        if config is None:
-            # TorchAO releases compatible with the repository's PyTorch 2.4
-            # expose the same recipe through a function instead of a config.
-            recipe = ao.int8_weight_only()
-        elif "version" in signature(config).parameters:
-            # v1 retains FP32 scales when restoring the public weight dtype.
-            # v2's generic Tensor.to currently ignores dtype changes, which
-            # breaks models that derive activation dtype from Linear.weight.
-            recipe = config(version=1)
-        else:
-            recipe = config()
-    except (ImportError, AttributeError, RuntimeError, OSError, TypeError) as exc:
-        raise RuntimeError(
-            "INT8 requires an optional torchao installation compatible with PyTorch "
-            "in the model's Python environment. Install torchao there, or select 'none'."
-        ) from exc
-
+    from ssui.native_quantization import quantize_model_int8
     def apply(model):
         import torch
-
-        original_dtypes = {}
-
-        def linear_filter(module, name):
-            if isinstance(module, torch.nn.Linear) and type(module.weight) is torch.nn.Parameter:
-                original_dtypes[module] = module.weight.dtype
-                # Compute quantization scales in FP32 one layer at a time.
-                # BF16 scale rounding can otherwise saturate INT8 endpoints.
-                module.weight = torch.nn.Parameter(module.weight.float(), requires_grad=False)
-                return True
-            return False
-
-        # TorchAO changes Linear weights in place; it must not replace custom
-        # SparseLinear.forward, nor quantize geometry/latent decoders.
-        quantize_(model, recipe, filter_fn=linear_filter)
-        for module, dtype in original_dtypes.items():
-            module.weight = torch.nn.Parameter(module.weight.to(dtype=dtype), requires_grad=False)
-        return model
-
+        sparse_types = tuple({type(layer) for layer in model.modules()
+                              if isinstance(layer, torch.nn.Linear) and type(layer).__name__ == 'SparseLinear'})
+        return quantize_model_int8(model, linear_types=sparse_types)
     return apply
 
 

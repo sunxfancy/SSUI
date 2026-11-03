@@ -1,3 +1,4 @@
+from ssui.model_memory import ModelMemoryOptions
 from typing import Optional, Tuple, List
 import torch
 from transformers import AutoModelForCausalLM, AutoTokenizer
@@ -21,13 +22,17 @@ class QwenModel:
         return self.model, self.tokenizer
 
     @staticmethod
-    def load(model_path: str = "Qwen/Qwen-7B-Chat"):
+    def load(model_path: str = "Qwen/Qwen-7B-Chat", *, quantization: str = "none", cpu_offload: bool = False):
+        options = ModelMemoryOptions(quantization, cpu_offload)
         tokenizer = AutoTokenizer.from_pretrained(model_path, trust_remote_code=True)
         model = AutoModelForCausalLM.from_pretrained(
             model_path,
-            device_map="auto",
+            device_map="cpu" if quantization != "none" or cpu_offload else "auto",
             trust_remote_code=True
         ).eval()
+        if quantization != "none" or cpu_offload:
+            from backend.util.devices import TorchDevice
+            options.configure([model], device=TorchDevice.choose_torch_device())
         return QwenModel(model_path, model, tokenizer)
 
 @param("temperature", Slider(0.0, 2.0, 0.1), default=0.7)
