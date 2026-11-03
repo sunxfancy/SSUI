@@ -1,6 +1,7 @@
 from ssui.model_memory import ModelMemoryOptions, configure_diffsynth_manager, run_pipeline
 import torch
 from backend.quantization.workflow import fp8_storage_dtype
+from ._runtime import wan_runtime
 
 from ssui.annotation import param
 from ssui.base import Prompt, Image
@@ -23,28 +24,29 @@ class HunyuanVideoModel:
     @staticmethod
     def load(quantization: str = "none", *, cpu_offload: bool = True) -> "HunyuanVideoModel":
         options = ModelMemoryOptions(quantization, cpu_offload, allow_fp8=True)
-        storage_dtype = fp8_storage_dtype("none" if quantization == "int8" else quantization, torch.bfloat16)
-        model_manager = ModelManager()
+        runtime = wan_runtime()
+        storage_dtype = fp8_storage_dtype("none" if quantization == "int8" else quantization, runtime["torch_dtype"], device=runtime["device"])
+        model_manager = ModelManager(device="cpu", torch_dtype=runtime["torch_dtype"])
         download_models(["HunyuanVideo"])
 
-        # Only DiT storage is optionally FP8; computation stays BF16.
+        # Stage weights on CPU; the pipeline computes on the selected accelerator.
         model_manager.load_models(
             ["models/HunyuanVideo/transformers/mp_rank_00_model_states.pt"],
             torch_dtype=storage_dtype,
             device="cpu",
         )
 
-        # The other modules are loaded in float16.
+        # Preserve CUDA checkpoint precision; MPS uses its safe runtime dtype.
         model_manager.load_models(
             [
                 "models/HunyuanVideo/text_encoder/model.safetensors",
                 "models/HunyuanVideo/text_encoder_2",
                 "models/HunyuanVideo/vae/pytorch_model.pt",
             ],
-            torch_dtype=torch.float16,
+            torch_dtype=torch.float16 if runtime["device"].startswith("cuda") else runtime["torch_dtype"],
             device="cpu",
         )
-        configure_diffsynth_manager(model_manager, options)
+        configure_diffsynth_manager(model_manager, options, runtime["device"])
         return HunyuanVideoModel(model_manager)
 
 
@@ -76,8 +78,9 @@ class HunyuanImageToVideoModel:
     @staticmethod
     def load(quantization: str = "none", *, cpu_offload: bool = True) -> "HunyuanImageToVideoModel":
         options = ModelMemoryOptions(quantization, cpu_offload, allow_fp8=True)
-        storage_dtype = fp8_storage_dtype("none" if quantization == "int8" else quantization, torch.bfloat16)
-        model_manager = ModelManager()
+        runtime = wan_runtime()
+        storage_dtype = fp8_storage_dtype("none" if quantization == "int8" else quantization, runtime["torch_dtype"], device=runtime["device"])
+        model_manager = ModelManager(device="cpu", torch_dtype=runtime["torch_dtype"])
         download_models(["HunyuanVideoI2V"])
 
         model_manager.load_models(
@@ -91,10 +94,10 @@ class HunyuanImageToVideoModel:
                 "models/HunyuanVideoI2V/text_encoder_2",
                 "models/HunyuanVideoI2V/vae/pytorch_model.pt",
             ],
-            torch_dtype=torch.float16,
+            torch_dtype=torch.float16 if runtime["device"].startswith("cuda") else runtime["torch_dtype"],
             device="cpu",
         )
-        configure_diffsynth_manager(model_manager, options)
+        configure_diffsynth_manager(model_manager, options, runtime["device"])
         return HunyuanImageToVideoModel(model_manager)
 
 
@@ -108,9 +111,8 @@ def HunyuanTextToVideo(
 ) -> list[Image]:
     if config.is_prepare():
         return [Image()]
-    # The computation device is "cuda".
     pipe = HunyuanVideoPipeline.from_model_manager(
-        base_model.model_manager, torch_dtype=torch.bfloat16, device="cuda", enable_vram_management=False
+        base_model.model_manager, **wan_runtime(), enable_vram_management=False
     )
     # This LoRA requires shift=9.0.
     pipe.scheduler = FlowMatchScheduler(shift=9.0, sigma_min=0.0, extra_one_step=True)
@@ -144,7 +146,7 @@ def HunyuanImageToVideo(
     if config.is_prepare():
         return [Image()]
     pipe = HunyuanVideoPipeline.from_model_manager(
-        base_model.model_manager, torch_dtype=torch.bfloat16, device="cuda", enable_vram_management=False
+        base_model.model_manager, **wan_runtime(), enable_vram_management=False
     )
     options = getattr(base_model.model_manager, "memory_options", ModelMemoryOptions(cpu_offload=True))
     if options.cpu_offload:

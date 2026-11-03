@@ -12,7 +12,7 @@ macOS 的基础依赖和锁文件已包含 ModelScope、imageio/FFmpeg、Sentenc
 在根目录运行 `yarn install-requirements` 安装到 `.venv`。
 AnimateDiff、CogVideoX、Wan 2.1 和 Wan 2.2 节点已接入设备选择；Wan 在现代 MPS 默认 BF16，
 CPU 或旧版 macOS 使用 float32。AnimateDiff 已通过真实权重的 MPS 完整视频生成（最高实测 512×512、8 帧）；
-Wan 1.3B 已通过下述分阶段完整短视频生成；CogVideo、Wan Fun/14B 和 Wan 2.2 目前仍只通过算子/小型模型测试。
+Wan 1.3B 已通过下述分阶段完整短视频生成；Wan 2.2 TI2V-5B 也已通过独立 MPS 短视频流程；Wan Fun/14B 和 A14B 仍待完整验证。
 Wan 2.2、Hunyuan、H3 等的支持边界见 [Mac 模型支持检查](../../doc/MacModelSupport.md)。
 
 Windows 安装环境需要补充 `modelscope==1.26.0`（Wan 系列节点下载权重时使用）。
@@ -353,3 +353,73 @@ VAE 解码及输出帧仍受模型、分辨率、帧数影响。量化也可能�
 具体显存下限需要在目标 GPU 上用固定输入验证。
 
 FP8 存储在 MPS 上会提前拒绝；Trellis 的独立 MPS runner 目前只支持 `none`。现有 `img2mesh(model, image)` 接口保持不变。
+
+## Apple Silicon 独立视频运行时（2026-10-28）
+
+主环境继续使用 Torch 2.4.1；LTX/H3 使用隔离环境，固定官方源码版本，避免污染已有视频、3D 和动作模型依赖：
+
+```bash
+python3.12 -m venv .venv/video-mps
+.venv/video-mps/bin/python -m pip install -r dependencies/requirements-video-mps.txt
+SSUI_VENV_PATH="$PWD/.venv/video-mps" yarn test:video:external-mps
+```
+
+节点自动探测 `.venv/video-mps/bin/python`；显式 `SSUI_LTX_PYTHON` / `SSUI_H3_PYTHON` 优先。
+该环境实测 Torch 2.14.1、Transformers 5.14.1；固定 LTX 源码包含 Apple fused MPS SDPA。
+LTX 默认关闭 FP8，runner 在 MPS 上拒绝 CUDA 量化参数和 CPU 回退。H3 原始权重路径使用 MPS 逐层 Accelerate offload；int8/NF4 仍只适用于 CUDA，不能视为 MPS 支持。
+H3 只加载所选 workflow 的组件，避免额外加载另一份 33B transformer。
+
+`test:video:external-mps` 使用随机小模型，实际验证 H3 音视频 DiT、MPS sequential offload、LTX 完整小型视频 DiT 和 fused attention，并与 CPU 数值比较；不下载完整权重，也不证明最终成片质量。
+LTX-2.5 权重需要 Hugging Face 仓库授权及命令行登录；当前已获授权且五个固定权重下载完成。词嵌入用后卸载及 64-token 投影分块后，真实蒸馏模型 CLI 已完成 MPS 音视频生成：128×128 / 9 帧 / 24 fps，产物 `output/ltx-mps/ltx.mp4`。极小样片主要为草地纹理，未清晰呈现猫，不能代表正常生成质量或节点 UI 端到端验证。
+
+CogVideo 节点现以安全精度暂存 CPU 权重，分阶段移动文本编码器/VAE，并逐层在 MPS 执行 DiT；切片计算设备与权重存储设备分离。Hunyuan 节点及卸载层同样使用 MPS，详细实测边界见 `doc/MacModelSupport.md`。
+
+Wan 2.2 TI2V-5B 独立低内存入口（复用 `models/wan-mac` 的 UMT5）：
+
+```bash
+yarn test:wan22:smoke --size 128 --frames 5 --steps 4
+```
+
+固定官方模型 revision；三个阶段分进程执行，DiT 使用 mmap-backed CPU 权重并逐层上传 MPS。该入口只覆盖 TI2V-5B 文生视频，不代表 A14B 双专家或图生视频通过。
+
+真实 CogVideoX-5B / Hunyuan T2V 的低内存独立入口（先下载，随后生成）：
+
+```sh
+SSUI_VENV_PATH="$PWD/.venv/video-mps" yarn test:cogvideo:smoke --download-only
+SSUI_VENV_PATH="$PWD/.venv/video-mps" yarn test:cogvideo:smoke
+SSUI_VENV_PATH="$PWD/.venv/video-mps" yarn test:hunyuan:smoke --download-only
+SSUI_VENV_PATH="$PWD/.venv/video-mps" yarn test:hunyuan:smoke
+```
+
+默认 128×128、9 帧、4 步，分别约 222 秒和 464 秒，输出 MP4 和包含 MPS
+阶段检查的 `report.json`。这些低步数样例主要是色块，只验证完整计算流程。
+原 vendored 节点的设备/卸载改动通过小型数值回归；不能把独立入口测试等同于
+原节点完整权重测试。CogVideo 短片要求 8n+1 帧且至少 9 帧。
+
+H3 的固定版本 T2VA 验证入口（约 144GB 原始权重，只下载一个 DiT）：
+
+```sh
+SSUI_VENV_PATH="$PWD/.venv/video-mps" yarn test:h3:smoke --download-only
+SSUI_VENV_PATH="$PWD/.venv/video-mps" yarn test:h3:smoke
+```
+
+默认 128×128、124 帧、`--steps 2`（调度器实际 1 次 DiT 调用）；通过节点使用的 runner 推理，并检查 MP4 视频和音轨。完整 H3 至少需要约 5 秒，22 帧只满足 VAE 对齐、不能用于完整管线。
+H3 的 MPS 路径通过 Accelerate 按需从本地 safetensors 读取每层权重，避免保留完整 CPU state dict。音频 VAE 约 0.6GB，因 weight_norm
+钩子不兼容逐层卸载而常驻 MPS；文本编码器、DiT 和约 10GB 视频 VAE 逐层执行。
+
+旧的完整 H3 测试曾伴随系统 watchdog 重启；用户要求恢复后，新增磁盘读取路径已完成真实 T2VA CLI，
+耗时约 149 秒，输出 `output/h3-mps/h3.mp4`：128×128 / 124 帧 / 24 fps，含 32 kHz 音频。
+文本、去噪、视频及音频解码均记录到 MPS 输出并通过有限值检查。此低步数样片仍是模糊纹理，
+不代表质量达标、I2V/ref2va 或节点 UI 已完整验证。MPS 上必须提供本地模型目录。
+冒烟父进程每秒检查可用内存和 swap，覆盖模型加载阶段；低于 1.5 GiB 可用内存或 swap
+增长超过 2 GiB 就终止，另保留 MPS 分配上限及逐层检查。
+
+LTX 默认使用磁盘卸载；MPS 磁盘路径使用一个主机缓冲和一个 GPU 缓冲并关闭预取。冒烟脚本保留系统内存/swap 保护，进一步将词嵌入用后卸载、投影分块并按层卸载，以及过滤去噪模型不使用的连接器权重；全部模型计算仍在 MPS。固定版本蒸馏模型的复现入口：
+
+```sh
+SSUI_VENV_PATH="$PWD/.venv/video-mps" yarn test:ltx:smoke --download-only
+SSUI_VENV_PATH="$PWD/.venv/video-mps" yarn test:ltx:smoke
+```
+
+默认 128×128、9 帧；runner 禁止 CPU 回退，测试记录实际层输出设备，并由父进程
+监控系统可用内存及 swap 增长。该保护不是系统绝不会卡顿的保证。
