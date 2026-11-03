@@ -1,7 +1,7 @@
+from ssui.model_memory import model_memory
 from ssui import workflow, Prompt, Image, Mesh
 from ssui_image.Flux import FluxModel, FluxClip, FluxLatent, FluxDenoise, FluxLatentDecode
 from ssui.config import SSUIConfig
-from ssui.quantization import Int8Quantization
 from ssui_3dmodel.Trellis import TrellisModel, GenModel
 from ssui_3dmodel.Pixal3D import Pixal3DModel, GenPixal3DModel
 from ssui_3dmodel.WorldClaw import WorldClawModel, GenWorldClawScene
@@ -37,9 +37,9 @@ def text2world_worldclaw(prompt: Prompt) -> Mesh:
 @workflow
 def img2mesh_quantized(image: Image) -> Mesh:
     """Trellis with optional INT8; preserve img2mesh's model-input API."""
-    quantization = Int8Quantization(config("TrellisModel Options"))
+    memory = model_memory(config("TrellisModel Options"))
     if config.is_prepare():
         model = TrellisModel()
     else:
-        model = TrellisModel.load("microsoft/TRELLIS-image-large", quantization=quantization)
+        model = TrellisModel.load("microsoft/TRELLIS-image-large", **memory)
     return GenModel(config("GenModel"), model, image)

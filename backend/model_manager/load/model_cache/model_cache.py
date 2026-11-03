@@ -96,6 +96,8 @@ class ModelCache:
         storage_device: torch.device | str = "cpu",
         log_memory_usage: bool = False,
         logger: Optional[Logger] = None,
+        model_transform: Optional[Callable] = None,
+        offload_on_unlock: bool = False,
     ):
         """Initialize the model RAM cache.
 
@@ -116,6 +118,8 @@ class ModelCache:
             behaviour.
         :param logger: InvokeAILogger to use (otherwise creates one)
         """
+        self._model_transform = model_transform
+        self._offload_on_unlock = offload_on_unlock
         self._enable_partial_loading = enable_partial_loading
         self._keep_ram_copy_of_weights = keep_ram_copy_of_weights
         self._execution_device_working_mem_gb = execution_device_working_mem_gb
@@ -161,6 +165,8 @@ class ModelCache:
             # )
             return
 
+        if self._model_transform is not None:
+            model = self._model_transform(model)
         size = calc_model_size_by_data(self._logger, model)
         self.make_room(size)
 
@@ -279,6 +285,8 @@ class ModelCache:
             pass
         # cache_entry = self._cached_models[key]
         cache_entry.unlock()
+        if self._offload_on_unlock and not cache_entry.is_locked:
+            self._move_model_to_ram(cache_entry, cache_entry.cached_model.cur_vram_bytes())
         # self._logger.debug(
         #     f"Unlocked model {cache_entry.key} (Type: {cache_entry.cached_model.model.__class__.__name__})"
         # )

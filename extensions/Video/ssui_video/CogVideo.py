@@ -1,3 +1,4 @@
+from ssui.model_memory import ModelMemoryOptions, configure_diffsynth_manager, run_pipeline
 from backend.util.devices import TorchDevice
 from backend.quantization.workflow import int8_quantizer, quantize_manager_components
 
@@ -15,11 +16,12 @@ class CogVideoModel:
         self.model_manager = model_manager
 
     @staticmethod
-    def load(quantization: str = "none") -> "CogVideoModel":
+    def load(quantization: str = "none", *, cpu_offload: bool = False) -> "CogVideoModel":
+        options = ModelMemoryOptions(quantization, cpu_offload)
         quantize = int8_quantizer(quantization)
         device = TorchDevice.choose_torch_device()
         model_manager = ModelManager(
-            torch_dtype=TorchDevice.choose_torch_dtype(device), device="cpu" if quantization != "none" else str(device)
+            torch_dtype=TorchDevice.choose_torch_dtype(device), device="cpu" if quantization != "none" or cpu_offload else str(device)
         )
         download_models(["CogVideoX-5B"])
         model_manager.load_models(
@@ -31,8 +33,7 @@ class CogVideoModel:
         )
         if quantization != "none":
             quantize_manager_components(model_manager, quantize, ("cog_dit", "flux_text_encoder_2"))
-            model_manager.to(str(device))
-            model_manager.device = str(device)
+        configure_diffsynth_manager(model_manager, options, str(device), quantize=False)
         return CogVideoModel(model_manager)
 
 
@@ -48,7 +49,9 @@ def CogVideoTextToVideo(
         return [Image()]
 
     pipe = CogVideoPipeline.from_model_manager(base_model.model_manager)
-    video = pipe(
+    if getattr(base_model.model_manager, "memory_options", ModelMemoryOptions()).cpu_offload:
+        pipe.enable_cpu_offload()
+    video = run_pipeline(pipe,
         prompt=prompt.text,
         negative_prompt=negative_prompt.text,
         height=config["height"],

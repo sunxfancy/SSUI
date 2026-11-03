@@ -28,6 +28,10 @@ class LayerPatcher:
         module.
         """
 
+        if getattr(model, "_ssui_int8", False):
+            force_direct_patching = False
+            force_sidecar_patching = True
+
         # original_weights are stored for unpatching layers that are directly patched.
         original_weights = OriginalWeightsStorage(cached_weights)
         # original_modules are stored for unpatching layers that are wrapped.
@@ -198,8 +202,10 @@ class LayerPatcher:
     ):
         """Apply a single LoRA wrapper patch to a module."""
         # Move the LoRA layer to the same device/dtype as the orig module.
-        first_param = next(module_to_patch.parameters())
-        device = first_param.device
+        first_tensor = next(module_to_patch.parameters(), None)
+        if first_tensor is None:
+            first_tensor = next(module_to_patch.buffers())
+        device = first_tensor.device
         patch.to(device=device, dtype=dtype)
 
         if module_to_patch_key not in original_modules:

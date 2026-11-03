@@ -30,9 +30,15 @@ from ssui.annotation import param
 from ssui.controller import Random, Select, Switch, Slider
 
 _loader_instance = None
+_memory_loaders = {}
 
 
-def getModelLoader():
+def getModelLoader(quantization: str = "none", cpu_offload: bool = False):
+    if quantization != "none" or cpu_offload:
+        key = (quantization, cpu_offload)
+        if key not in _memory_loaders:
+            _memory_loaders[key] = ModelLoaderService(quantization=quantization, cpu_offload=cpu_offload)
+        return _memory_loaders[key]
     global _loader_instance
     if _loader_instance is None:
         _loader_instance = ModelLoaderService()
@@ -61,9 +67,10 @@ class FluxModel:
         self.vae = vae
 
     @staticmethod
-    def load(model_path: str, t5_encoder_path: str, clip_path: str, vae_path: str):
+    def load(model_path: str, t5_encoder_path: str, clip_path: str, vae_path: str, *,
+             quantization: str = "none", cpu_offload: bool = False):
         transformer, t5_model, clip_model, vae = load_flux_model(
-            getModelLoader(), model_path, t5_encoder_path, clip_path, vae_path
+            getModelLoader(quantization, cpu_offload), model_path, t5_encoder_path, clip_path, vae_path
         )
         return FluxModel(model_path, t5_encoder_path, clip_path, vae_path, transformer, t5_model, clip_model, vae)
 

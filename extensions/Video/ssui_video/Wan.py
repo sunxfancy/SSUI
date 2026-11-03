@@ -1,3 +1,4 @@
+from ssui.model_memory import ModelMemoryOptions, configure_diffsynth_manager, run_pipeline
 from ._runtime import wan_runtime
 import torch
 from backend.quantization.workflow import fp8_storage_dtype, load_dit_with_storage_dtype
@@ -15,9 +16,11 @@ class WanVideoModel:
         self.model_manager = model_manager
 
     @staticmethod
-    def load(quantization: str = "none") -> "WanVideoModel":
+    def load(quantization: str = "none", *, cpu_offload: bool = True) -> "WanVideoModel":
+        options = ModelMemoryOptions(quantization, cpu_offload, allow_fp8=True)
+        storage_mode = "none" if quantization == "int8" else quantization
         runtime = wan_runtime()
-        fp8_storage_dtype(quantization, runtime["torch_dtype"], device=runtime["device"])
+        fp8_storage_dtype(storage_mode, runtime["torch_dtype"], device=runtime["device"])
         model_manager = ModelManager(device="cpu", torch_dtype=runtime["torch_dtype"])
         snapshot_download("PAI/Wan2.1-Fun-1.3B-InP", local_dir="models/PAI/Wan2.1-Fun-1.3B-InP")
 
@@ -30,10 +33,11 @@ class WanVideoModel:
                 "models/PAI/Wan2.1-Fun-1.3B-InP/Wan2.1_VAE.pth",
                 "models/PAI/Wan2.1-Fun-1.3B-InP/models_clip_open-clip-xlm-roberta-large-vit-huge-14.pth",
             ],
-            quantization=quantization,
+            quantization=storage_mode,
             torch_dtype=runtime["torch_dtype"],
             device="cpu",
         )
+        configure_diffsynth_manager(model_manager, options, runtime["device"])
         return WanVideoModel(model_manager)
 
 @param("seed", Random(), default=42)
@@ -45,10 +49,15 @@ def WanImageTextToVideo(config: SSUIConfig, base_model: WanVideoModel, image: Im
         return [Image()]
     
     pipe = WanVideoPipeline.from_model_manager(base_model.model_manager, **wan_runtime())
-    pipe.enable_vram_management(num_persistent_param_in_dit=0)
+    options = getattr(base_model.model_manager, "memory_options", ModelMemoryOptions(cpu_offload=True))
+    if options.cpu_offload:
+        if options.quantization == "int8":
+            pipe.enable_cpu_offload()
+        else:
+            pipe.enable_vram_management(num_persistent_param_in_dit=0)
 
     # Image-to-video
-    video = pipe(
+    video = run_pipeline(pipe,
         prompt=prompt.text,
         negative_prompt=negative_prompt.text,
         num_frames=config["num_frames"],

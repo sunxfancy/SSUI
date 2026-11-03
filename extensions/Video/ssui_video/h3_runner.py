@@ -1,7 +1,7 @@
 """MiniMax H3 本地推理 runner。
 
 此脚本在独立的 H3 虚拟环境中运行（需要 Python>=3.12 / torch>=2.7 /
-带 ModularPipeline 的新版 diffusers / transformers / torchao / PyAV / Pillow），
+带 ModularPipeline 的新版 diffusers / transformers / PyAV / Pillow），
 由 ssui_video/MiniMaxH3.py 通过 subprocess 调用，不依赖 SSUI 主环境。
 
 用法示例：
@@ -13,48 +13,25 @@ import argparse
 import sys
 
 
-def _apply_int8(pipe, model_id: str, task: str) -> None:
-    """按 diffusers 官方文档在加载前把 transformer / text encoder 切成 int8 并做组级 offload。
-    仅用于消费级显卡（24-32GB）；80GB 大显存建议直接用 bf16（--quantization none）。
-    """
-    import torch
-    from diffusers import MiniMaxH3Transformer3DModel, TorchAoConfig
-    from diffusers.hooks import apply_group_offloading
-    from torchao.quantization import Int8WeightOnlyConfig
-    from transformers import Qwen3VLForConditionalGeneration
-    from transformers import TorchAoConfig as TransformersTorchAoConfig
+def _apply_int8(pipe, quantizer_path=None):
+    """Use SSUI's portable INT8 implementation in the independent H3 venv."""
+    import importlib.util
+    from pathlib import Path
 
-    transformer_subfolder = "transformer" if task in ("t2va", "fl2va") else "transformer_ref"
-    pipe.update_components(
-        transformer=MiniMaxH3Transformer3DModel.from_pretrained(
-            model_id,
-            subfolder=transformer_subfolder,
-            dtype=torch.bfloat16,
-            quantization_config=TorchAoConfig(
-                Int8WeightOnlyConfig(version=2),
-                modules_to_not_convert=[
-                    "proj_in", "audio_proj_in", "context_embedder", "time_embedder", "time_proj",
-                    "token_refiner", "norm_out", "proj_out", "audio_proj_out",
-                ],
-            ),
-            low_cpu_mem_usage=False,
-        ),
-        text_encoder=Qwen3VLForConditionalGeneration.from_pretrained(
-            model_id,
-            subfolder="text_encoder",
-            dtype=torch.bfloat16,
-            quantization_config=TransformersTorchAoConfig(
-                Int8WeightOnlyConfig(version=2),
-                modules_to_not_convert=[
-                    "model.visual",
-                    "model.language_model.embed_tokens",
-                    "model.language_model.norm",
-                    "lm_head",
-                ],
-            ),
-        ),
-    )
-    # 上面只替换了组件定义，实际加载在 load_components 里完成
+    path = Path(quantizer_path) if quantizer_path else Path(__file__).resolve().parents[3] / "ssui" / "native_quantization.py"
+    if not path.is_file():
+        raise RuntimeError("SSUI quantizer not found; pass --quantizer-path /path/to/ssui/quantization.py")
+    spec = importlib.util.spec_from_file_location("ssui_native_quantization", path)
+    quantizer = importlib.util.module_from_spec(spec)
+    sys.modules[spec.name] = quantizer
+    spec.loader.exec_module(quantizer)
+    quantizer.quantize_model_int8(pipe.transformer, exclude=(
+        "proj_in", "audio_proj_in", "context_embedder", "time_embedder", "time_proj",
+        "token_refiner", "norm_out", "proj_out", "audio_proj_out",
+    ))
+    quantizer.quantize_model_int8(pipe.text_encoder, exclude=(
+        "model.visual", "model.language_model.embed_tokens", "model.language_model.norm", "lm_head",
+    ))
     return pipe
 
 
@@ -90,6 +67,8 @@ def main() -> int:
     parser.add_argument("--width", type=int, default=None)
     parser.add_argument("--seed", type=int, default=42)
     parser.add_argument("--quantization", choices=["none", "int8"], default="none")
+    parser.add_argument("--quantizer-path", default=None, help="SSUI quantization.py path")
+    parser.add_argument("--cpu-offload", action=argparse.BooleanOptionalAction, default=True)
     parser.add_argument("--output", required=True, help="输出 mp4 路径")
     args = parser.parse_args()
 
@@ -102,26 +81,28 @@ def main() -> int:
         print(
             "H3 venv 依赖不完整: %s\n"
             "请安装最新 diffusers（含 ModularPipeline / MiniMax-H3 支持）、"
-            "torch>=2.7、transformers、torchao、PyAV、Pillow。" % exc,
+            "torch>=2.7、transformers、PyAV、Pillow。" % exc,
             file=sys.stderr,
         )
         return 1
 
     try:
         manager = ComponentsManager()
-        manager.enable_auto_cpu_offload(device="cuda")
+        if args.cpu_offload and args.quantization == "none":
+            manager.enable_auto_cpu_offload(device="cuda")
         pipe = ModularPipeline.from_pretrained(
             args.model_id, workflow=args.task, components_manager=manager
         )
 
-        if args.quantization == "int8":
-            print("应用 int8 量化（transformer / text encoder）...")
-            pipe = _apply_int8(pipe, args.model_id, args.task)
-
         pipe.load_components(dtype=torch.bfloat16)
-
         if args.quantization == "int8":
+            print("应用 SSUI int8 权重量化（transformer / text encoder）...")
+            pipe = _apply_int8(pipe, args.quantizer_path)
+
+        if args.cpu_offload and args.quantization == "int8":
             _enable_group_offload(pipe)
+        elif not args.cpu_offload:
+            pipe.to("cuda")
 
         image = Image.open(args.image) if args.image else None
         last_image = Image.open(args.last_image) if args.last_image else None

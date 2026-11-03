@@ -80,6 +80,7 @@ class SDVideoPipeline(SDImagePipeline):
         self.ipadapter_image_encoder: IpAdapterCLIPImageEmbedder = None
         self.ipadapter: SDIpAdapter = None
         self.motion_modules: SDMotionModel = None
+        self.model_names = self.model_names + ["motion_modules"]
 
 
     def fetch_models(self, model_manager: ModelManager, controlnet_config_units: List[ControlNetConfigUnit]=[], prompt_refiner_classes=[]):
@@ -191,13 +192,16 @@ class SDVideoPipeline(SDImagePipeline):
         if input_frames is None or denoising_strength == 1.0:
             latents = noise
         else:
+            self.load_models_to_device(["vae_encoder"])
             latents = self.encode_video(input_frames, **tiler_kwargs)
             latents = self.scheduler.add_noise(latents, noise, timestep=self.scheduler.timesteps[0])
 
+        self.load_models_to_device(["text_encoder"])
         # Encode prompts
         prompt_emb_posi = self.encode_prompt(prompt, clip_skip=clip_skip, positive=True)
         prompt_emb_nega = self.encode_prompt(negative_prompt, clip_skip=clip_skip, positive=False)
 
+        self.load_models_to_device(["ipadapter_image_encoder", "ipadapter"])
         # IP-Adapter
         if ipadapter_images is not None:
             ipadapter_image_encoding = self.ipadapter_image_encoder(ipadapter_images)
@@ -227,6 +231,7 @@ class SDVideoPipeline(SDImagePipeline):
         else:
             controlnet_kwargs = {"controlnet_frames": None}
         
+        self.load_models_to_device(["unet", "motion_modules", "controlnet"])
         # Denoise
         for progress_id, timestep in enumerate(progress_bar_cmd(self.scheduler.timesteps)):
             timestep = timestep.unsqueeze(0).to(self.device)
@@ -259,6 +264,7 @@ class SDVideoPipeline(SDImagePipeline):
             if progress_bar_st is not None:
                 progress_bar_st.progress(progress_id / len(self.scheduler.timesteps))
         
+        self.load_models_to_device(["vae_decoder"])
         # Decode image
         output_frames = self.decode_video(latents, **tiler_kwargs)
 
@@ -266,4 +272,5 @@ class SDVideoPipeline(SDImagePipeline):
         if smoother is not None and (num_inference_steps in smoother_progress_ids or -1 in smoother_progress_ids):
             output_frames = smoother(output_frames, original_frames=input_frames)
 
+        self.load_models_to_device([])
         return output_frames

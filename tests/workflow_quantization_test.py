@@ -54,18 +54,13 @@ class QuantizationOptionTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             fp8_storage_dtype("int8", "bf16")
 
-    def test_missing_torchao_has_actionable_error(self):
+    @unittest.skipUnless(HAS_TORCH, "PyTorch required")
+    def test_int8_does_not_require_torchao(self):
+        import torch
         with patch.dict(sys.modules, {"torchao": None, "torchao.quantization": None}):
-            with self.assertRaisesRegex(RuntimeError, "optional torchao.*compatible"):
-                int8_quantizer("int8")
-
-    def test_legacy_torchao_recipe_is_supported(self):
-        ao = types.ModuleType("torchao.quantization")
-        ao.int8_weight_only = Mock(return_value="legacy-int8-recipe")
-        ao.quantize_ = Mock()
-        with patch.dict(sys.modules, {"torchao.quantization": ao}):
-            self.assertTrue(callable(int8_quantizer("int8")))
-        ao.int8_weight_only.assert_called_once_with()
+            model = torch.nn.Sequential(torch.nn.Linear(64, 64))
+            int8_quantizer("int8")(model)
+            self.assertEqual(model[0]._int8_weight.dtype, torch.int8)
 
     def test_none_preserves_legacy_loader_call(self):
         manager = Mock()
@@ -84,7 +79,7 @@ class QuantizationOptionTests(unittest.TestCase):
         with patch.dict(sys.modules, {"torchao": None, "torch": None}):
             self.assertEqual(FP8Quantization(config("Wan Model")), "none")
             self.assertEqual(Int8Quantization(config("Trellis Model")), "none")
-        self.assertEqual(config._config["Wan Model"]["quantization"]["args"].options, ("none", "fp8"))
+        self.assertEqual(config._config["Wan Model"]["quantization"]["args"].options, ("none", "fp8", "int8"))
         self.assertEqual(config._config["Trellis Model"]["quantization"]["args"].options, ("none", "int8"))
         config.set_prepared(False)
         config("Wan Model")["quantization"] = "fp8"
@@ -169,6 +164,7 @@ class QuantizedAdapterTests(unittest.TestCase):
         import torch
         self.torch = torch
         self.manager = Mock()
+        self.manager.model = []
         self.diffsynth = types.ModuleType("diffsynth")
         self.diffsynth.ModelManager = Mock(return_value=self.manager)
         self.diffsynth.download_models = Mock()
@@ -317,8 +313,7 @@ class QuantizedAdapterTests(unittest.TestCase):
         pipeline.cuda.assert_called_once()
 
 
-@unittest.skipUnless(HAS_TORCH and importlib.util.find_spec("torchao") is not None,
-                     "Optional torchao required for numerical INT8 regression")
+@unittest.skipUnless(HAS_TORCH, "PyTorch required for numerical INT8 regression")
 class Int8NumericalTests(unittest.TestCase):
     def test_weight_storage_shrinks_and_custom_linear_forward_survives(self):
         import torch
@@ -344,18 +339,16 @@ class Int8NumericalTests(unittest.TestCase):
                 torch.manual_seed(42)
                 model = torch.nn.Sequential(module.SparseLinear(128, 128)).to(dtype=dtype).eval()
                 x = SparseInput(torch.randn(2, 128, dtype=dtype))
-                with torch.inference_mode():
+                with torch.backends.mkldnn.flags(enabled=False), torch.inference_mode():
                     expected = model(x).feats
                     int8_quantizer("int8")(model)
                     actual = model(x).feats
                 self.assertIsInstance(model[0], module.SparseLinear)
                 weight = model[0].weight
-                layout = weight.tensor_impl if hasattr(weight, "tensor_impl") else weight.layout_tensor
-                tensors = layout.get_plain()
-                packed = tensors[0]
+                packed = model[0]._int8_weight
                 self.assertEqual(packed.dtype, torch.int8)
                 self.assertEqual(weight.dtype, dtype)
-                storage_bytes = sum(t.numel() * t.element_size() for t in tensors if torch.is_tensor(t))
+                storage_bytes = sum(t.numel() * t.element_size() for t in model.state_dict().values())
                 self.assertLess(storage_bytes,
                                 128 * 128 * torch.tensor([], dtype=dtype).element_size())
                 torch.testing.assert_close(actual, expected, atol=0.03, rtol=0.08)

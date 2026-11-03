@@ -47,6 +47,8 @@ class Pipeline:
 
     @property
     def device(self) -> torch.device:
+        if hasattr(self, "_execution_device"):
+            return self._execution_device
         for model in self.models.values():
             if hasattr(model, 'device'):
                 return model.device
