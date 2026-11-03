@@ -1,3 +1,4 @@
+from backend.lora import validate_lora, apply_manager_lora
 from ssui.model_memory import ModelMemoryOptions, configure_diffsynth_manager, run_pipeline
 from backend.quantization.workflow import int8_quantizer, quantize_manager_components
 from ._runtime import wan_runtime
@@ -16,7 +17,8 @@ class CogVideoModel:
         self.model_manager = model_manager
 
     @staticmethod
-    def load(quantization: str = "none", *, cpu_offload: bool | None = None) -> "CogVideoModel":
+    def load(quantization: str = "none", lora_path: str = "", lora_weight: float = 1.0, *, cpu_offload: bool | None = None) -> "CogVideoModel":
+        validate_lora(lora_path, lora_weight)
         quantize = int8_quantizer(quantization)
         runtime = wan_runtime()
         device = runtime["device"]
@@ -33,6 +35,7 @@ class CogVideoModel:
                 "models/CogVideo/CogVideoX-5b/vae/diffusion_pytorch_model.safetensors",
             ],
         )
+        apply_manager_lora(model_manager, lora_path, lora_weight)
         if quantization != "none":
             quantize_manager_components(model_manager, quantize, ("cog_dit", "flux_text_encoder_2"))
         configure_diffsynth_manager(model_manager, options, str(device), quantize=False)

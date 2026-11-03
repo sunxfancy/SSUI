@@ -1,3 +1,4 @@
+from backend.lora import validate_lora, apply_dit_lora
 from ssui.model_memory import ModelMemoryOptions, run_pipeline
 from ._runtime import wan_runtime
 import os
@@ -43,7 +44,8 @@ class Wan22TI2VModel:
         self.pipe = pipe
 
     @staticmethod
-    def load(quantization: str = "none", *, cpu_offload: bool = True) -> "Wan22TI2VModel":
+    def load(quantization: str = "none", lora_path: str = "", lora_weight: float = 1.0, *, cpu_offload: bool = True) -> "Wan22TI2VModel":
+        validate_lora(lora_path, lora_weight)
         options = ModelMemoryOptions(quantization, cpu_offload, allow_fp8=True)
         storage_mode = "none" if quantization == "int8" else quantization
         runtime = wan_runtime()
@@ -77,6 +79,7 @@ class Wan22TI2VModel:
                 local_model_path=LOCAL_MODEL_PATH,
             ),
         )
+        apply_dit_lora(pipe.dit, lora_path, lora_weight)
         if quantization == "int8":
             for name, component in pipe.named_children():
                 if name in ("dit", "dit2", "text_encoder", "image_encoder"):
@@ -98,7 +101,16 @@ class Wan22T2VA14BModel:
         self.pipe = pipe
 
     @staticmethod
-    def load(quantization: str = "none", *, cpu_offload: bool = True) -> "Wan22T2VA14BModel":
+    def load(
+        quantization: str = "none",
+        high_noise_lora_path: str = "",
+        high_noise_lora_weight: float = 1.0,
+        low_noise_lora_path: str = "",
+        low_noise_lora_weight: float = 1.0,
+        *, cpu_offload: bool = True,
+    ) -> "Wan22T2VA14BModel":
+        validate_lora(high_noise_lora_path, high_noise_lora_weight)
+        validate_lora(low_noise_lora_path, low_noise_lora_weight)
         options = ModelMemoryOptions(quantization, cpu_offload, allow_fp8=True)
         storage_mode = "none" if quantization == "int8" else quantization
         runtime = wan_runtime()
@@ -139,6 +151,8 @@ class Wan22T2VA14BModel:
                 local_model_path=LOCAL_MODEL_PATH,
             ),
         )
+        apply_dit_lora(pipe.dit, high_noise_lora_path, high_noise_lora_weight)
+        apply_dit_lora(pipe.dit2, low_noise_lora_path, low_noise_lora_weight)
         if quantization == "int8":
             for name, component in pipe.named_children():
                 if name in ("dit", "dit2", "text_encoder", "image_encoder"):
@@ -160,7 +174,16 @@ class Wan22I2VA14BModel:
         self.pipe = pipe
 
     @staticmethod
-    def load(quantization: str = "none", *, cpu_offload: bool = True) -> "Wan22I2VA14BModel":
+    def load(
+        quantization: str = "none",
+        high_noise_lora_path: str = "",
+        high_noise_lora_weight: float = 1.0,
+        low_noise_lora_path: str = "",
+        low_noise_lora_weight: float = 1.0,
+        *, cpu_offload: bool = True,
+    ) -> "Wan22I2VA14BModel":
+        validate_lora(high_noise_lora_path, high_noise_lora_weight)
+        validate_lora(low_noise_lora_path, low_noise_lora_weight)
         options = ModelMemoryOptions(quantization, cpu_offload, allow_fp8=True)
         storage_mode = "none" if quantization == "int8" else quantization
         runtime = wan_runtime()
@@ -201,6 +224,8 @@ class Wan22I2VA14BModel:
                 local_model_path=LOCAL_MODEL_PATH,
             ),
         )
+        apply_dit_lora(pipe.dit, high_noise_lora_path, high_noise_lora_weight)
+        apply_dit_lora(pipe.dit2, low_noise_lora_path, low_noise_lora_weight)
         if quantization == "int8":
             for name, component in pipe.named_children():
                 if name in ("dit", "dit2", "text_encoder", "image_encoder"):

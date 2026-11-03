@@ -1,3 +1,4 @@
+from backend.lora import validate_lora, apply_manager_lora
 from ssui.model_memory import ModelMemoryOptions, configure_diffsynth_manager, run_pipeline
 import torch
 from backend.quantization.workflow import fp8_storage_dtype
@@ -22,7 +23,8 @@ class HunyuanVideoModel:
         self.model_manager = model_manager
 
     @staticmethod
-    def load(quantization: str = "none", *, cpu_offload: bool = True) -> "HunyuanVideoModel":
+    def load(quantization: str = "none", lora_path: str = "", lora_weight: float = 1.0, *, cpu_offload: bool = True) -> "HunyuanVideoModel":
+        validate_lora(lora_path, lora_weight)
         options = ModelMemoryOptions(quantization, cpu_offload, allow_fp8=True)
         runtime = wan_runtime()
         storage_dtype = fp8_storage_dtype("none" if quantization == "int8" else quantization, runtime["torch_dtype"], device=runtime["device"])
@@ -46,6 +48,7 @@ class HunyuanVideoModel:
             torch_dtype=torch.float16 if runtime["device"].startswith("cuda") else runtime["torch_dtype"],
             device="cpu",
         )
+        apply_manager_lora(model_manager, lora_path, lora_weight)
         configure_diffsynth_manager(model_manager, options, runtime["device"])
         return HunyuanVideoModel(model_manager)
 
@@ -56,17 +59,21 @@ class HunyuanVideoLoraModel:
         base_model: HunyuanVideoModel,
         model_id: str = "AI-ModelScope/walking_animation_hunyuan_video",
         origin_file_path: str = "kxsr_walking_anim_v1-5.safetensors",
+        lora_path: str = "",
+        lora_weight: float = 1.0,
     ):
-        # We support LoRA inference. You can use the following code to load your LoRA model.
-        # Example LoRA: https://civitai.com/models/1032126/walking-animation-hunyuan-video
-        download_customized_models(
-            model_id=model_id,
-            origin_file_path=origin_file_path,
-            local_dir="models/lora",
-        )[0]
-        base_model.model_manager.load_lora(
-            "models/lora/" + origin_file_path, lora_alpha=1.0
-        )
+        self.model_manager = base_model.model_manager
+        if not lora_path and lora_weight != 0:
+            import math
+            if not math.isfinite(lora_weight):
+                raise ValueError("LoRA weight must be finite")
+            download_customized_models(
+                model_id=model_id, origin_file_path=origin_file_path,
+                local_dir="models/lora",
+            )
+            lora_path = "models/lora/" + origin_file_path
+        apply_manager_lora(self.model_manager, lora_path, lora_weight)
+
 
 
 class HunyuanImageToVideoModel:
@@ -76,7 +83,8 @@ class HunyuanImageToVideoModel:
         self.model_manager = model_manager
 
     @staticmethod
-    def load(quantization: str = "none", *, cpu_offload: bool = True) -> "HunyuanImageToVideoModel":
+    def load(quantization: str = "none", lora_path: str = "", lora_weight: float = 1.0, *, cpu_offload: bool = True) -> "HunyuanImageToVideoModel":
+        validate_lora(lora_path, lora_weight)
         options = ModelMemoryOptions(quantization, cpu_offload, allow_fp8=True)
         runtime = wan_runtime()
         storage_dtype = fp8_storage_dtype("none" if quantization == "int8" else quantization, runtime["torch_dtype"], device=runtime["device"])
@@ -97,6 +105,7 @@ class HunyuanImageToVideoModel:
             torch_dtype=torch.float16 if runtime["device"].startswith("cuda") else runtime["torch_dtype"],
             device="cpu",
         )
+        apply_manager_lora(model_manager, lora_path, lora_weight)
         configure_diffsynth_manager(model_manager, options, runtime["device"])
         return HunyuanImageToVideoModel(model_manager)
 

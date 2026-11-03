@@ -1,4 +1,5 @@
 """Local Wan 2.1 T2V-1.3B weights with file-backed CPU loading."""
+from backend.lora import validate_lora, apply_manager_lora
 import os
 from pathlib import Path
 import torch
@@ -17,7 +18,8 @@ from ssui.controller import Random, Slider, Switch
 
 class Wan21T2V13BModel(Wan2T2VModel):
     @staticmethod
-    def load_local(model_dir=None):
+    def load_local(model_dir: str = "", lora_path: str = "", lora_weight: float = 1.0):
+        validate_lora(lora_path, lora_weight)
         root = Path(model_dir or os.environ.get("SSUI_WAN21_MODEL_DIR", "models/wan-mac"))
         entries = (
             ("diffusion_pytorch_model.safetensors", "wan_video_dit", WanModel),
@@ -42,6 +44,7 @@ class Wan21T2V13BModel(Wan2T2VModel):
             manager.load_model_from_single_file(path, state_dict=weights, model_names=[name],
                                                 model_classes=[cls], model_resource="civitai")
             del weights
+        apply_manager_lora(manager, lora_path, lora_weight)
         return Wan21T2V13BModel(manager)
 
 

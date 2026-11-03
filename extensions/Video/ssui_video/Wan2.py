@@ -1,3 +1,4 @@
+from backend.lora import validate_lora, apply_manager_lora
 from ssui.model_memory import ModelMemoryOptions, configure_diffsynth_manager, run_pipeline
 from ._runtime import wan_runtime
 import torch
@@ -29,7 +30,8 @@ class Wan2T2VModel:
         self.model_manager = model_manager
 
     @staticmethod
-    def load(quantization: str = "none", *, cpu_offload: bool = True) -> "Wan2T2VModel":
+    def load(quantization: str = "none", lora_path: str = "", lora_weight: float = 1.0, *, cpu_offload: bool = True) -> "Wan2T2VModel":
+        validate_lora(lora_path, lora_weight)
         options = ModelMemoryOptions(quantization, cpu_offload, allow_fp8=True)
         storage_mode = "none" if quantization == "int8" else quantization
         runtime = wan_runtime()
@@ -48,6 +50,7 @@ class Wan2T2VModel:
             torch_dtype=runtime["torch_dtype"],
             device="cpu",
         )
+        apply_manager_lora(model_manager, lora_path, lora_weight)
         configure_diffsynth_manager(model_manager, options, runtime["device"])
         return Wan2T2VModel(model_manager)
 
@@ -59,7 +62,8 @@ class Wan2I2VModel:
         self.model_manager = model_manager
 
     @staticmethod
-    def load(quantization: str = "none", *, cpu_offload: bool = True) -> "Wan2I2VModel":
+    def load(quantization: str = "none", lora_path: str = "", lora_weight: float = 1.0, *, cpu_offload: bool = True) -> "Wan2I2VModel":
+        validate_lora(lora_path, lora_weight)
         options = ModelMemoryOptions(quantization, cpu_offload, allow_fp8=True)
         storage_mode = "none" if quantization == "int8" else quantization
         runtime = wan_runtime()
@@ -80,6 +84,7 @@ class Wan2I2VModel:
             torch_dtype=runtime["torch_dtype"],
             device="cpu",
         )
+        apply_manager_lora(model_manager, lora_path, lora_weight)
         configure_diffsynth_manager(model_manager, options, runtime["device"])
         return Wan2I2VModel(model_manager)
 

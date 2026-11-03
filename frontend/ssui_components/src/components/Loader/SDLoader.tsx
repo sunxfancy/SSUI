@@ -1,3 +1,4 @@
+import { LoraFields, loraParams } from './LoraFields';
 import React from 'react';
 import { PersistentComponent } from '../../UIState';
 
@@ -220,10 +221,11 @@ class FluxModelLoader extends PersistentComponent<{}, any> {
 }
 
 class Flux2KleinModelLoader extends PersistentComponent<{}, any> {
-    protected persistedFields = ['modelPath', 'cpuOffload', 'dtype'];
+    protected persistedFields = ['modelPath', 'cpuOffload', 'dtype', 'loraPath', 'loraWeight'];
     state = {
         modelPath: '',
         cpuOffload: true,
+        loraPath: '', loraWeight: 1,
         dtype: 'bfloat16',
         models: [] as SDModel[],
         loading: false,
@@ -261,7 +263,8 @@ class Flux2KleinModelLoader extends PersistentComponent<{}, any> {
             'params': {
                 'model_path': this.state.modelPath,
                 'cpu_offload': this.state.cpuOffload,
-                'dtype': this.state.dtype
+                'dtype': this.state.dtype,
+                ...loraParams(this.state.loraPath, this.state.loraWeight)
             }
         };
     }
@@ -282,6 +285,8 @@ class Flux2KleinModelLoader extends PersistentComponent<{}, any> {
                         <option key={index} value={model.path}>{model.name}</option>
                     ))}
                 </select>
+                <LoraFields path={this.state.loraPath} weight={this.state.loraWeight}
+                    onPath={loraPath => this.setState({ loraPath })} onWeight={loraWeight => this.setState({ loraWeight })} />
                 <label style={{ display: 'block', marginBottom: '8px' }}>
                     <input
                         type="checkbox"

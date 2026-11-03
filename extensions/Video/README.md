@@ -354,6 +354,46 @@ VAE 解码及输出帧仍受模型、分辨率、帧数影响。量化也可能�
 
 FP8 存储在 MPS 上会提前拒绝；Trellis 的独立 MPS runner 目前只支持 `none`。现有 `img2mesh(model, image)` 接口保持不变。
 
+
+## 可选 LoRA 推理
+
+模型面板提供本地 LoRA 权重文件路径和强度；路径留空或强度为 0 时禁用，默认强度为 1。
+支持 Wan 2.1（Fun、T2V、I2V、本地 1.3B 和常驻版）、Wan 2.2 TI2V-5B、
+CogVideoX（DiffSynth 5B 和 Diffusers 2B）、AnimateDiff 的 SD1 基础模型、
+HunyuanVideo 文生与图生视频，以及本扩展内的 Qwen-Image / Qwen-Image-Edit-2509。
+字段会随模型面板状态保存。
+
+Wan 2.2 T2V-A14B / I2V-A14B 使用双专家，面板分别填写高噪声和低噪声 LoRA。
+Python 对应 `high_noise_lora_path` / `high_noise_lora_weight` 和
+`low_noise_lora_path` / `low_noise_lora_weight`，不会自动把单个文件应用到两个专家。
+其他入口使用 `lora_path` / `lora_weight`：
+
+```python
+from ssui_video.Wan22 import Wan22TI2VModel, Wan22T2VA14BModel
+
+model = Wan22TI2VModel.load(lora_path="D:/Models/lora/wan5b.safetensors", lora_weight=0.8)
+moe = Wan22T2VA14BModel.load(
+    high_noise_lora_path="D:/Models/lora/high.safetensors", high_noise_lora_weight=0.8,
+    low_noise_lora_path="D:/Models/lora/low.safetensors", low_noise_lora_weight=0.6,
+)
+```
+
+LoRA 必须匹配基础模型的版本、架构和目标层；图像、视频、文本适配器不能互换。
+Wan / Qwen-Image 的通用加载器接受 DiffSynth / PEFT 的 `lora_A` / `lora_B` 权重键；
+旧版 ModelManager 另支持底层已实现的 Civitai 转换。未匹配的适配器会报错。
+AnimateDiff 这里支持基础 SD1 风格/角色适配器，不包含 Motion LoRA。
+每个入口接收单个文件，双专家各接收一个，不提供训练或任意格式转换。
+
+适配器在 INT8 量化、显存卸载包装之前应用；FP8 存储合并逐层使用浮点算术后恢复存储精度，
+因此会有 FP8 舍入。加载后修改路径或强度需重新加载模型，不能在同一个实例上撤销已合并的权重。
+新式 Wan / Qwen-Image 会先检查目标层与形状。Hunyuan 的历史 `HunyuanVideoLoraModel`
+仍会原地修改传入模型；建议使用新的 `HunyuanVideoModel.load(lora_path=..., lora_weight=...)`。
+
+验证：`yarn test_on lora_adapter_test` 使用真实小型 safetensors 和 PyTorch 参数验证权重变化、
+负强度、FP8 存储、错误处理，并通过桩验证节点路由、双专家与缓存隔离。
+`yarn test_on diffusers_lora_test` 另外用随机微型 FLUX.2 Transformer 验证真实 Diffusers / PEFT
+文件加载和正负强度的层输出变化。这些检查不代替各预训练模型搭配真实适配器的视频生成验证。
+
 ## Apple Silicon 独立视频运行时（2026-10-28）
 
 主环境继续使用 Torch 2.4.1；LTX/H3 使用隔离环境，固定官方源码版本，避免污染已有视频、3D 和动作模型依赖：

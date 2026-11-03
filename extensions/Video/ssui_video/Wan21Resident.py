@@ -1,4 +1,5 @@
 """Local Wan 2.1 T2V-1.3B with all weights resident on a 24 GB GPU."""
+from backend.lora import validate_lora, apply_manager_lora
 from pathlib import Path
 import torch
 from ssui.annotation import param
@@ -12,7 +13,8 @@ class Wan21Model:
         self.pipeline = pipeline
 
     @staticmethod
-    def load(model_path: str) -> 'Wan21Model':
+    def load(model_path: str, lora_path: str = "", lora_weight: float = 1.0) -> 'Wan21Model':
+        validate_lora(lora_path, lora_weight)
         from diffsynth import ModelManager, WanVideoPipeline
         root = Path(model_path)
         files = [root / 'diffusion_pytorch_model.safetensors',
@@ -23,6 +25,7 @@ class Wan21Model:
         manager.load_models([str(path) for path in files])
         # Keeping these models resident avoids copying the 11 GB UMT5 model
         # back to a small host during transitions between pipeline stages.
+        apply_manager_lora(manager, lora_path, lora_weight)
         return Wan21Model(WanVideoPipeline.from_model_manager(manager))
 
 

@@ -36,9 +36,8 @@ class LoRAFromCivitai:
                 continue
             if not key.startswith(lora_prefix):
                 continue
-            computation_device = "cuda" if torch.cuda.is_available() else "cpu"
-            weight_up = state_dict[key].to(device=computation_device, dtype=torch.float16)
-            weight_down = state_dict[key.replace(".lora_up", ".lora_down")].to(device=computation_device, dtype=torch.float16)
+            weight_up = state_dict[key].to(device="cpu", dtype=torch.float32)
+            weight_down = state_dict[key.replace(".lora_up", ".lora_down")].to(device="cpu", dtype=torch.float32)
             if len(weight_up.shape) == 4:
                 weight_up = weight_up.squeeze(3).squeeze(2).to(torch.float32)
                 weight_down = weight_down.squeeze(3).squeeze(2).to(torch.float32)
@@ -52,7 +51,7 @@ class LoRAFromCivitai:
         return state_dict_
     
 
-    def convert_state_dict_AB(self, state_dict, lora_prefix="", alpha=1.0, device="cuda", torch_dtype=torch.float16):
+    def convert_state_dict_AB(self, state_dict, lora_prefix="", alpha=1.0, device="cpu", torch_dtype=torch.float32):
         state_dict_ = {}
         if device == "cuda" and not torch.cuda.is_available():
             device = "cpu"
