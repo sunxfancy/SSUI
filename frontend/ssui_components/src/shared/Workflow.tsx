@@ -1,4 +1,5 @@
 import { UIStateContext } from '../UIState';
+import { connectAgent, agentObject, agentString, agentNumber } from '../AgentClient';
 import { captureWorkflow, restoreWorkflow, WorkflowState } from './WorkflowState';
 import React from 'react';
 import { createRoot } from 'react-dom/client';
@@ -614,8 +615,68 @@ const createEditor = (path: string, stateContext: React.ContextType<typeof UISta
     toolbar.appendChild(clearButton);
     container.appendChild(toolbar);
 
+    const nodeId = { id: agentString };
+    const positionSchema = agentObject({ x: agentNumber, y: agentNumber });
+    const getNode = (id: string) => { const node = editor.getNode(id); if (!node) throw new Error('Node not found'); return node; };
+    const stopAgent = connectAgent('Workflow: ' + path, [
+        { name: 'graph.snapshot', description: 'Read live graph nodes/ports/definitions/connections, positions and reroute pins.', readOnly: true, inputSchema: agentObject(), run: () => ({ ...captureWorkflow(editor, area, reroute),
+            sockets: editor.getNodes().map(node => ({ id: node.id, inputs: Object.keys(node.inputs), outputs: Object.keys(node.outputs) })), reroutePins: reroute.pins.getPins() }) },
+        { name: 'graph.add_node', description: 'Add a palette node or a typed Python operator.', inputSchema: agentObject({
+            kind: { enum: ['input', 'output', 'operator', 'definition', 'call'] }, position: positionSchema,
+            definitionId: agentString,
+            operator: agentObject({ module: agentString, name: agentString, callable: agentString, params: { type: 'object', additionalProperties: { type: 'string' } }, returns: { type: 'array', items: { type: 'string' } }, source: { type: 'string' } }, ['module', 'name', 'callable', 'params', 'returns']),
+        }, ['kind', 'position']), run: async ({ kind, position, operator, definitionId }) => {
+            const definition = definitionId ? getNode(definitionId) : undefined;
+            if (definitionId && !(definition instanceof FunctionDefinitionNode)) throw new Error('Invalid function definition');
+            const node = kind === 'call' && definition instanceof FunctionDefinitionNode ? new FunctionCallNode(area, definition) : operator ? createPythonOperator(operator) : createPaletteNode(kind);
+            if (!node) throw new Error('Create a function definition before its call node');
+            await addNode(node, position); syncDefinitions(); saveState(); return { id: node.id };
+        } },
+        { name: 'graph.update_node', description: 'Move/rename/select a node; resize a definition group.', inputSchema: agentObject({ ...nodeId,
+            position: positionSchema, label: agentString, selected: { type: 'boolean' }, width: { type: 'number', minimum: 100 }, height: { type: 'number', minimum: 100 } }, ['id']),
+            run: async ({ id, position, label, selected, width, height }) => { const node = getNode(id);
+                if (position) await area.translate(id, position); if (label) node.label = label; if (selected !== undefined) node.selected = selected;
+                if (node instanceof FunctionDefinitionNode) { if (width) node.boxWidth = width; if (height) node.boxHeight = height; }
+                await area.update('node', id); syncDefinitions(); saveState(); return { id };
+            } },
+        { name: 'graph.remove_node', description: 'Delete a graph node and attached connections.', inputSchema: agentObject(nodeId), run: async ({ id }) => {
+            getNode(id); for (const edge of editor.getConnections().filter(edge => edge.source === id || edge.target === id)) await editor.removeConnection(edge.id);
+            await editor.removeNode(id); syncDefinitions(); saveState();
+        } },
+        { name: 'graph.connect', description: 'Connect live node ports by keys from graph.snapshot.', inputSchema: agentObject({ source: agentString, target: agentString, sourceOutput: agentString, targetInput: agentString }),
+            run: async ({ source, target, sourceOutput, targetInput }) => { const a = getNode(source), b = getNode(target);
+                if (!a.outputs[sourceOutput] || !b.inputs[targetInput]) throw new Error('Port not found');
+                const edge = new Connection(a, sourceOutput, b, targetInput); await editor.addConnection(edge); saveState(); return { id: edge.id };
+            } },
+        { name: 'graph.disconnect', description: 'Remove a graph connection.', inputSchema: agentObject(nodeId), run: async ({ id }) => { if (!editor.getConnection(id)) throw new Error('Connection not found'); await editor.removeConnection(id); saveState(); } },
+        { name: 'graph.port', description: 'Add/remove/rename/retype input or output node ports.', inputSchema: agentObject({ ...nodeId,
+            action: { enum: ['add', 'remove', 'rename', 'retype'] }, key: agentString, value: agentString }, ['id', 'action']),
+            run: ({ id, action, key, value }) => { const node = getNode(id);
+                if (!(node instanceof InputNode || node instanceof OutputNode)) throw new Error('Expected input/output node');
+                if (action !== 'add' && !key) throw new Error('Port key required');
+                if (['rename', 'retype'].includes(action) && !value) throw new Error('Value required');
+                if (node instanceof InputNode) {
+                    if (action === 'add') node.addParameter(); else if (action === 'remove') node.removeParameter(key); else if (action === 'rename') node.renameParam(key, value); else node.retypeParam(key, value);
+                } else {
+                    if (action === 'add') node.addReturn(); else if (action === 'remove') node.removeReturn(key); else if (action === 'rename') node.renameReturn(key, value); else node.retypeReturn(key, value);
+                } syncDefinitions(); saveState();
+            } },
+        { name: 'graph.fit', description: 'Fit graph nodes in the visible editor.', inputSchema: agentObject(), run: () => AreaExtensions.zoomAt(area, editor.getNodes()) },
+        { name: 'graph.reroute', description: 'Add/move/remove connection reroute pins. Positions are absolute graph coordinates.', inputSchema: agentObject({ action: { enum: ['add', 'move', 'remove'] }, connectionId: agentString, pinId: agentString, position: positionSchema }, ['action']),
+            run: async ({ action, connectionId, pinId, position }) => {
+                if (action === 'add') { if (!position || !editor.getConnection(connectionId)) throw new Error('Connection and position required'); reroute.add(connectionId, position); }
+                else { const pin = reroute.pins.getPins().find(pin => pin.id === pinId); if (!pin) throw new Error('Pin not found');
+                    if (action === 'remove') await reroute.remove(pinId); else { if (!position) throw new Error('Position required'); await reroute.translate(pinId, position.x - pin.position.x, position.y - pin.position.y); } }
+                saveState();
+            } },
+        { name: 'graph.group_selected', description: 'Create a function definition around selected nodes.', inputSchema: agentObject(), run: async () => { await createDefinition(); saveState(); } },
+        { name: 'graph.clear', description: 'Clear all nodes and connections.', inputSchema: agentObject(), run: async () => { await editor.clear(); saveState(); } },
+        { name: 'graph.save', description: 'Flush current graph to project UI state storage.', inputSchema: agentObject(), run: async () => { saveState(); await stateContext?.store.flush(); return captureWorkflow(editor, area, reroute); } },
+    ]);
+
     return {
         destroy: () => {
+            stopAgent();
             clearTimeout(saveTimer);
             saveState();
             window.removeEventListener('pagehide', flushState);

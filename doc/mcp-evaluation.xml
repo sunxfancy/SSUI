@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Read-only source/catalog evaluations. Use ssui_project_catalog, inspect tool schemas,
+     and paginate where needed. Runtime/model availability must not be inferred. -->
+<evaluation>
+  <qa_pair><question>Find Image SDK entries for SD1 loading and denoising. Return the fully qualified model load callable, rather than a sampler or LoRA loader.</question><answer>ssui_image.SD1.SD1Model.load</answer></qa_pair>
+  <qa_pair><question>Find Flux SDK latent conversion and decoding entries. Which public callable constructs a Flux latent from an image?</question><answer>ssui_image.Flux.FluxLatent.from_image</answer></qa_pair>
+  <qa_pair><question>Find SD1 single-LoRA and multi-LoRA loading entries. Which fully qualified callable loads one LoRA?</question><answer>ssui_image.SD1.SD1Lora.load_one</answer></qa_pair>
+  <qa_pair><question>Inspect Motion BVH conversion and export entries. What declared return type is shared by to_bvh and export_bvh?</question><answer>BVHExport</answer></qa_pair>
+  <qa_pair><question>Find the Voice extension CosyVoice generation and model APIs. Return the model-loading callable rather than getModel or GenVoice.</question><answer>ssui_voice.Cosyvoice.CosyVoiceModel.load</answer></qa_pair>
+  <qa_pair><question>Compare Flux ControlNet loading with API-field conversion. Return the fully qualified conversion callable.</question><answer>ssui_image.Flux.FluxControlNet.to_api_field</answer></qa_pair>
+  <qa_pair><question>Inspect the available model scan and download API schemas. Which focused tool should be used to obtain their WebSocket finish result instead of treating the HTTP start response as completion?</question><answer>ssui_run_callback_api</answer></qa_pair>
+  <qa_pair><question>Inspect read-text and save-text tool input schemas. Which required save argument connects the save to the disk snapshot and prevents overwriting concurrent edits?</question><answer>expected_version</answer></qa_pair>
+  <qa_pair><question>Inspect UI target discovery and call tool schemas. Which argument identifies a specific live editor instance, independent of the command name?</question><answer>target_id</answer></qa_pair>
+  <qa_pair><question>Inspect project catalog and capabilities outputs. Which field tells whether API tools were discovered from the running backend or a bundled fallback?</question><answer>schema_source</answer></qa_pair>
+</evaluation>

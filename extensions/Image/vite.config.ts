@@ -33,6 +33,7 @@ export default defineConfig(async () => ({
       '/api': {
         target: 'http://localhost:7422',
         changeOrigin: true,
+        ws: true,
       },
       '/config': {
         target: 'http://localhost:7422',

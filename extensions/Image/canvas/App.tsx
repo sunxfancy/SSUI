@@ -14,6 +14,7 @@ import GpuCanvas from './GpuCanvas';
 import { hitStroke, smoothPoints, strokePoint, paintLayers } from './drawing';
 import { BRUSHES, BrushStyle } from './brushes';
 import { vectorize, strokeSamples, moveNode } from './bezier';
+import { connectAgent, agentDOMCommands, agentObject, agentString, agentNumber, AgentCommand } from 'ssui_components';
 
 const GRID_SIZE = 64;
 import { CanvasSettings, paddedBounds, alphaBounds } from './CanvasSize';
@@ -78,6 +79,7 @@ class AIDrawingCanvas extends React.Component<{path: string}, AIDrawingCanvasSta
     private undoLayers: Layer[][] = [];
     private redoLayers: Layer[][] = [];
     private fileInput = React.createRef<HTMLInputElement>();
+    private stopAgent?: () => void;
 
     constructor(props: {path: string}) {
         super(props);
@@ -122,6 +124,7 @@ class AIDrawingCanvas extends React.Component<{path: string}, AIDrawingCanvasSta
     }
 
     componentDidMount() {
+        this.stopAgent = connectAgent('Canvas: ' + this.props.path, [...agentDOMCommands(), ...this.agentCommands()]);
         this.restoreCanvas().then(() => window.parent.postMessage({ type: 'ssui-canvas-ready' }, window.location.origin));
         window.addEventListener('message', this.inputMessage);
         this.updateContainerSize();
@@ -130,6 +133,7 @@ class AIDrawingCanvas extends React.Component<{path: string}, AIDrawingCanvasSta
     }
 
     componentWillUnmount() {
+        this.stopAgent?.();
         this.restoreGeneration++;
         this.saveCanvas();
         window.removeEventListener('message', this.inputMessage);
@@ -276,14 +280,80 @@ class AIDrawingCanvas extends React.Component<{path: string}, AIDrawingCanvasSta
             await this.loadImage(doc.image, this.readSettings(doc.settings));
         } catch (error) { window.alert(String(error)); }
     };
-    private saveDocument = async () => {
+    private saveDocument = async (silent = false) => {
         try {
             const response = await fetch('/files/upload_json', { method: 'POST', headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ path: this.props.path, content: JSON.stringify({ version: 1, ...this.exportImage() }) }) });
             const result = await response.json();
             if (!response.ok || !result.success) throw new Error(result.error || '保存失败');
-            window.alert('画布已保存');
-        } catch (error) { window.alert(String(error)); }
+            if (!silent) window.alert('画布已保存');
+            return result;
+        } catch (error) { if (silent) throw error; window.alert(String(error)); }
+    };
+
+    private agentCommands = (): AgentCommand[] => {
+        const layerArgs = { layerId: agentString };
+        const objectArgs = { ...layerArgs, objectId: agentString };
+        const point = agentObject({ x: agentNumber, y: agentNumber, pressure: { type: 'number', minimum: 0, maximum: 1 } });
+        const objectChanges = { x: agentNumber, y: agentNumber, width: { type: 'number', exclusiveMinimum: 0 },
+            height: { type: 'number', exclusiveMinimum: 0 }, rotation: agentNumber, name: { type: 'string' },
+            points: { type: 'array', minItems: 1, maxItems: 100000, items: point }, stroke: agentString,
+            strokeWidth: { type: 'number', exclusiveMinimum: 0 }, feather: { type: 'number', minimum: 0 },
+            strokeStyle: { enum: BRUSHES.map(brush => brush.id) },
+            compositeOperation: { enum: ['source-over', 'destination-out'] },
+            curve: agentObject({ nodes: { type: 'array', minItems: 1, items: { type: 'array', minItems: 7, maxItems: 7, items: agentNumber } },
+                pressure: { type: 'array', items: { type: 'array', minItems: 2, maxItems: 2, items: agentNumber } }, source_count: { type: 'integer', minimum: 1 }, tolerance: { type: 'number', minimum: 0 } }) };
+        const requireLayer = (id: string, writable = false) => {
+            if (this.state.restoring || this.state.restoreError) throw new Error('Canvas not ready');
+            const layer = this.state.layers.find(layer => layer.id === id);
+            if (!layer) throw new Error('Layer not found');
+            if (writable && layer.locked) throw new Error('Layer is locked');
+            return layer;
+        };
+        const mutateObject = (layerId: string, objectId: string, changes: any) => {
+            const layer = requireLayer(layerId, true);
+            if (!layer.objects.some(object => object.id === objectId)) throw new Error('Object not found');
+            this.checkpoint();
+            this.setState(state => ({ layers: state.layers.map(item => item.id === layerId ? { ...item,
+                objects: item.objects.map(object => object.id === objectId ? { ...object, ...changes } : object) } : item) }));
+        };
+        return [
+            { name: 'canvas.snapshot', description: 'Get editable layers, objects, strokes, curves, settings and selection.', readOnly: true,
+                inputSchema: agentObject(), run: () => ({ ...Object.fromEntries(this.durableFields.map(key => [key, this.state[key]])),
+                    layers: this.state.layers.map(layer => ({ ...layer, objects: layer.objects.map(({ image, obj, ...object }) => object) })),
+                    restoring: this.state.restoring, error: this.state.restoreError, viewport: { scale: this.state.viewport.scale, position: this.state.viewport.position } }) },
+            { name: 'canvas.export', description: 'Render actual retained layers/strokes to a PNG data URI with export bounds.', readOnly: true,
+                inputSchema: agentObject(), run: () => this.exportImage() },
+            { name: 'canvas.save', description: 'Save the canvas document to its existing file.', inputSchema: agentObject(), run: () => this.saveDocument(true) },
+            { name: 'canvas.load_image', description: 'Replace the canvas with a PNG data URI.', inputSchema: agentObject({ image: { type: 'string', pattern: '^data:image/png;base64,' } }), run: ({ image }) => { this.checkpoint(); return this.loadImage(image); } },
+            { name: 'canvas.import_image', description: 'Import a PNG as a new editable object on the active layer.', inputSchema: agentObject({ image: { type: 'string', pattern: '^data:image/png;base64,' }, name: agentString }), run: async ({ image, name }) => { requireLayer(this.state.activeLayer, true); const blob = await (await fetch(image)).blob(); return this.importImage(new File([blob], name, { type: 'image/png' })); } },
+            { name: 'canvas.undo', description: 'Undo the last layer/object edit.', inputSchema: agentObject(), run: () => this.undo() },
+            { name: 'canvas.redo', description: 'Redo a layer/object edit.', inputSchema: agentObject(), run: () => this.redo() },
+            { name: 'canvas.layer.add', description: 'Add and select a layer.', inputSchema: agentObject(), run: () => this.handleLayerAdd() },
+            { name: 'canvas.layer.select', description: 'Select an existing layer.', inputSchema: agentObject(layerArgs), run: ({ layerId }) => { requireLayer(layerId); this.handleLayerSelect(layerId); } },
+            { name: 'canvas.layer.update', description: 'Rename, hide, lock or change layer opacity.', inputSchema: agentObject({ ...layerArgs, changes: agentObject({ name: agentString, visible: { type: 'boolean' }, locked: { type: 'boolean' }, opacity: { type: 'number', minimum: 0, maximum: 1 } }, []) }), run: ({ layerId, changes }) => { requireLayer(layerId); this.handleLayerChange(layerId, changes); } },
+            ...(['delete', 'duplicate'] as const).map(action => ({ name: 'canvas.layer.' + action, description: action + ' an existing layer.', inputSchema: agentObject(layerArgs), run: ({ layerId }: any) => { requireLayer(layerId, true); if (action === 'delete') this.handleLayerDelete(layerId); else this.handleLayerDuplicate(layerId); } })),
+            { name: 'canvas.layer.move', description: 'Move a layer up/down in the stack.', inputSchema: agentObject({ ...layerArgs, direction: { enum: ['up', 'down'] } }), run: ({ layerId, direction }) => { requireLayer(layerId); this.handleLayerMove(layerId, direction); } },
+            { name: 'canvas.object.add', description: 'Add an editable stroke (including erasure or Bezier curves) in world coordinates.',
+                inputSchema: agentObject({ ...layerArgs, object: agentObject({ ...objectChanges, type: { const: 'stroke' } }, ['x', 'y', 'points', 'stroke', 'strokeWidth', 'type']) }),
+                run: ({ layerId, object }) => { requireLayer(layerId, true); this.checkpoint(); const id = this.generateId();
+                    this.setState(state => ({ layers: state.layers.map(layer => layer.id === layerId ? { ...layer, objects: [...layer.objects, { ...object, id }] } : layer), selectedObjectId: id })); return { id }; } },
+            { name: 'canvas.object.update', description: 'Edit transform, pressure points, Bezier control nodes or stroke properties. Undoable.',
+                inputSchema: agentObject({ ...objectArgs, changes: agentObject(objectChanges, []) }), run: ({ layerId, objectId, changes }) => mutateObject(layerId, objectId, changes) },
+            ...(['delete', 'duplicate'] as const).map(action => ({ name: 'canvas.object.' + action, description: action + ' an editable object.', inputSchema: agentObject(objectArgs), run: ({ layerId, objectId }: any) => {
+                const layer = requireLayer(layerId, true); if (!layer.objects.some(object => object.id === objectId)) throw new Error('Object not found');
+                if (action === 'delete') this.deleteObject(layerId, objectId); else this.duplicateObject(layerId, objectId);
+            } })),
+            { name: 'canvas.object.order', description: 'Bring object to front or back.', inputSchema: agentObject({ ...objectArgs, position: { enum: ['front', 'back'] } }), run: ({ layerId, objectId, position }) => { requireLayer(layerId, true); this.moveObject(layerId, objectId, position); } },
+            { name: 'canvas.settings', description: 'Set canvas bounds, grid and drawing tool options.', inputSchema: agentObject({ changes: agentObject({
+                canvasSettings: agentObject({ unbounded: { type: 'boolean' }, width: { type: 'integer', minimum: 1, maximum: 16384 }, height: { type: 'integer', minimum: 1, maximum: 16384 }, margin: { type: 'integer', minimum: 0, maximum: 4096 } }),
+                showGrid: { type: 'boolean' }, selectedTool: { enum: ['move', 'brush', 'eraser', 'edit', 'shape'] },
+                brushSize: { type: 'number', minimum: 1, maximum: 4096 }, brushColor: agentString, brushStyle: { enum: BRUSHES.map(brush => brush.id) },
+                brushFeather: { type: 'number', minimum: 0, maximum: 100 }, eraserSize: { type: 'number', minimum: 1, maximum: 4096 },
+                eraserFeather: { type: 'number', minimum: 0, maximum: 100 }, shapeType: { enum: ['rectangle', 'ellipse'] }, shapeFeather: { type: 'number', minimum: 0, maximum: 100 },
+                selectedObjectId: { type: ['string', 'null'] } }, []) }), run: ({ changes }) => this.setState(changes) },
+            { name: 'canvas.viewport', description: 'Zoom or reset canvas view.', inputSchema: agentObject({ reset: { type: 'boolean' }, factor: { type: 'number', minimum: 0.1, maximum: 10 } }, []), run: ({ reset, factor }) => { if (reset) this.resetViewport(); if (factor) this.zoomViewport(factor); } },
+        ];
     };
     private inputMessage = async (event: MessageEvent) => {
         if (!this.inputMode || event.origin !== window.location.origin || event.source !== window.parent) return;
@@ -797,7 +867,7 @@ class AIDrawingCanvas extends React.Component<{path: string}, AIDrawingCanvasSta
         e.evt.preventDefault();
         this.activePointerId = (e.evt as PointerEvent).pointerId ?? null;
         const target=e.evt.target as HTMLElement;
-        if (this.activePointerId!==null && target.setPointerCapture) target.setPointerCapture(this.activePointerId);
+        if (this.activePointerId!==null && target.setPointerCapture && e.evt.isTrusted) target.setPointerCapture(this.activePointerId);
         this.activeStrokeId = this.generateId();
         const erasing = this.state.selectedTool === 'eraser';
         this.setState(state => produce(state, draft => {
@@ -1172,7 +1242,7 @@ class AIDrawingCanvas extends React.Component<{path: string}, AIDrawingCanvasSta
                 {!this.inputMode && <UIStateScope name="generation"><FloatingPanel path={this.props.path} aiDrawingService={this.drawingService}
                 onSelectScript={this.handleSelectScript}
                 onImageGenerated={this.handleImageGenerated}/></UIStateScope>}
-                {!this.inputMode && this.props.path.endsWith('.canvas') && <button style={{ position: 'absolute', top: 8, left: '45%' }} onClick={this.saveDocument}>保存画布</button>}
+                {!this.inputMode && this.props.path.endsWith('.canvas') && <button style={{ position: 'absolute', top: 8, left: '45%' }} onClick={() => void this.saveDocument()}>保存画布</button>}
 
                 {/* 添加侧边面板 */}
                 <SidePanel 

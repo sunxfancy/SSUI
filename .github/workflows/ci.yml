@@ -194,9 +194,10 @@ jobs:
           python-version: 3.12.8
           activate-environment: true
 
-      - name: Install mock API dependencies
+      - name: Install mock API and optional MCP dependencies
         timeout-minutes: 5
-        run: uv pip install -r tests/mock_api/requirements.txt
+        # Resolve together so MCP cannot upgrade Starlette past FastAPI's constraint.
+        run: uv pip install -r tests/mock_api/requirements.txt ".[mcp]"
 
       - name: Install Chromium
         if: github.event_name != 'schedule'
@@ -211,6 +212,10 @@ jobs:
       - name: Run API contract tests
         timeout-minutes: 5
         run: yarn test:contract
+
+      - name: MCP protocol and live bridge regressions
+        timeout-minutes: 5
+        run: yarn test:mcp
 
       - name: Check generated API types
         timeout-minutes: 5

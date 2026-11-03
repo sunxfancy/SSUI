@@ -284,6 +284,33 @@
         "title": "Body_upload_file_files_upload_post",
         "type": "object"
       },
+      "CommandRequest": {
+        "properties": {
+          "arguments": {
+            "additionalProperties": true,
+            "title": "Arguments",
+            "type": "object"
+          },
+          "command": {
+            "maxLength": 128,
+            "minLength": 1,
+            "title": "Command",
+            "type": "string"
+          },
+          "timeout": {
+            "default": 60,
+            "exclusiveMinimum": 0.0,
+            "maximum": 600.0,
+            "title": "Timeout",
+            "type": "number"
+          }
+        },
+        "required": [
+          "command"
+        ],
+        "title": "CommandRequest",
+        "type": "object"
+      },
       "ConversationInfo": {
         "properties": {
           "context_kind": {
@@ -767,6 +794,149 @@
   },
   "openapi": "3.1.0",
   "paths": {
+    "/api/agent/catalog": {
+      "get": {
+        "operationId": "catalog_api_agent_catalog_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "search",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "Search",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "kind",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "Kind",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "minimum": 0,
+              "title": "Offset",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "maximum": 200,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Catalog",
+        "tags": [
+          "Agent project catalog"
+        ]
+      }
+    },
+    "/api/agent/targets": {
+      "get": {
+        "operationId": "targets_api_agent_targets_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Targets",
+        "tags": [
+          "Agent live UI"
+        ]
+      }
+    },
+    "/api/agent/targets/{target_id}/call": {
+      "post": {
+        "operationId": "call_api_agent_targets__target_id__call_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "target_id",
+            "required": true,
+            "schema": {
+              "title": "Target Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CommandRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Call",
+        "tags": [
+          "Agent live UI"
+        ]
+      }
+    },
     "/api/available_models": {
       "get": {
         "operationId": "available_models_api_available_models_get",

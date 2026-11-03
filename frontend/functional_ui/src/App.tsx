@@ -1,6 +1,6 @@
 import React from 'react';
 import './App.css';
-import { UIStateProvider } from 'ssui_components';
+import { UIStateProvider, connectAgent, agentDOMCommands } from 'ssui_components';
 import { getUIProvider } from './ui/UIProvider';
 import { SessionProvider } from './ui/conversation/SessionState';
 import { singleConversation } from './ui/conversation/ConversationUI';
@@ -10,6 +10,7 @@ function route() {
     return { path: params.get('path') ?? '', view: params.get('view') ?? '' };
 }
 function App() {
+    React.useEffect(() => connectAgent('Functional UI: ' + window.location.search, agentDOMCommands()), []);
     const [current, setCurrent] = React.useState(route);
     React.useEffect(() => {
         const update = () => setCurrent(route());
