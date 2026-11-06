@@ -15,15 +15,14 @@ import importlib
 
 project_root = os.path.abspath(os.path.dirname(os.path.dirname(__file__)))
 
-# 添加extensions目录到sys.path
+from backend.extension_paths import add_extension_path
+
+# Prefer bundled extension runtimes to incompatible site-packages.
 extensions_root = os.path.join(project_root, "extensions")
 for dir in os.listdir(extensions_root):
     yaml_path = os.path.join(extensions_root, dir, "ssextension.yaml")
     if os.path.exists(yaml_path):
-        sys.path.append(os.path.join(extensions_root, dir))
-        vendor_dir = os.path.join(extensions_root, dir, "vendor")
-        if os.path.isdir(vendor_dir):
-            sys.path.append(vendor_dir)
+        add_extension_path(os.path.join(extensions_root, dir))
 
 
 from ss_executor.loader import SSLoader, search_project_root

@@ -8,6 +8,7 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 from typing import Dict, Optional
 from .opener_service import FileOpenerManager
+from backend.extension_paths import add_extension_path
 class ExtensionServerConfig(BaseModel):
     venv: str = Field(default="shared", description="The virtual environment to use for the extension")
     dependencies: list[str] = Field(default=[], description="The dependencies to install for the extension")
@@ -91,12 +92,7 @@ class ExtensionManager:
                 print(f"Loading {name} from {extension.server.main}")
                 script_path = os.path.join(extension.path, extension.server.main)
                 dir_path = os.path.dirname(script_path)
-                sys.path.append(dir_path)
-                print(f"Appending {dir_path} to sys.path")
-                # 第三方 vendored 代码放在扩展的 vendor/ 子目录中
-                vendor_dir = os.path.join(dir_path, "vendor")
-                if os.path.isdir(vendor_dir):
-                    sys.path.append(vendor_dir)
+                add_extension_path(dir_path)
                 import importlib.util
                 try:
                     spec = importlib.util.spec_from_file_location(name, script_path)

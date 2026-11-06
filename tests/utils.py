@@ -79,8 +79,9 @@ def download_if_needed(model_key: str, sub_key: str | None = None) -> Path:
             revision=entry.get("revision", "main"),
             local_dir=str(local_dir),
             allow_patterns=entry.get("allow_patterns"),
+            ignore_patterns=entry.get("ignore_patterns"),
         )
-        return local_dir
+        return local_dir / entry.get("snapshot_subdir", "")
 
     dest_path = data_dir / entry["file"]
     dest_path.parent.mkdir(parents=True, exist_ok=True)

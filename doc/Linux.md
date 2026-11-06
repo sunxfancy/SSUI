@@ -49,7 +49,7 @@ yarn test:package-resources
 
 默认扩展归档包括 Image、Video、Audio、3D-Model、Motion；Video/3D 归档必须包含 SDK 和 vendor 源码。
 安装器给 Linux 使用 `linux.lock`，通过独立 Python 创建 `.venv`，安装包解压后即可从桌面选择示例工作流。
-默认生成 AppImage；添加执行权限后直接运行。Git 和 GStreamer 视频解码插件仍需通过系统包管理器准备。
+默认生成 AppImage；添加执行权限后直接运行。Git 仍需通过系统包管理器准备。AppImage 开启媒体框架打包；构建机需安装 GStreamer base/good/libav 插件，以将 H.264 播放依赖带入安装包。
 桌面在线安装使用与源码相同的 UV 版本、依赖锁和隔离构建约束。
 离线基础包安装保持离线行为，不会隐式联网准备 CUDA 工具链；原生扩展需要预装或另行在线准备。
 
@@ -82,3 +82,10 @@ GLBPreview 是附加输出页签，现有部件预览、质量报告与导出入
 
 历史 GPU 推理和 Debian 原生桌面记录基于合并前环境，不能等同于当前 dev 依赖版本全部通过 GPU 验收。
 合并后已重新检查 Python 回归、前端构建及组件/功能 UI/桌面测试，结果见 PR 描述。
+
+## 2026-11-06 AppImage 运行时修复
+
+真实测试改为启动 AppRun，覆盖用户实际获得的环境。修复 AppRun 的 PYTHONHOME 污染独立 Python、安装资源缺失 flow_compiler.py、未打包 GStreamer 媒体框架，以及执行器扩展导入优先级。
+当前 AppImage 已在升级后的独立 GUI 环境中完成 GPU 后端、H.264 与 GLB 预览、错误反馈和真实 Wan 推理播放验证。
+复验命令为 `SSUI_WAN_MODEL_DIR=<本地权重目录> yarn test:desktop:linux`；保留 `SSUI_SMOKE_ARTIFACT` 时重放已有安装环境，不设置时执行全新安装。
+不要通过外部 GST_PLUGIN_PATH 来替代安装包媒体依赖验收。

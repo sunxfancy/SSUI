@@ -16,6 +16,10 @@ from transformers import (
 )
 from torchvision import transforms
 
+from backend.diffusers_compat import preload_attention_dispatch_for_torch_24
+
+preload_attention_dispatch_for_torch_24()
+
 from .multiview.pipeline_multiclass import StableUnCLIPImg2ImgPipeline
 from .canonicalize.models.unet_mv2d_condition import UNetMV2DConditionModel
 from .canonicalize.models.unet_mv2d_ref import UNetMV2DRefModel
@@ -188,23 +192,25 @@ def canonicalize(
         pretrained_model_path, subfolder="tokenizer"
     )
     text_encoder = CLIPTextModel.from_pretrained(
-        pretrained_model_path, subfolder="text_encoder"
+        pretrained_model_path, subfolder="text_encoder", torch_dtype=weight_dtype
     )
     image_encoder = CLIPVisionModelWithProjection.from_pretrained(
-        pretrained_model_path, subfolder="image_encoder"
+        pretrained_model_path, subfolder="image_encoder", torch_dtype=weight_dtype
     )
     feature_extractor = CLIPImageProcessor()
-    vae = AutoencoderKL.from_pretrained(pretrained_model_path, subfolder="vae")
+    vae = AutoencoderKL.from_pretrained(pretrained_model_path, subfolder="vae", torch_dtype=weight_dtype)
     unet = UNetMV2DConditionModel.from_pretrained_2d(
         pretrained_model_path,
         subfolder="unet",
         local_crossattn=local_crossattn,
+        torch_dtype=weight_dtype,
         **unet_from_pretrained_kwargs,
     )
     ref_unet = UNetMV2DRefModel.from_pretrained_2d(
         pretrained_model_path,
         subfolder="ref_unet",
         local_crossattn=local_crossattn,
+        torch_dtype=weight_dtype,
         **unet_from_pretrained_kwargs,
     )
 
@@ -463,9 +469,23 @@ def multiview(
         torch.cuda.empty_cache()
 
     def load_multiview_pipeline(pretrained_path):
-        pipeline = StableUnCLIPImg2ImgPipeline.from_pretrained(
-            pretrained_path,
-            torch_dtype=torch.float16,
+        # Official model_index.json names top-level "multiview" modules.
+        # Load our namespaced bundled implementation without adding its children
+        # to sys.path or mutating the downloaded checkpoint configuration.
+        from .multiview.models.unet_mv2d_condition import UNetMV2DConditionModel as MultiviewUNet
+        from diffusers import DDPMScheduler
+        from diffusers.pipelines.stable_diffusion.stable_unclip_image_normalizer import StableUnCLIPImageNormalizer
+
+        pipeline = StableUnCLIPImg2ImgPipeline(
+            feature_extractor=CLIPImageProcessor.from_pretrained(pretrained_path, subfolder="feature_extractor"),
+            image_encoder=CLIPVisionModelWithProjection.from_pretrained(pretrained_path, subfolder="image_encoder", torch_dtype=weight_dtype),
+            image_normalizer=StableUnCLIPImageNormalizer.from_pretrained(pretrained_path, subfolder="image_normalizer"),
+            image_noising_scheduler=DDPMScheduler.from_pretrained(pretrained_path, subfolder="image_noising_scheduler"),
+            text_encoder=CLIPTextModel.from_pretrained(pretrained_path, subfolder="text_encoder", torch_dtype=weight_dtype),
+            unet=MultiviewUNet.from_pretrained(pretrained_path, subfolder="unet", torch_dtype=weight_dtype),
+            scheduler=DDIMScheduler.from_pretrained(pretrained_path, subfolder="scheduler"),
+            vae=AutoencoderKL.from_pretrained(pretrained_path, subfolder="vae", torch_dtype=weight_dtype),
+            num_views=6,
         )
         pipeline.unet.enable_xformers_memory_efficient_attention()
         if torch.cuda.is_available():

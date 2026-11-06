@@ -61,6 +61,7 @@ async function setInput(selector,value) {
   await evaluate(`const input=document.querySelector(arguments[0]);if(!input)throw Error(arguments[0]);Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value').set.call(input,arguments[1]);input.dispatchEvent(new Event('input',{bubbles:true}));`,[selector,value]);
 }
 async function clickText(text,selector='button') {
+  if (text === 'Run') await until(()=>evaluate("return !document.querySelector('.details-loading')"));
   await evaluate(`const item=Array.from(document.querySelectorAll(arguments[1])).find(x=>(x.innerText.trim()===arguments[0] || (arguments[0]==='Run' && x.innerText.trim()==='运行')));if(!item)throw Error('Missing '+arguments[0]);item.click();`,[text,selector]);
 }
 for (const signal of ['SIGTERM','SIGINT']) process.on(signal,()=>{stop().finally(()=>process.exit(1))});
@@ -79,13 +80,14 @@ for (const signal of ['SIGTERM','SIGINT']) process.on(signal,()=>{stop().finally
     const extraction=spawnSync(image,['--appimage-extract'],{cwd:extractedRoot,encoding:'utf8'});
     assert.equal(extraction.status,0,extraction.stderr);
     appdir=path.join(extractedRoot,'squashfs-root');
-    app=path.join(appdir,'usr/bin/ssui');
+    // AppRun applies the packaged library/plugin environment used by end users.
+    app=path.join(appdir,'AppRun');
   }
   assert.ok(fs.existsSync(app),app);
   console.log('ARTIFACTS',artifact);
   // Replays exercise the new package against the same independently created venv.
   if (process.env.SSUI_SMOKE_ARTIFACT) {
-    const resources=path.resolve(path.dirname(app),'../lib/ssui/resources');
+    const resources=appdir ? path.join(appdir,'usr/lib/ssui/resources') : path.resolve(path.dirname(app),'../lib/ssui/resources');
     await tar.x({file:path.join(resources,'app.tar.gz'),cwd:install});
     for (const file of fs.readdirSync(path.join(resources,'extensions')).filter(x=>x.endsWith('.tar.gz'))) {
       await tar.x({file:path.join(resources,'extensions',file),cwd:path.join(install,'extensions')});
@@ -96,17 +98,29 @@ for (const signal of ['SIGTERM','SIGINT']) process.on(signal,()=>{stop().finally
   if (!fs.existsSync(settingsFile)) {
   await setInput('input[placeholder="Enter installation directory"]',install);
   await clickText('Install');
-  let previous='', sawLinuxLock=false;
+  let previous='', sawLinuxTarget=false;
   await until(async()=>{
     if (fs.existsSync(settingsFile) && fs.existsSync(path.join(install,'.venv/.packages_installed'))) return true;
     const body=await evaluate('return document.body.innerText');
-    if (body.includes('linux.lock')) sawLinuxLock=true;
+    if (body.includes('安装目标: linux / x64 / cuda')) sawLinuxTarget=true;
     if (body.trim()) fs.writeFileSync(path.join(artifact,'install-ui.txt'),body);
     if(body.includes('安装中止') || body.includes('安装过程中出错')){const error=new Error(body);error.fatal=true;throw error;}
     if(body!==previous){console.log(body.slice(-650));previous=body;}
     return fs.existsSync(path.join(install,'server/server.py')) && fs.existsSync(path.join(install,'.venv/.packages_installed'));
   },900000);
-  assert.ok(sawLinuxLock,'Linux dependency lock was not observed');
+  assert.ok(sawLinuxTarget,'Linux CUDA installation target was not observed');
+  const resources=appdir ? path.join(appdir,'usr/lib/ssui/resources') : path.resolve(path.dirname(app),'../lib/ssui/resources');
+  const lock=fs.readFileSync(path.join(resources,'dependencies/linux.lock'),'utf8');
+  const versions=spawnSync(path.join(install,'.venv/bin/python'),['-c',
+    'import json, importlib.metadata as m; print(json.dumps({p:m.version(p) for p in ["torch","diffusers","transformers"]}))'],{encoding:'utf8'});
+  assert.equal(versions.status,0,versions.stderr);
+  const installed=JSON.parse(versions.stdout);
+  for(const [name,version] of Object.entries(installed)) {
+    const expected=lock.match(new RegExp('^'+name+'==([^\\s]+)','m'))?.[1];
+    assert.ok(expected,'Missing locked package: '+name);
+    assert.equal(version.split('+')[0],expected.split('+')[0],name+' differs from packaged Linux lock');
+  }
+  console.log('DESKTOP_LOCKED_DEPENDENCIES_PASS',installed);
   assert.ok(fs.existsSync(path.join(install,'extensions/Video/ssui_video/Wan21.py')));
   assert.ok(fs.existsSync(path.join(install,'extensions/3D-Model/vendor/trellis/__init__.py')));
   assert.ok(fs.existsSync(path.join(install,'.venv/native-cuda/runtime.json')));
@@ -186,7 +200,11 @@ for (const signal of ['SIGTERM','SIGINT']) process.on(signal,()=>{stop().finally
     await setInput('input[placeholder="Model folder"]',process.env.SSUI_WAN_MODEL_DIR);
     await evaluate("const area=document.querySelector('textarea');Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype,'value').set.call(area,'A red toy car driving on a wooden table, cinematic lighting');area.dispatchEvent(new Event('input',{bubbles:true}));");
     await clickText('Run');
-    await until(()=>evaluate("const error=document.querySelector('.bp5-callout-danger');if(error)throw Error(error.innerText);return document.querySelector('video')?.videoWidth===256"),180000);
+    await until(async()=>{
+      const state=await evaluate("return {error:document.querySelector('.functional-ui-run-error')?.innerText,ready:document.querySelector('video')?.videoWidth===256}");
+      if(state.error){const error=Error(state.error);error.fatal=true;throw error;}
+      return state.ready;
+    },180000);
     console.log('DESKTOP_REAL_WAN_INFERENCE_PASS');
   }
   console.log('DESKTOP_NATIVE_UI_PASS');

@@ -108,11 +108,19 @@ diffsynth:
 
 stdgen:
   canonicalize:
-    local: "StdGEN/StdGEN-canonicalize-1024"
-    note: "上游模型位置待确认，请手动放入 TEST_DATA_DIR"
+    repo: "hyz317/StdGEN"
+    revision: "8d12f6e3e279a2aac9bb957236c1e8e3c13549c0"
+    snapshot: true
+    snapshot_subdir: "StdGEN-canonicalize-1024"
+    allow_patterns: ["StdGEN-canonicalize-1024/**"]
+    ignore_patterns: ["**/*.fp16.*", "**/text_encoder/pytorch_model.bin"]
   multiview:
-    local: "StdGEN/StdGEN-multiview-1024"
-    note: "上游模型位置待确认，请手动放入 TEST_DATA_DIR"
+    repo: "hyz317/StdGEN"
+    revision: "8d12f6e3e279a2aac9bb957236c1e8e3c13549c0"
+    snapshot: true
+    snapshot_subdir: "StdGEN-multiview-1024"
+    allow_patterns: ["StdGEN-multiview-1024/**"]
+    ignore_patterns: ["**/unet-old/**"]
 
 shap_e:
   repo: "openai/shap-e"

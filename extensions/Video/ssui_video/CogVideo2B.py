@@ -23,6 +23,8 @@ class CogVideo2BModel:
         lora_weight: float = 1.0,
     ) -> 'CogVideo2BModel':
         validate_lora(lora_path, lora_weight)
+        from backend.diffusers_compat import preload_attention_dispatch_for_torch_24
+        preload_attention_dispatch_for_torch_24()
         from diffusers import CogVideoXPipeline, CogVideoXTransformer3DModel, AutoencoderKLCogVideoX
         options = {}
         if quantized_t5_path:

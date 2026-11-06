@@ -7,6 +7,18 @@ from tests.download_models import _download_file
 
 
 class ModelDownloadTest(unittest.TestCase):
+    def test_snapshot_returns_the_selected_model_subdirectory(self):
+        from tests.download_models import download_entry
+        entry = dict(repo='test/model', snapshot=True, snapshot_subdir='component')
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            with patch('tests.download_models.load_manifest', return_value={'model': entry}), \
+                    patch('tests.download_models.data_dir', return_value=root), \
+                    patch('tests.download_models._download_snapshot') as download:
+                result = download_entry('model')
+            download.assert_called_once_with(entry, root / 'model')
+            self.assertEqual(result, root / 'model/component')
+
     def download(self, dest, chunks, size=4, digest=''):
         response = Mock(headers={'content-length': str(size)})
         response.iter_content.return_value = iter(chunks)

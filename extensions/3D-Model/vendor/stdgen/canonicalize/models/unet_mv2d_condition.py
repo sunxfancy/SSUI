@@ -1336,8 +1336,11 @@ class UNetMV2DConditionModel(ModelMixin, ConfigMixin, UNet2DConditionLoadersMixi
                         default_attn_proc, enabled=name.endswith("attn1.processor"), name=name
                     )
                 model.set_attn_processor(unet_lora_attn_procs)
-            state_dict = load_state_dict(model_file, variant=variant)
-            model._convert_deprecated_attention_blocks(state_dict)
+            state_dict = load_state_dict(model_file)
+            # New Diffusers removed conversion for obsolete Attention blocks.
+            convert_attention = getattr(model, "_convert_deprecated_attention_blocks", None)
+            if convert_attention is not None:
+                convert_attention(state_dict)
 
             conv_in_weight = state_dict['conv_in.weight']
             conv_out_weight = state_dict['conv_out.weight']

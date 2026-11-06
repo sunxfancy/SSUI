@@ -10,7 +10,7 @@ class TestWan21Model(unittest.TestCase):
         from diffsynth import save_video
         from ssui.base import Prompt
         from ssui.config import SSUIConfig
-        from ssui_video.Wan21 import Wan21Model, Wan21TextToVideo
+        from ssui_video.Wan21Resident import Wan21Model, Wan21TextToVideo
         model = Wan21Model.load(str(download_if_needed('wan21')))
         config = SSUIConfig()
         frames = Wan21TextToVideo(config('Generate video'), model,

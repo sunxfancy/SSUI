@@ -1,4 +1,7 @@
 import os
+import sys
+import importlib
+from unittest.mock import patch
 import unittest
 import tempfile
 from pathlib import Path
@@ -20,6 +23,28 @@ class TestExtensionConfigs(unittest.TestCase):
             manager.extensions["SDK"] = Extension(name="SDK", path=directory, version="1")
             manager.loadPythonScripts(FastAPI())
             self.assertIsNotNone(manager.modules["SDK"])
+
+    def test_bundled_runtime_precedes_installed_package(self):
+        from backend.extension_paths import add_extension_path
+
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            installed = root / "site-packages"
+            extension = root / "extension"
+            vendor = extension / "vendor"
+            installed.mkdir()
+            vendor.mkdir(parents=True)
+            name = "ssui_runtime_precedence_fixture"
+            (installed / (name + ".py")).write_text("source = 'installed'\n")
+            (vendor / (name + ".py")).write_text("source = 'bundled'\n")
+            with patch.object(sys, "path", [str(installed), *sys.path]):
+                add_extension_path(str(extension))
+                try:
+                    self.assertEqual(importlib.import_module(name).source, "bundled")
+                    add_extension_path(str(extension))
+                    self.assertEqual(sys.path.count(str(vendor)), 1)
+                finally:
+                    sys.modules.pop(name, None)
 
     def test_all_extension_yamls_are_valid(self):
         extensions_dir = os.path.abspath(

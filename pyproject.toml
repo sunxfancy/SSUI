@@ -12,6 +12,9 @@ dependencies = []
 [project.optional-dependencies]
 mcp = ["mcp>=1.28,<2", "httpx>=0.27,<1"]
 
+[tool.setuptools]
+py-modules = ["flow_compiler"]
+
 [tool.setuptools.packages.find]
 where = ["."]
 include = ["ssui*", "server*", "ss_executor*", "backend*"]
