@@ -205,6 +205,12 @@ for (const signal of ['SIGTERM','SIGINT']) process.on(signal,()=>{stop().finally
       if(state.error){const error=Error(state.error);error.fatal=true;throw error;}
       return state.ready;
     },180000);
+    const playing=await request('/session/'+session+'/execute/async',{script:"const done=arguments[arguments.length-1];const video=document.querySelector('video');video.muted=true;video.play().then(()=>done(true)).catch(e=>done({error:e.message}));",args:[]});
+    assert.equal(playing,true,JSON.stringify(playing));
+    await until(()=>evaluate("return document.querySelector('video')?.currentTime > 0"));
+    await evaluate("document.querySelector('video').scrollIntoView({block:'center'})");
+    const screenshot=await request('/session/'+session+'/screenshot');
+    fs.writeFileSync(path.join(artifact,'wan-result.png'),Buffer.from(screenshot,'base64'));
     console.log('DESKTOP_REAL_WAN_INFERENCE_PASS');
   }
   console.log('DESKTOP_NATIVE_UI_PASS');

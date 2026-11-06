@@ -447,6 +447,7 @@ export class TauriInstallerProvider implements IInstallerProvider {
         console.log(entries);
         const extensionInstallPath = await join(installConfig.path, 'extensions');
         for (const entry of entries) {
+            if (!entry.isFile || !entry.name.endsWith('.tar.gz')) continue;
             const output = await invoke('unpack_app', {
                 tar_path: await join(extensionsPath, entry.name),
                 target_path: extensionInstallPath

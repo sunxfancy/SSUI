@@ -89,3 +89,7 @@ GLBPreview 是附加输出页签，现有部件预览、质量报告与导出入
 当前 AppImage 已在升级后的独立 GUI 环境中完成 GPU 后端、H.264 与 GLB 预览、错误反馈和真实 Wan 推理播放验证。
 复验命令为 `SSUI_WAN_MODEL_DIR=<本地权重目录> yarn test:desktop:linux`；保留 `SSUI_SMOKE_ARTIFACT` 时重放已有安装环境，不设置时执行全新安装。
 不要通过外部 GST_PLUGIN_PATH 来替代安装包媒体依赖验收。
+
+Linux 在线首次安装使用运行时注册表固定的 UV 版本和源码安装入口相同的构建约束。
+扩展资源目录中的 Readme.md 等非归档文件不再传给解压器，避免安装最后一步失败。
+自动化验收会将实际 Torch/Diffusers/Transformers 版本与包内 Linux 锁对照，并检查真实 Wan 播放进度、保留 `wan-result.png` 截图。
