@@ -1,0 +1,33 @@
+MOSS-Image inference port for SSUI
+
+dit.py, vae.py, ops.py:
+Adapted from modelscope/DiffSynth-Studio, Apache-2.0,
+commit 08fdc0da8f41426885d9432e9007e6e460a4c30d:
+  diffsynth/models/moss_image_dit.py
+  diffsynth/models/flux2_vae.py
+  diffsynth/models/general_modules.py (RMSNorm)
+Changes: removed DiffSynth runtime, training/checkpoint wrappers and optimized
+attention dependency; use native Torch SDPA; calculate FP64 time sinusoid on CPU
+for MPS tensors. The public SSUI loader currently enables CUDA/ROCm and CPU only.
+
+qwen_ops.py and text_encoder.py:
+Copyright 2025 The Qwen Team and The HuggingFace Inc. team. All rights reserved.
+Adapted from huggingface/transformers, Apache-2.0,
+commit aad13b87ed59f2afcfaebc985f403301887a35fc (v5.3.0):
+  src/transformers/models/qwen3_5/modeling_qwen3_5.py
+Text configuration from DiffSynth-Studio's moss_image_text_encoder.py at the
+commit above. Changes: standalone text-only forward, no cache or generation,
+pure Torch gated delta rule, native SDPA, text-only default RoPE, per-prompt
+unpadded inference. No Transformers 5 internals are imported or monkey-patched.
+
+pipeline.py sigma schedule and prompt formatting:
+Adapted from OpenMOSS-Team/MOSS-Image-Base, Apache-2.0 pipeline code,
+Hugging Face revision 85975793d8b3d432f1b6e27f352abaa4c2a4c0d3:
+  pipeline_moss_image.py
+  tokenizer/chat_template.jinja (single-user text prompt)
+Changes: standalone Euler loop, explicit component offload, local safetensors
+loader, no downloaded Python execution or Diffusers pipeline dependency.
+
+LICENSE contains the Apache License 2.0 applicable to these upstream portions.
+Model weights and other downloaded assets are not distributed with this code;
+their respective model cards and licenses apply separately.

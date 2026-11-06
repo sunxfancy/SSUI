@@ -91,7 +91,8 @@ class TaskScheduler:
 
     def _get_executor_id(self, websocket: websockets.ClientConnection) -> str:
         """获取执行器ID"""
-        host, port, _, _ = websocket.remote_address
+        # IPv4 peers expose (host, port); IPv6 peers add flow/scope fields.
+        host, port = websocket.remote_address[:2]
         return f"{host}:{port}"
 
     async def _handle_new_connection(self, executor_id: str, websocket: websockets.ClientConnection):

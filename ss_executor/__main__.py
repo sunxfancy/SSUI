@@ -66,7 +66,7 @@ def convert_task_return(result, task_script):
         os.makedirs(output_dir, exist_ok=True)
         path = os.path.join(
             output_dir,
-            "image_" + current_time.strftime("%Y%m%d%H%M%S") + ".png",
+            "image_" + current_time.strftime("%Y%m%d%H%M%S") + "_" + uuid.uuid4().hex + ".png",
         )
         result._image.save(path)
         return {"type": "image", "path": path}
