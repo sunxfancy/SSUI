@@ -1,5 +1,6 @@
 import React from 'react';
 import './App.css';
+import { ResourceMonitor } from './ui/common/ResourceMonitor';
 import { UIStateProvider, connectAgent, agentDOMCommands } from 'ssui_components';
 import { getUIProvider } from './ui/UIProvider';
 import { SessionProvider } from './ui/conversation/SessionState';
@@ -36,7 +37,7 @@ function App() {
     }, [current.path, current.view]);
     if (!current.view) return <main>正在选择视图…</main>;
     const provider = getUIProvider(current.view) ?? getUIProvider('functional')!;
-    return <main><UIStateProvider key={current.path} path={current.path} view="sessions">
+    return <main><ResourceMonitor /><UIStateProvider key={current.path} path={current.path} view="sessions">
         <SessionProvider><UIStateProvider key={current.path + ':' + provider.getName()} path={current.path} view={provider.getName()}>
             {provider.getUI(current.path)}
         </UIStateProvider></SessionProvider>

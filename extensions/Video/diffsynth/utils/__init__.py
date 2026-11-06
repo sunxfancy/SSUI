@@ -38,7 +38,15 @@ class BasePipeline(torch.nn.Module):
             self.device = device
         if dtype is not None:
             self.torch_dtype = dtype
-        super().to(*args, **kwargs)
+        from backend.runtime_offload import finalize_pipeline, is_managed
+        finalize_pipeline(self)
+        if any(is_managed(m) for m in self.children()):
+            for child in self.children():
+                if not is_managed(child):
+                    child.to(*args, **kwargs)
+            self.vram_management_enabled = True
+        else:
+            super().to(*args, **kwargs)
         return self
 
 
@@ -97,6 +105,8 @@ class BasePipeline(torch.nn.Module):
         if self.vram_management_enabled:
             # offload models
             for name, model in self.named_children():
+                if getattr(model, "_ssui_residency", None):
+                    continue
                 if name not in model_names:
                     if hasattr(model, "vram_management_enabled") and model.vram_management_enabled:
                         for module in model.modules():
@@ -107,6 +117,8 @@ class BasePipeline(torch.nn.Module):
             empty_device_cache(self.device)
             # onload models
             for name, model in self.named_children():
+                if getattr(model, "_ssui_residency", None):
+                    continue
                 if name in model_names:
                     if hasattr(model, "vram_management_enabled") and model.vram_management_enabled:
                         for module in model.modules():

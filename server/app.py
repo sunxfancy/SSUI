@@ -16,6 +16,7 @@ from server.model_service import ModelService
 from server.opener_service import FileOpenerManager
 from server.routes import (
     config_routes,
+    resource_routes,
     extension_routes,
     file_routes,
     model_routes,
@@ -88,6 +89,7 @@ def create_app(
         allow_headers=["*"],
     )
 
+    app.include_router(resource_routes.router)
     app.include_router(config_routes.router)
     app.include_router(model_routes.router)
     app.include_router(script_routes.router)

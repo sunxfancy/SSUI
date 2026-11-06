@@ -88,6 +88,10 @@ class TrellisImageTo3DPipeline(Pipeline):
             dinov2_model = torch.hub.load(source, name, source=source_kind, pretrained=True)
 
         dinov2_model.eval()
+        from backend.runtime_offload import plan_load
+        size = sum(t.numel() * t.element_size() for t in dinov2_model.state_dict().values())
+        plan = plan_load(f"TRELLIS {name}", estimated_bytes=size)
+        dinov2_model._ssui_load_plan = plan
         self.models['image_cond_model'] = dinov2_model
         transform = transforms.Compose([
             transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),

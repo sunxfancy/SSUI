@@ -12,6 +12,7 @@ from fastapi import FastAPI
 
 from server.routes import (
     config_routes,
+    resource_routes,
     extension_routes,
     file_routes,
     model_routes,
@@ -23,6 +24,7 @@ from server.routes import (
 
 def create_contract_app() -> FastAPI:
     app = FastAPI(title="SSUI API", version="1.0.0")
+    app.include_router(resource_routes.router)
     app.include_router(config_routes.router)
     app.include_router(model_routes.router)
     app.include_router(script_routes.router)

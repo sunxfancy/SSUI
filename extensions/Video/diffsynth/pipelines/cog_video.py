@@ -25,6 +25,10 @@ class CogVideoPipeline(BasePipeline):
         self.model_names = ["text_encoder", "dit", "vae_encoder", "vae_decoder"]
 
     def enable_vram_management(self):
+        from backend.runtime_offload import finalize_pipeline
+        if finalize_pipeline(self):
+            self.cpu_offload = True
+            return
         # Keep DiT weights on the host; transfer only the current layer to MPS.
         self.enable_cpu_offload()
         self.dit.computation_device = self.device
