@@ -1,6 +1,6 @@
 from ssui import workflow, Prompt, Video
 from ssui.config import SSUIConfig
-from ssui_video.Wan21 import Wan21Model, Wan21TextToVideo
+from ssui_video.Wan21Resident import Wan21Model, Wan21TextToVideo
 
 config = SSUIConfig()
 

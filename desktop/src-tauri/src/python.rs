@@ -91,6 +91,12 @@ fn set_proxy_for_python(cmd: &mut Command, proxy_url: &str) {
 }
 
 // All Python entrypoints share the same verified native environment as the CLI.
+fn python_environment(mut command: Command) -> Command {
+    // AppRun exports its own PYTHONHOME, but our selected venv owns its stdlib.
+    command.env_remove("PYTHONHOME");
+    command
+}
+
 fn python_command(path: &str, cwd: &str) -> Command {
     let configured = configured_python(path);
     let path = configured.to_str().unwrap_or(path);
@@ -102,10 +108,10 @@ fn python_command(path: &str, cwd: &str) -> Command {
         if bootstrap.is_file() && python.is_file() && (!cfg!(debug_assertions) || std::path::Path::new(path).starts_with(root.join(".venv"))) {
             let mut command = Command::new(python);
             command.arg(bootstrap).args(["exec", "--", path]);
-            return command;
+            return python_environment(command);
         }
     }
-    Command::new(path)
+    python_environment(Command::new(path))
 }
 
 // 用来运行pip，所以要设置代理
@@ -435,6 +441,16 @@ pub fn get_dev_root() -> Result<String, String> {
 #[cfg(all(test, target_os = "linux"))]
 mod native_cuda_tests {
     use super::*;
+
+    #[test]
+    fn appimage_pythonhome_does_not_override_the_selected_interpreter() {
+        let mut command = Command::new("/usr/bin/python3");
+        command.env("PYTHONHOME", "/nonexistent/ssui-appimage/usr")
+            .args(["-c", "import os, encodings; assert 'PYTHONHOME' not in os.environ; print('PYTHON_STDLIB_OK')"]);
+        let output = python_environment(command).output().unwrap();
+        assert!(output.status.success(), "{}", String::from_utf8_lossy(&output.stderr));
+        assert_eq!(String::from_utf8_lossy(&output.stdout).trim(), "PYTHON_STDLIB_OK");
+    }
 
     #[test]
     fn desktop_python_uses_managed_cuda_environment() {

@@ -4,6 +4,31 @@
 环境：Python 3.12.8、PyTorch 2.4.1+cu124、Diffusers 0.33.1、Transformers 4.46.2。
 CUDA 已通过真实张量运算检查。模型文件与生成产物位于当前工作树的 `.build/`，不提交 Git。
 
+## 2026-11-06 当前 dev 依赖复验
+
+环境为 Python 3.12.8、Torch 2.4.1+cu124、Diffusers 0.38.0、Transformers 4.57.6，RTX 3090 24 GB。
+重新安装原生栈后，`yarn doctor:native` 的 CUDA 光栅化前向/反向检查通过。
+本轮独立进程重新运行 SD1.5、SDXL、Flux Schnell NF4、AnimateDiff、Wan2.1 Resident、CogVideoX-2B、Shap-E、TRELLIS、MDM，均完成实际推理及文件输出检查。
+产物保留在 `.build/model-results/linux-dev-20261106/`，`validation-summary.json` 记录视频逐帧变化、GLB 顶点/三角面及动作轨迹检查，`validation-contact.png` 已人工查看。
+本轮未对每个模型重新施加历史 5 GB 主机内存限额；低步数视频仅证明功能可运行，不作为最终质量验收。
+
+修复了 Wan 示例仍引用旧加载器名称、TRELLIS 的 DINOv2 本地参数名与 vendor 不匹配，以及 Shap-E/CogVideoX-2B 在 Torch 2.4 下导入新版 Diffusers 的兼容问题。
+桌面真实执行器另有导入顺序问题：site-packages 中的 DiffSynth 覆盖扩展自带版本；server/executor 现在共用扩展根目录优先的导入逻辑。
+默认 Python 回归为 372 项，343 项通过、29 项条件跳过。模型推理与默认回归是分别运行的。
+
+真实 AppImage 经 AppRun 启动，在已有独立 GUI 安装环境升级到当前依赖后通过工作流选择、SDK 发现、错误反馈、H.264 播放、GLB 加载，以及 Wan 256×256/17 帧/12 步 GPU 推理并在页面播放。
+这是安装环境升级重放，不能代替当前版本从全新空目录安装的复验。
+
+StdGEN 的官方权重位置已补齐并固定 revision；规范化（320×512、4 步）和六视图（320×512、40 步、1 层）均完成真实 GPU 推理。测试现检查真实输入对应的结果尺寸、6 张颜色图和 6 张法线图，均非空；产物及人工查看的拼图为 `stdgen-contact.png`。低步数规范化有明显失真，六视图细节也不稳定，仅作为功能冒烟，不作为建模质量验收。
+官方 image_encoder 只有 pickle 格式；当前 Transformers 拒绝在 Torch 2.4 读取该格式。需要在独立 CPU 环境安装 Torch >=2.6、safetensors、numpy，运行：
+
+```bash
+python scripts/convert_checkpoint_safetensors.py <StdGEN-canonicalize-1024>/image_encoder/pytorch_model.bin
+```
+
+转换器只接受 tensor state dict，以 `weights_only=True` 读取并原子写入 `model.safetensors`，不修改推理环境。
+StdGEN 的完整 3D 重建、CogVideoX-5B、HunyuanVideo 尚无本轮完成证据；LTX-2.5 当前账号下载返回 HTTP 401/GatedRepoError，需要先获得官方仓库访问授权并在本机登录。
+
 ## 已完成真实推理
 
 | 类别 | 模型 | 参数与验收 | 产物 |
@@ -18,7 +43,7 @@ CUDA 已通过真实张量运算检查。模型文件与生成产物位于当前
 | 3D | TRELLIS image-large | SSUI 节点、12+12 步采样、1024 纹理烘焙；37,030 顶点、45,567 三角面；纹理 GLB 重读通过 | `.build/model-results/trellis/sample.glb`、`preview.png` |
 | 动作 | MDM HumanML 50 steps | 2 秒、20 FPS、40 帧、22 关节；轨迹非静止；NPZ 无 pickle 重读和视频解码通过 | `.build/model-results/mdm-*/motion.npz`、`samples_00_to_00.mp4` |
 
-下表为合并前依赖环境的留存实测；dev 0.3.0 的 Diffusers/Transformers 版本已经变化，未把旧结果作为新依赖的全量 GPU 验收。
+上表为合并前依赖环境的留存实测；dev 0.3.0 的 Diffusers/Transformers 版本已经变化，未把旧结果作为新依赖的全量 GPU 验收。
 
 这是各类别代表模型的真实端到端验证，不代表所有已声明的模型都已通过，也不代表质量与最新旗舰模型相当。
 MDM 输出的是骨骼关节轨迹，尚不包含 FBX/BVH 转换、角色绑定和重定向。

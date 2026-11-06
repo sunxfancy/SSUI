@@ -25,6 +25,7 @@ test('Linux lock and native setup ship with the desktop package', async () => {
   }
   const entries=[];
   await tar.t({file:path.join(resources,'app.tar.gz'), onentry:e=>entries.push(e.path)});
+  assert.ok(entries.includes('flow_compiler.py'), 'server requires the flow compiler at runtime');
   for (const file of nativeFiles) assert.ok(entries.includes('dependencies/'+file), file);
 });
 

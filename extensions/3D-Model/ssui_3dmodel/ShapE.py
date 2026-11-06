@@ -14,6 +14,8 @@ class ShapEModel:
 
     @staticmethod
     def load(model_path: str) -> "ShapEModel":
+        from backend.diffusers_compat import preload_attention_dispatch_for_torch_24
+        preload_attention_dispatch_for_torch_24()
         from diffusers import ShapEPipeline
 
         cuda = torch.cuda.is_available()

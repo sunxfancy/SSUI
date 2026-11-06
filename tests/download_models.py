@@ -98,6 +98,7 @@ def _download_snapshot(entry, dest: Path):
         revision=entry.get("revision", "main"),
         local_dir=str(dest),
         allow_patterns=entry.get("allow_patterns"),
+        ignore_patterns=entry.get("ignore_patterns"),
     )
     print(f"快照下载完成: {dest}")
 
@@ -120,7 +121,7 @@ def download_entry(model_key, sub_key=None):
         if sub_key:
             dest = dest / sub_key
         _download_snapshot(entry, dest)
-        return dest
+        return dest / entry.get("snapshot_subdir", "")
 
     dest = base / entry["file"]
     _download_file(entry, dest)

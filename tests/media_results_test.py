@@ -45,6 +45,18 @@ class MediaResultsTest(unittest.TestCase):
             path = root / 'examples/advance' / name
             compile_restricted(path.read_text(), str(path), 'exec')
 
+    def test_wan_example_prepares_with_the_registered_resident_model(self):
+        from ss_executor.loader import SSLoader
+        path = Path(__file__).resolve().parents[1] / 'examples/advance/workflow-wan21.py'
+        loader = SSLoader(use_sandbox=True)
+        loader.load(str(path))
+        loader.Execute()
+        function, params, _ = next(item for item in loader.callables if item[0].__name__ == 'text_to_video')
+        self.assertEqual(params['model'].__module__, 'ssui_video.Wan21Resident')
+        config = loader.GetConfig(function.__name__)['Generate video']
+        self.assertEqual(config['num_frames']['default'], 17)
+        self.assertEqual(config['width']['default'], 256)
+
     def test_motion_sidecar_is_retained_in_the_project_output(self):
         with tempfile.TemporaryDirectory() as root:
             source = Path(root) / 'motion.npz'

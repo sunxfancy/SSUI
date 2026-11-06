@@ -23,6 +23,7 @@ const packDirsJsOutput = [
 ];
 
 const packFiles = [
+  'flow_compiler.py',
   'extensions/Readme.md',
   'dependencies/native_cuda.py',
   'dependencies/native-cuda-linux.yaml',

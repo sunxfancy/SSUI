@@ -4,6 +4,7 @@ import { appDataDir, homeDir, join, dirname, resolveResource } from '@tauri-apps
 import { open } from '@tauri-apps/plugin-dialog';
 import { platform, arch } from '@tauri-apps/plugin-os';
 import { makeRuntimeTarget, dependencyProfile, pythonDistribution } from './runtimeTarget';
+import runtimeConfig from '../../../dependencies/runtime-targets.json';
 import { IInstallerProvider, CommandInfo } from './IInstallerProvider';
 import { exists, readDir, readTextFile, writeTextFile, remove } from '@tauri-apps/plugin-fs';
 import { invoke } from '@tauri-apps/api/core';
@@ -230,14 +231,24 @@ export class TauriInstallerProvider implements IInstallerProvider {
 
             const resourcePath = await resolveResource(await join('resources', lockFile));
 
-            const output = await invoke('run_python',
-                {
+            let output: string;
+            if (currentPlatform === 'linux') {
+                const pythonPath = `${installDir}/.venv/bin/python`;
+                await invoke('run_python', {path: pythonPath, cwd: installDir,
+                    args: ['-m', 'pip', 'install', `uv==${runtimeConfig.uvVersion}`]});
+                const constraints = await resolveResource('resources/dependencies/build-constraints.txt');
+                output = await invoke('run_python', {path: pythonPath, cwd: installDir,
+                    args: ['-m', 'uv', 'pip', 'install', '--python', pythonPath,
+                        '-r', resourcePath, '--find-links', await dirname(resourcePath),
+                        '--index-strategy', 'unsafe-best-match', '--build-constraint', constraints]});
+            } else {
+                output = await invoke('run_python', {
                     path: pipPath,
                     cwd: installDir,
-                    args:  ['install', '-r', resourcePath, '--find-links', await dirname(resourcePath),
+                    args: ['install', '-r', resourcePath, '--find-links', await dirname(resourcePath),
                         ...(dependencyProfile(await this.detectRuntimeTarget()).binaryOnly ? ['--only-binary=:all:'] : [])]
-                }
-            );
+                });
+            }
             console.log('安装依赖包: ' + output);
 
             if (currentPlatform === 'linux') {
@@ -436,6 +447,7 @@ export class TauriInstallerProvider implements IInstallerProvider {
         console.log(entries);
         const extensionInstallPath = await join(installConfig.path, 'extensions');
         for (const entry of entries) {
+            if (!entry.isFile || !entry.name.endsWith('.tar.gz')) continue;
             const output = await invoke('unpack_app', {
                 tar_path: await join(extensionsPath, entry.name),
                 target_path: extensionInstallPath

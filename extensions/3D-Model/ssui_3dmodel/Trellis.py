@@ -49,7 +49,7 @@ class TrellisModel:
             os.environ.setdefault("SPARSE_BACKEND", "flex_gemm")
         from trellis.pipelines.trellis_image_to_3d import TrellisImageTo3DPipeline
 
-        model = TrellisImageTo3DPipeline.from_pretrained(model_path, dinov2_repository=dinov2_repository, dinov2_weights=dinov2_weights)
+        model = TrellisImageTo3DPipeline.from_pretrained(model_path, image_cond_repo=dinov2_repository, image_cond_weights=dinov2_weights)
         if quantization != "none":
             for name in ("sparse_structure_flow_model", "slat_flow_model", "image_cond_model"):
                 quantize(model.models[name])
