@@ -53,9 +53,10 @@ class TrellisModel:
         if quantization != "none":
             for name in ("sparse_structure_flow_model", "slat_flow_model", "image_cond_model"):
                 quantize(model.models[name])
-        if cpu_offload:
+        from backend.runtime_offload import LoadPlan
+        if cpu_offload or any(isinstance(getattr(m, '_ssui_load_plan', None), LoadPlan) for m in model.models.values()):
             model._execution_device = torch.device("cuda")
-            ModelMemoryOptions(cpu_offload=True).configure(model.models.values(), device="cuda")
+            ModelMemoryOptions(cpu_offload=cpu_offload).configure(model.models.values(), device="cuda")
         else:
             model.cuda()
         return TrellisModel(model_path, model)

@@ -58,8 +58,13 @@ class Pipeline:
         raise RuntimeError("No device found.")
 
     def to(self, device: torch.device) -> None:
+        from backend.runtime_offload import is_managed
+        self._execution_device = torch.device(device)
         for model in self.models.values():
-            model.to(device)
+            if not is_managed(model):
+                model.to(device)
+            elif torch.device(device) != model._ssui_execution_device:
+                raise RuntimeError("Reload managed TRELLIS models to change execution device")
 
     def cuda(self) -> None:
         self.to(torch.device("cuda"))

@@ -59,9 +59,12 @@ def from_pretrained(path: str, **kwargs):
     # Avoid allocating a second full parameter set on 16 GB hosts. Safetensors
     # maps checkpoint pages and assign=True preserves those tensors directly.
     from accelerate import init_empty_weights
+    from backend.runtime_offload import plan_load
+    plan = plan_load(f"TRELLIS {path}", model_file)
     with init_empty_weights():
         model = __getattr__(config['name'])(**config['args'], **kwargs)
     model.load_state_dict(load_file(model_file), assign=True)
+    model._ssui_load_plan = plan
 
     return model
 

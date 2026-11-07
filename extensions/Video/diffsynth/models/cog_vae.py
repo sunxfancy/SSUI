@@ -253,7 +253,7 @@ class CogVAEDecoder(torch.nn.Module):
 
     def decode_small_video(self, sample):
         B, C, T, H, W = sample.shape
-        computation_device = self.conv_in.weight.device
+        computation_device = getattr(self, "_ssui_execution_device", self.conv_in.weight.device)
         computation_dtype = self.conv_in.weight.dtype
         value = []
         for i in range(T//2):
@@ -338,7 +338,7 @@ class CogVAEEncoder(torch.nn.Module):
 
     def encode_small_video(self, sample):
         B, C, T, H, W = sample.shape
-        computation_device = self.conv_in.weight.device
+        computation_device = getattr(self, "_ssui_execution_device", self.conv_in.weight.device)
         computation_dtype = self.conv_in.weight.dtype
         value = []
         for i in range(T//8):

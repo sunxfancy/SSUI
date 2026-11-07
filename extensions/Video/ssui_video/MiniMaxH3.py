@@ -103,8 +103,13 @@ def _run_h3(
             last_image._image.save(last_path)
             cmd += ["--last-image", last_path]
 
+        import backend
+        env = os.environ.copy()
+        root = os.path.dirname(os.path.dirname(backend.__file__))
+        env["PYTHONPATH"] = root + os.pathsep + env.get("PYTHONPATH", "")
         proc = subprocess.Popen(
             cmd,
+            env=env,
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT,
             text=True,
