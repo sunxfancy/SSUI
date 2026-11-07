@@ -8,16 +8,17 @@ type VideoUploaderProps = {
 
 const VideoUploader = forwardRef((props: VideoUploaderProps, ref) => {
     const [video, setVideo] = useUIState<string>('video', '');
+    const [anchor, setAnchor] = useUIState<{ x: number; y: number } | null>('anchor', null);
     const [uploading, setUploading] = useState<boolean>(false);
     const [error, setError] = useState<string | null>(null);
 
     useImperativeHandle(ref, () => {
         return {
             onExecute: () => {
-                return { 'video': video };
+                return { 'video': video, 'metadata': anchor ? { anchor_x: anchor.x, anchor_y: anchor.y } : {} };
             }
         }
-    }, [video]);
+    }, [video, anchor]);
 
     const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
         const file = event.target.files?.[0];
@@ -39,6 +40,7 @@ const VideoUploader = forwardRef((props: VideoUploaderProps, ref) => {
 
             if (data.success) {
                 setVideo(data.path);
+                setAnchor(null);
                 setUploading(false);
             } else {
                 setError(data.error || '上传失败');
@@ -54,7 +56,22 @@ const VideoUploader = forwardRef((props: VideoUploaderProps, ref) => {
     const preview = () => {
         if (video) {
             return <div>
-                <video src={'/file?path=' + encodeURIComponent(video)} controls muted style={{ maxWidth: '100%', height: 'auto' }} />
+                <div style={{ position: 'relative', display: 'inline-block', maxWidth: '100%' }}>
+                    <video src={'/file?path=' + encodeURIComponent(video)} controls muted onClick={event => {
+                        if (event.currentTarget.currentTime > 0.1) {
+                            setError('请先将视频移到开头，再点击首帧中的锚点。');
+                            return;
+                        }
+                        const bounds = event.currentTarget.getBoundingClientRect();
+                        setAnchor({ x: (event.clientX - bounds.left) / bounds.width, y: (event.clientY - bounds.top) / bounds.height });
+                        setError(null);
+                    }} style={{ maxWidth: '100%', height: 'auto', display: 'block', cursor: 'crosshair' }} />
+                    <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none' }}>
+                        {anchor && <span style={{ position: 'absolute', left: `${anchor.x * 100}%`, top: `${anchor.y * 100}%`, color: '#ff4d4d', fontSize: 26, transform: 'translate(-50%, -50%)', pointerEvents: 'none' }}>⊕</span>}
+                    </div>
+                </div>
+                <div style={{ fontSize: 12 }}>在首帧点击 3D 锚点；留空则使用文本位置建议。</div>
+                {anchor && <button type="button" onClick={() => setAnchor(null)}>使用自动建议</button>}
             </div>
         }
     }
@@ -106,6 +123,25 @@ const VideoPreview = forwardRef((props, ref) => {
                         margin: '0 auto'
                     }}
                 />
+                {typeof metadata.anchor_confidence === 'number' && <div style={{ marginTop: 8, fontSize: 12 }}>
+                    锚点：{metadata.anchor_source === 'manual' ? '手动指定' : metadata.anchor_source === 'vision_grounder' ? '视觉模型建议' : '文本方位建议'}
+                    {' · 置信度 '}{Math.round(metadata.anchor_confidence * 100)}%
+                    {metadata.anchor_confidence < 0.5 && ' · 建议在上传视频的首帧点击确认位置'}
+                </div>}
+                {metadata.kind === 'blender_scene_composite' && <div style={{ marginTop: 8, fontSize: 12 }}>
+                    Blender {metadata.blender_version || 'unknown'}
+                    {typeof metadata.solve_error_px === 'number' && ` · 解算重投影误差 ${metadata.solve_error_px.toFixed(2)} px`}
+                    {typeof metadata.camera_frames === 'number' && ` · ${metadata.camera_frames} 帧相机轨迹`}
+                    <div style={{ marginTop: 4 }}>
+                        {(['scene_path', 'report_path'] as const).map(key => {
+                            const path = metadata[key];
+                            if (typeof path !== 'string' || !path) return null;
+                            return <a key={key} href={'/file?path=' + encodeURIComponent(path)} download style={{ marginRight: 10 }}>
+                                {key === 'scene_path' ? '下载 Blender 工程' : '下载解算报告'}
+                            </a>;
+                        })}
+                    </div>
+                </div>}
                 {metadata.kind === 'blender_comparison' && <div style={{ marginTop: 8, fontSize: 12 }}>
                     <div>
                         Blender {metadata.blender_version || 'unknown'}
