@@ -1,0 +1,5 @@
+# EasyOCR CRAFT and Chinese/English recognition.
+easyocr>=1.7,<2
+# Pure-Python variant works on Windows ARM64 with the compatibility shim in OCR.py.
+python-bidi==0.4.2
+modelscope>=1.28,<2
