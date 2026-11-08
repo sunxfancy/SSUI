@@ -4,7 +4,7 @@ from typing import Callable, List, Optional, Union, Dict, Any
 import PIL
 import torch
 import kornia
-from transformers import CLIPVisionModelWithProjection, CLIPFeatureExtractor, CLIPTextModel
+from transformers import CLIPVisionModelWithProjection, CLIPImageProcessor as CLIPFeatureExtractor, CLIPTextModel
 from diffusers.utils.import_utils import is_accelerate_available
 from diffusers.image_processor import VaeImageProcessor
 from diffusers.models import AutoencoderKL, UNet2DConditionModel

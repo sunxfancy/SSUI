@@ -1,3 +1,9 @@
+> 推理实现已迁入 backend 视频插件。默认共享环境已升级到 Torch 2.9.1、
+> Transformers 5.1.0、Diffusers 0.42.1，H3/LTX 优先使用主环境。
+> 下文独立 venv 命令仅供外部解释器兼容使用，原主环境 Torch 2.4.1 冲突说明已过时。
+> 新架构、依赖注入和安装验证见 [BackendPlugins.md](../../doc/BackendPlugins.md)。
+> 旧 DiffSynth 源码位于 `backend/plugins/video/vendor/diffsynth`。
+
 # Video 扩展：本地视频生成模型接入说明
 
 本扩展内置了 vendored [diffsynth 1.1.9](https://pypi.org/project/diffsynth/)（`extensions/Video/diffsynth`），
@@ -33,7 +39,7 @@ yarn update-lock:no-upgrade
 文本编码器 / tokenizer / VAE 与 Wan2.1 共享，会自动重定向下载。
 FP8：把 `Wan22.py` 里三个 `load()` 的 `torch_dtype=torch.bfloat16` 改为 `torch.float8_e4m3fn`。
 
-### LTX-2.5（独立 venv + subprocess）
+### LTX-2.5（共享环境 + subprocess）
 
 `ssui_video/LTX2.py`：
 
@@ -42,8 +48,8 @@ FP8：把 `Wan22.py` 里三个 `load()` 的 `torch_dtype=torch.bfloat16` 改为 
 | `LTX2TextToVideo` | `ltx_pipelines.distilled`（8 步蒸馏，最快） | `ltx-2.5-22b-distilled-transformer-bf16.safetensors` |
 | `LTX2ImageToVideo` | `ltx_pipelines.ti2vid_one_stage`（单阶段，40 步） | `ltx-2.5-22b-dev-transformer-bf16.safetensors` |
 
-LTX-2.5 官方栈要求 **Python>=3.12 / PyTorch~=2.7 / CUDA>=12.7**，与 SSUI 主环境（torch 2.4.1）冲突，
-所以必须建独立 venv（建议放仓库根目录的 `ltx-venv/`）：
+LTX-2.5 默认使用已升级的共享环境。以下命令仅供需要外部运行时的用户参考，
+可通过 `SSUI_LTX_PYTHON` 显式指定解释器：
 
 ```bash
 git clone https://github.com/Lightricks/LTX-2.git && cd LTX-2
@@ -74,7 +80,7 @@ SSUI_LTX_TRANSFORMER / SSUI_LTX_TRANSFORMER_DEV / SSUI_LTX_TEXT_ENCODER /
 SSUI_LTX_VIDEO_VAE / SSUI_LTX_AUDIO_VAE / SSUI_LTX_SPATIAL_UPSAMPLER  单个权重路径
 ```
 
-### MiniMax H3（独立 venv + subprocess）
+### MiniMax H3（共享环境 + subprocess）
 
 `ssui_video/MiniMaxH3.py` + `ssui_video/h3_runner.py`：
 
@@ -90,7 +96,7 @@ H3 是 33B 全模态 DiT，效果最接近 Seedance 2.0 的开源模型，但本
 H3-Context-IR 与 2K 重生成模块官方未开源，本地只能到 768p；
 想复现官方效果需按 [Prompting Guidance](https://github.com/MiniMax-AI/MiniMax-H3) 自行预处理提示词。
 
-独立 venv（建议 `h3-venv/`，Python>=3.12）：
+默认使用共享环境；如需额外环境，可参考以下命令（Python>=3.12）：
 
 ```bash
 hf auth login   # 先同意 MiniMaxAI/MiniMax-H3 的许可

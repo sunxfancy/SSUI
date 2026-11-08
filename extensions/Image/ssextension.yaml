@@ -4,8 +4,8 @@ server:
   venv: shared
   dependencies:
     - numpy>=1.21.2
-    - diffusers>=0.37.0,<0.41
-    - transformers>=4.51.3,<5
+    - diffusers==0.42.1
+    - transformers==5.1.0
     - accelerate>=1.2.1
   packages:
     - ssui_image

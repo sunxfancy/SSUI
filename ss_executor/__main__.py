@@ -17,9 +17,6 @@ for dir in os.listdir(extensions_root):
     yaml_path = os.path.join(extensions_root, dir, "ssextension.yaml")
     if os.path.exists(yaml_path):
         sys.path.append(os.path.join(extensions_root, dir))
-        vendor_dir = os.path.join(extensions_root, dir, "vendor")
-        if os.path.isdir(vendor_dir):
-            sys.path.append(vendor_dir)
 
 
 from ss_executor.loader import SSLoader, search_project_root
@@ -149,11 +146,8 @@ def convert_task_return(result, task_script):
             with open(path, "wb") as output:
                 output.write(result._audio)
         elif result._audio is not None:
-            import torchaudio
-            audio = result._audio.detach().cpu() if hasattr(result._audio, "detach") else result._audio
-            if getattr(audio, "ndim", 0) == 1:
-                audio = audio.unsqueeze(0)
-            torchaudio.save(path, audio, result.sample_rate)
+            from backend.util.audio import write_audio
+            write_audio(path, result._audio, result.sample_rate)
         else:
             raise ValueError("Audio result contains neither a path nor audio data")
 
@@ -178,12 +172,19 @@ def convert_task_return(result, task_script):
     return result
 
 class Executor:
-    def __init__(self, scheduler_url: str = None):
+    def __init__(self, scheduler_url: str = None, backend_application=None):
+        from backend.application import create_application
+        self.backend_application = backend_application or create_application()
+        self._owns_backend = backend_application is None
         self.scheduler_url = scheduler_url or os.environ.get(
             "SSUI_SCHEDULER_URL", "ws://localhost:5000/"
         )
         self.current_task: Optional[Task] = None
         self.is_running = True
+
+    def close(self):
+        if self._owns_backend:
+            self.backend_application.close()
         
     async def connect(self):
         """连接到调度器服务器"""
@@ -253,7 +254,8 @@ class Executor:
             await websocket.send(status_update.model_dump_json())
             
             # 执行任务
-            loader = SSLoader(use_sandbox=task.use_sandbox)
+            loader = SSLoader(use_sandbox=task.use_sandbox,
+                backend_application=self.backend_application)
             loader.load(task.script)
             loader.Execute()
 
@@ -314,7 +316,10 @@ def main():
     import ssui_image
     async def _start():
         executor = Executor()
-        await executor.connect()
+        try:
+            await executor.connect()
+        finally:
+            executor.close()
     asyncio.run(_start())
 
 if __name__ == "__main__":

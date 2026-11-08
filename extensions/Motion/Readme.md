@@ -3,10 +3,10 @@
 The Motion extension provides both NVIDIA Kimodo text-to-motion generation and
 MediaPipe video pose recognition with BVH/Blender reconstruction.
 
-The Motion extension runs NVIDIA Kimodo in an isolated child environment. This
-keeps Kimodo's pinned `transformers==5.1.0` dependency from replacing the
-versions used by SSUI's Image and Video extensions, while reusing the project's
-ROCm-enabled PyTorch installation.
+Inference now lives in the backend Motion plugin. Kimodo uses the shared
+Python environment with Transformers 5.1.0; it no longer needs a child venv.
+See [backend plugins](../../doc/BackendPlugins.md) for dependency injection,
+installation and platform validation.
 
 ## Windows AMDGPU setup
 
@@ -16,17 +16,16 @@ From the repository root, after the normal `yarn` installation:
 powershell -ExecutionPolicy Bypass -File extensions/Motion/install_kimodo.ps1
 ```
 
-The installer creates `.venv/kimodo`, installs the official Kimodo source at a
-pinned commit, and reuses `.venv/Lib/site-packages` for PyTorch/ROCm. It skips
-the optional native `motion_correction` postprocessor; text-to-motion generation
+The installer adds the pinned official Kimodo source to the main `.venv`.
+It skips the optional native `motion_correction` postprocessor; text-to-motion
 and NPZ/BVH export remain available.
 
 Kimodo's text encoder uses the gated
 `meta-llama/Meta-Llama-3-8B-Instruct` model. Request access on Hugging Face, then
-authenticate inside the child environment:
+authenticate inside the project environment:
 
 ```powershell
-.venv\kimodo\Scripts\hf.exe auth login
+.venv\Scripts\hf.exe auth login
 ```
 
 If Meta access is still pending, a compatible community snapshot may be used

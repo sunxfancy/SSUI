@@ -8,14 +8,16 @@ from tqdm import tqdm
 
 
 def add_extension_paths():
-    """把扩展目录及其 vendor/ 根目录加入 sys.path。
+    """把 SDK 兼容包目录加入 sys.path，按精确包名解析 backend vendor。
 
     返回实际加入的路径列表。扩展的 ``ssui_*`` SDK 包与第三方 vendored
-    代码（cosyvoice / matcha / trellis / stdgen 等）都通过这里导入。
+    代码（cosyvoice / matcha / trellis / stdgen 等）由 backend finder 解析。
 
     注意：只加入 vendor/ 根目录而不是其子目录，避免 vendored 包内部的
     子包（如 matcha/onnx）冒充同名顶层模块并遮蔽真实依赖（如 pip 的 onnx）。
     """
+    from backend.plugins.vendor import install_bundled_packages
+    install_bundled_packages()
     extensions_dir = os.path.abspath(
         os.path.join(os.path.dirname(__file__), "..", "extensions")
     )
@@ -29,11 +31,6 @@ def add_extension_paths():
         if ext_dir not in sys.path:
             sys.path.insert(0, ext_dir)
             added.append(ext_dir)
-        vendor_dir = os.path.join(ext_dir, "vendor")
-        if os.path.isdir(vendor_dir):
-            if vendor_dir not in sys.path:
-                sys.path.insert(0, vendor_dir)
-                added.append(vendor_dir)
     return added
 
 # 检查是否应该运行真实模型测试（默认关闭，需要下载 GB 级模型）

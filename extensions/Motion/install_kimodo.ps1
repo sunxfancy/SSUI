@@ -2,23 +2,15 @@ $ErrorActionPreference = "Stop"
 
 $RepoRoot = (Resolve-Path (Join-Path $PSScriptRoot "..\..")).Path
 $ProjectPython = Join-Path $RepoRoot ".venv\Scripts\python.exe"
-$KimodoRoot = Join-Path $RepoRoot ".venv\kimodo"
-$KimodoPython = Join-Path $KimodoRoot "Scripts\python.exe"
-$ParentSitePackages = Join-Path $RepoRoot ".venv\Lib\site-packages"
-$PthFile = Join-Path $KimodoRoot "Lib\site-packages\ssui_parent_venv.pth"
+$KimodoPython = $ProjectPython
 $KimodoCommit = "1aece8c124d73d255ceff5086d983b844c9f4e94"
 
 if (-not (Test-Path -LiteralPath $ProjectPython)) {
     throw "Project venv is missing. Run yarn at the repository root first."
 }
 
-if (-not (Test-Path -LiteralPath $KimodoPython)) {
-    & $ProjectPython -m venv $KimodoRoot
-}
-
-# Reuse the project's verified ROCm PyTorch without upgrading the shared SSUI
-# environment. Packages installed in the child environment take precedence.
-Set-Content -LiteralPath $PthFile -Value $ParentSitePackages -Encoding utf8
+# The shared backend now uses Transformers 5.1.0. Do not create a child venv
+# or leak the parent site-packages into it through .pth files.
 
 $env:SKIP_MOTION_CORRECTION_IN_SETUP = "1"
 & $KimodoPython -m pip install --timeout 300 `

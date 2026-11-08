@@ -5,10 +5,10 @@ absl-py:
     - mediapipe
 accelerate:
   version: "1.14.0"
-  isRoot: true
   dependents:
     - diffsynth
     - diffusers
+    - ltx-core
     - peft
 aiohappyeyeballs:
   version: "2.6.2"
@@ -16,10 +16,8 @@ aiohappyeyeballs:
     - aiohttp
 aiohttp:
   version: "3.14.1"
-  isRoot: true
 aioshutil:
   version: "1.6"
-  isRoot: true
 aiosignal:
   version: "1.4.0"
   dependents:
@@ -67,6 +65,10 @@ attrs:
     - cyclopts
     - jsonschema
     - referencing
+av:
+  version: "19.0.2"
+  dependents:
+    - ltx-pipelines
 babel:
   version: "2.18.0"
   dependents:
@@ -77,7 +79,6 @@ beautifulsoup4:
     - nbconvert
 blake3:
   version: "1.0.9"
-  isRoot: true
 bleach:
   version: "6.4.0"
   dependents:
@@ -95,6 +96,7 @@ cffi:
   dependents:
     - argon2-cffi-bindings
     - sounddevice
+    - soundfile
 charset-normalizer:
   version: "2.1.1"
   dependents:
@@ -108,28 +110,18 @@ click:
     - uvicorn
 clip-anytorch:
   version: "2.6.0"
-  isRoot: true
-colorama:
-  version: "0.4.6"
-  dependents:
-    - click
-    - ipython
-    - tqdm
-    - uvicorn
 comm:
   version: "0.2.3"
   dependents:
     - ipykernel
 compel:
   version: "2.4.0"
-  isRoot: true
 contourpy:
   version: "1.3.3"
   dependents:
     - matplotlib
 controlnet-aux:
   version: "0.0.10"
-  isRoot: true
 cycler:
   version: "0.12.1"
   dependents:
@@ -138,10 +130,6 @@ cyclopts:
   version: "4.19.0"
   dependents:
     - pyvista
-datasets:
-  version: "1.1.1"
-  dependents:
-    - diffsynth
 debugpy:
   version: "1.8.21"
   dependents:
@@ -156,24 +144,16 @@ defusedxml:
     - nbconvert
 deprecated:
   version: "1.3.1"
-  isRoot: true
 detect-installer:
   version: "0.1.0"
   dependents:
     - fastapi-cloud-cli
 diffsynth:
-  version: "2.0.16"
-  isRoot: true
+  version: "2.2.0"
 diffusers:
-  version: "0.38.0"
-  isRoot: true
+  version: "0.42.1"
   dependents:
     - compel
-dill:
-  version: "0.4.1"
-  dependents:
-    - datasets
-    - multiprocess
 distlib:
   version: "0.4.3"
   dependents:
@@ -188,13 +168,12 @@ docstring-parser:
     - cyclopts
 easydict:
   version: "1.13"
-  isRoot: true
 einops:
   version: "0.8.2"
-  isRoot: true
   dependents:
     - controlnet-aux
     - diffsynth
+    - ltx-core
     - spandrel
 email-validator:
   version: "2.3.0"
@@ -207,7 +186,6 @@ executing:
     - stack-data
 fastapi:
   version: "0.138.1"
-  isRoot: true
 fastapi-cli:
   version: "0.0.27"
   dependents:
@@ -229,10 +207,8 @@ filelock:
   version: "3.29.0"
   dependents:
     - controlnet-aux
-    - datasets
     - diffusers
     - huggingface-hub
-    - modelscope
     - python-discovery
     - torch
     - virtualenv
@@ -266,7 +242,6 @@ ftfy:
     - diffsynth
 gguf:
   version: "0.19.0"
-  isRoot: true
 glcontext:
   version: "3.0.0"
   dependents:
@@ -277,7 +252,7 @@ h11:
     - httpcore
     - uvicorn
 hf-xet:
-  version: "1.5.1"
+  version: "1.8.0"
   dependents:
     - huggingface-hub
 httpcore:
@@ -291,14 +266,12 @@ httptools:
 httpx:
   version: "0.28.1"
   dependents:
-    - diffusers
     - fastapi
     - fastapi-cloud-cli
     - huggingface-hub
     - jupyterlab
 huggingface-hub:
-  version: "1.21.0"
-  isRoot: true
+  version: "1.33.0"
   dependents:
     - accelerate
     - controlnet-aux
@@ -318,7 +291,6 @@ idna:
     - yarl
 igraph:
   version: "1.0.0"
-  isRoot: true
 imageio:
   version: "2.37.3"
   dependents:
@@ -436,7 +408,6 @@ kiwisolver:
     - matplotlib
 kornia:
   version: "0.8.3"
-  isRoot: true
 kornia-rs:
   version: "0.1.14"
   dependents:
@@ -453,6 +424,12 @@ llvmlite:
   version: "0.47.0"
   dependents:
     - numba
+ltx-core:
+  version: "1.0.0"
+  dependents:
+    - ltx-pipelines
+ltx-pipelines:
+  version: "1.0.0"
 markdown-it-py:
   version: "4.2.0"
   dependents:
@@ -464,7 +441,6 @@ markupsafe:
     - nbconvert
 matplotlib:
   version: "3.11.0"
-  isRoot: true
   dependents:
     - mediapipe
     - pyvista
@@ -480,7 +456,6 @@ mdurl:
     - markdown-it-py
 mediapipe:
   version: "0.10.35"
-  isRoot: true
 mistune:
   version: "3.3.2"
   dependents:
@@ -490,12 +465,11 @@ ml-dtypes:
   dependents:
     - onnx
 modelscope:
-  version: "1.37.1"
+  version: "1.26.0"
   dependents:
     - diffsynth
 moderngl:
   version: "5.12.0"
-  isRoot: true
 mpmath:
   version: "1.3.0"
   dependents:
@@ -505,10 +479,6 @@ multidict:
   dependents:
     - aiohttp
     - yarl
-multiprocess:
-  version: "0.70.19"
-  dependents:
-    - datasets
 nbclient:
   version: "0.11.0"
   dependents:
@@ -551,10 +521,10 @@ numpy:
     - accelerate
     - contourpy
     - controlnet-aux
-    - datasets
     - diffusers
     - gguf
     - imageio
+    - ltx-core
     - matplotlib
     - mediapipe
     - ml-dtypes
@@ -572,6 +542,7 @@ numpy:
     - rembg
     - scikit-image
     - scipy
+    - soundfile
     - spandrel
     - tifffile
     - torchsde
@@ -580,10 +551,8 @@ numpy:
     - trimesh
 onnx:
   version: "1.22.0"
-  isRoot: true
 onnxruntime:
   version: "1.27.0"
-  isRoot: true
 opencv-contrib-python:
   version: "4.13.0.92"
   dependents:
@@ -606,7 +575,6 @@ packaging:
     - kornia
     - lazy-loader
     - matplotlib
-    - modelscope
     - nbconvert
     - onnxruntime
     - peft
@@ -616,7 +584,6 @@ packaging:
 pandas:
   version: "3.0.3"
   dependents:
-    - datasets
     - diffsynth
 pandocfilters:
   version: "1.5.1"
@@ -630,16 +597,19 @@ peft:
   version: "0.19.1"
   dependents:
     - diffsynth
+pexpect:
+  version: "4.9.0"
+  dependents:
+    - ipython
 picklescan:
   version: "1.0.4"
-  isRoot: true
 pillow:
   version: "12.2.0"
-  isRoot: true
   dependents:
     - controlnet-aux
     - diffusers
     - imageio
+    - ltx-pipelines
     - matplotlib
     - pymatting
     - pyvista
@@ -655,7 +625,6 @@ platformdirs:
     - virtualenv
 plyfile:
   version: "1.1.4"
-  isRoot: true
 pooch:
   version: "1.9.0"
   dependents:
@@ -677,7 +646,6 @@ propcache:
 protobuf:
   version: "7.35.1"
   dependents:
-    - diffsynth
     - onnx
     - onnxruntime
 psutil:
@@ -688,21 +656,21 @@ psutil:
     - ipykernel
     - ipython
     - peft
+ptyprocess:
+  version: "0.7.0"
+  dependents:
+    - pexpect
+    - terminado
 pure-eval:
   version: "0.2.3"
   dependents:
     - stack-data
-pyarrow:
-  version: "24.0.0"
-  dependents:
-    - datasets
 pycparser:
   version: "3.0"
   dependents:
     - cffi
 pydantic:
   version: "2.13.4"
-  isRoot: true
   dependents:
     - fastapi
     - fastapi-cloud-cli
@@ -718,7 +686,6 @@ pydantic-extra-types:
     - fastapi
 pydantic-settings:
   version: "2.14.2"
-  isRoot: true
   dependents:
     - fastapi
 pygments:
@@ -735,7 +702,6 @@ pymatting:
     - rembg
 pymeshfix:
   version: "0.18.1"
-  isRoot: true
 pyparsing:
   version: "3.3.2"
   dependents:
@@ -765,18 +731,14 @@ python-multipart:
   version: "0.0.32"
   dependents:
     - fastapi
+pytorch-triton-rocm:
+  version: "3.5.1"
+  dependents:
+    - torch
 pyvista:
   version: "0.48.4"
-  isRoot: true
-pywinpty:
-  version: "3.0.5"
-  dependents:
-    - jupyter-server
-    - jupyter-server-terminals
-    - terminado
 pyyaml:
   version: "6.0.3"
-  isRoot: true
   dependents:
     - accelerate
     - gguf
@@ -806,11 +768,9 @@ regex:
     - transformers
 rembg:
   version: "2.0.69"
-  isRoot: true
 requests:
   version: "2.28.1"
   dependents:
-    - datasets
     - diffusers
     - gguf
     - jupyterlab-server
@@ -818,7 +778,6 @@ requests:
     - pooch
 restrictedpython:
   version: "8.3"
-  isRoot: true
 rfc3339-validator:
   version: "0.1.4"
   dependents:
@@ -851,11 +810,8 @@ rich-toolkit:
     - fastapi-cloud-cli
 rignore:
   version: "0.7.6"
-  isRoot: true
   dependents:
     - fastapi-cloud-cli
-    - torch
-    - rocm
 rpds-py:
   version: "2026.5.1"
   dependents:
@@ -863,11 +819,11 @@ rpds-py:
     - referencing
 safetensors:
   version: "0.8.0"
-  isRoot: true
   dependents:
     - accelerate
     - diffsynth
     - diffusers
+    - ltx-core
     - peft
     - spandrel
     - timm
@@ -879,9 +835,9 @@ scikit-image:
     - rembg
 scipy:
   version: "1.18.0"
-  isRoot: true
   dependents:
     - controlnet-aux
+    - ltx-core
     - pymatting
     - rembg
     - scikit-image
@@ -895,9 +851,7 @@ send2trash:
   dependents:
     - jupyter-server
 sentencepiece:
-  version: "0.2.1"
-  dependents:
-    - diffsynth
+  version: "0.2.3"
 sentry-sdk:
   version: "2.63.0"
   dependents:
@@ -905,7 +859,6 @@ sentry-sdk:
 setuptools:
   version: "70.2.0"
   dependents:
-    - modelscope
     - torch
 shellingham:
   version: "1.5.4"
@@ -920,13 +873,14 @@ sounddevice:
   version: "0.5.5"
   dependents:
     - mediapipe
+soundfile:
+  version: "0.14.0"
 soupsieve:
   version: "2.8.4"
   dependents:
     - beautifulsoup4
 spandrel:
   version: "0.4.2"
-  isRoot: true
 stack-data:
   version: "0.6.3"
   dependents:
@@ -962,9 +916,11 @@ tinycss2:
     - bleach
 tokenizers:
   version: "0.22.2"
-  isRoot: true
   dependents:
     - transformers
+torch:
+  version: "2.9.1+rocm6.4"
+  dependents:
     - accelerate
     - clip-anytorch
     - compel
@@ -972,15 +928,21 @@ tokenizers:
     - diffsynth
     - diffusers
     - kornia
+    - ltx-core
     - peft
     - spandrel
     - timm
     - torchaudio
     - torchsde
     - torchvision
+torchaudio:
+  version: "2.9.1+rocm6.4"
+  dependents:
+    - ltx-core
 torchsde:
   version: "0.2.6"
-  isRoot: true
+torchvision:
+  version: "0.24.1+rocm6.4"
   dependents:
     - clip-anytorch
     - controlnet-aux
@@ -1000,9 +962,9 @@ tqdm:
   version: "4.66.5"
   dependents:
     - clip-anytorch
-    - datasets
     - gguf
     - huggingface-hub
+    - ltx-pipelines
     - modelscope
     - peft
     - rembg
@@ -1026,21 +988,23 @@ trampoline:
   dependents:
     - torchsde
 transformers:
-  version: "5.12.1"
-  isRoot: true
+  version: "5.1.0"
   dependents:
     - compel
     - diffsynth
+    - ltx-core
     - peft
 trimesh:
   version: "4.12.2"
-  isRoot: true
 typer:
   version: "0.25.1"
   dependents:
     - fastapi-cli
     - fastapi-cloud-cli
-    - huggingface-hub
+    - typer-slim
+typer-slim:
+  version: "0.24.0"
+  dependents:
     - transformers
 typing-extensions:
   version: "4.15.0"
@@ -1059,6 +1023,7 @@ typing-extensions:
     - pyvista
     - referencing
     - rich-toolkit
+    - soundfile
     - spandrel
     - starlette
     - torch
@@ -1073,7 +1038,6 @@ tzdata:
   version: "2026.2"
   dependents:
     - arrow
-    - pandas
 uri-template:
   version: "1.3.0"
   dependents:
@@ -1090,9 +1054,12 @@ uvicorn:
     - fastapi
     - fastapi-cli
     - fastapi-cloud-cli
+uvloop:
+  version: "0.23.0"
+  dependents:
+    - uvicorn
 virtualenv:
   version: "21.5.1"
-  isRoot: true
 vtk:
   version: "9.6.2"
   dependents:
@@ -1121,7 +1088,6 @@ websocket-client:
     - jupyter-server
 websockets:
   version: "16.0"
-  isRoot: true
   dependents:
     - uvicorn
 wrapt:
@@ -1130,11 +1096,6 @@ wrapt:
     - deprecated
 xatlas:
   version: "0.0.11"
-  isRoot: true
-xxhash:
-  version: "3.8.0"
-  dependents:
-    - datasets
 yarl:
   version: "1.24.2"
   dependents:

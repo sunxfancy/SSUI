@@ -1,0 +1,142 @@
+from backend.contracts.services import ModelLoader
+from typing import Optional, List
+from pathlib import Path
+import torch
+import PIL
+from backend.stable_diffusion.diffusion.conditioning_data import SDXLConditioningInfo
+from backend.contracts.services import InferenceConfig as SSUIConfig
+from .api.conditioning import BasicConditioningInfo, create_sdxl_conditioning
+from .api.denoise import ApplyRange, ControlNet, decode_latents, denoise_image
+from .api.model import ModelLoaderService, UNetModel, ClipModel, VAEModel, load_model, load_sdxl_model, LoRAModel, load_lora, ControlNetModel, load_controlnet
+from backend.contracts.media import Prompt, Image
+
+def getModelLoader(*, model_loader: ModelLoader):
+    return model_loader
+
+class SDXLModel:
+
+    def __init__(self, path: str='', unet: Optional[UNetModel]=None, clip: Optional[ClipModel]=None, clip2: Optional[ClipModel]=None, vae: Optional[VAEModel]=None):
+        self.path = path
+        self.unet = unet
+        self.clip = clip
+        self.clip2 = clip2
+        self.vae = vae
+
+    @staticmethod
+    def load(path: str, *, model_loader: ModelLoader) -> 'SDXLModel':
+        unet, clip, clip2, vae = load_sdxl_model(getModelLoader(model_loader=model_loader), path)
+        return SDXLModel(path, unet, clip, clip2, vae)
+
+class SDXLCondition:
+
+    def __init__(self, condition_info: Optional[SDXLConditioningInfo]=None):
+        self.condition_info = condition_info
+
+def SDXLClip(config: SSUIConfig, model: SDXLModel, positive: Prompt, negative: Prompt):
+    if config.is_prepare():
+        return (SDXLCondition(), SDXLCondition())
+    print('SDXLClip executed')
+    print('ignoreLastLayer:', config['ignoreLastLayer'])
+    print('positive:', positive.text)
+    print('negative:', negative.text)
+    positive_condition = create_sdxl_conditioning(positive.text, '', model.clip, model.clip2, 1024, 1024, 0, 0, 1024, 1024)
+    negative_condition = create_sdxl_conditioning(negative.text, '', model.clip, model.clip2, 1024, 1024, 0, 0, 1024, 1024)
+    return (SDXLCondition(positive_condition), SDXLCondition(negative_condition))
+
+class SDXLLatent:
+
+    def __init__(self, config: SSUIConfig, tensor: Optional[torch.Tensor]=None):
+        self.width: int = config['width'] if 'width' in config else 1024
+        self.height: int = config['height'] if 'height' in config else 1024
+        self.tensor: Optional[torch.Tensor] = tensor
+        if config.is_prepare():
+            return
+        print('SDXLLatent executed')
+        print('width:', self.width)
+        print('height:', self.height)
+
+    @staticmethod
+    def from_image(image: Image) -> 'SDXLLatent':
+        pass
+
+class SDXLLora:
+
+    def __init__(self, path: str='', lora: Optional[LoRAModel]=None, weight: float=1.0):
+        self.path = path
+        self.lora = lora
+        self.weight = weight
+
+    @staticmethod
+    def load_one(path: str, weight: float=1.0, *, model_loader: ModelLoader) -> 'SDXLLora':
+        lora_model = load_lora(getModelLoader(model_loader=model_loader), Path(path), weight)
+        return SDXLLora(path=path, lora=lora_model, weight=weight)
+
+    @staticmethod
+    def load(path: List[Path], weights: Optional[List[float]]=None, *, model_loader: ModelLoader) -> 'List[SDXLLora]':
+        if weights is not None and len(path) != len(weights):
+            raise ValueError('LoRA paths list and weights list must have the same length')
+        if weights is None:
+            lora_weights = [1.0] * len(path)
+        else:
+            lora_weights = weights
+        sdxlLora = []
+        for i, lora_path in enumerate(path):
+            lora_models = load_lora(getModelLoader(model_loader=model_loader), lora_path, lora_weights[i])
+            sdxlLora.append(SDXLLora(lora=lora_models, weight=lora_weights[i]))
+        return sdxlLora
+
+class SDXLControlNet:
+    """SDXL ControlNet workflow node.
+
+    Pairs an SDXL ControlNet model file with a control image and tuning
+    parameters. ``load()`` is invoked by the frontend; the resulting node is
+    passed to ``SDXLDenoise``.
+    """
+
+    def __init__(self, path: str='', image_path: str='', controlnet: Optional[ControlNetModel]=None, image: Optional[PIL.Image.Image]=None, weight: float=1.0, control_mode: str='balanced', resize_mode: str='just_resize', begin_step_percent: float=0.0, end_step_percent: float=1.0):
+        self.path = path
+        self.image_path = image_path
+        self.controlnet = controlnet
+        self.image = image
+        self.weight = weight
+        self.control_mode = control_mode
+        self.resize_mode = resize_mode
+        self.begin_step_percent = begin_step_percent
+        self.end_step_percent = end_step_percent
+
+    @staticmethod
+    def load(path: str, image_path: str, weight: float=1.0, control_mode: str='balanced', resize_mode: str='just_resize', begin_step_percent: float=0.0, end_step_percent: float=1.0, *, model_loader: ModelLoader) -> 'SDXLControlNet':
+        controlnet = load_controlnet(getModelLoader(model_loader=model_loader), Path(path))
+        image = PIL.Image.open(image_path).convert('RGB')
+        return SDXLControlNet(path=path, image_path=image_path, controlnet=controlnet, image=image, weight=weight, control_mode=control_mode, resize_mode=resize_mode, begin_step_percent=begin_step_percent, end_step_percent=end_step_percent)
+
+    def to_api_field(self) -> ControlNet:
+        if self.controlnet is None or self.image is None:
+            raise ValueError('SDXLControlNet is not loaded; call SDXLControlNet.load() first.')
+        return ControlNet(image=self.image, control_model=self.controlnet.controlnet, control_weight=self.weight, apply_range=ApplyRange(begin_step_percent=self.begin_step_percent, end_step_percent=self.end_step_percent), control_mode=self.control_mode, resize_mode=self.resize_mode)
+
+def SDXLDenoise(config: SSUIConfig, model: SDXLModel, latent: SDXLLatent, positive: SDXLCondition, negative: SDXLCondition, control: Optional[SDXLControlNet]=None):
+    if config.is_prepare():
+        return SDXLLatent(config('DenoiseToLatents'))
+    print('SDXLDenoise executed')
+    print('scheduler:', config['scheduler'])
+    print('steps:', config['steps'])
+    print('CFG:', config['CFG'])
+    tensor = denoise_image(model=model.unet, positive=positive.condition_info, negative=negative.condition_info, seed=123454321, width=latent.width, height=latent.height, scheduler_name=config['scheduler'], steps=config['steps'], cfg_scale=config['CFG'], control=control.to_api_field() if control is not None else None)
+    return SDXLLatent(config('DenoiseToLatents'), tensor)
+
+def SDXLLatentDecode(config: SSUIConfig, model: SDXLModel, latent: SDXLLatent):
+    if config.is_prepare():
+        return Image()
+    print('SDXLLatentDecode executed')
+    image = decode_latents(model.vae, latent.tensor)
+    return Image(image)
+
+def SDXLMergeLora(config, model: SDXLModel, loraModel: List[SDXLLora]):
+    if config.is_prepare():
+        return SDXLModel(config('Add Empty Lora to SDXL'))
+    print('SDXLMergeLora executed')
+    model.unet.loras = loraModel
+    model.clip.loras = loraModel
+    model.clip2.loras = loraModel
+    return model

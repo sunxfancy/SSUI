@@ -13,6 +13,7 @@ class ScriptService:
         self.scheduler = scheduler
     
     def get_script_functions(self, script_path: str) -> Dict[str, Any]:
+        loader = None
         try:
             script_path = self.resolve_script_path(script_path)
             if not os.path.exists(script_path):
@@ -27,9 +28,10 @@ class ScriptService:
             loader.Execute()
             
             def getTypeName(t):
+                from ssui.backend_adapter import public_type_module
                 result = ""
                 if hasattr(t, "__module__"):
-                    result += t.__module__ + "."
+                    result += public_type_module(t.__module__) + "."
                 result += t.__name__
                 if hasattr(t, "__args__"):
                     result += "["
@@ -50,6 +52,9 @@ class ScriptService:
             }
         except Exception as e:
             return {"error": str(e)}
+        finally:
+            if loader is not None:
+                loader.close()
     
     async def prepare_script(self, script_path: str, callable: str) -> Dict[str, Any]:
         try:
@@ -125,6 +130,27 @@ class ScriptService:
             try:
                 with open(path, "r", encoding="utf-8") as source:
                     tree = ast.parse(source.read(), filename=source_name)
+                # SDK facades carry controls; typed inference signatures live in
+                # backend. Resolve only literal built-in entries, without imports.
+                for statement in tree.body:
+                    if not isinstance(statement, ast.Assign) or not isinstance(statement.value, ast.Call):
+                        continue
+                    call = statement.value
+                    if not isinstance(call.func, ast.Name) or call.func.id != "initialize_adapter":
+                        continue
+                    if len(call.args) != 2 or not isinstance(call.args[1], ast.Constant):
+                        continue
+                    key = call.args[1].value
+                    from backend.application import MODULES
+                    if not isinstance(key, str) or "." not in key:
+                        continue
+                    family, name = key.split(".", 1)
+                    if name not in MODULES.get(family, ()):
+                        continue
+                    implementation = os.path.join(os.path.dirname(__file__), "..", "backend", "plugins", family, name + ".py")
+                    with open(implementation, encoding="utf-8") as source:
+                        tree = ast.parse(source.read(), filename=source_name)
+                    break
                 for node in tree.body:
                     if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)) and not node.name.startswith("_"):
                         add_callable(module, source_name, node)

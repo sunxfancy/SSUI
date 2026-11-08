@@ -1,0 +1,143 @@
+from backend.contracts.services import ModelLoader
+from typing import Optional, List
+from pathlib import Path
+import PIL
+from backend.contracts.services import InferenceConfig as SSUIConfig
+from .api.conditioning import BasicConditioningInfo, create_conditioning
+from .api.denoise import ApplyRange, ControlNet, decode_latents, denoise_image
+from .api.model import ModelLoaderService, UNetModel, ClipModel, VAEModel, load_model, LoRAModel, load_lora, ControlNetModel, load_controlnet
+from backend.contracts.media import Prompt, Image
+
+def getModelLoader(*, model_loader: ModelLoader):
+    return model_loader
+
+class SD1Model:
+
+    def __init__(self, path: str='', unet: Optional[UNetModel]=None, clip: Optional[ClipModel]=None, vae: Optional[VAEModel]=None):
+        self.path = path
+        self.unet = unet
+        self.clip = clip
+        self.vae = vae
+
+    @staticmethod
+    def load(path: str, *, model_loader: ModelLoader) -> 'SD1Model':
+        unet, clip, vae = load_model(getModelLoader(model_loader=model_loader), path)
+        return SD1Model(path, unet, clip, vae)
+
+class SD1Condition:
+
+    def __init__(self, condition_info: Optional[BasicConditioningInfo]=None):
+        self.condition_info = condition_info
+
+def SD1Clip(config: SSUIConfig, model: SD1Model, positive: Prompt, negative: Prompt):
+    if config.is_prepare():
+        return (SD1Condition(), SD1Condition())
+    print('SD1Clip executed')
+    print('ignoreLastLayer:', config['ignoreLastLayer'])
+    print('positive:', positive.text)
+    print('negative:', negative.text)
+    positive_condition = create_conditioning(positive.text, model.clip)
+    negative_condition = create_conditioning(negative.text, model.clip)
+    return (SD1Condition(positive_condition), SD1Condition(negative_condition))
+
+class SD1Latent:
+
+    def __init__(self, config: SSUIConfig, tensor=None):
+        self.width = config['width'] if 'width' in config else 512
+        self.height = config['height'] if 'height' in config else 512
+        self.tensor = tensor
+        if config.is_prepare():
+            return
+        print('SD1Latent executed')
+        print('width:', self.width)
+        print('height:', self.height)
+
+    @staticmethod
+    def from_image(image: Image) -> 'SD1Latent':
+        pass
+
+class SD1Lora:
+
+    def __init__(self, path: str='', lora: Optional[LoRAModel]=None, weight: float=1.0):
+        self.path = path
+        self.lora = lora
+        self.weight = weight
+
+    @staticmethod
+    def load_one(path: str, weight: float=1.0, *, model_loader: ModelLoader) -> 'SD1Lora':
+        lora_model = load_lora(getModelLoader(model_loader=model_loader), Path(path), weight)
+        return SD1Lora(path=path, lora=lora_model, weight=weight)
+
+    @staticmethod
+    def load(path: List[Path], weights: Optional[List[float]]=None, *, model_loader: ModelLoader) -> 'List[SD1Lora]':
+        if weights is not None and len(path) != len(weights):
+            raise ValueError('LoRA paths list and weights list must have the same length')
+        if weights is None:
+            lora_weights = [1.0] * len(path)
+        else:
+            lora_weights = weights
+        sd1lora = []
+        for i, lora_path in enumerate(path):
+            lora_models = load_lora(getModelLoader(model_loader=model_loader), lora_path, lora_weights[i])
+            sd1lora.append(SD1Lora(lora=lora_models, weight=lora_weights[i]))
+        return sd1lora
+
+class SD1ControlNet:
+    """SD1.5 ControlNet workflow node.
+
+    Pair a ControlNet model file with a control image (e.g. a pose/canny/depth
+    map) and tuning parameters. ``load()`` is what the frontend invokes when a
+    ControlNet input is provided; the resulting node is passed to ``SD1Denoise``.
+    """
+
+    def __init__(self, path: str='', image_path: str='', controlnet: Optional[ControlNetModel]=None, image: Optional[PIL.Image.Image]=None, weight: float=1.0, control_mode: str='balanced', resize_mode: str='just_resize', begin_step_percent: float=0.0, end_step_percent: float=1.0):
+        self.path = path
+        self.image_path = image_path
+        self.controlnet = controlnet
+        self.image = image
+        self.weight = weight
+        self.control_mode = control_mode
+        self.resize_mode = resize_mode
+        self.begin_step_percent = begin_step_percent
+        self.end_step_percent = end_step_percent
+
+    @staticmethod
+    def load(path: str, image_path: str, weight: float=1.0, control_mode: str='balanced', resize_mode: str='just_resize', begin_step_percent: float=0.0, end_step_percent: float=1.0, *, model_loader: ModelLoader) -> 'SD1ControlNet':
+        controlnet = load_controlnet(getModelLoader(model_loader=model_loader), Path(path))
+        image = PIL.Image.open(image_path).convert('RGB')
+        return SD1ControlNet(path=path, image_path=image_path, controlnet=controlnet, image=image, weight=weight, control_mode=control_mode, resize_mode=resize_mode, begin_step_percent=begin_step_percent, end_step_percent=end_step_percent)
+
+    def to_api_field(self) -> ControlNet:
+        if self.controlnet is None or self.image is None:
+            raise ValueError('SD1ControlNet is not loaded; call SD1ControlNet.load() first.')
+        return ControlNet(image=self.image, control_model=self.controlnet.controlnet, control_weight=self.weight, apply_range=ApplyRange(begin_step_percent=self.begin_step_percent, end_step_percent=self.end_step_percent), control_mode=self.control_mode, resize_mode=self.resize_mode)
+
+def SD1MergeLora(config, model: SD1Model, loraModel: List[SD1Lora]):
+    if config.is_prepare():
+        return SD1Model(config('Add Empty Lora to SD1'))
+    print('SD1MergeLora executed')
+    model.unet.loras = loraModel
+    model.clip.loras = loraModel
+    return model
+
+def SD1Denoise(config, model: SD1Model, latent: SD1Latent, positive: SD1Condition, negative: SD1Condition, control: Optional[SD1ControlNet]=None):
+    if config.is_prepare():
+        return SD1Latent(config('Create Empty Latent'))
+    print('SD1Denoise executed')
+    print('scheduler:', config['scheduler'])
+    print('steps:', config['steps'])
+    print('CFG:', config['CFG'])
+    tensor = denoise_image(model=model.unet, positive=positive.condition_info, negative=negative.condition_info, seed=config['seed'], width=latent.width, height=latent.height, scheduler_name=config['scheduler'], steps=config['steps'], cfg_scale=config['CFG'], control=control.to_api_field() if control is not None else None)
+    return SD1Latent(config('Create Empty Latent'), tensor)
+
+def SD1LatentDecode(config, model: SD1Model, latent: SD1Latent):
+    if config.is_prepare():
+        return Image()
+    print('SD1LatentDecode executed')
+    image = decode_latents(model.vae, latent.tensor)
+    return Image(image)
+
+class SD1IPAdapter:
+
+    def __init__(self, config):
+        self.config = config

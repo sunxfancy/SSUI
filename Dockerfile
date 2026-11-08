@@ -1,5 +1,5 @@
 # 构建阶段
-FROM nvidia/cuda:12.4.1-cudnn-runtime-ubuntu22.04 as builder
+FROM nvidia/cuda:12.8.1-cudnn-runtime-ubuntu22.04 as builder
 
 # 设置环境变量
 ENV DEBIAN_FRONTEND=noninteractive
@@ -40,6 +40,8 @@ COPY extensions/ extensions/
 COPY dependencies/ dependencies/
 COPY backend/ backend/
 COPY package.json package.json
+COPY pyproject.toml pyproject.toml
+COPY flow_compiler.py flow_compiler.py
 COPY yarn.lock yarn.lock
 
 
@@ -48,8 +50,9 @@ RUN python3.12 -m venv /app/.venv
 ENV PATH="/app/.venv/bin:$PATH"
 
 # 安装 Python 依赖
-RUN pip install uv
-RUN uv pip install --no-cache-dir -r /app/dependencies/requirements-linux.txt
+RUN pip install uv==0.12.23
+RUN uv pip install --no-cache-dir -r /app/dependencies/linux.lock --index-strategy unsafe-best-match --build-constraint /app/dependencies/build-constraints.txt
+RUN uv pip install -e . --no-deps
 
 
 # 安装 Node.js 依赖
@@ -60,7 +63,7 @@ RUN . $NVM_DIR/nvm.sh && yarn
 RUN . $NVM_DIR/nvm.sh && yarn build:frontend
 
 # 运行阶段
-FROM nvidia/cuda:12.4.1-cudnn-runtime-ubuntu22.04
+FROM nvidia/cuda:12.8.1-cudnn-runtime-ubuntu22.04
 
 # 设置环境变量
 ENV DEBIAN_FRONTEND=noninteractive
@@ -92,6 +95,7 @@ COPY --from=builder /app/frontend/functional_ui/dist /app/frontend/functional_ui
 COPY --from=builder /app/extensions /app/extensions
 COPY --from=builder /app/dependencies /app/dependencies
 COPY --from=builder /app/backend /app/backend
+COPY --from=builder /app/flow_compiler.py /app/flow_compiler.py
 
 RUN apt update && apt install -y ffmpeg libsm6 libxext6 
 

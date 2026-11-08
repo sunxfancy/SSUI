@@ -69,7 +69,7 @@ fi
 # Check and install uv tool
 if [ ! -f ".venv/bin/uv" ]; then
     echo "Installing uv tool..."
-    .venv/bin/python -m pip install uv==0.6.11 packaging==24.1
+    .venv/bin/python -m pip install uv==0.12.23 packaging==26.3 pyyaml
 fi
 
-echo "Installation completed!" 
+echo "Installation completed!"

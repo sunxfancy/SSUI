@@ -39,6 +39,14 @@ class _FakePipeline:
 
 class TestFlux2Klein(unittest.TestCase):
     def setUp(self):
+        from backend.application import create_application
+        from ssui.backend_adapter import backend_scope
+        self.application = create_application(external=False, services={
+            "devices": types.SimpleNamespace(select=lambda: "cuda")})
+        self.scope = backend_scope(self.application)
+        self.scope.__enter__()
+        self.addCleanup(self.application.close)
+        self.addCleanup(self.scope.__exit__, None, None, None)
         _FakePipeline.load_count = 0
         self.diffusers = types.SimpleNamespace(Flux2KleinPipeline=_FakePipeline)
 

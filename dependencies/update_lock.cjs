@@ -1,4 +1,4 @@
-const { execSync } = require('child_process');
+const { execSync, execFileSync } = require('child_process');
 const fs = require('fs');
 const path = require('path');
 const os = require('os');
@@ -40,6 +40,7 @@ function main() {
     
     for (const targetName of targets) {
       const requirementsFile = path.join('.', 'dependencies', `requirements-${targetName}.txt`);
+      const combinedFile = path.join('.', '.venv', `requirements-${targetName}.in`);
       const lockFile = path.join('.', 'dependencies', `${targetName}.lock`);
       
       // 检查requirements文件是否存在
@@ -58,7 +59,10 @@ function main() {
       
       // 构建uv命令，根据参数决定是否添加--no-upgrade选项
       const venvPath = os.platform() === 'win32' ? '.venv\\Scripts\\uv.exe' : '.venv/bin/uv';
-      let uvCommand = `${venvPath} pip compile ${requirementsFile} -o ${lockFile}`;
+      const python = os.platform() === 'win32' ? '.venv\\Scripts\\python.exe' : '.venv/bin/python';
+      execFileSync(python, ['dependencies/combine_requirements.py', '--target', targetName, '--output', combinedFile], { stdio: 'inherit' });
+      const targetPlatform = { windows: 'windows', 'windows-amdgpu': 'windows', macosx: 'aarch64-apple-darwin', linux: 'x86_64-manylinux_2_28', 'linux-amdgpu': 'x86_64-manylinux_2_28' }[targetName];
+      let uvCommand = `${venvPath} pip compile ${combinedFile} --python-version 3.12 --python-platform ${targetPlatform} --index-strategy unsafe-best-match --build-constraint dependencies/build-constraints.txt -o ${lockFile}`;
       if (args.noUpgrade) {
         console.log('使用不升级模式: 已存在的包将不会升级到最新版本');
         uvCommand += ' --no-upgrade';

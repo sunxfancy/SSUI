@@ -93,10 +93,6 @@ class ExtensionManager:
                 dir_path = os.path.dirname(script_path)
                 sys.path.append(dir_path)
                 print(f"Appending {dir_path} to sys.path")
-                # 第三方 vendored 代码放在扩展的 vendor/ 子目录中
-                vendor_dir = os.path.join(dir_path, "vendor")
-                if os.path.isdir(vendor_dir):
-                    sys.path.append(vendor_dir)
                 import importlib.util
                 try:
                     spec = importlib.util.spec_from_file_location(name, script_path)

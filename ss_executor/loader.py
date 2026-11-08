@@ -5,12 +5,20 @@ from pydantic import BaseModel, Field
 from ss_executor.sandbox import Sandbox, NoSandbox
 
 class SSLoader:
-    def __init__(self, use_sandbox: bool = True):
+    def __init__(self, use_sandbox: bool = True, backend_application=None):
+        from backend.application import create_application
+        self.backend_application = backend_application or create_application()
+        self._owns_backend = backend_application is None
         self.callables = []
         self.use_sandbox = use_sandbox
         self.executor = Sandbox() if use_sandbox else NoSandbox()
         self.config = None
         self.current_file_path = None
+
+    def close(self):
+        if self._owns_backend:
+            self.backend_application.close()
+
 
     def load(self, path: str):
         """加载模块"""
@@ -88,10 +96,20 @@ class SSLoader:
         if not self.current_file_path:
             raise ValueError("No file path set. Call load() first.")
             
-        module_bundle = self.executor.execute_module()
+        from ssui.backend_adapter import backend_scope
+        from functools import wraps
+        with backend_scope(self.backend_application):
+            module_bundle = self.executor.execute_module()
         
         if module_bundle:
-            self.callables = module_bundle.callables
+            def bind(function):
+                @wraps(function)
+                def invoke(*args, **kwargs):
+                    with backend_scope(self.backend_application):
+                        return function(*args, **kwargs)
+                return invoke
+            self.callables = [(bind(function), parameters, result)
+                for function, parameters, result in module_bundle.callables]
             self.config = module_bundle.config
         else:
             raise ValueError("Failed to execute module.")
