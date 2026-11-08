@@ -392,4 +392,6 @@ jobs:
 
       - name: Run Tests
         timeout-minutes: 60
+        env:
+          SSUI_BLENDER_HEADLESS_CPU_RENDER: ${{ matrix.platform == 'windows' && '1' || '0' }}
         run: yarn test

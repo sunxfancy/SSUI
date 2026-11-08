@@ -132,7 +132,12 @@ def run(manifest_path):
     light_data.energy = 600
     light_data.shape = "DISK"
     light_data.size = 5
-    scene.render.engine = "BLENDER_EEVEE"
+    if manifest.get("headless_cpu_render"):
+        scene.render.engine = "CYCLES"
+        scene.cycles.device = "CPU"
+        scene.cycles.samples = 8
+    else:
+        scene.render.engine = "BLENDER_EEVEE"
     scene.render.resolution_x = width
     scene.render.resolution_y = height
     scene.render.resolution_percentage = 100
@@ -142,7 +147,8 @@ def run(manifest_path):
     scene.render.fps = round(manifest["fps"])
     renders = root / "renders"
     renders.mkdir(exist_ok=True)
-    report = {"blender_version": bpy.app.version_string, "solve_error_px": error,
+    report = {"blender_version": bpy.app.version_string,
+              "render_engine": scene.render.engine, "solve_error_px": error,
               "focal_px": tracking.camera.focal_length_pixels,
               "camera_frames": len(reconstruction.cameras),
               "camera_translation_span": translation_span,

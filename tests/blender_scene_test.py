@@ -2,6 +2,7 @@
 
 import tempfile
 import unittest
+import json
 import os
 import shutil
 from pathlib import Path
@@ -57,6 +58,9 @@ class BlenderSceneTest(unittest.TestCase):
             self.assertEqual(result.metadata["camera_frames"], 16)
             self.assertGreater(result.metadata["camera_translation_span"], .01)
             self.assertLess(result.metadata["solve_error_px"], 3)
+            if os.environ.get("SSUI_BLENDER_HEADLESS_CPU_RENDER") == "1":
+                report = json.loads(Path(result.metadata["report_path"]).read_text(encoding="utf-8"))
+                self.assertEqual(report["render_engine"], "CYCLES")
             original = imageio.get_reader(str(source), format="ffmpeg")
             rendered = imageio.get_reader(result.path, format="ffmpeg")
             try:

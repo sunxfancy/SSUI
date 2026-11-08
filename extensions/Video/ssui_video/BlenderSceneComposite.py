@@ -130,7 +130,8 @@ def blender_composite_scene(video: Video, mesh: Mesh, prompt: Prompt, *,
                 "output_dir": str(root.resolve()), "width": width, "height": height,
                 "fps": fps, "frames": len(frames), "tracks": tracks,
                 "anchor": anchor, "size": size, "focal_px": focal_px or max(width, height),
-                "max_solve_error": max_solve_error}
+                "max_solve_error": max_solve_error,
+                "headless_cpu_render": os.environ.get("SSUI_BLENDER_HEADLESS_CPU_RENDER") == "1"}
     manifest_path = root / "blender-input.json"
     manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
     _run_blender(manifest_path, blender_executable)
