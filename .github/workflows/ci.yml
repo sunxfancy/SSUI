@@ -386,6 +386,10 @@ jobs:
         timeout-minutes: 60
         run: yarn build:desktop
 
+      - name: Install verified Blender for camera solve
+        timeout-minutes: 20
+        run: node dependencies/venv.cjs python scripts/install_blender_ci.py
+
       - name: Run Tests
         timeout-minutes: 60
         run: yarn test
