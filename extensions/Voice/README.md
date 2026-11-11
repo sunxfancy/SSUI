@@ -83,9 +83,9 @@ yarn test_on model.cosyvoice_model_test
 `SSUI_COSYVOICE_MODEL_DIR` 使用已有权重，`SSUI_COSYVOICE_PROMPT` 复用官方参考音频。
 自定义参考转写请直接使用探针的 `--prompt-text`。
 
-本次已同步除 Intel macOS 外的平台锁文件。Intel macOS 仍需先取得项目要求的已验证
-原生 PyTorch wheelhouse，并设置 `SSUI_NATIVE_WHEELHOUSE` 后运行
-`yarn update-lock:no-upgrade --target macosx-x86_64`；当前 Windows 验证环境没有该产物。
+Intel macOS 锁文件已使用经过源码版本、架构和哈希验证的原生 PyTorch wheelhouse 完整解析。
+后续刷新时，先取得项目要求的已验证 wheelhouse，设置 `SSUI_NATIVE_WHEELHOUSE`，再运行
+`yarn update-lock:no-upgrade --target macosx-x86_64`。
 
 上游：[CosyVoice](https://github.com/FunAudioLLM/CosyVoice)、
 [CosyVoice2 权重](https://huggingface.co/FunAudioLLM/CosyVoice2-0.5B)。

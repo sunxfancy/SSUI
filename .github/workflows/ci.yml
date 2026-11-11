@@ -331,6 +331,13 @@ jobs:
         # Keep the full lock installation and native build isolation below.
         run: uv pip install -r dependencies/${{ steps.runtime.outputs.lock }} --index-strategy unsafe-best-match --build-constraint dependencies/build-constraints.txt
 
+      - name: Verify macOS native inference dependencies
+        if: runner.os == 'macOS'
+        timeout-minutes: 5
+        run: |
+          runtime_target=$(node -p "require('./dependencies/runtime.cjs').getRuntime().id")
+          python scripts/check_runtime.py --target "$runtime_target"
+
       - name: Install system dependencies
         if: ${{ matrix.platform == 'linux' }}
         timeout-minutes: 30
