@@ -81,7 +81,7 @@ def load_model_from_path(
 ) -> LoadedModelWithoutConfig:
     ram_cache = ModelCache(
         execution_device_working_mem_gb=3,
-        enable_partial_loading=False,
+        enable_partial_loading=True,
         keep_ram_copy_of_weights=True,
         max_ram_cache_size_gb=None,
         max_vram_cache_size_gb=None,
@@ -134,7 +134,7 @@ class ModelLoaderService:
         self._app_config = ModelLoaderConfig()
         self._ram_cache = ModelCache(
             execution_device_working_mem_gb=3,
-            enable_partial_loading=False,
+            enable_partial_loading=True,
             keep_ram_copy_of_weights=True,
             max_ram_cache_size_gb=None,
             max_vram_cache_size_gb=None,

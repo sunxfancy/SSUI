@@ -180,16 +180,32 @@ class ModelCache:
         #   well.
         running_with_cuda = self._execution_device.type == "cuda"
 
+        backing = None
+        keep_ram_copy = self._keep_ram_copy_of_weights
+        if isinstance(model, torch.nn.Module) and running_with_cuda and self._enable_partial_loading:
+            from backend.resource_monitor import snapshot, placement
+            from backend.disk_offload import confirm_disk_offload, disk_back_model
+            resources = snapshot()
+            # The model is already resident: add its bytes back when judging host capacity.
+            resources["ram"]["available"] += size
+            mode = placement(size, resources, self._execution_device.index or 0,
+                             int(self._execution_device_working_mem_gb * GB))
+            if mode == "disk_confirmation":
+                confirm_disk_offload(key, size)
+                backing = disk_back_model(model, size)
+                keep_ram_copy = True
+
         # Wrap model.
         if isinstance(model, torch.nn.Module) and running_with_cuda and self._enable_partial_loading:
             wrapped_model = CachedModelWithPartialLoad(
-                model, self._execution_device, keep_ram_copy=self._keep_ram_copy_of_weights
+                model, self._execution_device, keep_ram_copy=keep_ram_copy
             )
         else:
             wrapped_model = CachedModelOnlyFullLoad(
-                model, self._execution_device, size, keep_ram_copy=self._keep_ram_copy_of_weights
+                model, self._execution_device, size, keep_ram_copy=keep_ram_copy
             )
 
+        wrapped_model._disk_backing = backing
         cache_record = CacheRecord(key=key, cached_model=wrapped_model)
         self._cached_models[key] = cache_record
         self._cache_stack.append(key)

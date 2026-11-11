@@ -349,6 +349,39 @@
         "title": "ConversationInfo",
         "type": "object"
       },
+      "Decision": {
+        "properties": {
+          "approved": {
+            "title": "Approved",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "approved"
+        ],
+        "title": "Decision",
+        "type": "object"
+      },
+      "DiskRequest": {
+        "properties": {
+          "model": {
+            "maxLength": 512,
+            "title": "Model",
+            "type": "string"
+          },
+          "required_bytes": {
+            "minimum": 0.0,
+            "title": "Required Bytes",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "model",
+          "required_bytes"
+        ],
+        "title": "DiskRequest",
+        "type": "object"
+      },
       "DynamicResult": {
         "description": "Executor-driven payload whose concrete shape is defined by a script.",
         "title": "DynamicResult"
@@ -1756,6 +1789,154 @@
           }
         },
         "summary": "Preset Models"
+      }
+    },
+    "/api/resources/": {
+      "get": {
+        "operationId": "resources_api_resources__get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Resources"
+      }
+    },
+    "/api/resources/disk-requests": {
+      "get": {
+        "operationId": "pending_api_resources_disk_requests_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Pending"
+      },
+      "post": {
+        "operationId": "request_disk_api_resources_disk_requests_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DiskRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Request Disk"
+      }
+    },
+    "/api/resources/disk-requests/{key}": {
+      "get": {
+        "operationId": "decision_api_resources_disk_requests__key__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "key",
+            "required": true,
+            "schema": {
+              "title": "Key",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Decision"
+      },
+      "post": {
+        "operationId": "decide_api_resources_disk_requests__key__post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "key",
+            "required": true,
+            "schema": {
+              "title": "Key",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Decision"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Decide"
       }
     },
     "/api/script": {

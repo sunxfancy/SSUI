@@ -16,6 +16,7 @@ from pathlib import Path
 import time
 import sys
 import traceback
+sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
 
 
 def _guard_mps_memory(pipe):
@@ -93,7 +94,7 @@ def _checkpoint_offload(model, checkpoint_dir):
     cpu_offload(model, execution_device=torch.device("mps"), offload_buffers=True, state_dict=weights)
 
 
-def _enable_offload(pipe, device="cuda", model_root=None) -> None:
+def _enable_offload(pipe, device="cuda", model_root=None, disk_directory=None) -> None:
     import torch
     from diffusers.hooks import apply_group_offloading
 
@@ -111,12 +112,16 @@ def _enable_offload(pipe, device="cuda", model_root=None) -> None:
     offload = dict(
         onload_device=torch.device(device),
         offload_device=torch.device("cpu"),
-        use_stream=torch.device(device).type == "cuda",
+        use_stream=torch.device(device).type == "cuda" and disk_directory is None,
     )
+    transformer_options, text_options = dict(offload), dict(offload)
+    if disk_directory is not None:
+        transformer_options["offload_to_disk_path"] = str(Path(disk_directory) / "transformer")
+        text_options["offload_to_disk_path"] = str(Path(disk_directory) / "text_encoder")
     pipe.transformer.enable_group_offload(
-        offload_type="block_level", num_blocks_per_group=1, **offload
+        offload_type="block_level", num_blocks_per_group=1, **transformer_options
     )
-    apply_group_offloading(pipe.text_encoder.model, offload_type="leaf_level", **offload)
+    apply_group_offloading(pipe.text_encoder.model, offload_type="leaf_level", **text_options)
     pipe.vae.to(device)
     pipe.audio_vae.to(device)
 
@@ -155,6 +160,7 @@ def main() -> int:
         )
         return 1
 
+    disk_directory = None
     try:
         device = args.device
         if device == "auto":
@@ -166,8 +172,21 @@ def main() -> int:
         if device == "mps":
             torch.set_num_threads(4)
             torch.mps.set_per_process_memory_fraction(0.35)
+        from backend.runtime_offload import plan_load, remote_weight_size
+        from backend.disk_offload import new_offload_directory
+        transformer = "transformer" if args.task in ("t2va", "fl2va") else "transformer_ref"
+        size = remote_weight_size(args.model_id, (transformer, "text_encoder", "vae", "audio_vae"))
+        plan = plan_load("MiniMax H3", device=device, estimated_bytes=size,
+                         requested="cpu" if args.cpu_offload else None)
+        args.cpu_offload = plan.mode != "device"
+        if plan.mode == "disk_offload" and device == "cuda":
+            import inspect
+            from diffusers.hooks import apply_group_offloading
+            if "offload_to_disk_path" not in inspect.signature(apply_group_offloading).parameters:
+                raise MemoryError("当前 H3 diffusers 不支持磁盘 offload，请升级 H3 独立环境。")
+            disk_directory = new_offload_directory(size)
         manager = ComponentsManager()
-        if device == "cuda" and args.cpu_offload and args.quantization == "none":
+        if device == "cuda" and args.cpu_offload and args.quantization == "none" and disk_directory is None:
             manager.enable_auto_cpu_offload(device=device)
         pipe = ModularPipeline.from_pretrained(
             args.model_id, workflow=args.task, components_manager=manager
@@ -182,8 +201,9 @@ def main() -> int:
 
         if args.quantization == "int8":
             pipe = _apply_int8(pipe, args.quantizer_path)
-        if device == "mps" or (args.cpu_offload and args.quantization == "int8"):
-            _enable_offload(pipe, device=device, model_root=args.model_id)
+        if device == "mps" or disk_directory is not None or (args.cpu_offload and args.quantization == "int8"):
+            _enable_offload(pipe, device=device, model_root=args.model_id,
+                            disk_directory=disk_directory.name if disk_directory else None)
         elif not args.cpu_offload:
             pipe.to(device)
         if device == "mps":
@@ -258,6 +278,14 @@ def main() -> int:
         traceback.print_exc()
         print("MiniMax H3 推理失败: %s" % exc, file=sys.stderr)
         return 1
+
+    finally:
+        if disk_directory is not None:
+            pipe = None
+            manager = None
+            import gc
+            gc.collect()
+            disk_directory.cleanup()
 
 
 if __name__ == "__main__":

@@ -448,7 +448,7 @@ class HunyuanVideoVAEDecoder(nn.Module):
         # Run
         torch_dtype = self.post_quant_conv.weight.dtype
         data_device = hidden_states.device
-        computation_device = self.post_quant_conv.weight.device
+        computation_device = getattr(self, "_ssui_execution_device", self.post_quant_conv.weight.device)
 
         weight = torch.zeros((1, 1, (T - 1) * 4 + 1, H * 8, W * 8), dtype=torch_dtype, device=data_device)
         values = torch.zeros((B, 3, (T - 1) * 4 + 1, H * 8, W * 8), dtype=torch_dtype, device=data_device)

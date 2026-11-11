@@ -5,6 +5,11 @@ export const defaults = {
   external_code_editor: '', civitai_token: '',
 };
 
+export const resources = {
+  ram: { total: 16 * 2 ** 30, available: 8 * 2 ** 30, used: 8 * 2 ** 30 },
+  gpus: [], gpu_error: null,
+};
+
 // Real application/React/Monaco; only the service boundary is simulated.
 // Unexpected API calls fail the test, so fixtures cannot silently hide regressions.
 export const test = base.extend<{ serviceGuard: void }>({
@@ -24,6 +29,10 @@ export const test = base.extend<{ serviceGuard: void }>({
         }
         return route.fulfill({ json: states.get(key) ?? {} });
       }
+      if (route.request().method() === 'GET' && path === '/api/resources/')
+        return route.fulfill({ json: resources });
+      if (route.request().method() === 'GET' && path === '/api/resources/disk-requests')
+        return route.fulfill({ json: [] });
       if (path === '/config/') return route.fulfill({ json: { ui: defaults } });
       unexpected.push(`${route.request().method()} ${path}`);
       await route.fulfill({ status: 501, json: { error: 'Unmocked API' } });

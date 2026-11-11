@@ -1,5 +1,6 @@
 import os, torch, json, importlib
 from typing import List
+from backend.runtime_offload import materialize_for_update
 
 from .downloader import download_models, download_customized_models, Preset_model_id, Preset_model_website
 
@@ -370,6 +371,7 @@ class ModelManager:
         print(f"    The following patched models are loaded: {model_names}.")
 
 
+    @materialize_for_update
     def load_lora(self, file_path="", state_dict={}, lora_alpha=1.0):
         if isinstance(file_path, list):
             for file_path_ in file_path:
@@ -392,10 +394,14 @@ class ModelManager:
                 print(f"    Cannot load LoRA: {file_path}")
 
 
-    def load_model(self, file_path, model_names=None, device=None, torch_dtype=None):
+    def load_model(self, file_path, model_names=None, device=None, torch_dtype=None, resource_plan=None):
         print(f"Loading models from: {file_path}")
         if device is None: device = self.device
         if torch_dtype is None: torch_dtype = self.torch_dtype
+        from backend.runtime_offload import plan_load, configure_model
+        # self.device is the execution device, even when callers request CPU staging.
+        resource_plan = resource_plan or plan_load(str(file_path), file_path, self.device)
+        device = "cpu"
         if isinstance(file_path, list):
             state_dict = {}
             for path in file_path:
@@ -412,6 +418,7 @@ class ModelManager:
                     allowed_model_names=model_names, model_manager=self
                 )
                 for model_name, model in zip(model_names, models):
+                    model._ssui_load_plan = resource_plan
                     self.model.append(model)
                     self.model_path.append(file_path)
                     self.model_name.append(model_name)
@@ -422,8 +429,11 @@ class ModelManager:
         
 
     def load_models(self, file_path_list, model_names=None, device=None, torch_dtype=None):
+        from backend.runtime_offload import plan_load
+        # Budget the complete group before loading its first component.
+        plan = plan_load("视频模型组", [p for item in file_path_list for p in (item if isinstance(item, list) else [item])], self.device)
         for file_path in file_path_list:
-            self.load_model(file_path, model_names, device=device, torch_dtype=torch_dtype)
+            self.load_model(file_path, model_names, device=device, torch_dtype=torch_dtype, resource_plan=plan)
 
     
     def fetch_model(self, model_name, file_path=None, require_model_path=False, index=None):
@@ -463,5 +473,6 @@ class ModelManager:
 
     def to(self, device):
         for model in self.model:
-            model.to(device)
+            if not getattr(model, "_ssui_residency", None):
+                model.to(device)
 

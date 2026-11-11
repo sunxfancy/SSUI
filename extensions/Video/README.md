@@ -464,6 +464,16 @@ SSUI_VENV_PATH="$PWD/.venv/video-mps" yarn test:ltx:smoke
 默认 128×128、9 帧；runner 禁止 CPU 回退，测试记录实际层输出设备，并由父进程
 监控系统可用内存及 swap 增长。该保护不是系统绝不会卡顿的保证。
 
+### 自动资源策略
+
+视频与 TRELLIS 3D 入口共用 SSUI 的内存、显存预算和一次性磁盘确认。
+DiffSynth 的 Wan / Wan2 / Wan2.2、CogVideo、Hunyuan、AnimateDiff 在 CPU 上加载，
+再按预算常驻显卡或使用逐层卸载；不会同时套用两套显存管理钩子。
+LTX 会根据预算调整原生 `--offload`，即使手动选择 disk 也必须通过一次性确认。
+H3 独立环境需安装 psutil，使用 Hub 权重大小元数据做预检；旧版 diffusers 缺少
+`offload_to_disk_path` 时会明确停止，请升级独立环境。
+资源策略和验证边界见 [资源监控说明](../../doc/ResourceMonitoring.zh.md)。
+
 # Blender 3D scene composite
 
 `examples/advance/workflow-video-3d-composite.py` exposes two workflows:

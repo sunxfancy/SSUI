@@ -84,7 +84,9 @@ class Wan22TI2VModel:
             for name, component in pipe.named_children():
                 if name in ("dit", "dit2", "text_encoder", "image_encoder"):
                     options.quantize(component)
-                component.to("cpu" if cpu_offload else runtime["device"])
+                from backend.runtime_offload import configure_pending
+                if not configure_pending(component, runtime["device"], cpu_offload):
+                    component.to("cpu" if cpu_offload else runtime["device"])
             pipe.vram_management_enabled = cpu_offload
         elif cpu_offload:
             pipe.enable_vram_management(num_persistent_param_in_dit=None)
@@ -157,7 +159,9 @@ class Wan22T2VA14BModel:
             for name, component in pipe.named_children():
                 if name in ("dit", "dit2", "text_encoder", "image_encoder"):
                     options.quantize(component)
-                component.to("cpu" if cpu_offload else runtime["device"])
+                from backend.runtime_offload import configure_pending
+                if not configure_pending(component, runtime["device"], cpu_offload):
+                    component.to("cpu" if cpu_offload else runtime["device"])
             pipe.vram_management_enabled = cpu_offload
         elif cpu_offload:
             pipe.enable_vram_management(num_persistent_param_in_dit=None)
@@ -230,7 +234,9 @@ class Wan22I2VA14BModel:
             for name, component in pipe.named_children():
                 if name in ("dit", "dit2", "text_encoder", "image_encoder"):
                     options.quantize(component)
-                component.to("cpu" if cpu_offload else runtime["device"])
+                from backend.runtime_offload import configure_pending
+                if not configure_pending(component, runtime["device"], cpu_offload):
+                    component.to("cpu" if cpu_offload else runtime["device"])
             pipe.vram_management_enabled = cpu_offload
         elif cpu_offload:
             pipe.enable_vram_management(num_persistent_param_in_dit=None)

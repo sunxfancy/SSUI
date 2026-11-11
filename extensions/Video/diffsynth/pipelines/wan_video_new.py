@@ -128,6 +128,12 @@ class WanVideoPipeline(BasePipeline):
 
 
     def enable_vram_management(self, num_persistent_param_in_dit=None, vram_limit=None, vram_buffer=0.5):
+        from backend.runtime_offload import finalize_pipeline
+        finalize_pipeline(self)
+        if any(getattr(m, "_ssui_residency", None) for m in self.modules()):
+            self.cpu_offload = True
+            self.vram_management_enabled = True
+            return
         self.vram_management_enabled = True
         if num_persistent_param_in_dit is not None:
             vram_limit = None

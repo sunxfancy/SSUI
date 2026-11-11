@@ -102,6 +102,8 @@ class BasePipeline(torch.nn.Module):
             if model_name not in loadmodel_names:
                 model = getattr(self, model_name)
                 if model is not None:
+                    if getattr(model, "_ssui_residency", None):
+                        continue
                     if hasattr(model, "vram_management_enabled") and model.vram_management_enabled:
                         for module in model.modules():
                             if hasattr(module, "offload"):
@@ -112,6 +114,8 @@ class BasePipeline(torch.nn.Module):
         for model_name in loadmodel_names:
             model = getattr(self, model_name)
             if model is not None:
+                if getattr(model, "_ssui_residency", None):
+                    continue
                 if hasattr(model, "vram_management_enabled") and model.vram_management_enabled:
                     for module in model.modules():
                         if hasattr(module, "onload"):

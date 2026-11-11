@@ -71,6 +71,16 @@ def _ltx_python() -> str:
 
 def _run_ltx(module: str, args: list[str]) -> None:
     """调用 LTX venv 的 CLI，实时转发输出，失败时抛出带日志的错误。"""
+    from backend.runtime_offload import plan_load
+    args = list(args)
+    paths = [args[i + 1] for i, value in enumerate(args[:-1]) if value.endswith("-path") and value != "--output-path"]
+    requested = args[args.index("--offload") + 1] if "--offload" in args else None
+    plan = plan_load("LTX-2.5", paths, requested=requested)
+    if "--offload" in args:
+        index = args.index("--offload")
+        del args[index:index + 2]
+    if plan.mode != "device":
+        args += ["--offload", "disk" if plan.mode == "disk_offload" else "cpu"]
     python = _ltx_python()
     cmd = [python, os.path.join(os.path.dirname(__file__), "ltx_runner.py"), "--module", module, *args]
     proc = subprocess.Popen(

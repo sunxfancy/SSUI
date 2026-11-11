@@ -40,13 +40,16 @@ class ModelMemoryOptions:
                 continue
             seen.add(id(module))
             self.quantize(module)
+            from backend.runtime_offload import configure_pending
+            if configure_pending(module, device, self.cpu_offload):
+                continue
             if self.cpu_offload:
                 offload_component(module, device)
             else:
                 module.to(device)
 
 
-def offload_component(module, device="cuda"):
+def offload_component(module, device="cuda", *, cpu_state=None):
     """Keep a component on CPU between calls; release even on errors/close.
 
     Wrap custom inference methods as well as forward: several vendored models
@@ -73,7 +76,10 @@ def offload_component(module, device="cuda"):
                     depth -= 1
             finally:
                 if outer:
-                    module.to("cpu")
+                    if cpu_state is not None:
+                        module.load_state_dict(cpu_state, assign=True)
+                    else:
+                        module.to("cpu")
 
     def move_inputs(args, kwargs):
         import torch
@@ -116,7 +122,15 @@ def configure_diffsynth_manager(manager, options, device="cuda", *, quantize=Tru
     if quantize and options.quantization == "int8":
         for model in manager.model:
             options.quantize(model)
-    manager.to("cpu" if options.cpu_offload else device)
+    from backend.runtime_offload import configure_pending, is_managed, LoadPlan
+    if any(isinstance(getattr(m, '_ssui_load_plan', None), LoadPlan) for m in manager.model):
+        for model in manager.model:
+            if not configure_pending(model, device, options.cpu_offload):
+                model.to("cpu" if options.cpu_offload else device)
+        if any(is_managed(m) for m in manager.model):
+            options = ModelMemoryOptions(options.quantization, True, allow_fp8=True)
+    else:
+        manager.to("cpu" if options.cpu_offload else device)
     manager.device = str(device)
     manager.memory_options = options
     return manager
