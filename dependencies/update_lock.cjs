@@ -27,6 +27,7 @@ function compileArgs(target, requirementsFile, lockFile, noUpgrade = false) {
   const python = pythonDistribution(profile);
   const nativeWheels = require('./native_wheels.cjs').wheelhouseFor(profile.dependencyTarget);
   return ['pip', 'compile', requirementsFile, '-o', lockFile,
+    '--build-constraints', path.join(__dirname, 'build-constraints.txt'),
     '--python-platform', python.triple, '--python-version', python.version,
     ...(nativeWheels ? ['--find-links', nativeWheels] : []),
     ...(profile.binaryOnly ? ['--no-build', '--index-strategy', 'unsafe-best-match'] : []),

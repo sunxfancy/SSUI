@@ -182,7 +182,13 @@ jobs:
         if: matrix.id == 'macos-x86_64'
         run: |
           node dependencies/native_wheels.cjs "$RUNNER_TEMP/native-wheels"
+          cp "$RUNNER_TEMP/native-wheels/macosx-x86_64.lock" dependencies/macosx-x86_64.lock
           echo "SSUI_NATIVE_WHEELHOUSE=$RUNNER_TEMP/native-wheels" >> "$GITHUB_ENV"
+
+      - name: Prepare macOS OpenFst GRM prerequisites
+        if: runner.os == 'macOS'
+        timeout-minutes: 15
+        run: node dependencies/macos_prerequisites.cjs --github-env
 
       - name: Install requirements
         timeout-minutes: 30

@@ -121,7 +121,13 @@ jobs:
           path: native-wheels
       - name: Check Intel wheel manifest
         if: matrix.id == 'macos-x86_64'
-        run: node dependencies/native_wheels.cjs native-wheels
+        run: |
+          node dependencies/native_wheels.cjs native-wheels
+          cp native-wheels/macosx-x86_64.lock dependencies/macosx-x86_64.lock
+      - name: Prepare macOS OpenFst GRM prerequisites
+        if: runner.os == 'macOS'
+        timeout-minutes: 15
+        run: node dependencies/macos_prerequisites.cjs --github-env
       - name: Install the full native dependency lock
         timeout-minutes: 25
         env:

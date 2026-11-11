@@ -4,6 +4,12 @@ Voice 使用仓库内的 `vendor/cosyvoice` 与 `vendor/matcha`，Python 依赖�
 `dependencies/dependencies.yaml` 声明，并生成各平台 requirements、lock 和依赖图。
 无需进入 Voice 目录另建 venv，也不要安装上游训练 requirements 覆盖 SSUI 的 Torch。
 
+macOS 上 Pynini 2.1.7 没有 PyPI wheel，需要 OpenFst 1.8.4 的 GRM 头文件和动态库。
+根目录安装器与 Mac CI 会通过 Homebrew 安装并检查该前置库，并传入编译器/链接器路径；
+因此 Mac 开发环境需要先安装 Homebrew。锁文件解析与安装均沿用
+`dependencies/build-constraints.txt` 的隔离构建约束，避免 Whisper 构建时丢失 `pkg_resources`。
+Intel CI 使用验证后的原生 PyTorch wheel 解析完整锁，并将该锁交给后续完整安装与运行检查。
+
 ## 从根目录运行
 
 先按 SSUI 的标准流程安装对应运行时。Windows AMD 使用项目的 Windows x64 ROCm

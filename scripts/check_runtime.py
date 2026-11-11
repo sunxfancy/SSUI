@@ -24,6 +24,13 @@ def main():
     assert torch.tensor([1.0, 2.0]).sum().item() == 3
     boxes = torch.tensor([[0., 0., 1., 1.], [0., 0., 1., 1.]])
     assert torchvision.ops.nms(boxes, torch.tensor([0.9, 0.8]), 0.5).tolist() == [0]
+    if a.target.startswith('macos-'):
+        # Exercise the native OpenFst binding after the full lock installation,
+        # rather than treating a successful sdist metadata resolution as proof.
+        import pynini
+        import hyperpyyaml
+        import whisper
+        assert (pynini.accep('one') @ pynini.cross('one', '1')).string() == '1'
     print(f'OK {a.target}: Python {platform.python_version()}, torch {torch.__version__}, torchvision {torchvision.__version__}')
 
 

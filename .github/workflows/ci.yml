@@ -320,8 +320,15 @@ jobs:
         timeout-minutes: 5
         run: uv pip install packaging==24.1
 
+      - name: Prepare macOS OpenFst GRM prerequisites
+        if: runner.os == 'macOS'
+        timeout-minutes: 15
+        run: node dependencies/macos_prerequisites.cjs --github-env
+
       - name: Install requirements
         timeout-minutes: 20
+        # macOS has no upstream Pynini wheel; expose the real OpenFst GRM SDK.
+        # Keep the full lock installation and native build isolation below.
         run: uv pip install -r dependencies/${{ steps.runtime.outputs.lock }} --index-strategy unsafe-best-match --build-constraint dependencies/build-constraints.txt
 
       - name: Install system dependencies
