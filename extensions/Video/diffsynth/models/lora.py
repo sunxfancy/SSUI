@@ -1,3 +1,4 @@
+from ssui.native_quantization import quantized_weight_keys, quantized_linear_for_weight
 import torch
 from .sd_unet import SDUNet
 from .sdxl_unet import SDXLUNet
@@ -35,8 +36,8 @@ class LoRAFromCivitai:
                 continue
             if not key.startswith(lora_prefix):
                 continue
-            weight_up = state_dict[key].to(device="cuda", dtype=torch.float16)
-            weight_down = state_dict[key.replace(".lora_up", ".lora_down")].to(device="cuda", dtype=torch.float16)
+            weight_up = state_dict[key].to(device="cpu", dtype=torch.float32)
+            weight_down = state_dict[key.replace(".lora_up", ".lora_down")].to(device="cpu", dtype=torch.float32)
             if len(weight_up.shape) == 4:
                 weight_up = weight_up.squeeze(3).squeeze(2).to(torch.float32)
                 weight_down = weight_down.squeeze(3).squeeze(2).to(torch.float32)
@@ -50,8 +51,10 @@ class LoRAFromCivitai:
         return state_dict_
     
 
-    def convert_state_dict_AB(self, state_dict, lora_prefix="", alpha=1.0, device="cuda", torch_dtype=torch.float16):
+    def convert_state_dict_AB(self, state_dict, lora_prefix="", alpha=1.0, device="cpu", torch_dtype=torch.float32):
         state_dict_ = {}
+        if device == "cuda" and not torch.cuda.is_available():
+            device = "cpu"
         for key in state_dict:
             if ".lora_B." not in key:
                 continue
@@ -85,6 +88,10 @@ class LoRAFromCivitai:
         if len(state_dict_lora) > 0:
             print(f"    {len(state_dict_lora)} tensors are updated.")
             for name in state_dict_lora:
+                quantized = quantized_linear_for_weight(model, name)
+                if quantized is not None:
+                    quantized.merge_weight_delta(state_dict_lora[name])
+                    continue
                 fp8=False
                 if state_dict_model[name].dtype == torch.float8_e4m3fn:
                     state_dict_model[name]= state_dict_model[name].to(state_dict_lora[name].dtype)
@@ -101,6 +108,7 @@ class LoRAFromCivitai:
             if not isinstance(model, model_class):
                 continue
             state_dict_model = model.state_dict()
+            state_dict_model.update({key: None for key in quantized_weight_keys(model)})
             for model_resource in ["diffusers", "civitai"]:
                 try:
                     state_dict_lora_ = self.convert_state_dict(state_dict_lora, lora_prefix=lora_prefix, alpha=1.0)
@@ -221,6 +229,7 @@ class GeneralLoRAFromPeft:
     def match(self, model: torch.nn.Module, state_dict_lora):
         lora_name_dict = self.get_name_dict(state_dict_lora)
         model_name_dict = {name: None for name, _ in model.named_parameters()}
+        model_name_dict.update({key: None for key in quantized_weight_keys(model)})
         matched_num = sum([i in model_name_dict for i in lora_name_dict])
         if matched_num == len(lora_name_dict):
             return "", ""
@@ -248,6 +257,11 @@ class GeneralLoRAFromPeft:
         device, dtype, computation_device, computation_dtype = self.fetch_device_and_dtype(state_dict_model)
         lora_name_dict = self.get_name_dict(state_dict_lora)
         for name in lora_name_dict:
+            quantized = quantized_linear_for_weight(model, name)
+            if quantized is not None:
+                quantized.add_lora(state_dict_lora[lora_name_dict[name][0]], state_dict_lora[lora_name_dict[name][1]], alpha)
+                continue
+            device, dtype, computation_device, computation_dtype = self.fetch_device_and_dtype({name: state_dict_model[name]})
             weight_up = state_dict_lora[lora_name_dict[name][0]].to(device=computation_device, dtype=computation_dtype)
             weight_down = state_dict_lora[lora_name_dict[name][1]].to(device=computation_device, dtype=computation_dtype)
             if len(weight_up.shape) == 4:
@@ -258,9 +272,8 @@ class GeneralLoRAFromPeft:
                 weight_lora = alpha * torch.mm(weight_up, weight_down)
             weight_model = state_dict_model[name].to(device=computation_device, dtype=computation_dtype)
             weight_patched = weight_model + weight_lora
-            state_dict_model[name] = weight_patched.to(device=device, dtype=dtype)
+            state_dict_model[name].copy_(weight_patched.to(device=device, dtype=dtype))
         print(f"    {len(lora_name_dict)} tensors are updated.")
-        model.load_state_dict(state_dict_model)
     
     
 

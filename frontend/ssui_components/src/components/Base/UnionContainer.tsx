@@ -15,6 +15,7 @@ type UnionContainerProps = {
 type UnionContainerState = { selected: number; enabled: boolean };
 
 class UnionContainer extends IComponent<UnionContainerProps, UnionContainerState> {
+    protected persistedFields: ('selected' | 'enabled')[] = ['selected', 'enabled'];
     state: UnionContainerState = { selected: 0, enabled: true };
     private componentRefs = new Map<number, React.RefObject<ComponentRef>>();
 

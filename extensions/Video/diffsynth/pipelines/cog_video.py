@@ -2,6 +2,7 @@ from ..models import ModelManager, FluxTextEncoder2, CogDiT, CogVAEEncoder, CogV
 from ..prompters import CogPrompter
 from ..schedulers import EnhancedDDIMScheduler
 from .base import BasePipeline
+from ..vram_management import enable_vram_management, AutoWrappedLinear, AutoWrappedModule
 import torch
 from tqdm import tqdm
 from PIL import Image
@@ -21,6 +22,22 @@ class CogVideoPipeline(BasePipeline):
         self.dit: CogDiT = None
         self.vae_encoder: CogVAEEncoder = None
         self.vae_decoder: CogVAEDecoder = None
+        self.model_names = ["text_encoder", "dit", "vae_encoder", "vae_decoder"]
+
+    def enable_vram_management(self):
+        # Keep DiT weights on the host; transfer only the current layer to MPS.
+        self.enable_cpu_offload()
+        self.dit.computation_device = self.device
+        self.dit.computation_dtype = self.torch_dtype
+        enable_vram_management(self.dit, module_map={
+            torch.nn.Linear: AutoWrappedLinear,
+            torch.nn.LayerNorm: AutoWrappedModule,
+            torch.nn.Conv3d: AutoWrappedModule,
+        }, module_config=dict(offload_device="cpu", onload_device="cpu",
+                              computation_device=self.device, offload_dtype=self.torch_dtype,
+                              onload_dtype=self.torch_dtype, computation_dtype=self.torch_dtype),
+                               vram_limit=0)
+
     
 
     def fetch_models(self, model_manager: ModelManager, prompt_refiner_classes=[]):
@@ -33,10 +50,10 @@ class CogVideoPipeline(BasePipeline):
 
 
     @staticmethod
-    def from_model_manager(model_manager: ModelManager, prompt_refiner_classes=[]):
+    def from_model_manager(model_manager: ModelManager, prompt_refiner_classes=[], device=None, torch_dtype=None):
         pipe = CogVideoPipeline(
-            device=model_manager.device,
-            torch_dtype=model_manager.torch_dtype
+            device=device or model_manager.device,
+            torch_dtype=torch_dtype or model_manager.torch_dtype
         )
         pipe.fetch_models(model_manager, prompt_refiner_classes)
         return pipe
@@ -91,20 +108,24 @@ class CogVideoPipeline(BasePipeline):
         if denoising_strength == 1.0:
             latents = noise.clone()
         else:
+            self.load_models_to_device(["vae_encoder"])
             input_video = self.preprocess_images(input_video)
             input_video = torch.stack(input_video, dim=2)
             latents = self.vae_encoder.encode_video(input_video, **tiler_kwargs, progress_bar=progress_bar_cmd).to(dtype=self.torch_dtype)
             latents = self.scheduler.add_noise(latents, noise, self.scheduler.timesteps[0])
         if not tiled: latents = latents.to(self.device)
 
+        self.load_models_to_device(["text_encoder"])
         # Encode prompt
         prompt_emb_posi = self.encode_prompt(prompt, positive=True)
         if cfg_scale != 1.0:
             prompt_emb_nega = self.encode_prompt(negative_prompt, positive=False)
 
+        self.load_models_to_device(["dit"])
         # Extra input
         extra_input = self.prepare_extra_input(latents)
 
+        self.load_models_to_device(["dit"])
         # Denoise
         for progress_id, timestep in enumerate(progress_bar_cmd(self.scheduler.timesteps)):
             timestep = timestep.unsqueeze(0).to(self.device)
@@ -128,8 +149,10 @@ class CogVideoPipeline(BasePipeline):
             if progress_bar_st is not None:
                 progress_bar_st.progress(progress_id / len(self.scheduler.timesteps))
 
+        self.load_models_to_device(["vae_decoder"])
         # Decode image
         video = self.vae_decoder.decode_video(latents.to("cpu"), **tiler_kwargs, progress_bar=progress_bar_cmd)
         video = self.tensor2video(video[0])
 
+        self.load_models_to_device([])
         return video

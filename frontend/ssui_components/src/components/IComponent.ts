@@ -1,7 +1,7 @@
 import React from 'react';
+import { PersistentComponent } from '../UIState';
 
-export interface IComponent<P = {}, S = {}> extends React.Component<P, S> {}
-export class IComponent<P, S> extends React.Component<P, S> {
+export class IComponent<P = {}, S = {}> extends PersistentComponent<P, S> {
     onExecute(): any {}
     onUpdate(data: any): void {}
 }

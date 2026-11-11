@@ -21,9 +21,15 @@ from ssui.controller import Random, Select, Switch, Slider
 
 
 _loader_instance = None
+_memory_loaders = {}
 
 
-def getModelLoader():
+def getModelLoader(quantization: str = "none", cpu_offload: bool = False):
+    if quantization != "none" or cpu_offload:
+        key = (quantization, cpu_offload)
+        if key not in _memory_loaders:
+            _memory_loaders[key] = ModelLoaderService(quantization=quantization, cpu_offload=cpu_offload)
+        return _memory_loaders[key]
     global _loader_instance
     if _loader_instance is None:
         _loader_instance = ModelLoaderService()
@@ -44,8 +50,8 @@ class SD1Model:
         self.vae = vae
 
     @staticmethod
-    def load(path: str) -> "SD1Model":
-        unet, clip, vae = load_model(getModelLoader(), path)
+    def load(path: str, *, quantization: str = "none", cpu_offload: bool = False) -> "SD1Model":
+        unet, clip, vae = load_model(getModelLoader(quantization, cpu_offload), path)
         return SD1Model(path, unet, clip, vae)
 
 

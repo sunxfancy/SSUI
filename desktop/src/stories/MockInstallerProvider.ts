@@ -1,4 +1,5 @@
 import { CommandInfo, IInstallerProvider } from '../providers/IInstallerProvider';
+import { makeRuntimeTarget } from '../providers/runtimeTarget';
 
 export class MockInstallerProvider implements IInstallerProvider {
   private mockPlatform = 'darwin';
@@ -29,6 +30,10 @@ export class MockInstallerProvider implements IInstallerProvider {
 
   async detectPlatform(): Promise<string> {
     return this.mockPlatform;
+  }
+
+  async detectRuntimeTarget() {
+    return makeRuntimeTarget(this.mockPlatform, this.mockPlatform === 'darwin' || this.mockPlatform === 'macos' ? 'arm64' : 'x64');
   }
 
   setMockPlatform(platform: string): void {
@@ -119,4 +124,4 @@ export class MockInstallerProvider implements IInstallerProvider {
   }): Promise<void> {
     console.log('模拟保存设置', installConfig);
   }
-} 
+}

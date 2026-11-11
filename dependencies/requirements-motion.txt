@@ -1,0 +1,10 @@
+# Install after the project's locked base environment.
+# Chumpy's legacy build needs wheel/setuptools installed first (see README.md).
+setuptools==69.5.1
+numpy==1.26.3
+spacy==3.7.5
+smplx==0.1.28
+joblib==1.6.0
+moviepy==1.0.3
+chumpy==0.70
+clip-anytorch==2.6.0

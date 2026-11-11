@@ -1,6 +1,7 @@
-import { defineConfig } from "vite";
+import { defineConfig, searchForWorkspaceRoot } from "vite";
 import react from "@vitejs/plugin-react";
 import path from 'path'
+import fs from 'node:fs'
 import customImport from './customImport'
 
 const host = process.env.TAURI_DEV_HOST;
@@ -32,6 +33,9 @@ export default defineConfig(async ({ mode }) => {
       ],
     },
     server: {
+      // Worktrees may share node_modules via a junction. Serve dependency fonts
+      // and other CSS assets from that resolved directory as well.
+      fs: { allow: [searchForWorkspaceRoot(__dirname), fs.realpathSync(path.resolve(__dirname, '../../node_modules'))] },
       port: 7420,
       strictPort: true,
       host: host || false,
@@ -50,6 +54,7 @@ export default defineConfig(async ({ mode }) => {
         '/api': {
           target: 'http://localhost:7422',
           changeOrigin: true,
+          ws: true,
         },
         '/config': {
           target: 'http://localhost:7422',

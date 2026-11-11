@@ -1,4 +1,5 @@
 import os
+import importlib.util
 import shutil
 import subprocess
 import sys
@@ -8,7 +9,7 @@ import uuid
 from ssui.annotation import param
 from ssui.base import Prompt, Image, Video
 from ssui.config import SSUIConfig
-from ssui.controller import Random, Slider, Select
+from ssui.controller import Random, Slider, Select, Switch
 
 
 # MiniMax H3（33B 全模态 DiT，开源版最接近 Seedance 2.0 的效果）本地节点。
@@ -21,12 +22,12 @@ from ssui.controller import Random, Slider, Select
 #   SSUI_H3_MODEL_ID 模型仓库 id（默认 MiniMaxAI/MiniMax-H3）
 #   SSUI_H3_NF4_MODEL_ROOT  DiffSynth-Studio NF4 权重目录
 #   SSUI_H3_DIFFSYNTH_ROOT  当前 DiffSynth-Studio 源码 checkout（可选）
-H3_MODEL_ID = os.environ.get("SSUI_H3_MODEL_ID", "MiniMaxAI/MiniMax-H3")
+H3_MODEL_ID = os.environ.get("SSUI_H3_MODEL_ID", "models/h3-mac" if os.path.isdir("models/h3-mac") else "MiniMaxAI/MiniMax-H3")
 H3_PYTHON = os.environ.get("SSUI_H3_PYTHON", "")
 H3_RUNNER = os.path.join(os.path.dirname(__file__), "h3_runner.py")
 H3_NF4_RUNNER = os.path.join(os.path.dirname(__file__), "h3_nf4_runner.py")
 H3_NF4_MODEL_ROOT = os.environ.get(
-    "SSUI_H3_NF4_MODEL_ROOT", os.path.join("models", "minimax-h3-nf4")
+    "SSUI_H3_NF4_MODEL_ROOT", os.path.join(os.environ.get("SSUI_MODEL_DIR", "models"), "minimax-h3-nf4")
 )
 H3_DIFFSYNTH_ROOT = os.environ.get("SSUI_H3_DIFFSYNTH_ROOT", "")
 H3_PROCESSOR_MODEL_ID = os.environ.get("SSUI_H3_PROCESSOR_MODEL_ID", "MiniMax/MiniMax-H3")
@@ -37,6 +38,7 @@ def _h3_python() -> str:
     if H3_PYTHON:
         return H3_PYTHON
     candidates = [
+        os.path.join(".venv", "video-mps", "bin", "python"),
         os.path.join("h3-venv", "Scripts", "python.exe"),  # Windows
         os.path.join("h3-venv", "bin", "python"),          # Linux / macOS
     ]
@@ -59,6 +61,7 @@ def _run_h3(
     output = os.path.join(output_dir, f"h3_{uuid.uuid4().hex}.mp4")
     try:
         quantization = config["quantization"]
+        cpu_offload = config["cpu_offload"] if "cpu_offload" in config else True
         runner = H3_NF4_RUNNER if quantization == "nf4" else H3_RUNNER
         cmd = [
             _h3_python(),
@@ -85,6 +88,12 @@ def _run_h3(
                 "--model-id", H3_MODEL_ID,
                 "--quantization", quantization,
             ]
+        if quantization != "nf4":
+            cmd += ["--cpu-offload" if cpu_offload else "--no-cpu-offload"]
+            if quantization == "int8":
+                cmd += ["--quantizer-path", importlib.util.find_spec("ssui.native_quantization").origin]
+        elif not cpu_offload:
+            raise ValueError("H3 NF4 backend requires CPU offload")
         if image is not None:
             first_path = os.path.join(tmpdir, "first.png")
             image._image.save(first_path)
@@ -126,6 +135,7 @@ def _run_h3(
 @param("height", Slider(32, 1536, 32), default=768)
 @param("width", Slider(32, 1536, 32), default=1344)
 @param("quantization", Select("none", "int8", "nf4"), default="none")
+@param("cpu_offload", Switch(), default=True)
 def H3TextToVideo(config: SSUIConfig, prompt: Prompt) -> Video:
     """MiniMax H3 文生视频（t2va，768p + 原生音频；独立 H3 venv 运行）。"""
     if config.is_prepare():
@@ -139,6 +149,7 @@ def H3TextToVideo(config: SSUIConfig, prompt: Prompt) -> Video:
 @param("height", Slider(32, 1536, 32), default=768)
 @param("width", Slider(32, 1536, 32), default=1344)
 @param("quantization", Select("none", "int8", "nf4"), default="none")
+@param("cpu_offload", Switch(), default=True)
 def H3ImageToVideo(
     config: SSUIConfig,
     image: Image,

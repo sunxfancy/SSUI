@@ -1,4 +1,6 @@
 .component-scalar-preview { display: flex; align-items: center; gap: 10px; min-height: 30px; }
+.component-integer-random { display: flex; align-items: center; gap: 6px; }
+.component-integer-random > .bp5-numeric-input { flex: 1; min-width: 0; }
 .component-scalar-preview code { overflow-wrap: anywhere; white-space: pre-wrap; }
 .component-json-preview { display: grid; gap: 8px; }
 .component-json-preview pre {

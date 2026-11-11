@@ -78,11 +78,13 @@ safetensors 分片的模拟模型上，覆盖准备阶段无权重运行、文�
 
 本次补齐了测试环境缺失的 ONNX Runtime、ONNX、Spandrel、GGUF、Compel、
 TorchSDE 等依赖；`pip check` 通过，Torch/Transformers 主版本未变。
-MOSS、节点发现、Diffusers 兼容、FLUX.2、工作流编译和执行器相关验证共
-37 项通过；另一个旧的可选集成测试未启用。完整模型权重测试未运行。
+同步当前 dev 后，MOSS、节点发现、Diffusers 兼容、FLUX.2 和工作流编译
+相关验证共 26 项通过（含模拟权重端到端测试）。额外执行器回归有两项
+受测试环境缺少 imageio 和本地 socket 权限限制，未记为通过。完整模型
+权重测试未运行。
 
-端到端测试发现并修复了工作流字符串注解解析、调度器 IPv4 地址解包，
-以及同秒保存多个 PNG 时文件名碰撞的问题。
+端到端测试覆盖了工作流字符串注解解析、IPv4 调度器连接和 PNG 文件名
+唯一性。本改动补齐字符串注解解析；IPv4 和结果序列化沿用当前 dev 实现。
 
 真模型测试需已有模型目录和 CUDA GPU：
 

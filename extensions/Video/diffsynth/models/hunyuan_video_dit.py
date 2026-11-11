@@ -1,4 +1,5 @@
 import torch
+from ..device_utils import empty_device_cache
 from .sd3_dit import TimestepEmbeddings, RMSNorm
 from .utils import init_weights_on_device
 from einops import rearrange, repeat
@@ -220,7 +221,7 @@ class IndividualTokenRefinerBlock(torch.nn.Module):
         )
         self.adaLN_modulation = torch.nn.Sequential(
             torch.nn.SiLU(),
-            torch.nn.Linear(hidden_size, hidden_size * 2, device="cuda", dtype=torch.bfloat16),
+            torch.nn.Linear(hidden_size, hidden_size * 2),
         )
 
     def forward(self, x, c, attn_mask=None):
@@ -243,7 +244,7 @@ class SingleTokenRefiner(torch.nn.Module):
     def __init__(self, in_channels=4096, hidden_size=3072, depth=2):
         super().__init__()
         self.input_embedder = torch.nn.Linear(in_channels, hidden_size, bias=True)
-        self.t_embedder = TimestepEmbeddings(256, hidden_size, computation_device="cpu")
+        self.t_embedder = TimestepEmbeddings(256, hidden_size, computation_device=None)
         self.c_embedder = torch.nn.Sequential(
             torch.nn.Linear(in_channels, hidden_size),
             torch.nn.SiLU(),
@@ -385,6 +386,8 @@ def apply_rotary_emb(
 
 
 def attention(q, k, v):
+    if q.shape[1] == 0:
+        return q.flatten(2, 3)
     q, k, v = q.transpose(1, 2), k.transpose(1, 2), v.transpose(1, 2)
     x = torch.nn.functional.scaled_dot_product_attention(q, k, v)
     x = x.transpose(1, 2).flatten(2, 3)
@@ -559,7 +562,8 @@ class MMSingleStreamBlock(torch.nn.Module):
         v_len = txt_len - split_token
         q_a, q_b = torch.concat([q_a, q_b[:, :split_token]], dim=1), q_b[:, split_token:].contiguous()
         k_a, k_b = torch.concat([k_a, k_b[:, :split_token]], dim=1), k_b[:, split_token:].contiguous()
-        v_a, v_b = v[:, :-v_len].contiguous(), v[:, -v_len:].contiguous()
+        split_index = v.shape[1] - v_len
+        v_a, v_b = v[:, :split_index].contiguous(), v[:, split_index:].contiguous()
 
         attn_output_a = attention(q_a, k_a, v_a)
         attn_output_b = attention(q_b, k_b, v_b)
@@ -591,13 +595,13 @@ class HunyuanVideoDiT(torch.nn.Module):
         super().__init__()
         self.img_in = PatchEmbed(in_channels=in_channels, embed_dim=hidden_size)
         self.txt_in = SingleTokenRefiner(in_channels=text_dim, hidden_size=hidden_size)
-        self.time_in = TimestepEmbeddings(256, hidden_size, computation_device="cpu")
+        self.time_in = TimestepEmbeddings(256, hidden_size, computation_device=None)
         self.vector_in = torch.nn.Sequential(
             torch.nn.Linear(768, hidden_size),
             torch.nn.SiLU(),
             torch.nn.Linear(hidden_size, hidden_size)
         )
-        self.guidance_in = TimestepEmbeddings(256, hidden_size, computation_device="cpu") if guidance_embed else None
+        self.guidance_in = TimestepEmbeddings(256, hidden_size, computation_device=None) if guidance_embed else None
         self.double_blocks = torch.nn.ModuleList([MMDoubleStreamBlock(hidden_size) for _ in range(num_double_blocks)])
         self.single_blocks = torch.nn.ModuleList([MMSingleStreamBlock(hidden_size) for _ in range(num_single_blocks)])
         self.final_layer = FinalLayer(hidden_size)
@@ -623,7 +627,7 @@ class HunyuanVideoDiT(torch.nn.Module):
             model = getattr(self, model_name)
             if model is not None:
                 model.to(device)
-        torch.cuda.empty_cache()
+        empty_device_cache(device)
 
     def prepare_freqs(self, latents):
         return HunyuanVideoRope(latents)
@@ -713,7 +717,7 @@ class HunyuanVideoDiT(torch.nn.Module):
                     x_ = x[..., i * self.block_size: (i + 1) * self.block_size]
                     y_ = torch.nn.functional.linear(x_, weight_, bias_)
                     del x_, weight_, bias_
-                    torch.cuda.empty_cache()
+                    empty_device_cache(device)
                     return y_
 
                 def block_forward(self, x, **kwargs):
@@ -726,7 +730,7 @@ class HunyuanVideoDiT(torch.nn.Module):
 
                 def forward(self, x, **kwargs):
                     weight, bias = cast_bias_weight(self, x, dtype=self.dtype, device=self.device)
-                    return torch.nn.functional.linear(x, weight, bias)
+                    return torch.nn.functional.linear(x.to(device=self.device, dtype=self.dtype), weight, bias)
 
 
             class RMSNorm(torch.nn.Module):
@@ -742,7 +746,7 @@ class HunyuanVideoDiT(torch.nn.Module):
                     hidden_states = hidden_states * torch.rsqrt(variance + self.module.eps)
                     hidden_states = hidden_states.to(input_dtype)
                     if self.module.weight is not None:
-                        weight = cast_weight(self.module, hidden_states, dtype=torch.bfloat16, device="cuda")
+                        weight = cast_weight(self.module, hidden_states, dtype=self.dtype, device=self.device)
                         hidden_states = hidden_states * weight
                     return hidden_states
 
@@ -754,7 +758,7 @@ class HunyuanVideoDiT(torch.nn.Module):
 
                 def forward(self, x):
                     weight, bias = cast_bias_weight(self, x, dtype=self.dtype, device=self.device)
-                    return torch.nn.functional.conv3d(x, weight, bias, self.stride, self.padding, self.dilation, self.groups)
+                    return torch.nn.functional.conv3d(x.to(device=self.device, dtype=self.dtype), weight, bias, self.stride, self.padding, self.dilation, self.groups)
 
             class LayerNorm(torch.nn.LayerNorm):
                 def __init__(self, *args, dtype=torch.bfloat16, device="cuda", **kwargs):

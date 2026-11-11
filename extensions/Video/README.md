@@ -8,6 +8,13 @@
 
 ## 依赖
 
+macOS 的基础依赖和锁文件已包含 ModelScope、imageio/FFmpeg、SentencePiece、ftfy、pandas。
+在根目录运行 `yarn install-requirements` 安装到 `.venv`。
+AnimateDiff、CogVideoX、Wan 2.1 和 Wan 2.2 节点已接入设备选择；Wan 在现代 MPS 默认 BF16，
+CPU 或旧版 macOS 使用 float32。AnimateDiff 已通过真实权重的 MPS 完整视频生成（最高实测 512×512、8 帧）；
+Wan 1.3B 已通过下述分阶段完整短视频生成；Wan 2.2 TI2V-5B 也已通过独立 MPS 短视频流程；Wan Fun/14B 和 A14B 仍待完整验证。
+Wan 2.2、Hunyuan、H3 等的支持边界见 [Mac 模型支持检查](../../doc/MacModelSupport.md)。
+
 Windows 安装环境需要补充 `modelscope==1.26.0`（Wan 系列节点下载权重时使用）。
 已加入 `dependencies/requirements-windows.txt` 与 `requirements-windows-amdgpu.txt`；
 改依赖后请在有 venv 的机器上重新生成锁文件：
@@ -15,6 +22,53 @@ Windows 安装环境需要补充 `modelscope==1.26.0`（Wan 系列节点下载�
 ```bash
 yarn update-lock:no-upgrade
 ```
+
+## Mac 完整 AnimateDiff 流程
+
+当前工作树已有独立 `.venv` 时，在根目录执行：
+
+```bash
+# 首次下载约 3.7GB，固定版本并校验 SHA-256；后续复用本地文件。
+yarn test:video:smoke --download-only
+# 实际经过 SSUI 沙盒工作流、真实模型推理、MP4 编码与解码校验。
+yarn test:video:smoke --local-files-only --workflow --device mps --size 256 --frames 8 --steps 20
+```
+
+产物在 `output/video-smoke/`：`animatediff.mp4`、`preview.png`、`report.json`。
+`--output` 可指定其他输出目录。无 MPS 的机器可用 `--device cpu`，但运行会慢很多。
+普通测试不会自动下载这些权重。真模型回归单独运行：
+
+```bash
+SSUI_RUN_MODEL_TESTS=1 SSUI_VIDEO_MODEL_DIR="$PWD/models/video-smoke" yarn test_on model.diffsynth_model_test
+```
+
+桌面端可打开 `examples/advance/workflow-video-mac.py`，使用 `txt2vid_animatediff`。
+默认 256×256、8 帧、20 步；按内存和耗时再提高尺寸。模型默认读取本仓库
+`models/video-smoke/`，也可用 `SSUI_ANIMATEDIFF_CHECKPOINT` 和
+`SSUI_ANIMATEDIFF_MOTION` 指向其他本地文件。准备/读取节点参数时不加载模型。
+两阶段生成均使用指定 seed；MPS 的随机噪声在 CPU 上生成后传入 GPU。
+
+## Mac 低内存 Wan 1.3B 流程
+
+根目录新增 `yarn test:wan:smoke`，使用固定版本的官方 `Wan-AI/Wan2.1-T2V-1.3B`。
+首次下载约 17.6GB，校验三个权重的 SHA-256。三个独立进程依次执行：
+UMT5 文件映射和逐层 MPS 编码、BF16 DiT 去噪、float32 VAE 解码。
+每阶段退出后释放模型，避免文本编码器、DiT、VAE 同时驻留统一内存。
+
+```bash
+yarn test:wan:smoke --download-only
+yarn test:wan:smoke --local-files-only --size 256 --frames 9 --steps 30
+```
+
+输出目录为 `output/wan-mac/`，包含 `wan.mp4`、`preview.png`、`report.json`，
+以及用于排错的提示词编码和 latent。帧数必须为 `4n+1`，尺寸必须为 16 的倍数。
+报告记录阶段耗时、进程 RSS、系统可用内存和交换空间；系统指标也包含其他应用的影响。
+已在本机 16GB Mac / Torch 2.4.1 实测 256×256、9 帧、30 步成功，约 97 秒，
+生成约 1.1 秒的橘猫行走视频。后续帧有模糊和重影，仅证明低内存完整链路可用。
+128×128 / 8 步虽能编码 MP4，但仅形成色块，不能作为质量通过的样例。
+已验证产物保存在 `output/wan-mac-preview/`。
+
+此脚本为独立低内存入口，已有 Wan 14B / Fun 节点不会自动使用它。
 
 ## 节点一览
 
@@ -31,7 +85,7 @@ yarn update-lock:no-upgrade
 
 权重下载到 `models/`（可用环境变量 `SSUI_WAN_MODEL_ROOT` 覆盖），
 文本编码器 / tokenizer / VAE 与 Wan2.1 共享，会自动重定向下载。
-FP8：把 `Wan22.py` 里三个 `load()` 的 `torch_dtype=torch.bfloat16` 改为 `torch.float8_e4m3fn`。
+Mac 不支持这里的 CUDA FP8 路径。CPU 卸载仍占统一内存，不能据此保证 16GB Mac 可以加载完整 Wan 权重。
 
 ### LTX-2.5（独立 venv + subprocess）
 
@@ -136,7 +190,7 @@ txt2vid_h3 / img2vid_h3
 
 ## 引擎升级说明
 
-- diffsynth 由仓库原 vendored 版本整体替换为 PyPI `diffsynth==1.1.9` 源码（无本地补丁，git 可回滚）。
+- diffsynth 由仓库原 vendored 版本整体替换为 PyPI `diffsynth==1.1.9` 源码（含本仓库的 Mac 兼容性补丁，git 可回滚）。
 - 1.1.9 新增 `pipelines/wan_video_new.py`（Wan 2.2 系列入口，`WanVideoPipeline.from_pretrained`）与
   `models/wan_video_dit_s2v.py`、`wan_video_mot.py`、`wan_video_animate_adapter.py` 等。
 - 顶层 `diffsynth.WanVideoPipeline` 仍是旧版（Wan 2.1），Wan 2.2 节点显式导入
@@ -171,3 +225,241 @@ SSUI_QWEN_IMAGE_VRAM_LIMIT_GIB   低显存模式的模型常驻显存上限（Gi
 较大的系统内存和磁盘空间；当前 SSUI Qwen-Image 节点要求 CUDA。32 GiB
 显存运行 512×512 时，可在模型加载参数中设置 `vram_limit_gib=24`，为激活
 和 VAE 解码预留空间。设为 `0` 时沿用自动值或上述环境变量。
+
+## Windows AMD / ROCm validation
+
+On Radeon AI PRO R9700 (gfx1201), Windows Python 3.12 and Torch
+2.9.1+rocm7.2.1, the real AnimateDiff SSUI sandbox workflow generated and
+round-trip decoded a 512x512, 16-frame MP4 (seed 42, 20 steps). Model loading
+plus generation took 40.5 seconds after initial kernel warmup, with 3.92 GiB
+peak allocated VRAM and 2.69 GiB peak process working set. The orange-cat
+sequence shows changing legs/tail across the clip; this is a short smoke test,
+not a long-video quality guarantee. A 256x256 lake example was nearly static
+and missed the requested sailboat, so successful encoding alone is insufficient.
+
+```powershell
+yarn test:video:smoke --device cuda --size 512 --frames 16 --steps 20 --workflow --prompt "A small orange cat walking slowly across a green lawn, daylight, fixed camera, realistic video."
+```
+
+`cuda` is also PyTorch's device name on ROCm. Reports include HIP version,
+GPU name, peak allocated VRAM and (on Windows) peak process working set.
+The preview samples the entire clip instead of only its first frames.
+Wan 2.1 T2V-1.3B also passed full staged generation on this host: 512x512,
+17 frames at 8 FPS, seed 42, 30 steps and CFG 5. All three pinned checkpoints
+passed SHA256 verification. Text encoding took 14.6 seconds, denoising 26.9
+seconds and FP32 VAE decoding 178.8 seconds (237.4 seconds including checkpoint
+verification and subprocess startup). Peak allocated VRAM was 14.86 GiB during
+decode; peak process working set was 9.90 GiB during text encoding. The system
+retained at least 5.75 GiB available RAM. MP4 round-trip checks passed, and sampled
+frames show a coherent orange cat taking steps. The 256x256 trial had visible
+ghosting; this short 512px sample does not certify long-video quality or larger
+Wan variants. These measurements describe the staged model runner.
+
+```powershell
+yarn test:wan:smoke --device cuda --size 512 --frames 17 --steps 30
+```
+
+Windows ROCm 7.2's hipBLASLt crashed natively while selecting a BF16 matrix
+multiplication algorithm in Wan denoising. Wan node loaders and the staged smoke
+entry now select regular hipBLAS through PyTorch's `preferred_blas_library` API.
+This preference is process-wide and limited to Windows ROCm 7.2 GPU runs; it is
+not applied on CPU, MPS, NVIDIA CUDA or other ROCm versions. The installed Torch
+build warns that this API is experimental/unsupported on Windows, but the full
+generation above validates its effect on this host. Revalidate on SDK upgrades.
+
+The download entry checks disk space before fetching missing weights. The CPU
+BF16 LayerNorm offload regression, opt-in real-dependency runtime suite and eight
+device-policy tests pass; these small tests are separate from the real-model run.
+
+### Wan 1.3B SSUI workflow
+
+Open `examples/advance/workflow-video-wan21.py` and select `txt2vid_wan21_13b`.
+Download the pinned weights once with `yarn test:wan:smoke --download-only`.
+The local loader uses `models/wan-mac` by default; set `SSUI_WAN21_MODEL_DIR`
+to use a different directory. Preparing the workflow does not load/download
+weights. The default controls are 512x512, 17 frames, 30 steps and CFG 5.
+UMT5/VAE checkpoints are memory-mapped on CPU before pipeline offloading.
+
+```powershell
+yarn test:wan:smoke --device cuda --local-files-only --workflow --size 512 --frames 17 --steps 30
+```
+
+This command exercises the real sandbox, model loader, generation node and
+executor video exporter, then decodes both exported MP4 files to check frame
+counts/dimensions. The executor accepts both SSUI `Image` wrappers (returned by
+Wan) and PIL frames. `executor_result.json` records the actual executor output.
+The workflow smoke uses untiled decoding; the interactive node defaults to tiled.
+
+On the same R9700 host, the full workflow passed with 179.1 seconds wall time,
+7.51 GiB peak allocated VRAM and 16.73 GiB peak process working set. It uses BF16
+VAE decoding, unlike the staged FP32 decode above. Sampled frames show coherent
+cat motion. System available RAM reached 1.93 GiB, so this single-process path
+is not certified for a 16 GiB RAM machine. The staged runner remains the lower
+RAM option. Browser rendering and other Wan model variants remain unverified.
+
+The Wan embedding offload path now transfers weights directly to the computation
+device instead of first deep-copying the ~2 GiB UMT5 embedding on CPU. Repeating
+the same 512px workflow reduced peak process working set from 16.73 to 14.84 GiB
+(1.89 GiB less), with unchanged 7.51 GiB peak VRAM. All 17 decoded MP4 frames were
+pixel-identical to the preceding run. This warmed run took 68.4 seconds total;
+cache/warmup differences mean the speed change is not attributed to this fix.
+This still does not establish that the complete workflow fits a 16 GiB RAM host.
+
+## 可选量化（本地 3D / 视频）
+
+`examples/advance/workflow-video.py`、`workflow-video-local.py` 和
+`workflow-3d.py` 中新增的 `img2mesh_quantized` 的模型选项中增加了 `quantization`。新选项默认 `none`，
+保留模型原有精度；准备工作流只登记控件，不下载或量化权重。
+
+| 模型 | 可选值 | 量化范围 |
+| --- | --- | --- |
+| Wan 2.1 / Fun、Wan 2.2（含 A14B 双专家） | `none` / `fp8` | DiT 权重以 FP8 E4M3 存储，运行时精度计算（CUDA 通常 BF16）；文本编码器、VAE、CLIP 保留原精度 |
+| Hunyuan T2V / I2V | `none` / `fp8` | DiT 使用 FP8 存储和 BF16 计算；其余组件保持原精度 |
+| CogVideo | `none` / `int8` | TorchAO INT8 weight-only Linear：DiT 和文本编码器；VAE 保留原精度 |
+| AnimateDiff | `none` / `int8` | TorchAO INT8 weight-only Linear：UNet 和文本编码器；卷积、VAE、运动模块保留原精度 |
+| Trellis | `none` / `int8` | TorchAO INT8 weight-only Linear：两级 flow 和图像条件编码器；几何、纹理解码器保持原精度 |
+| LTX-2.5 / MiniMax H3 | 已有节点选项 | 继续使用各自独立虚拟环境中的 `fp8-cast` / `int8` 实现 |
+
+Python 调用保持兼容，量化在模型加载时选择：
+
+```python
+model = Wan2T2VModel.load(quantization="fp8")
+model = CogVideoModel.load(quantization="int8")
+model = TrellisModel.load("jetx/trellis-image-large", quantization="int8")
+model = AnimateDiffModel(quantization="int8")
+```
+
+自定义工作流可以用 `ssui.quantization.FP8Quantization` 或
+`Int8Quantization` 注册模型加载选项；先检查 `config.is_prepare()`，
+在准备阶段构造空模型，执行阶段再将选项传给 `.load()`。
+
+INT8 为可选依赖，需要在**模型实际使用的 Python 环境**安装与 PyTorch
+匹配的 `torchao`。没有该依赖时，`none` 模式不导入它；选择 `int8`
+会在下载权重前给出明确错误，不会静默退回全精度。
+CPU 回归覆盖仓库固定的 PyTorch 2.4.1 + TorchAO 0.5.0，以及
+PyTorch 2.10.0 + TorchAO 0.15.0；未验证这些组合的 CUDA 内核或完整模型生成。
+INT8 逐层使用 FP32 计算量化比例，再恢复权重对外声明的原始浮点 dtype，
+避免 BF16 比例舍入导致 INT8 端点溢出，同时保留原有激活精度。
+实现采用 [TorchAO Int8WeightOnlyConfig](https://docs.pytorch.org/ao/stable/api_reference/generated/torchao.quantization.Int8WeightOnlyConfig.html)
+的逐通道权重量化，不量化激活，也不替换 Trellis SparseLinear 的前向接口。
+
+FP8 模式需要 PyTorch 提供 `float8_e4m3fn`。这里通过 DiffSynth 的
+存储/计算精度分离执行，不能将整个 pipeline 的计算 dtype 改成 FP8。
+Wan 2.1/Fun 的 DiT 使用按层换入，避免加载时先将完整 DiT 放入 GPU。
+
+量化降低的是指定权重的常驻存储，不代表总峰值内存等比例下降。
+当前加载器仍需读取原始 checkpoint；主内存加载峰值、视频激活、注意力、
+VAE 解码及输出帧仍受模型、分辨率、帧数影响。量化也可能影响质量或速度，
+具体显存下限需要在目标 GPU 上用固定输入验证。
+
+FP8 存储在 MPS 上会提前拒绝；Trellis 的独立 MPS runner 目前只支持 `none`。现有 `img2mesh(model, image)` 接口保持不变。
+
+
+## 可选 LoRA 推理
+
+模型面板提供本地 LoRA 权重文件路径和强度；路径留空或强度为 0 时禁用，默认强度为 1。
+支持 Wan 2.1（Fun、T2V、I2V、本地 1.3B 和常驻版）、Wan 2.2 TI2V-5B、
+CogVideoX（DiffSynth 5B 和 Diffusers 2B）、AnimateDiff 的 SD1 基础模型、
+HunyuanVideo 文生与图生视频，以及本扩展内的 Qwen-Image / Qwen-Image-Edit-2509。
+字段会随模型面板状态保存。
+
+Wan 2.2 T2V-A14B / I2V-A14B 使用双专家，面板分别填写高噪声和低噪声 LoRA。
+Python 对应 `high_noise_lora_path` / `high_noise_lora_weight` 和
+`low_noise_lora_path` / `low_noise_lora_weight`，不会自动把单个文件应用到两个专家。
+其他入口使用 `lora_path` / `lora_weight`：
+
+```python
+from ssui_video.Wan22 import Wan22TI2VModel, Wan22T2VA14BModel
+
+model = Wan22TI2VModel.load(lora_path="D:/Models/lora/wan5b.safetensors", lora_weight=0.8)
+moe = Wan22T2VA14BModel.load(
+    high_noise_lora_path="D:/Models/lora/high.safetensors", high_noise_lora_weight=0.8,
+    low_noise_lora_path="D:/Models/lora/low.safetensors", low_noise_lora_weight=0.6,
+)
+```
+
+LoRA 必须匹配基础模型的版本、架构和目标层；图像、视频、文本适配器不能互换。
+Wan / Qwen-Image 的通用加载器接受 DiffSynth / PEFT 的 `lora_A` / `lora_B` 权重键；
+旧版 ModelManager 另支持底层已实现的 Civitai 转换。未匹配的适配器会报错。
+AnimateDiff 这里支持基础 SD1 风格/角色适配器，不包含 Motion LoRA。
+每个入口接收单个文件，双专家各接收一个，不提供训练或任意格式转换。
+
+适配器在 INT8 量化、显存卸载包装之前应用；FP8 存储合并逐层使用浮点算术后恢复存储精度，
+因此会有 FP8 舍入。加载后修改路径或强度需重新加载模型，不能在同一个实例上撤销已合并的权重。
+新式 Wan / Qwen-Image 会先检查目标层与形状。Hunyuan 的历史 `HunyuanVideoLoraModel`
+仍会原地修改传入模型；建议使用新的 `HunyuanVideoModel.load(lora_path=..., lora_weight=...)`。
+
+验证：`yarn test_on lora_adapter_test` 使用真实小型 safetensors 和 PyTorch 参数验证权重变化、
+负强度、FP8 存储、错误处理，并通过桩验证节点路由、双专家与缓存隔离。
+`yarn test_on diffusers_lora_test` 另外用随机微型 FLUX.2 Transformer 验证真实 Diffusers / PEFT
+文件加载和正负强度的层输出变化。这些检查不代替各预训练模型搭配真实适配器的视频生成验证。
+
+## Apple Silicon 独立视频运行时（2026-10-28）
+
+主环境继续使用 Torch 2.4.1；LTX/H3 使用隔离环境，固定官方源码版本，避免污染已有视频、3D 和动作模型依赖：
+
+```bash
+python3.12 -m venv .venv/video-mps
+.venv/video-mps/bin/python -m pip install -r dependencies/requirements-video-mps.txt
+SSUI_VENV_PATH="$PWD/.venv/video-mps" yarn test:video:external-mps
+```
+
+节点自动探测 `.venv/video-mps/bin/python`；显式 `SSUI_LTX_PYTHON` / `SSUI_H3_PYTHON` 优先。
+该环境实测 Torch 2.14.1、Transformers 5.14.1；固定 LTX 源码包含 Apple fused MPS SDPA。
+LTX 默认关闭 FP8，runner 在 MPS 上拒绝 CUDA 量化参数和 CPU 回退。H3 原始权重路径使用 MPS 逐层 Accelerate offload；int8/NF4 仍只适用于 CUDA，不能视为 MPS 支持。
+H3 只加载所选 workflow 的组件，避免额外加载另一份 33B transformer。
+
+`test:video:external-mps` 使用随机小模型，实际验证 H3 音视频 DiT、MPS sequential offload、LTX 完整小型视频 DiT 和 fused attention，并与 CPU 数值比较；不下载完整权重，也不证明最终成片质量。
+LTX-2.5 权重需要 Hugging Face 仓库授权及命令行登录；当前已获授权且五个固定权重下载完成。词嵌入用后卸载及 64-token 投影分块后，真实蒸馏模型 CLI 已完成 MPS 音视频生成：128×128 / 9 帧 / 24 fps，产物 `output/ltx-mps/ltx.mp4`。极小样片主要为草地纹理，未清晰呈现猫，不能代表正常生成质量或节点 UI 端到端验证。
+
+CogVideo 节点现以安全精度暂存 CPU 权重，分阶段移动文本编码器/VAE，并逐层在 MPS 执行 DiT；切片计算设备与权重存储设备分离。Hunyuan 节点及卸载层同样使用 MPS，详细实测边界见 `doc/MacModelSupport.md`。
+
+Wan 2.2 TI2V-5B 独立低内存入口（复用 `models/wan-mac` 的 UMT5）：
+
+```bash
+yarn test:wan22:smoke --size 128 --frames 5 --steps 4
+```
+
+固定官方模型 revision；三个阶段分进程执行，DiT 使用 mmap-backed CPU 权重并逐层上传 MPS。该入口只覆盖 TI2V-5B 文生视频，不代表 A14B 双专家或图生视频通过。
+
+真实 CogVideoX-5B / Hunyuan T2V 的低内存独立入口（先下载，随后生成）：
+
+```sh
+SSUI_VENV_PATH="$PWD/.venv/video-mps" yarn test:cogvideo:smoke --download-only
+SSUI_VENV_PATH="$PWD/.venv/video-mps" yarn test:cogvideo:smoke
+SSUI_VENV_PATH="$PWD/.venv/video-mps" yarn test:hunyuan:smoke --download-only
+SSUI_VENV_PATH="$PWD/.venv/video-mps" yarn test:hunyuan:smoke
+```
+
+默认 128×128、9 帧、4 步，分别约 222 秒和 464 秒，输出 MP4 和包含 MPS
+阶段检查的 `report.json`。这些低步数样例主要是色块，只验证完整计算流程。
+原 vendored 节点的设备/卸载改动通过小型数值回归；不能把独立入口测试等同于
+原节点完整权重测试。CogVideo 短片要求 8n+1 帧且至少 9 帧。
+
+H3 的固定版本 T2VA 验证入口（约 144GB 原始权重，只下载一个 DiT）：
+
+```sh
+SSUI_VENV_PATH="$PWD/.venv/video-mps" yarn test:h3:smoke --download-only
+SSUI_VENV_PATH="$PWD/.venv/video-mps" yarn test:h3:smoke
+```
+
+默认 128×128、124 帧、`--steps 2`（调度器实际 1 次 DiT 调用）；通过节点使用的 runner 推理，并检查 MP4 视频和音轨。完整 H3 至少需要约 5 秒，22 帧只满足 VAE 对齐、不能用于完整管线。
+H3 的 MPS 路径通过 Accelerate 按需从本地 safetensors 读取每层权重，避免保留完整 CPU state dict。音频 VAE 约 0.6GB，因 weight_norm
+钩子不兼容逐层卸载而常驻 MPS；文本编码器、DiT 和约 10GB 视频 VAE 逐层执行。
+
+旧的完整 H3 测试曾伴随系统 watchdog 重启；用户要求恢复后，新增磁盘读取路径已完成真实 T2VA CLI，
+耗时约 149 秒，输出 `output/h3-mps/h3.mp4`：128×128 / 124 帧 / 24 fps，含 32 kHz 音频。
+文本、去噪、视频及音频解码均记录到 MPS 输出并通过有限值检查。此低步数样片仍是模糊纹理，
+不代表质量达标、I2V/ref2va 或节点 UI 已完整验证。MPS 上必须提供本地模型目录。
+冒烟父进程每秒检查可用内存和 swap，覆盖模型加载阶段；低于 1.5 GiB 可用内存或 swap
+增长超过 2 GiB 就终止，另保留 MPS 分配上限及逐层检查。
+
+LTX 默认使用磁盘卸载；MPS 磁盘路径使用一个主机缓冲和一个 GPU 缓冲并关闭预取。冒烟脚本保留系统内存/swap 保护，进一步将词嵌入用后卸载、投影分块并按层卸载，以及过滤去噪模型不使用的连接器权重；全部模型计算仍在 MPS。固定版本蒸馏模型的复现入口：
+
+```sh
+SSUI_VENV_PATH="$PWD/.venv/video-mps" yarn test:ltx:smoke --download-only
+SSUI_VENV_PATH="$PWD/.venv/video-mps" yarn test:ltx:smoke
+```
+
+默认 128×128、9 帧；runner 禁止 CPU 回退，测试记录实际层输出设备，并由父进程
+监控系统可用内存及 swap 增长。该保护不是系统绝不会卡顿的保证。

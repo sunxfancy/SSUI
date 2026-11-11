@@ -12,18 +12,33 @@ class Image():
         with PIL.Image.open(path) as image:
             return Image(image.convert("RGB").copy())
 
+@dataclass
+class MotionClip:
+    """Generated 3D joint motion and its native animation artifacts."""
+    path: str | None = None
+    npz_path: str | None = None
+    bvh_path: str | None = None
+    model: str = ""
+    fps: float = 30.0
+    frames: int = 0
+
+
 class Mesh():
-    def __init__(self, model: trimesh.Trimesh = None):
+    def __init__(self, model: trimesh.Trimesh = None, path: str = None):
         self._model = model
+        # Native rigged GLBs must bypass trimesh's geometry-only re-export.
+        # A path-backed Mesh is an immutable artifact; _model is optional.
+        self.path = path
 
     @staticmethod
     def load(path: str) -> "Mesh":
         return Mesh(trimesh.load(path, force="scene"))
 
 class Video():
-    def __init__(self, format: str = "mp4", frames: list[PIL.Image.Image] = None, fps: float = 30, video: str = None, path: str = None, metadata: dict[str, Any] = None):
+    def __init__(self, format: str = "mp4", frames: list[PIL.Image.Image] = None, fps: float = 30, video: str = None, path: str = None, metadata: dict[str, Any] = None, artifacts: dict[str, str] = None):
         self._format = format
         self._frames = frames
+        self._artifacts = artifacts or {}
         self._fps = fps
         # Upload components historically send {"video": path}; ``path`` is the
         # clearer spelling for programmatic callers.  Keep both compatible.

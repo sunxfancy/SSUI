@@ -1,10 +1,11 @@
+import { useUIState } from '../../../UIState';
 import React, { useState, forwardRef, useImperativeHandle } from 'react';
 import {TextArea, Tag} from '@blueprintjs/core';
 import { registerComponent, ComponentRegister } from '../../ComponentsManager';
 import styles from './style.module.css'
 
 const PromptEditor = forwardRef((props, ref) => {
-    const [ textContent, setTextContent ] = useState<string>('')
+    const [ textContent, setTextContent ] = useUIState<string>('textContent', '')
 
     useImperativeHandle(ref, () => {
         return {

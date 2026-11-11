@@ -1,3 +1,4 @@
+from backend.lora import validate_lora, apply_diffusers_lora
 from pathlib import Path
 from typing import List
 
@@ -46,6 +47,8 @@ class Flux2KleinModel:
         model_path: str,
         cpu_offload: bool = True,
         dtype: str = "bfloat16",
+        lora_path: str = "",
+        lora_weight: float = 1.0,
     ) -> "Flux2KleinModel":
         """Load a local Diffusers FLUX.2 Klein repository.
 
@@ -53,6 +56,7 @@ class Flux2KleinModel:
         Hugging Face repo id is also accepted, although preset installs pass a
         local directory.
         """
+        has_lora = validate_lora(lora_path, lora_weight)
         try:
             from diffusers import Flux2KleinPipeline
         except ImportError as exc:
@@ -65,18 +69,20 @@ class Flux2KleinModel:
         path = Path(model_path).expanduser()
         cache_path = str(path.resolve()) if path.exists() else model_path
         cache_key = (cache_path, cpu_offload, str(torch_dtype), device)
-        pipeline = _PIPELINE_CACHE.get(cache_key)
+        pipeline = None if has_lora else _PIPELINE_CACHE.get(cache_key)
 
         if pipeline is None:
             pipeline = Flux2KleinPipeline.from_pretrained(
                 model_path,
                 torch_dtype=torch_dtype,
             )
+            apply_diffusers_lora(pipeline, lora_path, lora_weight)
             if cpu_offload and device == "cuda":
                 pipeline.enable_model_cpu_offload()
             else:
                 pipeline.to(device)
-            _PIPELINE_CACHE[cache_key] = pipeline
+            if not has_lora:
+                _PIPELINE_CACHE[cache_key] = pipeline
 
         return Flux2KleinModel(model_path=cache_path, pipeline=pipeline)
 

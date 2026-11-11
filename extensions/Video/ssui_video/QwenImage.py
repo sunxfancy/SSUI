@@ -3,6 +3,7 @@
 The Video extension already owns the DiffSynth runtime, so the image nodes live
 here to avoid shipping a second copy of the same model implementation.
 """
+from backend.lora import validate_lora, apply_dit_lora
 
 import os
 from typing import Optional
@@ -30,7 +31,7 @@ def _model_config(model_id: str, pattern: str, low_vram: bool) -> ModelConfig:
         download_resource=os.environ.get(
             "SSUI_QWEN_IMAGE_DOWNLOAD_SOURCE", "ModelScope"
         ),
-        local_model_path=os.environ.get("SSUI_QWEN_IMAGE_MODEL_ROOT", "models"),
+        local_model_path=os.environ.get("SSUI_QWEN_IMAGE_MODEL_ROOT", os.environ.get("SSUI_MODEL_DIR", "models")),
         offload_device="cpu" if low_vram else None,
     )
 
@@ -41,7 +42,10 @@ def _load_pipeline(
     edit: bool,
     low_vram: bool,
     vram_limit_gib: Optional[float] = None,
+    lora_path: str = "",
+    lora_weight: float = 1.0,
 ) -> QwenImagePipeline:
+    validate_lora(lora_path, lora_weight)
     if not torch.cuda.is_available():
         raise RuntimeError("Qwen-Image in SSUI currently requires a CUDA GPU")
 
@@ -76,6 +80,7 @@ def _load_pipeline(
             else None
         ),
     )
+    apply_dit_lora(pipe.dit, lora_path, lora_weight)
     if low_vram:
         env_limit = os.environ.get("SSUI_QWEN_IMAGE_VRAM_LIMIT_GIB")
         vram_limit = vram_limit_gib
@@ -108,6 +113,8 @@ class QwenImageModel:
         model_id: str = QWEN_IMAGE_MODEL_ID,
         low_vram: bool = True,
         vram_limit_gib: float = 0.0,
+        lora_path: str = "",
+        lora_weight: float = 1.0,
     ) -> "QwenImageModel":
         return QwenImageModel(
             pipe=_load_pipeline(
@@ -115,6 +122,7 @@ class QwenImageModel:
                 edit=False,
                 low_vram=low_vram,
                 vram_limit_gib=vram_limit_gib or None,
+                lora_path=lora_path, lora_weight=lora_weight,
             ),
             model_id=model_id,
         )
@@ -140,6 +148,8 @@ class QwenImageEditModel:
         model_id: str = QWEN_IMAGE_EDIT_MODEL_ID,
         low_vram: bool = True,
         vram_limit_gib: float = 0.0,
+        lora_path: str = "",
+        lora_weight: float = 1.0,
     ) -> "QwenImageEditModel":
         return QwenImageEditModel(
             pipe=_load_pipeline(
@@ -147,6 +157,7 @@ class QwenImageEditModel:
                 edit=True,
                 low_vram=low_vram,
                 vram_limit_gib=vram_limit_gib or None,
+                lora_path=lora_path, lora_weight=lora_weight,
             ),
             model_id=model_id,
         )

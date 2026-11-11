@@ -2,6 +2,7 @@ export class Message {
     host: string;
     port: number;
     ws?: WebSocket;
+    private connectionPromise?: Promise<string | undefined>;
     active_requests: number = 0;
     uuid?: string;
     message_cache: {
@@ -25,15 +26,19 @@ export class Message {
 
     async connect(): Promise<string | undefined> {
         this.active_requests++;
-        if (this.ws) { return; }
-        return new Promise((resolve, reject) => {
+        if (this.ws && this.uuid) { return this.uuid; }
+        if (this.connectionPromise) { return this.connectionPromise; }
+        this.connectionPromise = new Promise((resolve, reject) => {
             let ws = new WebSocket(`ws://${this.host}:${this.port}/ws`);
             ws.onopen = () => {
                 console.log("connected to server!");
             }
             ws.onclose = () => {
-                console.log("disconnected from server!");
+                this.ws = undefined;
+                this.uuid = undefined;
+                this.connectionPromise = undefined;
                 if (this.active_requests > 0) {
+                    console.log("disconnected from server!");
                     console.log("WebSocket disconnected, retrying...");
                     setTimeout(this.connect.bind(this), 200); // 0.2秒后自动重连
                 }
@@ -45,6 +50,7 @@ export class Message {
                 if (data.type === 'uuid') {
                     console.log("uuid received: ", data.uuid);
                     this.uuid = data.uuid;
+                    this.connectionPromise = undefined;
                     resolve(this.uuid);
                 }
         
@@ -77,32 +83,37 @@ export class Message {
             ws.onerror = (err) => {
                 console.error("WebSocket error", err);
                 ws.close(); // 确保触发 onclose
+                this.connectionPromise = undefined;
                 reject(err);
             };
             this.ws = ws;
         });
+        return this.connectionPromise;
     }
 
-    disconnect() {
-        this.active_requests--;
-        if (this.active_requests === 0 && this.ws) {
-            this.ws.close();
-            this.ws = undefined;
-        }
+    async disconnect(): Promise<void> {
+        this.active_requests = Math.max(0, this.active_requests - 1);
+        if (this.active_requests !== 0 || !this.ws) return;
+        const socket = this.ws;
+        this.ws = undefined;
+        this.uuid = undefined;
+        if (socket.readyState === WebSocket.CLOSED) return;
+        await new Promise<void>(resolve => {
+            socket.addEventListener('close', () => resolve(), { once: true });
+            socket.close();
+        });
     }
 
-    
 
     async post(api_path: string, data?: any, callbacks?: {
         [key: string]: (data: any) => void;
     }) {
-        if (!this.uuid) {
-            await new Promise(resolve => setTimeout(resolve, 1000));
-        }
-
         let address = `http://${this.host}:${this.port}/${api_path}`;
         if (callbacks) {
             await this.connect();
+            if (!this.uuid) {
+                throw new Error('WebSocket connected without a client UUID');
+            }
             address += `/${this.uuid}`;
         }
         const response = await fetch(address, {
@@ -114,7 +125,7 @@ export class Message {
         });
 
         if (!response.ok) {
-            if (callbacks) { this.disconnect(); }
+            if (callbacks) { await this.disconnect(); }
             throw new Error(`HTTP error! status: ${response.status}`);
         }
 
@@ -125,15 +136,15 @@ export class Message {
         let result = await response.json();
         console.log("result: ", result);
         return await new Promise((resolve, reject) => {
-            let finish_callback = (data: any) => {
+            let finish_callback = async (data: any) => {
+                await this.disconnect();
                 resolve(data);
-                this.disconnect();
             };
             this.listening_callbacks[result.request_uuid] = {};
             for (const key in callbacks) {
                 if (!(result.callbacks.includes(key))) {
-                    reject(new Error(`Callback ${key} not found in result`));
-                    this.disconnect();
+                    void this.disconnect().then(() => reject(new Error(`Callback ${key} not found in result`)));
+                    return;
                 }
                 this.listening_callbacks[result.request_uuid][key] = callbacks[key];
             }

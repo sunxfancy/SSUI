@@ -1,7 +1,6 @@
 use crate::downloader::get_proxy;
 use log::{debug, error, info, warn};
 use serde::Serialize;
-use std::collections::HashMap;
 use std::fs::File;
 #[cfg(windows)]
 use std::os::windows::process::CommandExt; // 只在windows平台引入CommandExt
@@ -10,103 +9,23 @@ use std::process::Command;
 use std::sync::{LazyLock, Mutex, MutexGuard};
 use std::time::{SystemTime, UNIX_EPOCH};
 
-pub struct BackgroundProcessesGuard {
-    processes: Vec<Child>,
-}
 
-impl BackgroundProcessesGuard {
-    pub const fn new() -> Self {
-        Self {
-            processes: Vec::new(),
-        }
-    }
-
-    pub fn add_process(&mut self, child: Child) {
-        debug!("添加后台进程");
-        self.processes.push(child);
-    }
-
-    pub fn kill_all_processes(&mut self) {
-        info!("开始关闭所有后台进程");
-        for child in self.processes.iter_mut() {
-            if let Err(e) = child.kill() {
-                error!("无法终止进程: {}", e);
-            }
-        }
-        self.processes.clear();
-        info!("所有后台进程已关闭");
-    }
-}
-
-// 存储特定类型进程的Child对象
-pub struct ProcessManager {
-    processes: HashMap<String, Child>,
-}
-
-impl ProcessManager {
-    pub fn new() -> Self {
-        Self {
-            processes: HashMap::new(),
-        }
-    }
-
-    pub fn add_process(&mut self, process_type: &str, child: Child) {
-        debug!("添加进程: {}", process_type);
-        self.processes.insert(process_type.to_string(), child);
-    }
-
-    pub fn is_process_running(&mut self, process_type: &str) -> bool {
-        if let Some(child) = self.processes.get_mut(process_type) {
-            // 尝试等待进程，但不阻塞
-            match child.try_wait() {
-                Ok(Some(_)) => {
-                    // 进程已退出，从管理器中移除
-                    info!("进程 {} 已终止", process_type);
-                    self.processes.remove(process_type);
-                    false
-                }
-                Ok(None) => {
-                    // 进程仍在运行
-                    true
-                }
-                Err(e) => {
-                    // 发生错误，假设进程仍在运行
-                    error!("终止进程 {} 失败: {}", process_type, e);
-                    true
-                }
-            }
-        } else {
-            // 进程不存在
-            false
-        }
-    }
-
-    pub fn kill_process(&mut self, process_type: &str) -> bool {
-        if let Some(child) = self.processes.get_mut(process_type) {
-            if let Err(e) = child.kill() {
-                eprintln!("无法终止进程 {}: {}", process_type, e);
-                return false;
-            }
-            self.processes.remove(process_type);
-            true
-        } else {
-            false
-        }
-    }
-
-    pub fn kill_all_processes(&mut self) {
-        info!("开始关闭所有特定类型进程");
-        for (process_type, child) in self.processes.iter_mut() {
-            if let Err(e) = child.kill() {
-                error!("无法终止进程 {}: {}", process_type, e);
+// Development launches inherit the environment resolved by dev_run.cjs.
+// Installed applications continue to use the interpreter selected by the installer.
+fn configured_python(path: &str) -> std::path::PathBuf {
+    if cfg!(debug_assertions) {
+        if let Some(venv) = std::env::var_os("SSUI_VENV_PATH") {
+            return std::path::PathBuf::from(venv).join(if cfg!(windows) {
+                "Scripts/python.exe"
             } else {
-                info!("进程 {} 已终止", process_type);
-            }
+                "bin/python"
+            });
         }
-        self.processes.clear();
-        info!("所有特定类型进程已关闭");
     }
+    std::path::PathBuf::from(path)
 }
+
+use crate::process::{BackgroundProcessesGuard, ProcessManager};
 
 pub struct GlobalProcessState {
     processes_guard: Mutex<BackgroundProcessesGuard>,
@@ -171,6 +90,24 @@ fn set_proxy_for_python(cmd: &mut Command, proxy_url: &str) {
     }
 }
 
+// All Python entrypoints share the same verified native environment as the CLI.
+fn python_command(path: &str, cwd: &str) -> Command {
+    let configured = configured_python(path);
+    let path = configured.to_str().unwrap_or(path);
+    #[cfg(target_os = "linux")]
+    {
+        let root = std::path::Path::new(cwd);
+        let bootstrap = root.join("dependencies/native_cuda.py");
+        let python = root.join(".venv/bin/python");
+        if bootstrap.is_file() && python.is_file() && (!cfg!(debug_assertions) || std::path::Path::new(path).starts_with(root.join(".venv"))) {
+            let mut command = Command::new(python);
+            command.arg(bootstrap).args(["exec", "--", path]);
+            return command;
+        }
+    }
+    Command::new(path)
+}
+
 // 用来运行pip，所以要设置代理
 #[tauri::command]
 pub async fn run_python(path: &str, cwd: &str, args: Vec<&str>) -> Result<String, String> {
@@ -179,7 +116,8 @@ pub async fn run_python(path: &str, cwd: &str, args: Vec<&str>) -> Result<String
 
     // 创建基本命令
     let create_cmd = |use_proxy: bool| -> Command {
-        let mut cmd = Command::new(path);
+        let mut cmd = python_command(path, cwd);
+
         cmd.args(args.clone())
             .current_dir(cwd)
             .env("PYTHONIOENCODING", "utf-8");
@@ -202,8 +140,8 @@ pub async fn run_python(path: &str, cwd: &str, args: Vec<&str>) -> Result<String
             )
         })?;
 
-        let stdout = String::from_utf8(output.stdout).expect("无法将stdout转换为字符串");
-        let stderr = String::from_utf8(output.stderr).expect("无法将stderr转换为字符串");
+        let stdout = String::from_utf8_lossy(&output.stdout).into_owned();
+        let stderr = String::from_utf8_lossy(&output.stderr).into_owned();
 
         if output.status.success() {
             info!(
@@ -262,9 +200,9 @@ pub fn run_python_background(
         .as_secs();
 
     // 从参数中提取一个标识符，用于日志文件名
-    let args_identifier = if !args.is_empty() {
-        // 使用第二个参数作为标识符的一部分
-        args[1].replace(|c: char| !c.is_alphanumeric(), "_")
+    let args_identifier = if let Some(identifier) = args.get(1).or_else(|| args.first()) {
+        identifier.replace(|c: char| !c.is_alphanumeric(), "_")
+
     } else {
         "no_args".to_string()
     };
@@ -281,7 +219,8 @@ pub fn run_python_background(
     let error_log_file =
         File::create(&error_log_path).map_err(|e| format!("无法创建错误日志文件: {}", e))?;
 
-    let child = Command::new(path)
+    let child = python_command(path, cwd)
+
         .args(args.clone())
         .current_dir(cwd)
         .stdout(log_file)
@@ -322,7 +261,7 @@ pub fn start_server(path: &str, cwd: &str) -> Result<PythonCommand, String> {
     info!("服务器进程已启动，PID: {}", pid);
 
     // 将进程添加到进程管理器
-    process_manager.add_process("server", child);
+    process_manager.add_process("server", child)?;
 
     Ok(PythonCommand { pid })
 }
@@ -352,7 +291,7 @@ pub fn start_executor(path: &str, cwd: &str) -> Result<PythonCommand, String> {
     info!("执行器进程已启动，PID: {}", pid);
 
     // 将进程添加到进程管理器
-    process_manager.add_process("executor", child);
+    process_manager.add_process("executor", child)?;
 
     Ok(PythonCommand { pid })
 }
@@ -366,7 +305,7 @@ pub fn restart_server(path: &str, cwd: &str) -> Result<PythonCommand, String> {
     // 先停止现有服务器进程
     if process_manager.is_process_running("server") {
         info!("停止现有服务器进程");
-        process_manager.kill_process("server");
+        if !process_manager.kill_process("server") { return Err("无法停止现有服务器进程".into()); }
     }
 
     // 启动新的服务器进程
@@ -378,7 +317,7 @@ pub fn restart_server(path: &str, cwd: &str) -> Result<PythonCommand, String> {
     info!("服务器进程已重启，PID: {}", pid);
 
     // 将进程添加到进程管理器
-    process_manager.add_process("server", child);
+    process_manager.add_process("server", child)?;
 
     Ok(PythonCommand { pid })
 }
@@ -392,7 +331,7 @@ pub fn restart_executor(path: &str, cwd: &str) -> Result<PythonCommand, String> 
     // 先停止现有执行器进程
     if process_manager.is_process_running("executor") {
         info!("停止现有执行器进程");
-        process_manager.kill_process("executor");
+        if !process_manager.kill_process("executor") { return Err("无法停止现有执行器进程".into()); }
     }
 
     // 启动新的执行器进程
@@ -404,7 +343,7 @@ pub fn restart_executor(path: &str, cwd: &str) -> Result<PythonCommand, String> 
     info!("执行器进程已重启，PID: {}", pid);
 
     // 将进程添加到进程管理器
-    process_manager.add_process("executor", child);
+    process_manager.add_process("executor", child)?;
 
     Ok(PythonCommand { pid })
 }
@@ -440,22 +379,12 @@ pub fn get_executor_status() -> Result<ProcessStatus, String> {
     Ok(ProcessStatus { is_running, pid })
 }
 
-// 获取进程PID
-impl ProcessManager {
-    pub fn get_process_pid(&self, process_type: &str) -> Option<String> {
-        debug!("获取进程 {} 的PID", process_type);
-        self.processes
-            .get(process_type)
-            .map(|child| child.id().to_string())
-    }
-}
-
 // 启动Python进程并返回Child对象
 fn spawn_python_process(path: &str, cwd: &str, args: Vec<&str>) -> Result<Child, String> {
     // 从参数中提取一个标识符，用于日志文件名
-    let args_identifier = if !args.is_empty() {
-        // 使用第二个参数作为标识符的一部分
-        args[1].replace(|c: char| !c.is_alphanumeric(), "_")
+    let args_identifier = if let Some(identifier) = args.get(1).or_else(|| args.first()) {
+        identifier.replace(|c: char| !c.is_alphanumeric(), "_")
+
     } else {
         "no_args".to_string()
     };
@@ -476,7 +405,8 @@ fn spawn_python_process(path: &str, cwd: &str, args: Vec<&str>) -> Result<Child,
     let error_log_file =
         File::create(&error_log_path).map_err(|e| format!("无法创建错误日志文件: {}", e))?;
 
-    let mut cmd = Command::new(path);
+    let mut cmd = python_command(path, cwd);
+
     cmd.args(args.clone())
         .current_dir(cwd)
         .stdout(log_file)
@@ -501,3 +431,44 @@ pub fn get_dev_root() -> Result<String, String> {
     let current_dir = current_dir.parent().ok_or("无法获取上级目录")?;
     Ok(current_dir.to_string_lossy().into_owned())
 }
+
+#[cfg(all(test, target_os = "linux"))]
+mod native_cuda_tests {
+    use super::*;
+
+    #[test]
+    fn desktop_python_uses_managed_cuda_environment() {
+        let root = std::env::temp_dir().join(format!("ssui-native-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&root);
+        std::fs::create_dir_all(root.join("dependencies")).unwrap();
+        std::fs::create_dir_all(root.join(".venv/bin")).unwrap();
+        std::fs::create_dir_all(root.join(".venv/native-cuda")).unwrap();
+        std::fs::create_dir_all(root.join("compiler with spaces/bin")).unwrap();
+        std::fs::write(root.join("dependencies/native_cuda.py"),
+            include_str!("../../../dependencies/native_cuda.py")).unwrap();
+        std::os::unix::fs::symlink("/usr/bin/python3", root.join(".venv/bin/python")).unwrap();
+        let prefix = root.join("compiler with spaces");
+        std::fs::write(prefix.join("bin/nvcc"), "").unwrap();
+        std::fs::write(root.join(".venv/native-cuda/runtime.json"),
+            serde_json::json!({"prefix": prefix}).to_string()).unwrap();
+        // Debug builds only wrap interpreters owned by this installation.
+        let python = root.join(".venv/bin/python");
+        let output = python_command(python.to_str().unwrap(), root.to_str().unwrap())
+            .args(["-c", "import os,sys; print(os.environ['CUDA_HOME']); print(sys.argv[1])", "argument with spaces"])
+            .output().unwrap();
+        let _ = std::fs::remove_dir_all(&root);
+        assert!(output.status.success(), "{}", String::from_utf8_lossy(&output.stderr));
+        let stdout = String::from_utf8(output.stdout).unwrap();
+        assert_eq!(stdout.lines().collect::<Vec<_>>(), vec![prefix.to_str().unwrap(), "argument with spaces"]);
+    }
+}
+
+#[tauri::command]
+pub fn stop_server() -> bool { GLOBAL_PROCESS_STATE.process_manager().kill_process("server") }
+
+#[tauri::command]
+pub fn stop_executor() -> bool { GLOBAL_PROCESS_STATE.process_manager().kill_process("executor") }
+
+#[cfg(test)]
+#[path = "python_tests.rs"]
+mod tests;

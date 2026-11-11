@@ -201,6 +201,7 @@ export class NewWorkflow extends React.Component<NewWorkflowProps, NewWorkflowSt
               <InputGroup
                 placeholder={i18n.t('workflow.saveLocation')}
                 value={targetPath}
+                onChange={(event) => this.setState({ targetPath: event.target.value })}
                 fill
               />
             </div>

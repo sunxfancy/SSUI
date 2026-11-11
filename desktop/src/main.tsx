@@ -7,6 +7,8 @@ import { BlueprintProvider } from "@blueprintjs/core";
 import GlobalStateManager from "./services/GlobalState";
 import ExecutorService from "./services/Executor";
 import ServerService from "./services/Server";
+import { connectAgent } from 'ssui_components';
+import { desktopAgentCommands } from './services/AgentCommands';
 import { resolvePortConflicts } from "./services/PortService";
 import { enableMapSet } from 'immer'
 
@@ -26,6 +28,7 @@ interface RootState {
 
 
 class Root extends Component<{}, RootState> {
+  private stopAgent?: () => void;
   private isInitialized: boolean = false;
 
   constructor(props: {}) {
@@ -48,9 +51,9 @@ class Root extends Component<{}, RootState> {
       await GlobalStateManager.getInstance().initialize();
       // 从全局状态获取 root 信息
       const rootState = GlobalStateManager.getInstance().getRootState();
-      this.setState({ root: rootState || undefined });
-
       enableMapSet()
+      // 先画出默认页面，服务器启动和端口等待都不要挡住界面
+      this.setState({ root: rootState || undefined, isLoading: false });
 
       if (rootState?.path) {
         console.log('root path:', rootState.path);
@@ -84,8 +87,12 @@ class Root extends Component<{}, RootState> {
   }
 
   componentDidMount() {
+    // Separate relay also exposes installer controls before the model server exists.
+    this.stopAgent = connectAgent('SSUI Native / Installer', desktopAgentCommands(), 'http://127.0.0.1:7424');
     this.initRoot();
   }
+
+  componentWillUnmount() { this.stopAgent?.(); }
 
   render() {
     const { root, isLoading } = this.state;
@@ -95,9 +102,11 @@ class Root extends Component<{}, RootState> {
     }
 
     return (
-      <BlueprintProvider>
-        {root?.path ? <App /> : <Install />}
-      </BlueprintProvider>
+      <div data-testid="desktop-root" data-app-state={root?.path ? "ready" : "install"} style={{ height: "100%" }}>
+        <BlueprintProvider>
+          {root?.path ? <App /> : <Install />}
+        </BlueprintProvider>
+      </div>
     );
   }
 }

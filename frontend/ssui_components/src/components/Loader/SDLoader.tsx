@@ -1,4 +1,6 @@
-import React, { Component } from 'react';
+import { LoraFields, loraParams } from './LoraFields';
+import React from 'react';
+import { PersistentComponent } from '../../UIState';
 
 interface SDModel {
     name: string;
@@ -7,7 +9,8 @@ interface SDModel {
     tags?: string[];
 }
 function getModelLoader(type: 'sd-1' | 'sdxl', secondary_tag?: string, functionName?: string) {
-    return class SDModelLoader extends Component {
+    return class SDModelLoader extends PersistentComponent<{}, any> {
+    protected persistedFields = ['filePath'];
         state = {
             filePath: '',
             models: [] as SDModel[],
@@ -16,6 +19,7 @@ function getModelLoader(type: 'sd-1' | 'sdxl', secondary_tag?: string, functionN
         };
 
         componentDidMount() {
+        super.componentDidMount();
             this.fetchModels();
         }
 
@@ -106,7 +110,8 @@ function getModelLoader(type: 'sd-1' | 'sdxl', secondary_tag?: string, functionN
 }
 
 
-class FluxModelLoader extends Component {
+class FluxModelLoader extends PersistentComponent<{}, any> {
+    protected persistedFields = ['modelPath', 't5EncoderPath', 'clipPath', 'vaePath'];
     state = {
         modelPath: '',
         t5EncoderPath: '',
@@ -121,6 +126,7 @@ class FluxModelLoader extends Component {
     };
 
     componentDidMount() {
+        super.componentDidMount();
         this.fetchModels();
     }
 
@@ -214,10 +220,12 @@ class FluxModelLoader extends Component {
 
 }
 
-class Flux2KleinModelLoader extends Component {
+class Flux2KleinModelLoader extends PersistentComponent<{}, any> {
+    protected persistedFields = ['modelPath', 'cpuOffload', 'dtype', 'loraPath', 'loraWeight'];
     state = {
         modelPath: '',
         cpuOffload: true,
+        loraPath: '', loraWeight: 1,
         dtype: 'bfloat16',
         models: [] as SDModel[],
         loading: false,
@@ -225,6 +233,7 @@ class Flux2KleinModelLoader extends Component {
     };
 
     componentDidMount() {
+        super.componentDidMount();
         this.fetchModels();
     }
 
@@ -254,7 +263,8 @@ class Flux2KleinModelLoader extends Component {
             'params': {
                 'model_path': this.state.modelPath,
                 'cpu_offload': this.state.cpuOffload,
-                'dtype': this.state.dtype
+                'dtype': this.state.dtype,
+                ...loraParams(this.state.loraPath, this.state.loraWeight)
             }
         };
     }
@@ -275,6 +285,8 @@ class Flux2KleinModelLoader extends Component {
                         <option key={index} value={model.path}>{model.name}</option>
                     ))}
                 </select>
+                <LoraFields path={this.state.loraPath} weight={this.state.loraWeight}
+                    onPath={loraPath => this.setState({ loraPath })} onWeight={loraWeight => this.setState({ loraWeight })} />
                 <label style={{ display: 'block', marginBottom: '8px' }}>
                     <input
                         type="checkbox"

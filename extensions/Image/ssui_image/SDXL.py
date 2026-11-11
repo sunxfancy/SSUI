@@ -24,9 +24,15 @@ from ssui.controller import Select, Switch, Slider
 
 
 _loader_instance = None
+_memory_loaders = {}
 
 
-def getModelLoader():
+def getModelLoader(quantization: str = "none", cpu_offload: bool = False):
+    if quantization != "none" or cpu_offload:
+        key = (quantization, cpu_offload)
+        if key not in _memory_loaders:
+            _memory_loaders[key] = ModelLoaderService(quantization=quantization, cpu_offload=cpu_offload)
+        return _memory_loaders[key]
     global _loader_instance
     if _loader_instance is None:
         _loader_instance = ModelLoaderService()
@@ -49,8 +55,8 @@ class SDXLModel:
         self.vae = vae
 
     @staticmethod
-    def load(path: str) -> "SDXLModel":
-        unet, clip, clip2, vae = load_sdxl_model(getModelLoader(), path)
+    def load(path: str, *, quantization: str = "none", cpu_offload: bool = False) -> "SDXLModel":
+        unet, clip, clip2, vae = load_sdxl_model(getModelLoader(quantization, cpu_offload), path)
         return SDXLModel(path, unet, clip, clip2, vae)
 
 

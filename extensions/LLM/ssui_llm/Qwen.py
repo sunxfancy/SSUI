@@ -1,3 +1,4 @@
+from ssui.model_memory import ModelMemoryOptions
 from typing import Optional, Tuple, List
 import torch
 from transformers import AutoModelForCausalLM, AutoTokenizer
@@ -21,13 +22,17 @@ class QwenModel:
         return self.model, self.tokenizer
 
     @staticmethod
-    def load(model_path: str = "Qwen/Qwen-7B-Chat"):
+    def load(model_path: str = "Qwen/Qwen-7B-Chat", *, quantization: str = "none", cpu_offload: bool = False):
+        options = ModelMemoryOptions(quantization, cpu_offload)
         tokenizer = AutoTokenizer.from_pretrained(model_path, trust_remote_code=True)
         model = AutoModelForCausalLM.from_pretrained(
             model_path,
-            device_map="auto",
+            device_map="cpu" if quantization != "none" or cpu_offload else "auto",
             trust_remote_code=True
         ).eval()
+        if quantization != "none" or cpu_offload:
+            from backend.util.devices import TorchDevice
+            options.configure([model], device=TorchDevice.choose_torch_device())
         return QwenModel(model_path, model, tokenizer)
 
 @param("temperature", Slider(0.0, 2.0, 0.1), default=0.7)
@@ -48,20 +53,37 @@ def Chat(
     print("top_p:", config["top_p"])
 
     model_obj, tokenizer = model.getModel()
-    
+
     # Set generation config
     generation_config = GenerationConfig(
         temperature=config["temperature"],
         max_length=config["max_length"],
         top_p=config["top_p"],
     )
-    
+
     # Generate response
-    response, new_history = model_obj.chat(
-        tokenizer,
-        prompt,
-        history=history,
-        generation_config=generation_config
-    )
-    
+    if callable(getattr(model_obj, "chat", None)):
+        response, new_history = model_obj.chat(
+            tokenizer, prompt, history=history, generation_config=generation_config
+        )
+    else:
+        messages = []
+        for question, answer in history or []:
+            messages.extend([
+                {"role": "user", "content": question},
+                {"role": "assistant", "content": answer},
+            ])
+        messages.append({"role": "user", "content": prompt})
+        text = tokenizer.apply_chat_template(messages, tokenize=False, add_generation_prompt=True)
+        inputs = tokenizer(text, return_tensors="pt").to(model_obj.device)
+        with torch.inference_mode():
+            output = model_obj.generate(
+                **inputs,
+                generation_config=generation_config,
+                do_sample=config["temperature"] > 0,
+                pad_token_id=tokenizer.pad_token_id if tokenizer.pad_token_id is not None else tokenizer.eos_token_id,
+            )
+        response = tokenizer.decode(output[0, inputs.input_ids.shape[1]:], skip_special_tokens=True)
+        new_history = [*(history or []), (prompt, response)]
+
     return response, new_history

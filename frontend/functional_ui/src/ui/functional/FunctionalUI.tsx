@@ -1,8 +1,10 @@
-import React, { Component } from 'react';
+import React from 'react';
 import { Button, Callout, Collapse, Icon, MenuItem, NonIdealState, Spinner, Tag } from "@blueprintjs/core";
 import { ItemPredicate, ItemRenderer, Select } from "@blueprintjs/select";
-import { ComponentTabRef } from "ssui_components";
+import { ComponentTabRef, PersistentComponent, UIStateScope } from "ssui_components";
+import type { ApiComponents } from "ssui_components";
 import { DetailsPanel } from "./Details";
+import { ContextEditor, SessionAccess, SharedSettings, useSessions } from '../conversation/SessionState';
 import { registerUIProvider, UIProvider } from '../UIProvider';
 import { useConfig } from '../../config';
 import { ViewSwitcher } from "../common/ViewSwitcher";
@@ -12,10 +14,10 @@ import "@blueprintjs/core/lib/css/blueprint.css";
 import "@blueprintjs/icons/lib/css/blueprint-icons.css";
 
 interface Callable { rank: number; name: string; }
-interface Params { params: Record<string, string>; returns: string[]; }
-interface FunctionMeta { [key: string]: Params | string; }
-interface ScriptMeta { root_path: string; functions: FunctionMeta; }
-interface FunctionalUIProps { path: string; autoOpenDetails?: boolean; }
+type Params = ApiComponents['schemas']['ScriptFunctionInfo'];
+type ScriptMeta = ApiComponents['schemas']['ScriptMeta'];
+type FunctionMeta = ScriptMeta['functions'];
+interface FunctionalUIProps { path: string; autoOpenDetails?: boolean; sessions?: SessionAccess | null; }
 interface FunctionalUIState {
     functions: FunctionMeta | null;
     loading: boolean;
@@ -28,7 +30,8 @@ interface FunctionalUIState {
     hasRun: boolean;
 }
 
-export class FunctionalUI extends Component<FunctionalUIProps, FunctionalUIState> {
+export class FunctionalUI extends PersistentComponent<FunctionalUIProps, FunctionalUIState> {
+    protected persistedFields: (keyof FunctionalUIState)[] = ['selectedFunc', 'isOpen'];
     state: FunctionalUIState = {
         functions: null, loading: true, error: null, selectedFunc: undefined,
         isOpen: Boolean(this.props.autoOpenDetails), root_path: '', running: false,
@@ -38,12 +41,14 @@ export class FunctionalUI extends Component<FunctionalUIProps, FunctionalUIState
     private refInputs = new Map<string, React.RefObject<ComponentTabRef>>();
     private refOutputs = new Map<string, React.RefObject<ComponentTabRef>>();
     private details: React.RefObject<DetailsPanel> = React.createRef();
+    private runPending = false;
     private metaRequest?: AbortController;
     private executeRequest?: AbortController;
 
-    componentDidMount() { this.queryScriptMeta(); }
+    componentDidMount() { super.componentDidMount(); this.queryScriptMeta(); }
 
     componentDidUpdate(prevProps: FunctionalUIProps) {
+        super.componentDidUpdate();
         if (prevProps.path !== this.props.path) this.queryScriptMeta();
         if (!prevProps.autoOpenDetails && this.props.autoOpenDetails) this.setState({ isOpen: true });
     }
@@ -58,15 +63,27 @@ export class FunctionalUI extends Component<FunctionalUIProps, FunctionalUIState
         this.executeRequest?.abort();
         const request = new AbortController();
         this.metaRequest = request;
+        this.runPending = false;
         this.refInputs.clear();
         this.refOutputs.clear();
-        this.setState({ loading: true, error: null, functions: null, selectedFunc: undefined, running: false, runError: null, hasRun: false });
+        this.setState({ loading: true, error: null, functions: null, running: false, runError: null, hasRun: false });
         try {
             const response = await fetch('/api/script?' + new URLSearchParams({ script_path: this.props.path }), { signal: request.signal });
             if (!response.ok) throw new Error(`无法读取脚本信息（${response.status}）`);
             const data = await response.json() as ScriptMeta;
-            this.setState({ functions: data.functions, loading: false, error: null, root_path: data.root_path });
+            if (request !== this.metaRequest || request.signal.aborted) return;
+            if (!data.functions || typeof data.functions !== 'object') throw new Error('Invalid script metadata');
+            for (const meta of Object.values(data.functions)) {
+                if (typeof meta === 'string') continue;
+                if (!meta || typeof meta.params !== 'object' || !meta.params || !Array.isArray(meta.returns) ||
+                    !Object.values(meta.params).every(value => typeof value === 'string') ||
+                    !meta.returns.every(value => typeof value === 'string')) throw new Error('Invalid function metadata');
+            }
+            const names = this.getFunctionNames(data.functions);
+            if (this.state.selectedFunc && !names.includes(this.state.selectedFunc.name)) this.setState({ selectedFunc: undefined });
+            this.setState({ functions: data.functions, loading: false, error: null, root_path: data.root_path ?? '' });
         } catch (error) {
+            if (request !== this.metaRequest || request.signal.aborted) return;
             if (error instanceof DOMException && error.name === 'AbortError') return;
             this.setState({ loading: false, error: error instanceof Error ? error : new Error('读取脚本时发生未知错误') });
         }
@@ -85,6 +102,7 @@ export class FunctionalUI extends Component<FunctionalUIProps, FunctionalUIState
         .map(([key]) => key);
 
     handleSelectFunc = (func: Callable) => {
+        if (this.runPending) return;
         this.executeRequest?.abort();
         this.refInputs.clear();
         this.refOutputs.clear();
@@ -94,38 +112,62 @@ export class FunctionalUI extends Component<FunctionalUIProps, FunctionalUIState
     toggleDetails = () => this.setState(state => ({ isOpen: !state.isOpen }));
 
     handleRun = async (): Promise<void> => {
-        const { functions, selectedFunc, running } = this.state;
-        if (!functions || running) return;
+        const { functions, selectedFunc, loading } = this.state;
+        if (!functions || loading || this.runPending) return;
         const selected = selectedFunc?.name ?? this.getFunctionNames(functions)[0];
         const meta = functions[selected];
         if (!meta || typeof meta === 'string') return;
-
-        const params: Record<string, unknown> = {};
-        Object.keys(meta.params).forEach(key => { params[key] = this.refInputs.get(key)?.current?.onExecute(); });
-        const details = this.details.current?.onExecute() ?? {};
+        const conversation = meta.conversation;
+        const snapshot = conversation ? this.props.sessions?.get(selected, conversation) : undefined;
         this.executeRequest?.abort();
         const request = new AbortController();
         this.executeRequest = request;
+        this.runPending = true;
         this.setState({ running: true, runError: null });
         try {
+            const params: Record<string, unknown> = {};
+            for (const key of Object.keys(meta.params)) {
+                if (conversation && key === conversation.context_param) {
+                    if (!snapshot) throw new Error('共享会话尚未准备好');
+                    params[key] = snapshot.context;
+                    continue;
+                }
+                const input = this.refInputs.get(key)?.current;
+                if (!input) throw new Error(`Input is not ready: ${key}`);
+                params[key] = input.onExecute();
+            }
+            const details = this.details.current?.onExecute() ?? {};
             const response = await fetch('/api/execute?' + new URLSearchParams({ script_path: this.props.path, callable: selected }), {
                 method: 'POST', headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ params, details }), signal: request.signal,
             });
             if (!response.ok) throw new Error((await response.text()) || `执行失败（${response.status}）`);
             const data = await response.json() as unknown;
+            if (request !== this.executeRequest || request.signal.aborted) return;
             if (!Array.isArray(data)) {
                 const message = data && typeof data === 'object' && 'error' in data
                     ? String((data as { error: unknown }).error)
                     : '执行器返回了无法识别的结果格式';
                 throw new Error(message);
             }
-            const outputNames = Object.keys(meta.returns);
+            const outputNames = meta.returns.map((_type, index) => String(index));
+            if (data.length !== outputNames.length) throw new Error('Unexpected output count');
+            if (conversation && snapshot) {
+                const prompt = params[conversation.prompt_param];
+                if (typeof prompt !== 'string') throw new Error('对话输入必须是文本');
+                this.props.sessions!.commit(selected, conversation, snapshot, prompt, data);
+            }
             data.forEach((item, index) => this.refOutputs.get(outputNames[index])?.current?.onUpdate(item));
-            this.setState({ running: false, runError: null, hasRun: true });
+            this.setState({ runError: null, hasRun: true });
         } catch (error) {
-            if (error instanceof DOMException && error.name === 'AbortError') return;
-            this.setState({ running: false, runError: error instanceof Error ? error.message : '执行时发生未知错误' });
+            if (request === this.executeRequest && !request.signal.aborted) {
+                this.setState({ runError: error instanceof Error ? error.message : String(error) });
+            }
+        } finally {
+            if (request === this.executeRequest) {
+                this.runPending = false;
+                if (!request.signal.aborted) this.setState({ running: false });
+            }
         }
     };
 
@@ -139,9 +181,10 @@ export class FunctionalUI extends Component<FunctionalUIProps, FunctionalUIState
         ) : null;
         return (
             <Select<Callable> items={items} itemPredicate={filter} itemRenderer={renderer}
+                popoverTargetProps={{ 'aria-label': 'Select function' }}
                 noResults={<MenuItem disabled text="没有匹配的函数" roleStructure="listoption" />}
                 onItemSelect={this.handleSelectFunc} popoverProps={{ minimal: true, matchTargetWidth: true }}>
-                <Button className="functional-ui-select" alignText="left" icon="function"
+                <Button disabled={this.state.running} className="functional-ui-select" alignText="left" icon="function"
                     text={this.state.selectedFunc?.name ?? names[0]} rightIcon="chevron-down" />
             </Select>
         );
@@ -149,7 +192,7 @@ export class FunctionalUI extends Component<FunctionalUIProps, FunctionalUIState
 
     renderPorts = (meta: Params, port: 'input' | 'output', functionName: string): JSX.Element => {
         const entries: [string, string][] = port === 'input'
-            ? Object.entries(meta.params)
+            ? Object.entries(meta.params).filter(([name]) => name !== meta.conversation?.context_param)
             : meta.returns.map((type, index) => [String(index), type]);
         const refs = port === 'input' ? this.refInputs : this.refOutputs;
         if (!entries.length) return (
@@ -159,8 +202,8 @@ export class FunctionalUI extends Component<FunctionalUIProps, FunctionalUIState
         return <div className="functional-ui-port-list">{entries.map(([name, type], index) => (
             <section className="functional-ui-card" key={`${functionName}-${port}-${name}`}>
                 <div className="functional-ui-card-index">{String(index + 1).padStart(2, '0')}</div>
-                <ComponentTabRef name={port === 'output' ? `output_${name}` : name} root_path={this.state.root_path}
-                    script_path={this.props.path} type={type} port={port} ref={this.getRef(name, refs)} />
+                <SharedSettings name={`${functionName}/${port}/${name}`}><ComponentTabRef name={port === 'output' ? `output_${name}` : name} root_path={this.state.root_path}
+                    script_path={this.props.path} type={type} port={port} ref={this.getRef(name, refs)} /></SharedSettings>
             </section>
         ))}</div>;
     };
@@ -189,9 +232,10 @@ export class FunctionalUI extends Component<FunctionalUIProps, FunctionalUIState
                     aria-expanded={this.state.isOpen}>高级参数</Button>
             </section>
             <Collapse isOpen={this.state.isOpen} keepChildrenMounted><div className="functional-ui-details-shell">
-                <DetailsPanel path={this.props.path} selected={selected} ref={this.details} />
+                <SharedSettings name={`${selected}/details`}><DetailsPanel key={`${this.props.path}:${selected}`} path={this.props.path} selected={selected} ref={this.details} /></SharedSettings>
             </div></Collapse>
-            {this.state.runError && <Callout className="functional-ui-run-error" intent="danger" icon="error" title="运行失败">{this.state.runError}</Callout>}
+            {this.state.runError && <Callout role="alert" className="functional-ui-run-error" intent="danger" icon="error" title="运行失败">{this.state.runError}</Callout>}
+            {selectedMeta.conversation && <ContextEditor name={selected} conversation={selectedMeta.conversation} disabled={this.state.running} />}
             <div className="functional-ui-stage">
                 <section className="functional-ui-column functional-ui-column-input">
                     <header className="functional-ui-column-header"><div><span className="functional-ui-eyebrow">Configure</span><h2>输入</h2></div><span>{inputCount}</span></header>
@@ -232,7 +276,7 @@ export class FunctionalUI extends Component<FunctionalUIProps, FunctionalUIState
 
 const FunctionalUIView: React.FC<FunctionalUIProps> = ({ path }) => {
     const { config } = useConfig();
-    return <FunctionalUI path={path} autoOpenDetails={config.auto_open_details} />;
+    return <FunctionalUI path={path} autoOpenDetails={config.auto_open_details} sessions={useSessions()} />;
 };
 
 export class FunctionalUIProvider implements UIProvider {

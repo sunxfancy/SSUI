@@ -1,11 +1,14 @@
+from backend.lora import validate_lora, apply_manager_lora
+from ssui.model_memory import ModelMemoryOptions, configure_diffsynth_manager, run_pipeline
 import torch
+from backend.quantization.workflow import fp8_storage_dtype
+from ._runtime import wan_runtime
 
 from ssui.annotation import param
 from ssui.base import Prompt, Image
 from ssui.config import SSUIConfig
 from ssui.controller import Random, Slider
 
-torch.cuda.set_per_process_memory_fraction(1.0, 0)
 from diffsynth import (
     ModelManager,
     HunyuanVideoPipeline,
@@ -20,27 +23,33 @@ class HunyuanVideoModel:
         self.model_manager = model_manager
 
     @staticmethod
-    def load() -> "HunyuanVideoModel":
-        model_manager = ModelManager()
+    def load(quantization: str = "none", lora_path: str = "", lora_weight: float = 1.0, *, cpu_offload: bool = True) -> "HunyuanVideoModel":
+        validate_lora(lora_path, lora_weight)
+        options = ModelMemoryOptions(quantization, cpu_offload, allow_fp8=True)
+        runtime = wan_runtime()
+        storage_dtype = fp8_storage_dtype("none" if quantization == "int8" else quantization, runtime["torch_dtype"], device=runtime["device"])
+        model_manager = ModelManager(device="cpu", torch_dtype=runtime["torch_dtype"])
         download_models(["HunyuanVideo"])
 
-        # The DiT model is loaded in bfloat16.
+        # Stage weights on CPU; the pipeline computes on the selected accelerator.
         model_manager.load_models(
             ["models/HunyuanVideo/transformers/mp_rank_00_model_states.pt"],
-            torch_dtype=torch.bfloat16,  # you can use torch_dtype=torch.float8_e4m3fn to enable quantization.
+            torch_dtype=storage_dtype,
             device="cpu",
         )
 
-        # The other modules are loaded in float16.
+        # Preserve CUDA checkpoint precision; MPS uses its safe runtime dtype.
         model_manager.load_models(
             [
                 "models/HunyuanVideo/text_encoder/model.safetensors",
                 "models/HunyuanVideo/text_encoder_2",
                 "models/HunyuanVideo/vae/pytorch_model.pt",
             ],
-            torch_dtype=torch.float16,
+            torch_dtype=torch.float16 if runtime["device"].startswith("cuda") else runtime["torch_dtype"],
             device="cpu",
         )
+        apply_manager_lora(model_manager, lora_path, lora_weight)
+        configure_diffsynth_manager(model_manager, options, runtime["device"])
         return HunyuanVideoModel(model_manager)
 
 
@@ -50,17 +59,21 @@ class HunyuanVideoLoraModel:
         base_model: HunyuanVideoModel,
         model_id: str = "AI-ModelScope/walking_animation_hunyuan_video",
         origin_file_path: str = "kxsr_walking_anim_v1-5.safetensors",
+        lora_path: str = "",
+        lora_weight: float = 1.0,
     ):
-        # We support LoRA inference. You can use the following code to load your LoRA model.
-        # Example LoRA: https://civitai.com/models/1032126/walking-animation-hunyuan-video
-        download_customized_models(
-            model_id=model_id,
-            origin_file_path=origin_file_path,
-            local_dir="models/lora",
-        )[0]
-        base_model.model_manager.load_lora(
-            "models/lora/" + origin_file_path, lora_alpha=1.0
-        )
+        self.model_manager = base_model.model_manager
+        if not lora_path and lora_weight != 0:
+            import math
+            if not math.isfinite(lora_weight):
+                raise ValueError("LoRA weight must be finite")
+            download_customized_models(
+                model_id=model_id, origin_file_path=origin_file_path,
+                local_dir="models/lora",
+            )
+            lora_path = "models/lora/" + origin_file_path
+        apply_manager_lora(self.model_manager, lora_path, lora_weight)
+
 
 
 class HunyuanImageToVideoModel:
@@ -70,13 +83,17 @@ class HunyuanImageToVideoModel:
         self.model_manager = model_manager
 
     @staticmethod
-    def load() -> "HunyuanImageToVideoModel":
-        model_manager = ModelManager()
+    def load(quantization: str = "none", lora_path: str = "", lora_weight: float = 1.0, *, cpu_offload: bool = True) -> "HunyuanImageToVideoModel":
+        validate_lora(lora_path, lora_weight)
+        options = ModelMemoryOptions(quantization, cpu_offload, allow_fp8=True)
+        runtime = wan_runtime()
+        storage_dtype = fp8_storage_dtype("none" if quantization == "int8" else quantization, runtime["torch_dtype"], device=runtime["device"])
+        model_manager = ModelManager(device="cpu", torch_dtype=runtime["torch_dtype"])
         download_models(["HunyuanVideoI2V"])
 
         model_manager.load_models(
             ["models/HunyuanVideoI2V/transformers/mp_rank_00_model_states.pt"],
-            torch_dtype=torch.bfloat16,
+            torch_dtype=storage_dtype,
             device="cpu",
         )
         model_manager.load_models(
@@ -85,9 +102,11 @@ class HunyuanImageToVideoModel:
                 "models/HunyuanVideoI2V/text_encoder_2",
                 "models/HunyuanVideoI2V/vae/pytorch_model.pt",
             ],
-            torch_dtype=torch.float16,
+            torch_dtype=torch.float16 if runtime["device"].startswith("cuda") else runtime["torch_dtype"],
             device="cpu",
         )
+        apply_manager_lora(model_manager, lora_path, lora_weight)
+        configure_diffsynth_manager(model_manager, options, runtime["device"])
         return HunyuanImageToVideoModel(model_manager)
 
 
@@ -101,13 +120,18 @@ def HunyuanTextToVideo(
 ) -> list[Image]:
     if config.is_prepare():
         return [Image()]
-    # The computation device is "cuda".
     pipe = HunyuanVideoPipeline.from_model_manager(
-        base_model.model_manager, torch_dtype=torch.bfloat16, device="cuda"
+        base_model.model_manager, **wan_runtime(), enable_vram_management=False
     )
     # This LoRA requires shift=9.0.
     pipe.scheduler = FlowMatchScheduler(shift=9.0, sigma_min=0.0, extra_one_step=True)
-    video = pipe(
+    options = getattr(base_model.model_manager, "memory_options", ModelMemoryOptions(cpu_offload=True))
+    if options.cpu_offload:
+        if options.quantization == "int8":
+            pipe.enable_cpu_offload()
+        else:
+            pipe.enable_vram_management()
+    video = run_pipeline(pipe,
         prompt=prompt.text,
         seed=config["seed"],
         height=config["height"],
@@ -131,9 +155,15 @@ def HunyuanImageToVideo(
     if config.is_prepare():
         return [Image()]
     pipe = HunyuanVideoPipeline.from_model_manager(
-        base_model.model_manager, torch_dtype=torch.bfloat16, device="cuda"
+        base_model.model_manager, **wan_runtime(), enable_vram_management=False
     )
-    video = pipe(
+    options = getattr(base_model.model_manager, "memory_options", ModelMemoryOptions(cpu_offload=True))
+    if options.cpu_offload:
+        if options.quantization == "int8":
+            pipe.enable_cpu_offload()
+        else:
+            pipe.enable_vram_management()
+    video = run_pipeline(pipe,
         prompt=prompt.text,
         input_images=[image._image],
         i2v_resolution="720p",

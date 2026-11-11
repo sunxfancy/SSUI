@@ -26,12 +26,17 @@ class GeneralLoRALoader:
 
 
     def load(self, model: torch.nn.Module, state_dict_lora, alpha=1.0):
+        from ssui.native_quantization import Int8Linear
         updated_num = 0
         lora_name_dict = self.get_name_dict(state_dict_lora)
         for name, module in model.named_modules():
             if name in lora_name_dict:
                 weight_up = state_dict_lora[lora_name_dict[name][0]].to(device=self.device, dtype=self.torch_dtype)
                 weight_down = state_dict_lora[lora_name_dict[name][1]].to(device=self.device, dtype=self.torch_dtype)
+                if isinstance(module, Int8Linear):
+                    module.add_lora(weight_up, weight_down, alpha)
+                    updated_num += 1
+                    continue
                 if len(weight_up.shape) == 4:
                     weight_up = weight_up.squeeze(3).squeeze(2)
                     weight_down = weight_down.squeeze(3).squeeze(2)

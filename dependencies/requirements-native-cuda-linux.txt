@@ -1,0 +1,14 @@
+# Optional tested TRELLIS/FLUX stack: CPython 3.12, Torch 2.4.1+cu124, Linux x86_64.
+# Install Torch/base requirements first; source extensions also need model_native_env.sh.
+--find-links https://nvidia-kaolin.s3.us-east-2.amazonaws.com/torch-2.4.0_cu124.html
+kaolin==0.17.0
+spconv-cu124==2.3.8
+cumm-cu124==0.7.11
+bitsandbytes==0.45.5
+ninja
+pygltflib
+nvdiffrast @ git+https://github.com/NVlabs/nvdiffrast.git@729261dc64c4241ea36efda84fbf532cc8b425b8
+diff-gaussian-rasterization @ git+https://github.com/autonomousvision/mip-splatting.git@dda02ab5ecf45d6edb8c540d9bb65c7e451345a9#subdirectory=submodules/diff-gaussian-rasterization
+
+# Motion model Python dependencies; repository and weights are selected separately.
+-r requirements-motion.txt

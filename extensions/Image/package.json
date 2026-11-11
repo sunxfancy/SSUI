@@ -4,7 +4,9 @@
   "version": "0.1.0",
   "type": "module",
   "scripts": {
+    "predev": "yarn workspace @ssui/canvas-engine build",
     "dev": "vite",
+    "prebuild": "yarn workspace @ssui/canvas-engine build",
     "build": "tsc && vite build",
     "preview": "vite preview",
     "test": "jest"

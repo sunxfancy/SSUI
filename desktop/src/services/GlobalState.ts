@@ -11,25 +11,15 @@ export interface RootState {
   isServerRunning?: boolean;
 }
 
-async function checkPort(host: string, port: number) {
+async function checkPort(port: number) {
   try {
-    const response = await fetch(`http://${host}:${port}`);
-    return response.ok;
-  } catch (error) {
-    console.error('检查端口状态失败:', error);
+    const owner = await invoke<{ pid: number } | null>('check_port_owner', { port });
+    return owner != null;
+  } catch {
     return false;
   }
 }
 
-async function checkServerStatus(host: string, port: number) {
-  try {
-    const response = await fetch(`http://${host}:${port}/api/version`);
-    return response.ok;
-  } catch (error) {
-    console.error('检查服务器状态失败:', error);
-    return false;
-  }
-}
 
 
 // 全局状态管理器
@@ -56,10 +46,13 @@ class GlobalStateManager {
       const production = import.meta.env.PROD;
 
       if (!production) {
-        const isUIServerUsed = await checkPort("localhost", 7420);
-        const isServerRunning = await checkServerStatus("localhost", 7422);
+        const isUIServerUsed = await checkPort(7420);
         const path: string = await invoke("get_dev_root");
-        this.rootState = { path, version: 'dev', host: 'localhost', port: isUIServerUsed ? 7420 : 7422, isUIServerUsed, isServerRunning };
+        // 7420 是 functional_ui 开发服，自带到 7422 的代理。
+        // 否则留在当前页面（桌面 Vite，1420），由它转发，避免 WebView 直连 7422。
+        const host = isUIServerUsed ? "localhost" : (window.location.hostname || "localhost");
+        const port = isUIServerUsed ? 7420 : (Number(window.location.port) || 1420);
+        this.rootState = { path, version: 'dev', host, port, isUIServerUsed, isServerRunning: false };
       } else {
         const store = await load('settings.json', { autoSave: true });
         const rootData = await store.get<RootState>('root');

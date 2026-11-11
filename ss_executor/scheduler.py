@@ -35,7 +35,10 @@ class TaskScheduler:
             self.server = await websockets.serve(
                 self.handle_executor_connection, 
                 host, 
-                port
+                port,
+                # Native mesh/GPU calls can hold the executor's GIL for minutes.
+                # Keep pings but tolerate delayed pongs during these calls.
+                ping_timeout=None,
             )
             print("任务调度器已启动")
           
@@ -91,7 +94,8 @@ class TaskScheduler:
 
     def _get_executor_id(self, websocket: websockets.ClientConnection) -> str:
         """获取执行器ID"""
-        # IPv4 peers expose (host, port); IPv6 peers add flow/scope fields.
+        # IPv4 addresses have two fields; IPv6 adds flow/scope fields.
+
         host, port = websocket.remote_address[:2]
         return f"{host}:{port}"
 
@@ -125,7 +129,15 @@ class TaskScheduler:
         if executor_id in self.executor_websockets:
             del self.executor_websockets[executor_id]
         if executor_id in self.executors:
-            self.executors[executor_id].is_active = False
+            executor = self.executors[executor_id]
+            executor.is_active = False
+            # Wake HTTP callers rather than leaving an orphaned running task.
+            for task in list(self.tasks.values()):
+                if task.executor_id == executor_id and task.status in (TaskStatus.PENDING, TaskStatus.RUNNING):
+                    await self._handle_task_result(TaskResult(
+                        task_id=task.task_id, status=TaskStatus.FAILED,
+                        error="Executor disconnected before returning the task result.",
+                    ), executor)
 
     def add_task(self, task: Task) -> str:
         """添加新任务"""
@@ -136,7 +148,7 @@ class TaskScheduler:
         if self._try_assign_task(task):
             print(f"任务 {task.task_id} 已立即分配给执行器")
         else:
-            asyncio.create_task(self.task_queue.put((-task.priority, task.task_id)))
+            self.task_queue.put_nowait((-task.priority, task.task_id))
             print(f"任务 {task.task_id} 已加入队列")
         
         return task.task_id
@@ -261,10 +273,7 @@ class TaskScheduler:
         await self.executor_websockets[executor_id].send(register_response.model_dump_json())
         print(f"执行器 {executor_id} 已注册")
         
-        if self.task_queue.qsize() > 0:
-            priority, task_id = await self.task_queue.get()
-            print(f"尝试分配任务 {task_id}")
-            self._try_assign_task(self.tasks[task_id])
+        self._assign_queued_tasks()
 
     async def _handle_status_update(self, message: UpdateStatus):
         """处理状态更新"""
@@ -273,10 +282,8 @@ class TaskScheduler:
             self.tasks[task_id].status = message.status
             
             # 如果任务状态更新为RUNNING，尝试分配队列中的下一个任务
-            if message.status == TaskStatus.RUNNING and self.task_queue.qsize() > 0:
-                priority, next_task_id = await self.task_queue.get()
-                print(f"状态更新触发：尝试分配任务 {next_task_id}")
-                self._try_assign_task(self.tasks[next_task_id])
+            if message.status == TaskStatus.RUNNING:
+                self._assign_queued_tasks()
 
     async def _handle_task_result(self, message: TaskResult, executor: ExecutorInfo):
         """处理任务结果"""
@@ -319,10 +326,18 @@ class TaskScheduler:
         if task_id in self.task_completion_events:
             self.task_completion_events[task_id].set()
         # 如何还有其他任务
-        if self.task_queue.qsize() > 0:
-            priority, task_id = await self.task_queue.get()
-            print(f"尝试分配任务 {task_id}")
-            self._try_assign_task(self.tasks[task_id])
+        self._assign_queued_tasks()
+
+    def _assign_queued_tasks(self):
+        """Retain pending work when every executor is busy."""
+        while not self.task_queue.empty():
+            queued = self.task_queue.get_nowait()
+            task = self.tasks.get(queued[1])
+            if task is None or task.status != TaskStatus.PENDING:
+                continue
+            if not self._try_assign_task(task):
+                self.task_queue.put_nowait(queued)
+                break
 
     async def _check_all_tasks_completion(self):
         """检查是否所有任务都已完成"""

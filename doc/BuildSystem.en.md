@@ -16,11 +16,8 @@ You can also manually start independent development servers:
 ```
 yarn dev:desktop
 yarn dev:functional_ui
-yarn dev:components
-yarn dev:server
-yarn dev:executor
 ```
-You need to start all 5 servers for integrated project development, which can meet most hot-reloading requirements. However, if you only need to test a specific part, you can just start the corresponding server.
+The shared component package has no `dev:components` script; run `yarn build:components` after changing it. `yarn dev:desktop` starts the server and executor automatically when port 7422 is free. For browser-only Functional UI development, run `yarn dev:server`, `yarn dev:executor`, and `yarn dev:functional_ui` separately.
 
 Note: dev:server and dev:executor are not development servers and won't hot reload, but they can help observe their running status and output. You can also check the log folder in the project directory. Additionally, if you manually start dev:server, you must also manually start dev:executor.
 
@@ -43,12 +40,15 @@ The project provides multiple build commands:
 - `yarn dev:server` - Start FastAPI server (port 7422)
 - `yarn dev:executor` - Start SSExecutor for task execution and model running
 - `yarn dev:functional_ui` - Start functional UI development server (port 7420), when desktop project starts, if port 7420 is occupied, it will automatically use development port 7420 instead of 7422
-- `yarn dev:components` - Start component development server, automatically watch component code changes
+- `yarn storybook` - Develop UI components independently on port 6006
 
 Build commands:
 - `yarn build:desktop` - Build Tauri desktop application
 - `yarn build:components` - Build components
 - `yarn build:functional_ui` - Build functional UI
+- `yarn build:canvas` - Build the Image Canvas frontend
+- `yarn build:canvas-engine` - Build the Rust/Wasm Canvas Engine
+- `yarn build:desktop_ui` - Build only the desktop frontend, without Tauri/Rust
 - `yarn build:example` - Build example extension
 
 ## Packaging
@@ -65,8 +65,14 @@ The project supports packaging multiple extensions:
 
 ## Testing
 
-- `yarn test` - Run all tests
+- `yarn test` - Run Python tests
 - `yarn test_on <test_name>` - Run specified test, e.g., `yarn test_on ss_executor_test`
+- `yarn test:frontend` / `yarn test:ui` - Frontend unit / browser tests
+- `yarn test:desktop-ui` / `yarn test:rust` - Desktop UI / Rust tests
+- `yarn test:canvas-engine` - Canvas Engine Cargo tests
+- `yarn test:contract` / `yarn api:check` - API contract / OpenAPI type synchronization checks
+
+See the [testing guide](Testing.md) for browser and native test requirements and coverage.
 
 Please note that tests are divided into regular and real-model regression.
 Regular tests verify interfaces and flows on CPU with mocked model outputs and

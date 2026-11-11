@@ -202,12 +202,14 @@ export class InputNode extends BaseNode {
         this.addControl('add', new ButtonControl('添加参数', () => this.addParameter()));
     }
 
-    addParameter(): ParamSpec {
-        const key = `param_${this.counter++}`;
+    addParameter(saved?: ParamSpec): ParamSpec {
+        const key = saved?.key ?? `param_${this.counter++}`;
+        if (saved) this.counter = Math.max(this.counter, Number(key.split("_").pop()) + 1);
         const spec: ParamSpec = {
             key,
             name: `参数 ${this.parameters.length + 1}`,
             type: 'string',
+            ...saved,
         };
         this.parameters.push(spec);
         this.addOutput(key, new ClassicPreset.Output(new ClassicPreset.Socket(spec.name), spec.name));
@@ -261,12 +263,14 @@ export class OutputNode extends BaseNode {
         this.addControl('add', new ButtonControl('添加返回值', () => this.addReturn()));
     }
 
-    addReturn(): ParamSpec {
-        const key = `return_${this.counter++}`;
+    addReturn(saved?: ParamSpec): ParamSpec {
+        const key = saved?.key ?? `return_${this.counter++}`;
+        if (saved) this.counter = Math.max(this.counter, Number(key.split("_").pop()) + 1);
         const spec: ParamSpec = {
             key,
             name: `返回值 ${this.returns.length + 1}`,
             type: 'string',
+            ...saved,
         };
         this.returns.push(spec);
         this.addInput(key, new ClassicPreset.Input(new ClassicPreset.Socket(spec.name), spec.name));

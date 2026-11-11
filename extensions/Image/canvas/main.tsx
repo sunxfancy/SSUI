@@ -3,6 +3,7 @@ import React from "react";
 import ReactDOM from "react-dom/client";
 import { BlueprintProvider } from "@blueprintjs/core";
 import App from "./App";
+import { UIStateProvider } from "ssui_components";
 
 import "normalize.css";
 import "@blueprintjs/core/lib/css/blueprint.css";
@@ -18,7 +19,7 @@ if (params.has('path')) {
 ReactDOM.createRoot(document.getElementById("root") as HTMLElement).render(
   <React.StrictMode>
     <BlueprintProvider>
-        <App path={canvas_path} />
+        {params.has('input') ? <App path={canvas_path} /> : <UIStateProvider path={canvas_path} view="image-canvas"><App path={canvas_path} /></UIStateProvider>}
     </BlueprintProvider>
   </React.StrictMode>
 );

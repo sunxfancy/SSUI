@@ -6,11 +6,10 @@
       "module": "ESNext",
       "skipLibCheck": true,
       "outDir": "dist",
-  
       "moduleResolution": "node",
       "isolatedModules": true,
       "jsx": "react-jsx",
-  
+
       /* Linting */
       "strict": true,
       "noUnusedLocals": true,
@@ -18,5 +17,6 @@
       "noFallthroughCasesInSwitch": true
     },
     "include": ["src"],
+    "exclude": ["src/**/*.stories.*"],
   }
-  
+

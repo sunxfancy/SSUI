@@ -17,51 +17,46 @@ export class TauriDownloaderProvider implements IDownloaderProvider {
     private tasks: Map<string, DownloadTask> = new Map();
     private eventUnlisteners: (() => void)[] = [];
 
-    constructor() {
-        this.initializeEventListeners();
-        this.loadTasks();
+    private taskUrls = new Map<string, string>();
+    private disposed = false;
+    private ready: Promise<void>;
+
+    constructor(private onChange?: () => void) {
+        this.ready = this.initializeEventListeners().then(() => this.loadTasks());
+        void this.ready.catch(error => console.error('初始化下载器失败:', error));
     }
 
     private async initializeEventListeners() {
-        // 监听下载进度事件
-        const progressUnlisten = await listen('download-progress', (event) => {
-            const { url, progress, total } = event.payload as any;
-            const task = Array.from(this.tasks.values()).find(t => t.model.id.toString() === url);
-            if (task) {
-                task.progress = Math.round((progress / total) * 100);
-            }
+        const register = async (name: string, callback: (payload: any) => void) => {
+            const unlisten = await listen(name, event => {
+                if (!this.disposed) { callback(event.payload); this.onChange?.(); }
+            });
+            if (this.disposed) unlisten();
+            else this.eventUnlisteners.push(unlisten);
+        };
+        const find = (url: string) => {
+            const id = Array.from(this.taskUrls).find(([, value]) => value === url)?.[0];
+            return id ? this.tasks.get(id) : undefined;
+        };
+        await register('download-progress', ({ url, progress, total }) => {
+            const task = find(url);
+            if (task && total > 0) { task.progress = Math.round(progress / total * 100); task.status = 'downloading'; }
         });
-
-        // 监听下载完成事件
-        const completedUnlisten = await listen('download-completed', (event) => {
-            const url = event.payload as string;
-            const task = Array.from(this.tasks.values()).find(t => t.model.id.toString() === url);
-            if (task) {
-                task.status = 'completed';
-                task.progress = 100;
-            }
+        await register('download-completed', url => {
+            const task = find(url); if (task) { task.status = 'completed'; task.progress = 100; }
         });
-
-        // 监听下载失败事件
-        const failedUnlisten = await listen('download-failed', (event) => {
-            const { url, error } = event.payload as any;
-            const task = Array.from(this.tasks.values()).find(t => t.model.id.toString() === url);
-            if (task) {
-                task.status = 'failed';
-                task.error = error;
-            }
+        await register('download-failed', ({ url, error }) => {
+            const task = find(url); if (task) { task.status = 'failed'; task.error = error; }
         });
-
-        this.eventUnlisteners.push(
-            progressUnlisten,
-            completedUnlisten,
-            failedUnlisten
-        );
+        await register('download-cancelled', url => {
+            const task = find(url); if (task) { task.status = 'failed'; task.error = '下载已取消'; }
+        });
     }
 
     private async loadTasks() {
         try {
             const tasks = await invoke<RustDownloadTask[]>('get_download_task_list');
+            if (this.disposed) return;
             tasks.forEach(task => {
                 const model: CivitaiModel = {
                     id: parseInt(task.url) || 0,
@@ -95,11 +90,12 @@ export class TauriDownloaderProvider implements IDownloaderProvider {
                     }]
                 };
 
+                this.taskUrls.set(task.url, task.url);
                 this.tasks.set(task.url, {
                     id: task.url,
                     model,
                     status: this.mapTaskStatus(task.status),
-                    progress: task.progress,
+                    progress: task.total_blocks > 0 ? Math.round(task.progress / task.total_blocks * 100) : 0,
                     error: task.status === 'Failed' ? '下载失败' : undefined
                 });
             });
@@ -138,6 +134,9 @@ export class TauriDownloaderProvider implements IDownloaderProvider {
         const rootPath = rootState?.path;
 
         try {
+            await this.ready;
+            if (this.disposed) throw new Error('下载器已关闭');
+            if (!rootPath) throw new Error('未找到安装路径');
             // 获取模型下载URL
             const latestVersion = model.modelVersions[0];
             if (!latestVersion) {
@@ -156,24 +155,21 @@ export class TauriDownloaderProvider implements IDownloaderProvider {
                 file = latestVersion.files[0];
             }
             
-            downloadUrl = file.downloadUrl;
-            if (file.metadata.format || file.metadata.size || file.metadata.fp) {
-                downloadUrl += "?";
+            if (!file) throw new Error('没有可下载的文件');
+            const address = new URL(file.downloadUrl);
+            for (const [key, value] of Object.entries(file.metadata)) {
+                if (value) address.searchParams.set(key, value);
             }
-            if (file.metadata.format) {
-                downloadUrl += "format=" + file.metadata.format;
-            }
-            if (file.metadata.size) {
-                downloadUrl += "&size=" + file.metadata.size;
-            }
-            if (file.metadata.fp) {
-                downloadUrl += "&fp=" + file.metadata.fp;
-            }
+            downloadUrl = address.toString();
             fileName = file.name;
 
             console.log("找到了要下载的文件metadata: ", downloadUrl, fileName);
            
 
+            // Register before IPC resolves: progress/completion events may arrive first.
+            this.tasks.set(taskId, task);
+            this.taskUrls.set(taskId, downloadUrl);
+            task.status = 'downloading';
             // 创建下载任务
             await invoke('create_download_task', {
                 url: downloadUrl,
@@ -192,6 +188,7 @@ export class TauriDownloaderProvider implements IDownloaderProvider {
     }
 
     async getDownloadTasks(): Promise<DownloadTask[]> {
+        await this.ready;
         return Array.from(this.tasks.values());
     }
 
@@ -207,7 +204,7 @@ export class TauriDownloaderProvider implements IDownloaderProvider {
 
         try {
             await invoke('cancel_download_task', {
-                url: task.model.id.toString()
+                url: this.taskUrls.get(taskId)
             });
             task.status = 'failed';
             task.error = '下载已取消';
@@ -224,6 +221,7 @@ export class TauriDownloaderProvider implements IDownloaderProvider {
 
         for (const [id, _] of completedTasks) {
             this.tasks.delete(id);
+            this.taskUrls.delete(id);
         }
     }
 
@@ -246,6 +244,7 @@ export class TauriDownloaderProvider implements IDownloaderProvider {
 
     // 清理事件监听器
     destroy() {
-        this.eventUnlisteners.forEach(unlisten => unlisten());
+        this.disposed = true;
+        this.eventUnlisteners.splice(0).forEach(unlisten => unlisten());
     }
 } 

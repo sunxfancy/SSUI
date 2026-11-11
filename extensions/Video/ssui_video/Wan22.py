@@ -1,6 +1,10 @@
+from backend.lora import validate_lora, apply_dit_lora
+from ssui.model_memory import ModelMemoryOptions, run_pipeline
+from ._runtime import wan_runtime
 import os
 
 import torch
+from backend.quantization.workflow import fp8_storage_dtype
 
 from ssui.annotation import param
 from ssui.base import Prompt, Image
@@ -14,7 +18,7 @@ from diffsynth.utils import ModelConfig
 # Wan 2.2 是目前 diffsynth 能支持到的最新 Wan 系列：
 #   - TI2V-5B：文生视频 / 图生视频 / 首尾帧 一体化，5B 参数量，24GB 显存可跑；
 #   - T2V-A14B / I2V-A14B：MoE 双专家（high_noise + low_noise）14B 级，质量更接近 Seedance，
-#     建议 48GB+ 显存，24GB 需配合 FP8（把下面 torch_dtype 改为 torch.float8_e4m3fn）。
+#     load(quantization="fp8") 可压缩双专家存储，计算精度仍由运行时选择。
 # 权重通过 ModelScope 下载（可在环境变量中覆盖本地根目录）。
 WAN22_TI2V_MODEL_ID = "Wan-AI/Wan2.2-TI2V-5B"
 WAN22_T2V_MODEL_ID = "Wan-AI/Wan2.2-T2V-A14B"
@@ -22,7 +26,7 @@ WAN22_I2V_MODEL_ID = "Wan-AI/Wan2.2-I2V-A14B"
 # Wan2.2 与 Wan2.1 共享 UMT5-XXL 文本编码器、tokenizer 和 VAE（1.1.9 会自动重定向下载）
 WAN21_T2V_LIGHT_MODEL_ID = "Wan-AI/Wan2.1-T2V-1.3B"
 
-LOCAL_MODEL_PATH = os.environ.get("SSUI_WAN_MODEL_ROOT", "models")
+LOCAL_MODEL_PATH = os.environ.get("SSUI_WAN_MODEL_ROOT", os.environ.get("SSUI_MODEL_DIR", "models"))
 
 # 官方推荐的负面提示词（Wan 官方示例原样）
 WAN22_NEGATIVE_PROMPT = (
@@ -40,10 +44,14 @@ class Wan22TI2VModel:
         self.pipe = pipe
 
     @staticmethod
-    def load() -> "Wan22TI2VModel":
+    def load(quantization: str = "none", lora_path: str = "", lora_weight: float = 1.0, *, cpu_offload: bool = True) -> "Wan22TI2VModel":
+        validate_lora(lora_path, lora_weight)
+        options = ModelMemoryOptions(quantization, cpu_offload, allow_fp8=True)
+        storage_mode = "none" if quantization == "int8" else quantization
+        runtime = wan_runtime()
+        storage_dtype = fp8_storage_dtype(storage_mode, runtime["torch_dtype"], device=runtime["device"])
         pipe = WanVideoPipeline.from_pretrained(
-            torch_dtype=torch.bfloat16,  # 可改为 torch.float8_e4m3fn 启用 FP8 量化
-            device="cuda",
+            **runtime,
             model_configs=[
                 ModelConfig(
                     model_id=WAN22_TI2V_MODEL_ID,
@@ -54,6 +62,7 @@ class Wan22TI2VModel:
                 ModelConfig(
                     model_id=WAN22_TI2V_MODEL_ID,
                     origin_file_pattern="diffusion_pytorch_model*.safetensors",
+                    offload_dtype=storage_dtype,
                     offload_device="cpu",
                     local_model_path=LOCAL_MODEL_PATH,
                 ),
@@ -70,7 +79,18 @@ class Wan22TI2VModel:
                 local_model_path=LOCAL_MODEL_PATH,
             ),
         )
-        pipe.enable_vram_management(num_persistent_param_in_dit=None)
+        apply_dit_lora(pipe.dit, lora_path, lora_weight)
+        if quantization == "int8":
+            for name, component in pipe.named_children():
+                if name in ("dit", "dit2", "text_encoder", "image_encoder"):
+                    options.quantize(component)
+                component.to("cpu" if cpu_offload else runtime["device"])
+            pipe.vram_management_enabled = cpu_offload
+        elif cpu_offload:
+            pipe.enable_vram_management(num_persistent_param_in_dit=None)
+        else:
+            pipe.to(runtime["device"])
+            pipe.vram_management_enabled = False
         return Wan22TI2VModel(pipe)
 
 
@@ -81,20 +101,34 @@ class Wan22T2VA14BModel:
         self.pipe = pipe
 
     @staticmethod
-    def load() -> "Wan22T2VA14BModel":
+    def load(
+        quantization: str = "none",
+        high_noise_lora_path: str = "",
+        high_noise_lora_weight: float = 1.0,
+        low_noise_lora_path: str = "",
+        low_noise_lora_weight: float = 1.0,
+        *, cpu_offload: bool = True,
+    ) -> "Wan22T2VA14BModel":
+        validate_lora(high_noise_lora_path, high_noise_lora_weight)
+        validate_lora(low_noise_lora_path, low_noise_lora_weight)
+        options = ModelMemoryOptions(quantization, cpu_offload, allow_fp8=True)
+        storage_mode = "none" if quantization == "int8" else quantization
+        runtime = wan_runtime()
+        storage_dtype = fp8_storage_dtype(storage_mode, runtime["torch_dtype"], device=runtime["device"])
         pipe = WanVideoPipeline.from_pretrained(
-            torch_dtype=torch.bfloat16,
-            device="cuda",
+            **runtime,
             model_configs=[
                 ModelConfig(
                     model_id=WAN22_T2V_MODEL_ID,
                     origin_file_pattern="high_noise_model/diffusion_pytorch_model*.safetensors",
+                    offload_dtype=storage_dtype,
                     offload_device="cpu",
                     local_model_path=LOCAL_MODEL_PATH,
                 ),
                 ModelConfig(
                     model_id=WAN22_T2V_MODEL_ID,
                     origin_file_pattern="low_noise_model/diffusion_pytorch_model*.safetensors",
+                    offload_dtype=storage_dtype,
                     offload_device="cpu",
                     local_model_path=LOCAL_MODEL_PATH,
                 ),
@@ -117,7 +151,19 @@ class Wan22T2VA14BModel:
                 local_model_path=LOCAL_MODEL_PATH,
             ),
         )
-        pipe.enable_vram_management(num_persistent_param_in_dit=None)
+        apply_dit_lora(pipe.dit, high_noise_lora_path, high_noise_lora_weight)
+        apply_dit_lora(pipe.dit2, low_noise_lora_path, low_noise_lora_weight)
+        if quantization == "int8":
+            for name, component in pipe.named_children():
+                if name in ("dit", "dit2", "text_encoder", "image_encoder"):
+                    options.quantize(component)
+                component.to("cpu" if cpu_offload else runtime["device"])
+            pipe.vram_management_enabled = cpu_offload
+        elif cpu_offload:
+            pipe.enable_vram_management(num_persistent_param_in_dit=None)
+        else:
+            pipe.to(runtime["device"])
+            pipe.vram_management_enabled = False
         return Wan22T2VA14BModel(pipe)
 
 
@@ -128,20 +174,34 @@ class Wan22I2VA14BModel:
         self.pipe = pipe
 
     @staticmethod
-    def load() -> "Wan22I2VA14BModel":
+    def load(
+        quantization: str = "none",
+        high_noise_lora_path: str = "",
+        high_noise_lora_weight: float = 1.0,
+        low_noise_lora_path: str = "",
+        low_noise_lora_weight: float = 1.0,
+        *, cpu_offload: bool = True,
+    ) -> "Wan22I2VA14BModel":
+        validate_lora(high_noise_lora_path, high_noise_lora_weight)
+        validate_lora(low_noise_lora_path, low_noise_lora_weight)
+        options = ModelMemoryOptions(quantization, cpu_offload, allow_fp8=True)
+        storage_mode = "none" if quantization == "int8" else quantization
+        runtime = wan_runtime()
+        storage_dtype = fp8_storage_dtype(storage_mode, runtime["torch_dtype"], device=runtime["device"])
         pipe = WanVideoPipeline.from_pretrained(
-            torch_dtype=torch.bfloat16,
-            device="cuda",
+            **runtime,
             model_configs=[
                 ModelConfig(
                     model_id=WAN22_I2V_MODEL_ID,
                     origin_file_pattern="high_noise_model/diffusion_pytorch_model*.safetensors",
+                    offload_dtype=storage_dtype,
                     offload_device="cpu",
                     local_model_path=LOCAL_MODEL_PATH,
                 ),
                 ModelConfig(
                     model_id=WAN22_I2V_MODEL_ID,
                     origin_file_pattern="low_noise_model/diffusion_pytorch_model*.safetensors",
+                    offload_dtype=storage_dtype,
                     offload_device="cpu",
                     local_model_path=LOCAL_MODEL_PATH,
                 ),
@@ -164,7 +224,19 @@ class Wan22I2VA14BModel:
                 local_model_path=LOCAL_MODEL_PATH,
             ),
         )
-        pipe.enable_vram_management(num_persistent_param_in_dit=None)
+        apply_dit_lora(pipe.dit, high_noise_lora_path, high_noise_lora_weight)
+        apply_dit_lora(pipe.dit2, low_noise_lora_path, low_noise_lora_weight)
+        if quantization == "int8":
+            for name, component in pipe.named_children():
+                if name in ("dit", "dit2", "text_encoder", "image_encoder"):
+                    options.quantize(component)
+                component.to("cpu" if cpu_offload else runtime["device"])
+            pipe.vram_management_enabled = cpu_offload
+        elif cpu_offload:
+            pipe.enable_vram_management(num_persistent_param_in_dit=None)
+        else:
+            pipe.to(runtime["device"])
+            pipe.vram_management_enabled = False
         return Wan22I2VA14BModel(pipe)
 
 
@@ -179,7 +251,7 @@ def Wan22TextToVideo(
 ) -> list[Image]:
     if config.is_prepare():
         return [Image()]
-    video = base_model.pipe(
+    video = run_pipeline(base_model.pipe,
         prompt=prompt.text,
         negative_prompt=negative_prompt.text if negative_prompt.text else WAN22_NEGATIVE_PROMPT,
         height=config["height"],
@@ -208,7 +280,7 @@ def Wan22ImageToVideo(
 ) -> list[Image]:
     if config.is_prepare():
         return [Image()]
-    video = base_model.pipe(
+    video = run_pipeline(base_model.pipe,
         prompt=prompt.text,
         negative_prompt=negative_prompt.text if negative_prompt.text else WAN22_NEGATIVE_PROMPT,
         input_image=image._image,
@@ -235,7 +307,7 @@ def Wan22T2VA14BTextToVideo(
 ) -> list[Image]:
     if config.is_prepare():
         return [Image()]
-    video = base_model.pipe(
+    video = run_pipeline(base_model.pipe,
         prompt=prompt.text,
         negative_prompt=negative_prompt.text if negative_prompt.text else WAN22_NEGATIVE_PROMPT,
         height=config["height"],
@@ -266,7 +338,7 @@ def Wan22I2VA14BImageToVideo(
 ) -> list[Image]:
     if config.is_prepare():
         return [Image()]
-    video = base_model.pipe(
+    video = run_pipeline(base_model.pipe,
         prompt=prompt.text,
         negative_prompt=negative_prompt.text if negative_prompt.text else WAN22_NEGATIVE_PROMPT,
         input_image=image._image,

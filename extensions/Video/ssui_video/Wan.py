@@ -1,4 +1,8 @@
+from backend.lora import validate_lora, apply_manager_lora
+from ssui.model_memory import ModelMemoryOptions, configure_diffsynth_manager, run_pipeline
+from ._runtime import wan_runtime
 import torch
+from backend.quantization.workflow import fp8_storage_dtype, load_dit_with_storage_dtype
 from diffsynth import ModelManager, WanVideoPipeline
 from modelscope import snapshot_download
 
@@ -13,37 +17,54 @@ class WanVideoModel:
         self.model_manager = model_manager
 
     @staticmethod
-    def load() -> "WanVideoModel":
-        model_manager = ModelManager()
+    def load(quantization: str = "none", lora_path: str = "", lora_weight: float = 1.0, *, cpu_offload: bool = True) -> "WanVideoModel":
+        validate_lora(lora_path, lora_weight)
+        options = ModelMemoryOptions(quantization, cpu_offload, allow_fp8=True)
+        storage_mode = "none" if quantization == "int8" else quantization
+        runtime = wan_runtime()
+        fp8_storage_dtype(storage_mode, runtime["torch_dtype"], device=runtime["device"])
+        model_manager = ModelManager(device="cpu", torch_dtype=runtime["torch_dtype"])
         snapshot_download("PAI/Wan2.1-Fun-1.3B-InP", local_dir="models/PAI/Wan2.1-Fun-1.3B-InP")
 
         # Load models
-        model_manager.load_models(
+        load_dit_with_storage_dtype(
+            model_manager,
             [
                 "models/PAI/Wan2.1-Fun-1.3B-InP/diffusion_pytorch_model.safetensors",
                 "models/PAI/Wan2.1-Fun-1.3B-InP/models_t5_umt5-xxl-enc-bf16.pth",
                 "models/PAI/Wan2.1-Fun-1.3B-InP/Wan2.1_VAE.pth",
                 "models/PAI/Wan2.1-Fun-1.3B-InP/models_clip_open-clip-xlm-roberta-large-vit-huge-14.pth",
             ],
-            torch_dtype=torch.bfloat16, # You can set `torch_dtype=torch.float8_e4m3fn` to enable FP8 quantization.
+            quantization=storage_mode,
+            torch_dtype=runtime["torch_dtype"],
+            device="cpu",
         )
+        apply_manager_lora(model_manager, lora_path, lora_weight)
+        configure_diffsynth_manager(model_manager, options, runtime["device"])
         return WanVideoModel(model_manager)
 
 @param("seed", Random(), default=42)
 @param("tiled", Switch(), default=True)
-@param("num_frames", Slider(1, 200, 1), default=50)
+@param("num_frames", Slider(1, 200, 1), default=49)
+@param("num_inference_steps", Slider(1, 100, 1), default=50)
 def WanImageTextToVideo(config: SSUIConfig, base_model: WanVideoModel, image: Image, prompt: Prompt, negative_prompt: Prompt) -> list[Image]:
     if config.is_prepare():
         return [Image()]
     
-    pipe = WanVideoPipeline.from_model_manager(base_model.model_manager, torch_dtype=torch.bfloat16, device="cuda")
-    pipe.enable_vram_management(num_persistent_param_in_dit=None)
+    pipe = WanVideoPipeline.from_model_manager(base_model.model_manager, **wan_runtime())
+    options = getattr(base_model.model_manager, "memory_options", ModelMemoryOptions(cpu_offload=True))
+    if options.cpu_offload:
+        if options.quantization == "int8":
+            pipe.enable_cpu_offload()
+        else:
+            pipe.enable_vram_management(num_persistent_param_in_dit=0)
 
     # Image-to-video
-    video = pipe(
+    video = run_pipeline(pipe,
         prompt=prompt.text,
         negative_prompt=negative_prompt.text,
-        num_inference_steps=config["num_frames"],
+        num_frames=config["num_frames"],
+        num_inference_steps=config["num_inference_steps"],
         input_image=image._image,
         # You can input `end_image=xxx` to control the last frame of the video.
         # The model will automatically generate the dynamic content between `input_image` and `end_image`.

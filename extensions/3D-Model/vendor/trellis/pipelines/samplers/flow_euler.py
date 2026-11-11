@@ -31,6 +31,8 @@ class FlowEulerSampler(Sampler):
 
     def _v_to_xstart_eps(self, x_t, t, v):
         assert x_t.shape == v.shape
+        # NumPy 2 scalars otherwise try to coerce the sparse tensor to an ndarray.
+        t = float(t)
         eps = (1 - t) * v + x_t
         x_0 = (1 - self.sigma_min) * x_t - (self.sigma_min + (1 - self.sigma_min) * t) * v
         return x_0, eps
@@ -106,7 +108,7 @@ class FlowEulerSampler(Sampler):
         sample = noise
         t_seq = np.linspace(1, 0, steps + 1)
         t_seq = rescale_t * t_seq / (1 + (rescale_t - 1) * t_seq)
-        t_pairs = list((t_seq[i], t_seq[i + 1]) for i in range(steps))
+        t_pairs = [(float(t_seq[i]), float(t_seq[i + 1])) for i in range(steps)]
         ret = edict({"samples": None, "pred_x_t": [], "pred_x_0": []})
         for t, t_prev in tqdm(t_pairs, desc="Sampling", disable=not verbose):
             out = self.sample_once(model, sample, t, t_prev, cond, **kwargs)
