@@ -36,6 +36,7 @@ from .PixelArt import (
     FinalizePixelArt,
     finalize_pixel_art_image,
 )
+from .OCR import RapidOCRText, RapidOCRMediumText, EasyOCRText
 
 # 定义__all__列表，明确指定导出的符号
 __all__ = [
@@ -64,4 +65,7 @@ __all__ = [
     "RenderPixelSrc",
     "FinalizePixelArt",
     "finalize_pixel_art_image",
+    "RapidOCRText",
+    "RapidOCRMediumText",
+    "EasyOCRText",
 ]
