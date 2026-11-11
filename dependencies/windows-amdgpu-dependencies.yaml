@@ -376,6 +376,9 @@ huggingface-hub:
 hydra-core:
   version: "1.3.2"
   isRoot: true
+hyperpyyaml:
+  version: "1.2.2"
+  isRoot: true
 idna:
   version: "3.4"
   dependents:
@@ -406,6 +409,9 @@ importlib-resources:
   version: "7.1.0"
   dependents:
     - wetextprocessing
+inflect:
+  version: "7.6.0"
+  isRoot: true
 ipycanvas:
   version: "0.14.3"
   dependents:
@@ -441,6 +447,10 @@ itsdangerous:
   version: "2.2.0"
   dependents:
     - flask
+jaraco-functools:
+  version: "4.6.0"
+  dependents:
+    - inflect
 jedi:
   version: "0.20.0"
   dependents:
@@ -616,6 +626,8 @@ moderngl:
 more-itertools:
   version: "11.1.0"
   dependents:
+    - inflect
+    - jaraco-functools
     - openai-whisper
 mpmath:
   version: "1.3.0"
@@ -740,6 +752,7 @@ o-voxel:
   isRoot: true
 omegaconf:
   version: "2.3.1"
+  isRoot: true
   dependents:
     - hydra-core
 onnx:
@@ -979,6 +992,7 @@ pyyaml:
     - accelerate
     - gguf
     - huggingface-hub
+    - hyperpyyaml
     - jupyter-events
     - omegaconf
     - peft
@@ -1083,6 +1097,15 @@ rpds-py:
   dependents:
     - jsonschema
     - referencing
+ruamel-yaml:
+  version: "0.18.17"
+  isRoot: true
+  dependents:
+    - hyperpyyaml
+ruamel-yaml-clib:
+  version: "0.2.15"
+  dependents:
+    - ruamel-yaml
 safetensors:
   version: "0.8.0"
   isRoot: true
@@ -1324,6 +1347,10 @@ triton-windows:
   isRoot: true
   dependents:
     - flex-gemm
+typeguard:
+  version: "4.6.0"
+  dependents:
+    - inflect
 typer:
   version: "0.25.1"
   dependents:
@@ -1349,6 +1376,7 @@ typing-extensions:
     - spandrel
     - starlette
     - torch
+    - typeguard
     - typing-inspect
     - typing-inspection
 typing-inspect:

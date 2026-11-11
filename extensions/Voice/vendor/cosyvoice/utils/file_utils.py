@@ -15,6 +15,8 @@
 
 import json
 import torchaudio
+import soundfile
+import torch
 import logging
 logging.getLogger('matplotlib').setLevel(logging.WARNING)
 logging.basicConfig(level=logging.DEBUG,
@@ -39,10 +41,12 @@ def read_json_lists(list_file):
 
 
 def load_wav(wav, target_sr):
-    speech, sample_rate = torchaudio.load(wav, backend='soundfile')
+    # torchaudio >=2.9 ignores backend= and requires TorchCodec, which is not
+    # part of the Windows ROCm runtime. Decode with the shared SoundFile dep.
+    samples, sample_rate = soundfile.read(wav, dtype='float32', always_2d=True)
+    speech = torch.from_numpy(samples.T.copy())
     speech = speech.mean(dim=0, keepdim=True)
     if sample_rate != target_sr:
-        assert sample_rate > target_sr, 'wav sample rate {} must be greater than {}'.format(sample_rate, target_sr)
         speech = torchaudio.transforms.Resample(orig_freq=sample_rate, new_freq=target_sr)(speech)
     return speech
 

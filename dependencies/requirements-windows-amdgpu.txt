@@ -22,8 +22,10 @@ ftfy>=6.3
 gguf>=0.10.0
 huggingface_hub[hf-transfer,hf_xet]>=0.36.2,<1
 hydra-core==1.3.2
+HyperPyYAML==1.2.2
 igraph>=0.11.8
 imageio[ffmpeg]>=2.37.0
+inflect>=7.3,<8
 kaolin @ https://nvidia-kaolin.s3.us-east-2.amazonaws.com/torch-2.4.0_cu124/kaolin-0.17.0-cp312-cp312-win_amd64.whl
 kornia>=0.8.0
 librosa==0.11.0
@@ -35,6 +37,7 @@ natten @ https://github.com/sunxfancy/SSUI/releases/download/rocm-wheels-2026102
 networkx==3.3
 nvdiffrast @ https://github.com/sunxfancy/SSUI/releases/download/rocm-wheels-20261027/nvdiffrast-0.4.0%2Bssui.rocm72-cp312-cp312-win_amd64.whl#sha256=5ead6ef29217d88d20a24cacacf05da66f810edc0b03b9567c08f1f30e8613db
 o-voxel @ https://github.com/sunxfancy/o-voxel.rocm72/releases/download/v0.0.1%2Brocm72/o_voxel-0.0.1%2Brocm72-cp312-cp312-win_amd64.whl
+omegaconf>=2.3,<3
 onnx>=1.17.0
 onnxruntime>=1.21.0
 openai-whisper==20240930
@@ -57,6 +60,7 @@ rocm @ https://repo.radeon.com/rocm/windows/rocm-rel-7.2.1/rocm-7.2.1.tar.gz
 rocm_sdk_core @ https://repo.radeon.com/rocm/windows/rocm-rel-7.2.1/rocm_sdk_core-7.2.1-py3-none-win_amd64.whl
 rocm_sdk_devel @ https://repo.radeon.com/rocm/windows/rocm-rel-7.2.1/rocm_sdk_devel-7.2.1-py3-none-win_amd64.whl
 rocm_sdk_libraries_custom @ https://repo.radeon.com/rocm/windows/rocm-rel-7.2.1/rocm_sdk_libraries_custom-7.2.1-py3-none-win_amd64.whl
+ruamel.yaml>=0.17.28,<0.19
 safetensors>=0.8.0,<0.9
 scipy>=1.15.2
 scipy>=1.15

@@ -241,6 +241,15 @@ class Qwen2Encoder(torch.nn.Module):
 
     def forward_one_step(self, xs, masks, cache=None):
         input_masks = masks[:, -1, :]
+        # New Transformers Cache implementations require the mask to cover
+        # both the cached prefix and the current tokens. A one-token mask
+        # otherwise hides the entire prompt during incremental decoding.
+        if cache is not None:
+            past_length = (cache.get_seq_length() if hasattr(cache, 'get_seq_length')
+                           else cache[0][0].shape[2])
+            missing = past_length + xs.shape[1] - input_masks.shape[1]
+            if missing > 0:
+                input_masks = F.pad(input_masks, (missing, 0), value=True)
         outs = self.model(
             inputs_embeds=xs,
             attention_mask=input_masks,

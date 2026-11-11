@@ -29,6 +29,8 @@ attrs==25.3.0
     #   jsonschema
     #   mediapipe
     #   referencing
+audioread==3.1.0
+    # via librosa
 blake3==1.0.5
     # via -r dependencies/requirements-linux.txt
 certifi==2022.12.7
@@ -37,7 +39,9 @@ certifi==2022.12.7
     #   httpx
     #   requests
 cffi==1.17.1
-    # via sounddevice
+    # via
+    #   sounddevice
+    #   soundfile
 charset-normalizer==2.1.1
     # via requests
 click==8.1.8
@@ -47,9 +51,13 @@ click==8.1.8
     #   uvicorn
 clip-anytorch==2.6.0
     # via -r dependencies/requirements-linux.txt
+cloudpickle==3.1.2
+    # via joblib
 coloredlogs==15.0.1
     # via onnxruntime
 compel==2.1.1
+    # via -r dependencies/requirements-linux.txt
+conformer==0.3.2
     # via -r dependencies/requirements-linux.txt
 contourpy==1.3.2
     # via matplotlib
@@ -57,6 +65,8 @@ controlnet-aux==0.0.7
     # via -r dependencies/requirements-linux.txt
 cycler==0.12.1
     # via matplotlib
+decorator==5.3.1
+    # via librosa
 deprecated==1.2.18
     # via -r dependencies/requirements-linux.txt
 diffsynth==2.1.12
@@ -74,6 +84,7 @@ easydict==1.13
 einops==0.8.1
     # via
     #   -r dependencies/requirements-linux.txt
+    #   conformer
     #   controlnet-aux
     #   diffsynth
     #   spandrel
@@ -142,6 +153,8 @@ huggingface-hub==0.36.2
     #   transformers
 humanfriendly==10.0
     # via coloredlogs
+hyperpyyaml==1.2.2
+    # via -r dependencies/requirements-linux.txt
 idna==3.4
     # via
     #   anyio
@@ -161,6 +174,12 @@ importlib-metadata==7.1.0
     # via
     #   controlnet-aux
     #   diffusers
+importlib-resources==7.1.0
+    # via wetextprocessing
+inflect==7.6.0
+    # via -r dependencies/requirements-linux.txt
+jaraco-functools==4.6.0
+    # via inflect
 jax==0.6.1
     # via mediapipe
 jaxlib==0.6.1
@@ -171,6 +190,10 @@ jinja2==3.1.4
     # via
     #   fastapi
     #   torch
+joblib==1.6.0
+    # via
+    #   librosa
+    #   scikit-learn
 jsonschema==4.23.0
     # via rembg
 jsonschema-specifications==2025.4.1
@@ -182,7 +205,11 @@ kornia==0.8.1
 kornia-rs==0.1.9
     # via kornia
 lazy-loader==0.4
-    # via scikit-image
+    # via
+    #   librosa
+    #   scikit-image
+librosa==0.11.0
+    # via -r dependencies/requirements-linux.txt
 llvmlite==0.44.0
     # via numba
 markdown-it-py==3.0.0
@@ -204,21 +231,35 @@ ml-dtypes==0.5.1
     #   jax
     #   jaxlib
 modelscope==1.26.0
-    # via diffsynth
+    # via
+    #   -r dependencies/requirements-linux.txt
+    #   diffsynth
 moderngl==5.12.0
     # via -r dependencies/requirements-linux.txt
+more-itertools==11.2.1
+    # via
+    #   inflect
+    #   jaraco-functools
+    #   openai-whisper
 mpmath==1.3.0
     # via sympy
+msgpack==1.2.4
+    # via librosa
 multidict==6.4.4
     # via
     #   aiohttp
     #   yarl
+narwhals==2.28.0
+    # via scikit-learn
 networkx==3.3
     # via
     #   scikit-image
     #   torch
 numba==0.61.2
-    # via pymatting
+    # via
+    #   librosa
+    #   openai-whisper
+    #   pymatting
 numpy==1.26.3
     # via
     #   accelerate
@@ -229,12 +270,14 @@ numpy==1.26.3
     #   imageio
     #   jax
     #   jaxlib
+    #   librosa
     #   matplotlib
     #   mediapipe
     #   ml-dtypes
     #   numba
     #   onnx
     #   onnxruntime
+    #   openai-whisper
     #   opencv-contrib-python
     #   opencv-python
     #   opencv-python-headless
@@ -246,7 +289,10 @@ numpy==1.26.3
     #   pyvista
     #   rembg
     #   scikit-image
+    #   scikit-learn
     #   scipy
+    #   soundfile
+    #   soxr
     #   spandrel
     #   tifffile
     #   torchsde
@@ -286,9 +332,13 @@ nvidia-nvjitlink-cu12==12.4.99
     #   torch
 nvidia-nvtx-cu12==12.4.99
     # via torch
+omegaconf==2.4.0
+    # via -r dependencies/requirements-linux.txt
 onnx==1.18.0
     # via -r dependencies/requirements-linux.txt
 onnxruntime==1.22.0
+    # via -r dependencies/requirements-linux.txt
+openai-whisper==20240930
     # via -r dependencies/requirements-linux.txt
 opencv-contrib-python==4.11.0.86
     # via mediapipe
@@ -338,6 +388,7 @@ plyfile==1.1
     # via -r dependencies/requirements-linux.txt
 pooch==1.8.2
     # via
+    #   librosa
     #   pyvista
     #   rembg
 propcache==0.3.1
@@ -371,6 +422,8 @@ pymatting==1.1.14
     # via rembg
 pymeshfix==0.17.1
     # via -r dependencies/requirements-linux.txt
+pynini==2.1.7
+    # via -r dependencies/requirements-linux.txt
 pyparsing==3.2.3
     # via
     #   compel
@@ -395,6 +448,8 @@ pyyaml==6.0.2
     #   accelerate
     #   gguf
     #   huggingface-hub
+    #   hyperpyyaml
+    #   omegaconf
     #   peft
     #   timm
     #   transformers
@@ -407,6 +462,7 @@ regex==2024.11.6
     # via
     #   clip-anytorch
     #   diffusers
+    #   tiktoken
     #   transformers
 rembg==2.0.66
     # via -r dependencies/requirements-linux.txt
@@ -416,6 +472,7 @@ requests==2.28.1
     #   huggingface-hub
     #   modelscope
     #   pooch
+    #   tiktoken
     #   transformers
 restrictedpython==8.0
     # via -r dependencies/requirements-linux.txt
@@ -429,6 +486,12 @@ rpds-py==0.25.1
     # via
     #   jsonschema
     #   referencing
+ruamel-yaml==0.18.17
+    # via
+    #   -r dependencies/requirements-linux.txt
+    #   hyperpyyaml
+ruamel-yaml-clib==0.2.15
+    # via ruamel-yaml
 safetensors==0.8.0
     # via
     #   -r dependencies/requirements-linux.txt
@@ -443,15 +506,19 @@ scikit-image==0.25.2
     # via
     #   controlnet-aux
     #   rembg
+scikit-learn==1.9.1
+    # via librosa
 scipy==1.15.3
     # via
     #   -r dependencies/requirements-linux.txt
     #   controlnet-aux
     #   jax
     #   jaxlib
+    #   librosa
     #   pymatting
     #   rembg
     #   scikit-image
+    #   scikit-learn
     #   torchsde
 scooby==0.10.1
     # via pyvista
@@ -469,6 +536,12 @@ sniffio==1.3.1
     # via anyio
 sounddevice==0.5.2
     # via mediapipe
+soundfile==0.14.0
+    # via
+    #   -r dependencies/requirements-linux.txt
+    #   librosa
+soxr==1.1.0
+    # via librosa
 spandrel==0.4.1
     # via -r dependencies/requirements-linux.txt
 starlette==0.41.3
@@ -479,8 +552,14 @@ sympy==1.13.3
     #   torch
 texttable==1.7.0
     # via igraph
+threadpoolctl==3.8.0
+    # via scikit-learn
 tifffile==2025.5.21
     # via scikit-image
+tiktoken==0.14.0
+    # via
+    #   -r dependencies/requirements-linux.txt
+    #   openai-whisper
 timm==1.0.15
     # via controlnet-aux
 tokenizers==0.22.2
@@ -493,10 +572,12 @@ torch==2.4.1+cu124
     #   accelerate
     #   clip-anytorch
     #   compel
+    #   conformer
     #   controlnet-aux
     #   diffsynth
     #   diffusers
     #   kornia
+    #   openai-whisper
     #   peft
     #   spandrel
     #   timm
@@ -522,6 +603,7 @@ tqdm==4.66.5
     #   gguf
     #   huggingface-hub
     #   modelscope
+    #   openai-whisper
     #   peft
     #   rembg
     #   transformers
@@ -536,22 +618,29 @@ transformers==4.57.6
 trimesh==4.6.10
     # via -r dependencies/requirements-linux.txt
 triton==3.0.0
-    # via torch
+    # via
+    #   openai-whisper
+    #   torch
+typeguard==4.6.0
+    # via inflect
 typer==0.15.4
     # via fastapi-cli
-typing-extensions==4.12.2
+typing-extensions==4.16.0
     # via
     #   anyio
     #   fastapi
     #   huggingface-hub
+    #   librosa
     #   onnx
     #   pydantic
     #   pydantic-core
     #   pyvista
     #   referencing
     #   rich-toolkit
+    #   soundfile
     #   spandrel
     #   torch
+    #   typeguard
     #   typer
     #   typing-inspection
 typing-inspection==0.4.1
@@ -580,6 +669,8 @@ websockets==15.0.1
     # via
     #   -r dependencies/requirements-linux.txt
     #   uvicorn
+wetextprocessing @ https://github.com/sunxfancy/pynini-2.1.6.post1/releases/download/2.1.6.post1/WeTextProcessing-1.0.4-py3-none-any.whl
+    # via -r dependencies/requirements-linux.txt
 wrapt==1.17.2
     # via deprecated
 xatlas==0.0.10

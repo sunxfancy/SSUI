@@ -252,6 +252,8 @@ huggingface-hub==0.36.2
     #   transformers
 hydra-core==1.3.2
     # via -r dependencies/requirements-windows-amdgpu.txt
+hyperpyyaml==1.2.2
+    # via -r dependencies/requirements-windows-amdgpu.txt
 idna==3.4
     # via
     #   anyio
@@ -274,6 +276,8 @@ importlib-metadata==7.1.0
     #   diffusers
 importlib-resources==7.1.0
     # via wetextprocessing
+inflect==7.6.0
+    # via -r dependencies/requirements-windows-amdgpu.txt
 ipycanvas==0.14.3
     # via kaolin
 ipyevents==2.0.4
@@ -295,6 +299,8 @@ isoduration==20.11.0
     # via jsonschema
 itsdangerous==2.2.0
     # via flask
+jaraco-functools==4.6.0
+    # via inflect
 jedi==0.20.0
     # via ipython
 jinja2==3.1.6
@@ -413,7 +419,10 @@ modelscope==1.26.0
 moderngl==5.12.0
     # via -r dependencies/requirements-windows-amdgpu.txt
 more-itertools==11.1.0
-    # via openai-whisper
+    # via
+    #   inflect
+    #   jaraco-functools
+    #   openai-whisper
 mpmath==1.3.0
     # via sympy
 msgpack==1.2.1
@@ -507,7 +516,9 @@ nvdiffrast @ https://github.com/sunxfancy/SSUI/releases/download/rocm-wheels-202
 o-voxel @ https://github.com/sunxfancy/o-voxel.rocm72/releases/download/v0.0.1%2Brocm72/o_voxel-0.0.1%2Brocm72-cp312-cp312-win_amd64.whl
     # via -r dependencies/requirements-windows-amdgpu.txt
 omegaconf==2.3.1
-    # via hydra-core
+    # via
+    #   -r dependencies/requirements-windows-amdgpu.txt
+    #   hydra-core
 onnx==1.22.0
     # via -r dependencies/requirements-windows-amdgpu.txt
 onnxruntime==1.27.0
@@ -683,6 +694,7 @@ pyyaml==6.0.3
     #   accelerate
     #   gguf
     #   huggingface-hub
+    #   hyperpyyaml
     #   jupyter-events
     #   omegaconf
     #   peft
@@ -762,6 +774,12 @@ rpds-py==2026.5.1
     # via
     #   jsonschema
     #   referencing
+ruamel-yaml==0.18.17
+    # via
+    #   -r dependencies/requirements-windows-amdgpu.txt
+    #   hyperpyyaml
+ruamel-yaml-clib==0.2.15
+    # via ruamel-yaml
 safetensors==0.8.0
     # via
     #   -r dependencies/requirements-windows-amdgpu.txt
@@ -940,6 +958,8 @@ triton-windows==3.1.0.post17
     # via
     #   -r dependencies/requirements-windows-amdgpu.txt
     #   flex-gemm
+typeguard==4.6.0
+    # via inflect
 typer==0.25.1
     # via
     #   fastapi-cli
@@ -963,6 +983,7 @@ typing-extensions==4.15.0
     #   spandrel
     #   starlette
     #   torch
+    #   typeguard
     #   typing-inspect
     #   typing-inspection
 typing-inspect==0.9.0

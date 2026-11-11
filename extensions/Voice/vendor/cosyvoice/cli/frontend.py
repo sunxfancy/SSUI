@@ -52,9 +52,14 @@ class CosyVoiceFrontEnd:
         option.graph_optimization_level = onnxruntime.GraphOptimizationLevel.ORT_ENABLE_ALL
         option.intra_op_num_threads = 1
         self.campplus_session = onnxruntime.InferenceSession(campplus_model, sess_options=option, providers=["CPUExecutionProvider"])
-        self.speech_tokenizer_session = onnxruntime.InferenceSession(speech_tokenizer_model, sess_options=option,
-                                                                     providers=["CUDAExecutionProvider" if torch.cuda.is_available() else
-                                                                                "CPUExecutionProvider"])
+        # ROCm PyTorch also exposes torch.cuda; that does not imply that ORT
+        # has NVIDIA's CUDA provider. Windows ROCm uses CPU for the tokenizer.
+        providers = ["CPUExecutionProvider"]
+        if (torch.cuda.is_available() and not torch.version.hip
+                and "CUDAExecutionProvider" in onnxruntime.get_available_providers()):
+            providers.insert(0, "CUDAExecutionProvider")
+        self.speech_tokenizer_session = onnxruntime.InferenceSession(
+            speech_tokenizer_model, sess_options=option, providers=providers)
         if os.path.exists(spk2info):
             self.spk2info = torch.load(spk2info, map_location=self.device)
         else:
@@ -68,8 +73,14 @@ class CosyVoiceFrontEnd:
                 'failed to initialize ttsfrd resource'
             self.frd.set_lang_type('pinyinvg')
         else:
-            self.zh_tn_model = ZhNormalizer(remove_erhua=False, full_to_half=False, overwrite_cache=True)
-            self.en_tn_model = EnNormalizer()
+            # Installed packages may be read-only. Keep reusable FSTs in a user
+            # cache, separated from other normalizer configurations.
+            cache_dir = os.environ.get('SSUI_COSYVOICE_TN_CACHE') or os.path.join(
+                os.environ.get('HF_HOME', os.path.expanduser('~/.cache')),
+                'ssui', 'cosyvoice2-tn-v1')
+            self.zh_tn_model = ZhNormalizer(cache_dir=cache_dir, remove_erhua=False,
+                                            full_to_half=False, overwrite_cache=False)
+            self.en_tn_model = EnNormalizer(cache_dir=cache_dir)
             self.inflect_parser = inflect.engine()
 
     def _extract_text_token(self, text):
