@@ -473,3 +473,39 @@ LTX 会根据预算调整原生 `--offload`，即使手动选择 disk 也必须�
 H3 独立环境需安装 psutil，使用 Hub 权重大小元数据做预检；旧版 diffusers 缺少
 `offload_to_disk_path` 时会明确停止，请升级独立环境。
 资源策略和验证边界见 [资源监控说明](../../doc/ResourceMonitoring.zh.md)。
+
+# Blender 3D scene composite
+
+`examples/advance/workflow-video-3d-composite.py` exposes two workflows:
+`composite_existing_mesh` accepts an uploaded video and an existing `Mesh`, and
+`generate_and_composite` creates an image with Qwen-Image and a 3D mesh with
+Pixal3D before compositing it. The latter requires those models and a CUDA GPU.
+Both workflows now call `CompositeWithBlender`: OpenCV supplies feature tracks,
+Blender solves the 3D camera and renders the GLB from that camera, then the
+transparent frames are composited with the original video and audio. The output
+links to a `.blend` project and a JSON solve report with reprojection error,
+camera-frame count, and translation span. The older `Composite3DPreview` node
+remains available for a quick CPU preview.
+
+In the video uploader, click the target point on the first frame to override the
+text location suggestion. Without a click, the workflow uses an automatic
+suggestion. Set
+`SSUI_SCENE_GROUNDER_URL` to an HTTP service accepting JSON
+`{"prompt": "...", "image_jpeg_base64": "..."}` and returning
+`{"point": [x, y], "confidence": 0.0..1.0}` (normalized image coordinates).
+Without a configured vision service, the fallback uses rough spatial words and
+reports low confidence. The result preview shows the source and confidence.
+
+Blender solving requires a continuous shot with at least 12 frames, sufficient
+texture, and camera parallax. The node rejects low-quality solves rather than
+substituting a 2D transform. The clicked point is placed on an estimated plane
+near reconstructed feature points; the footage does not establish absolute
+world scale. The current compositor still lacks foreground depth occlusion and
+automatic lighting match. Text-to-3D model inference is separate from the
+camera-solve acceptance test.
+
+Run the synthetic video check with `yarn test:scene-composite` in an SSUI Python
+environment containing OpenCV, trimesh, imageio, and imageio-ffmpeg.
+Run `yarn test:blender-scene` for the real Blender camera-solve/render test on
+the generated parallax clip. Set `BLENDER_EXECUTABLE` to a normal Blender binary
+or use the repository's Windows MSIX Blender launcher when installed.
