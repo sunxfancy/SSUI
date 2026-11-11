@@ -39,3 +39,5 @@ class FlowOperatorDiscoveryTest(unittest.TestCase):
             names = {(item.module, item.callable) for item in operators}
             self.assertIn(("ssui_image.Flux2", "Flux2KleinModel.load"), names)
             self.assertIn(("ssui_image.Flux2", "Flux2KleinGenerate"), names)
+            self.assertIn(("ssui_image.MOSSImage", "MOSSImageModel.load"), names)
+            self.assertIn(("ssui_image.MOSSImage", "MOSSImageGenerate"), names)

@@ -6,7 +6,9 @@ callables = []
 
 # 用于记录 API 的装饰器
 def workflow(func):
-    signature = inspect.signature(func)
+    # RestrictedPython and postponed annotations may provide strings. Resolve
+    # them in the workflow's namespace before exposing types to the UI.
+    signature = inspect.signature(func, eval_str=True)
     param_types = {
         param.name: param.annotation
         for param in signature.parameters.values()
