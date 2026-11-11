@@ -180,8 +180,8 @@ class RuntimeOffloadTests(unittest.TestCase):
             namespace['_enable_offload'](pipe, disk_directory='/approved/offload')
         transformer_options = pipe.transformer.enable_group_offload.call_args.kwargs
         text_options = hooks.apply_group_offloading.call_args.kwargs
-        self.assertEqual(transformer_options['offload_to_disk_path'], '/approved/offload/transformer')
-        self.assertEqual(text_options['offload_to_disk_path'], '/approved/offload/text_encoder')
+        self.assertEqual(Path(transformer_options['offload_to_disk_path']), Path('/approved/offload') / 'transformer')
+        self.assertEqual(Path(text_options['offload_to_disk_path']), Path('/approved/offload') / 'text_encoder')
         self.assertFalse(transformer_options['use_stream'])
 
     def test_trellis_actual_checkpoint_loader_uses_empty_init_and_real_hooks(self):

@@ -1,10 +1,11 @@
 """Machine resources and conservative model placement decisions (all sizes are bytes)."""
-import psutil
 
 GiB = 2**30
 
 
 def snapshot():
+    # Schema-only imports must not require optional monitoring dependencies.
+    import psutil
     ram = psutil.virtual_memory()
     result = {"ram": {"total": ram.total, "available": ram.available,
                       "used": ram.total - ram.available}, "gpus": [], "gpu_error": None}

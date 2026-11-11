@@ -4,6 +4,11 @@ import { Message } from 'ssui_components';
 type Memory = { total: number; available: number; used: number };
 type Resources = { ram: Memory; gpus: (Memory & { index: number; name: string })[]; gpu_error: string | null };
 type DiskRequest = { id: string; model: string; required_bytes: number };
+async function getResource(message: Message, path: string) {
+    const response = await fetch(`http://${message.host}:${message.port}/api/resources/${path}`);
+    if (!response.ok) throw new Error(`Resource monitor HTTP ${response.status}`);
+    return response.json();
+}
 const gib = (bytes: number) => (bytes / 2 ** 30).toFixed(1);
 
 export function ResourceMonitor() {
@@ -18,7 +23,7 @@ export function ResourceMonitor() {
         const poll = async () => {
             try {
                 const [state, pending] = await Promise.all([
-                    message.get('api/resources/'), message.get('api/resources/disk-requests'),
+                    getResource(message, ''), getResource(message, 'disk-requests'),
                 ]);
                 if (!disposed) { setResources(state); setRequest(pending[0]); setError(''); }
             } catch { if (!disposed) setError('资源监控连接失败'); }
