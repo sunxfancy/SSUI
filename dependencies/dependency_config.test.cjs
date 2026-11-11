@@ -198,3 +198,12 @@ test('CosyVoice CUDA dependencies use one ONNX runtime and retain native platfor
     assert.ok(os === 'windows' ? pynini.includes('win_amd64.whl') : pynini === 'pynini==2.1.6.post1');
   }
 });
+
+
+test('all supported profiles include the shared Voice WAV dependency', () => {
+  const spec = loadConfig();
+  for (const profile of config.profiles) {
+    const { requirements } = resolveDependencies(profile, spec);
+    assert.ok(requirements.some(line => /^soundfile[<>=@]/i.test(line)));
+  }
+});

@@ -41,6 +41,8 @@ common:
     safetensors: ">=0.4.5"
     scipy: ">=1.15.2"
     spandrel: ">=0.4.1"
+    # Voice adapters encode WAV on every platform, including contract tests.
+    soundfile: ">=0.12.1"
     tokenizers: ">=0.20.0"
     torchsde: "==0.2.6"
     transformers: ">=4.51.3,<5"
@@ -265,7 +267,6 @@ overrides:
       # HyperPyYAML 1.2.2 needs the pre-0.19 loader API.
       ruamel.yaml: "==0.18.6"
       conformer: ">=0.3.2"
-      soundfile: ">=0.12.1"
       librosa: "==0.11.0"
       openai-whisper: "==20240930"
       inflect: ">=7.3.1"

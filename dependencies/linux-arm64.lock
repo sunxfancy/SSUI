@@ -70,6 +70,7 @@ cffi==2.1.1
     #   argon2-cffi-bindings
     #   cryptography
     #   sounddevice
+    #   soundfile
 charset-normalizer==3.5.2
     # via requests
 click==8.5.0
@@ -397,6 +398,7 @@ numpy==2.5.4
     #   rembg
     #   scikit-image
     #   scipy
+    #   soundfile
     #   spandrel
     #   tifffile
     #   torchsde
@@ -683,6 +685,8 @@ six==1.17.0
     #   rfc3339-validator
 sounddevice==0.5.6
     # via mediapipe
+soundfile==0.14.0
+    # via -r dependencies/requirements-linux-arm64.txt
 soupsieve==3.0.4
     # via beautifulsoup4
 spandrel==0.4.2
@@ -810,6 +814,7 @@ typing-extensions==4.16.0
     #   pyvista-validation
     #   referencing
     #   rich-toolkit
+    #   soundfile
     #   spandrel
     #   starlette
     #   torch

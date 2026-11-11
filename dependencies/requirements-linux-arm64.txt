@@ -37,6 +37,7 @@ RestrictedPython>=8.0
 safetensors>=0.4.5
 scipy>=1.15.2
 sentencepiece==0.2.0
+soundfile>=0.12.1
 spandrel>=0.4.1
 tokenizers>=0.20.0
 torch==2.8.0
