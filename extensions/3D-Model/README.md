@@ -1,5 +1,9 @@
 # SSUI 3D Model extension
 
+## SceneSmith 室内场景
+
+`GenSceneSmithScene` 使用仓库内的 Python backend 摆放已有 GLB 资产，导出带独立网格对象的 GLB、阶段快照和预览图。当前移植的是静态场景布局，上游的多代理与物理求解尚未完成。接口、示例和验证状态见 [SCENESMITH.md](SCENESMITH.md)。
+
 ## 自动骨骼绑定
 
 新增 UniRig、Make-It-Animatable（MIA）和 RigAnything 隔离运行适配器，
