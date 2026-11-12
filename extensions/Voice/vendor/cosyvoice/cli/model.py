@@ -13,6 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 import os
+import zipfile
 from typing import Generator
 import queue
 import torch
@@ -68,14 +69,22 @@ class CosyVoiceModel:
         self.hift_cache_dict = {}
 
     def load(self, llm_model, flow_model, hift_model):
-        self.llm.load_state_dict(torch.load(llm_model, map_location=self.device), strict=True)
-        self.llm.to(self.device).eval()
-        self.flow.load_state_dict(torch.load(flow_model, map_location=self.device), strict=True)
-        self.flow.to(self.device).eval()
-        # in case hift_model is a hifigan model
-        hift_state_dict = {k.replace('generator.', ''): v for k, v in torch.load(hift_model, map_location=self.device).items()}
+        # Move each module before reading its checkpoint to avoid simultaneous
+        # resident CPU copies of both the model and the deserialized weights.
+        def checkpoint(path):
+            return torch.load(path, map_location='cpu', weights_only=True,
+                              mmap=zipfile.is_zipfile(path))
+
+        self.llm.to(self.device)
+        self.llm.load_state_dict(checkpoint(llm_model), strict=True)
+        self.llm.eval()
+        self.flow.to(self.device)
+        self.flow.load_state_dict(checkpoint(flow_model), strict=True)
+        self.flow.eval()
+        self.hift.to(self.device)
+        hift_state_dict = {k.replace('generator.', ''): v for k, v in checkpoint(hift_model).items()}
         self.hift.load_state_dict(hift_state_dict, strict=True)
-        self.hift.to(self.device).eval()
+        self.hift.eval()
 
     def load_jit(self, llm_text_encoder_model, llm_llm_model, flow_encoder_model):
         llm_text_encoder = torch.jit.load(llm_text_encoder_model, map_location=self.device)

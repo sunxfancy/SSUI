@@ -57,6 +57,7 @@ cffi:
   version: "1.17.1"
   dependents:
     - sounddevice
+    - soundfile
 charset-normalizer:
   version: "3.4.1"
   dependents:
@@ -350,6 +351,7 @@ numpy:
     - rembg
     - scikit-image
     - scipy
+    - soundfile
     - spandrel
     - tifffile
     - torchsde
@@ -606,6 +608,9 @@ sounddevice:
   version: "0.5.1"
   dependents:
     - mediapipe
+soundfile:
+  version: "0.14.0"
+  isRoot: true
 spandrel:
   version: "0.4.1"
   isRoot: true
@@ -710,6 +715,7 @@ typing-extensions:
     - pyvista
     - referencing
     - rich-toolkit
+    - soundfile
     - spandrel
     - torch
     - typer

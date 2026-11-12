@@ -40,6 +40,7 @@ rocm_sdk_devel @ https://repo.radeon.com/rocm/windows/rocm-rel-7.2.1/rocm_sdk_de
 rocm_sdk_libraries_custom @ https://repo.radeon.com/rocm/windows/rocm-rel-7.2.1/rocm_sdk_libraries_custom-7.2.1-py3-none-win_amd64.whl
 safetensors>=0.4.5
 scipy>=1.15.2
+soundfile>=0.12.1
 spandrel>=0.4.1
 tokenizers>=0.20.0
 torch @ https://repo.radeon.com/rocm/windows/rocm-rel-7.2.1/torch-2.9.1%2Brocm7.2.1-cp312-cp312-win_amd64.whl

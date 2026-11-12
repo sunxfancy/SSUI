@@ -95,6 +95,7 @@ cffi:
   dependents:
     - argon2-cffi-bindings
     - sounddevice
+    - soundfile
 charset-normalizer:
   version: "2.1.1"
   dependents:
@@ -568,6 +569,7 @@ numpy:
     - rembg
     - scikit-image
     - scipy
+    - soundfile
     - spandrel
     - tifffile
     - torchsde
@@ -941,6 +943,9 @@ sounddevice:
   version: "0.5.5"
   dependents:
     - mediapipe
+soundfile:
+  version: "0.14.0"
+  isRoot: true
 soupsieve:
   version: "2.8.4"
   dependents:
@@ -1091,6 +1096,7 @@ typing-extensions:
     - pyvista
     - referencing
     - rich-toolkit
+    - soundfile
     - spandrel
     - starlette
     - torch

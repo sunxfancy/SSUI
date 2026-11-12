@@ -184,3 +184,26 @@ test('generated lock graph preserves uv root and reverse-dependency annotations'
   assert.ok(cuda.requirements.some(line => line.startsWith('nvdiffrast @ ') && line.includes('/v0.3.3.1/')));
   assert.ok(!cuda.requirements.some(line => line.startsWith('natten ')));
 });
+
+test('CosyVoice CUDA dependencies use one ONNX runtime and retain native platform wheels', () => {
+  const spec = loadConfig();
+  for (const os of ['linux', 'windows']) {
+    const { requirements } = resolveDependencies({ os, arch: 'x64', backend: 'cuda' }, spec);
+    assert.ok(requirements.includes('onnxruntime-gpu==1.22.0'));
+    assert.ok(!requirements.some(line => /^onnxruntime[<>=@]/.test(line)));
+    assert.ok(requirements.includes('HyperPyYAML==1.2.2'));
+    assert.ok(requirements.includes('ruamel.yaml==0.18.6'));
+    assert.ok(requirements.includes('pyarrow==20.0.0'));
+    const pynini = requirements.find(line => line.startsWith('pynini'));
+    assert.ok(os === 'windows' ? pynini.includes('win_amd64.whl') : pynini === 'pynini==2.1.6.post1');
+  }
+});
+
+
+test('all supported profiles include the shared Voice WAV dependency', () => {
+  const spec = loadConfig();
+  for (const profile of config.profiles) {
+    const { requirements } = resolveDependencies(profile, spec);
+    assert.ok(requirements.some(line => /^soundfile[<>=@]/i.test(line)));
+  }
+});

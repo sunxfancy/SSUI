@@ -52,9 +52,16 @@ class CosyVoiceFrontEnd:
         option.graph_optimization_level = onnxruntime.GraphOptimizationLevel.ORT_ENABLE_ALL
         option.intra_op_num_threads = 1
         self.campplus_session = onnxruntime.InferenceSession(campplus_model, sess_options=option, providers=["CPUExecutionProvider"])
-        self.speech_tokenizer_session = onnxruntime.InferenceSession(speech_tokenizer_model, sess_options=option,
-                                                                     providers=["CUDAExecutionProvider" if torch.cuda.is_available() else
-                                                                                "CPUExecutionProvider"])
+        if torch.cuda.is_available() and hasattr(onnxruntime, "preload_dlls"):
+            onnxruntime.preload_dlls()
+        providers = ["CPUExecutionProvider"]
+        if torch.cuda.is_available():
+            if "CUDAExecutionProvider" in onnxruntime.get_available_providers():
+                providers.insert(0, "CUDAExecutionProvider")
+            else:
+                logging.warning("ONNX speech tokenizer uses CPU; PyTorch synthesis still uses CUDA")
+        self.speech_tokenizer_session = onnxruntime.InferenceSession(
+            speech_tokenizer_model, sess_options=option, providers=providers)
         if os.path.exists(spk2info):
             self.spk2info = torch.load(spk2info, map_location=self.device)
         else:
@@ -68,9 +75,10 @@ class CosyVoiceFrontEnd:
                 'failed to initialize ttsfrd resource'
             self.frd.set_lang_type('pinyinvg')
         else:
-            self.zh_tn_model = ZhNormalizer(remove_erhua=False, full_to_half=False, overwrite_cache=True)
-            self.en_tn_model = EnNormalizer()
-            self.inflect_parser = inflect.engine()
+            # Build only the requested language, and reuse its on-disk FST cache.
+            self.zh_tn_model = None
+            self.en_tn_model = None
+            self.inflect_parser = None
 
     def _extract_text_token(self, text):
         if isinstance(text, Generator):
@@ -130,6 +138,8 @@ class CosyVoiceFrontEnd:
             text = ''.join(texts)
         else:
             if contains_chinese(text):
+                if self.zh_tn_model is None:
+                    self.zh_tn_model = ZhNormalizer(remove_erhua=False, full_to_half=False, overwrite_cache=False)
                 text = self.zh_tn_model.normalize(text)
                 text = text.replace("\n", "")
                 text = replace_blank(text)
@@ -141,6 +151,9 @@ class CosyVoiceFrontEnd:
                 texts = list(split_paragraph(text, partial(self.tokenizer.encode, allowed_special=self.allowed_special), "zh", token_max_n=80,
                                              token_min_n=60, merge_len=20, comma_split=False))
             else:
+                if self.en_tn_model is None:
+                    self.en_tn_model = EnNormalizer()
+                    self.inflect_parser = inflect.engine()
                 text = self.en_tn_model.normalize(text)
                 text = spell_out_number(text, self.inflect_parser)
                 texts = list(split_paragraph(text, partial(self.tokenizer.encode, allowed_special=self.allowed_special), "en", token_max_n=80,

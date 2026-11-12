@@ -41,6 +41,8 @@ common:
     safetensors: ">=0.4.5"
     scipy: ">=1.15.2"
     spandrel: ">=0.4.1"
+    # Voice adapters encode WAV on every platform, including contract tests.
+    soundfile: ">=0.12.1"
     tokenizers: ">=0.20.0"
     torchsde: "==0.2.6"
     transformers: ">=4.51.3,<5"
@@ -251,3 +253,35 @@ overrides:
       # Last Numba/LLVM pair with official CPython 3.12 macOS Intel wheels.
       numba: '==0.62.1'
       llvmlite: '==0.45.1'
+
+  # CosyVoice2 inference dependencies share the root CUDA runtime.
+  # Other profiles retain their platform-specific wheels and constraints.
+  - when:
+      os: [linux, windows]
+      arch: x64
+      backend: cuda
+    packages:
+      onnxruntime: null
+      onnxruntime-gpu: "==1.22.0"
+      HyperPyYAML: "==1.2.2"
+      # HyperPyYAML 1.2.2 needs the pre-0.19 loader API.
+      ruamel.yaml: "==0.18.6"
+      conformer: ">=0.3.2"
+      librosa: "==0.11.0"
+      openai-whisper: "==20240930"
+      inflect: ">=7.3.1"
+      WeTextProcessing: "@ https://github.com/sunxfancy/pynini-2.1.6.post1/releases/download/2.1.6.post1/WeTextProcessing-1.0.4-py3-none-any.whl"
+      hydra-core: "==1.3.2"
+      lightning: ">=2.2.4"
+      rich: ">=13.7.1"
+      gdown: ">=5.1.0"
+      wget: ">=3.2"
+      # Newer PyArrow wheels require NumPy 2; retain Torch 2.4 compatibility.
+      pyarrow: "==20.0.0"
+  - when:
+      os: linux
+      arch: x64
+      backend: cuda
+    packages:
+      pynini: "==2.1.6.post1"
+      pyworld: "==0.3.5"
