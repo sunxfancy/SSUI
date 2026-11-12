@@ -16,6 +16,7 @@ on:
       - 'scripts/audit_native_binaries.py'
       - 'scripts/runtime_config.py'
       - 'scripts/check_runtime.py'
+      - 'scripts/ci_apt.py'
       - '.github/workflows/windows-arm64-wheels.yml'
       - '.github/workflows/macos-intel-wheels.yml'
       - 'scripts/build_macos_intel_wheels.py'
@@ -27,6 +28,7 @@ on:
       - 'scripts/audit_native_binaries.py'
       - 'scripts/runtime_config.py'
       - 'scripts/check_runtime.py'
+      - 'scripts/ci_apt.py'
       - '.github/workflows/windows-arm64-wheels.yml'
       - '.github/workflows/macos-intel-wheels.yml'
       - 'scripts/build_macos_intel_wheels.py'
@@ -108,10 +110,14 @@ jobs:
       - name: Install pinned standalone Python
         timeout-minutes: 15
         run: node dependencies/bootstrap.cjs --github-env
+      - name: Prepare Ubuntu package sources
+        if: runner.os == 'Linux'
+        timeout-minutes: 6
+        run: sudo --preserve-env=GITHUB_ACTIONS /usr/bin/python3 scripts/ci_apt.py
       - name: Install Linux native build dependencies
+        timeout-minutes: 10
         if: runner.os == 'Linux'
         run: |
-          sudo apt-get update
           sudo apt-get install -y libgl1-mesa-dev libx11-dev
       - name: Download verified Intel wheels
         if: matrix.id == 'macos-x86_64'
