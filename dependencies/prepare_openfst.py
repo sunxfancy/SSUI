@@ -18,7 +18,9 @@ VERSION = "1.8.4"
 # the original SHA-256; upstream's download endpoint currently returns 403.
 SOURCE_URL = f"https://distfiles-origin.macports.org/openfst/openfst-{VERSION}.tar.gz"
 SOURCE_SHA256 = "a8ebbb6f3d92d07e671500587472518cfc87cb79b9a654a5a8abb2d0eb298016"
-CONFIGURE = ["--enable-grm", "--enable-shared", "--disable-static", "--disable-bin"]
+# OpenFst also gates its script libraries behind --enable-bin. Pynini links
+# libfstscript and the GRM script libraries, so these must remain enabled.
+CONFIGURE = ["--enable-grm", "--enable-shared", "--disable-static", "--enable-bin"]
 REQUIRED = ["include/fst/util.h", "include/fst/extensions/far/far.h",
             "lib/libfst.so", "lib/libfstscript.so", "lib/libfstfar.so",
             "lib/libfstfarscript.so", "lib/libfstpdtscript.so", "lib/libfstmpdtscript.so"]
