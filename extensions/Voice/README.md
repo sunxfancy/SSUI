@@ -10,6 +10,16 @@ macOS 上 Pynini 2.1.7 没有 PyPI wheel，需要 OpenFst 1.8.4 的 GRM 头文�
 `dependencies/build-constraints.txt` 的隔离构建约束，避免 Whisper 构建时丢失 `pkg_resources`。
 Intel CI 使用验证后的原生 PyTorch wheel 解析完整锁，并将该锁交给后续完整安装与运行检查。
 
+Linux ARM64 同样需要源码编译 Pynini。根目录安装器与 ARM64 验证流程通过
+`dependencies/prepare_openfst.py` 准备 OpenFst 1.8.4 GRM，固定源码 SHA-256，SDK 安装到
+`.build/native/openfst-1.8.4`，并为完整依赖安装提供头文件、链接和运行时库路径。
+源码使用 [MacPorts 官方 distfile 镜像](https://distfiles-origin.macports.org/openfst/openfst-1.8.4.tar.gz)，
+与上游原归档逐字节一致，保留原 SHA-256
+`a8ebbb6f3d92d07e671500587472518cfc87cb79b9a654a5a8abb2d0eb298016`。
+可用 `SSUI_OPENFST_ARCHIVE` 指向获准取得的本地源码归档，仍必须通过相同 SHA-256 校验。
+源码下载拒绝访问或校验不符会直接失败，不回退到 HTTP、其他来源或不校验的归档。
+Ubuntu CI 的 apt 更新在任一软件源失败时停止，不能以旧索引继续安装和掩盖网络故障。
+
 ## 从根目录运行
 
 先按 SSUI 的标准流程安装对应运行时。Windows AMD 使用项目的 Windows x64 ROCm

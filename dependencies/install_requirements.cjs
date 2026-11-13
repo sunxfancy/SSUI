@@ -17,7 +17,7 @@ function getRequirementsFile() {
 }
 
 try {
-    devEnv = require('./macos_prerequisites.cjs').prepare({ env: devEnv });
+    devEnv = require('./native_prerequisites.cjs').prepare({ env: devEnv });
     const requirementsFile = getRequirementsFile();
     const pythonRuntime = JSON.parse(execFileSync(executable('python', devEnv), [
         '-c', 'import json, platform, sys; print(json.dumps({"os": sys.platform, "arch": platform.machine()}))'
