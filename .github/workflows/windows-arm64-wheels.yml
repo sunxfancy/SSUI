@@ -111,7 +111,7 @@ jobs:
       - name: Install Linux native build dependencies
         if: runner.os == 'Linux'
         run: |
-          sudo apt-get update
+          sudo apt-get -o APT::Update::Error-Mode=any -o Acquire::Retries=3 update
           sudo apt-get install -y libgl1-mesa-dev libx11-dev
       - name: Download verified Intel wheels
         if: matrix.id == 'macos-x86_64'
@@ -121,7 +121,13 @@ jobs:
           path: native-wheels
       - name: Check Intel wheel manifest
         if: matrix.id == 'macos-x86_64'
-        run: node dependencies/native_wheels.cjs native-wheels
+        run: |
+          node dependencies/native_wheels.cjs native-wheels
+          cp native-wheels/macosx-x86_64.lock dependencies/macosx-x86_64.lock
+      - name: Prepare native OpenFst GRM prerequisites
+        if: runner.os == 'macOS' || matrix.id == 'linux-arm64'
+        timeout-minutes: 15
+        run: node dependencies/native_prerequisites.cjs --github-env
       - name: Install the full native dependency lock
         timeout-minutes: 25
         env:

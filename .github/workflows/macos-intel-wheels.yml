@@ -46,12 +46,15 @@ jobs:
         run: node dependencies/native_wheels.cjs native-wheels
       - name: Verify portable native libraries
         run: python scripts/verify_macos_wheels.py
+      - name: Prepare macOS OpenFst GRM prerequisites
+        timeout-minutes: 15
+        run: node dependencies/macos_prerequisites.cjs --github-env
       - name: Resolve the Intel dependency lock with the native wheels
         env:
           MACOSX_DEPLOYMENT_TARGET: '14.0'
         run: |
           cp dependencies/macosx-x86_64.lock native-wheels/macosx-x86_64.lock
-          uv pip compile dependencies/requirements-macosx-x86_64.txt --find-links native-wheels --python-version 3.12.8 --python-platform x86_64-apple-darwin --index-strategy unsafe-best-match --emit-index-url -o native-wheels/macosx-x86_64.lock
+          uv pip compile dependencies/requirements-macosx-x86_64.txt --find-links native-wheels --python-version 3.12.8 --python-platform x86_64-apple-darwin --index-strategy unsafe-best-match --build-constraints dependencies/build-constraints.txt --emit-index-url -o native-wheels/macosx-x86_64.lock
       - name: Preserve native wheels
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02

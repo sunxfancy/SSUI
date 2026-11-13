@@ -6,6 +6,19 @@ const { loadConfig, validateConfig, resolveDependencies, renderRequirements, gen
 const { extensionRequirements } = require('./combine_requirements.cjs');
 const { parseArgs, compileArgs, parseLockFile } = require('./update_lock.cjs');
 const { main: generate } = require('./generate_requirements.cjs');
+const { prepare: prepareMacos } = require('./macos_prerequisites.cjs');
+
+test('macOS native Pynini build preserves caller flags and requires GRM libraries', () => {
+  const env = { CPLUS_INCLUDE_PATH: '/custom/include', LIBRARY_PATH: '/custom/lib', LDFLAGS: '-Wl,-rpath,/custom/lib' };
+  const run = (_command, args) => args[0] === '--prefix' ? '/opt/homebrew/opt/openfst\n' : 'openfst 1.8.4\n';
+  const result = prepareMacos({ platform: 'darwin', env, run, exists: () => true });
+  assert.equal(result.CPLUS_INCLUDE_PATH, '/opt/homebrew/opt/openfst/include:/custom/include');
+  assert.equal(result.LIBRARY_PATH, '/opt/homebrew/opt/openfst/lib:/custom/lib');
+  assert.equal(result.LDFLAGS, '-L/opt/homebrew/opt/openfst/lib -Wl,-rpath,/custom/lib');
+  assert.throws(() => prepareMacos({ platform: 'darwin', env, run,
+    exists: file => !file.endsWith('libfstfar.dylib') }), /GRM prerequisite missing/);
+  assert.deepEqual(prepareMacos({ platform: 'win32', env, run: () => { throw new Error('must not run brew'); } }), env);
+});
 
 function sample() {
   return {
@@ -110,6 +123,7 @@ test('lock compilation uses the requested target, Python version and unchanged l
   assert.throws(() => parseArgs(['--target']), /缺少/);
   assert.throws(() => parseArgs(['--target', 'linux-arm64-qnn']), /尚未提供/);
   const args = compileArgs('macosx', 'in file.txt', 'macosx.lock', true);
+  assert.equal(args[args.indexOf('--build-constraints') + 1], path.join(__dirname, 'build-constraints.txt'));
   assert.equal(args[args.indexOf('--python-platform') + 1], 'aarch64-apple-darwin');
   assert.equal(args[args.indexOf('--python-version') + 1], config.python.version);
   assert.ok(args.includes('in file.txt'));

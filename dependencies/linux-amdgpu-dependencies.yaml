@@ -67,6 +67,10 @@ attrs:
     - cyclopts
     - jsonschema
     - referencing
+audioread:
+  version: "3.1.0"
+  dependents:
+    - librosa
 babel:
   version: "2.18.0"
   dependents:
@@ -95,6 +99,7 @@ cffi:
   dependents:
     - argon2-cffi-bindings
     - sounddevice
+    - soundfile
 charset-normalizer:
   version: "2.1.1"
   dependents:
@@ -108,12 +113,19 @@ click:
 clip-anytorch:
   version: "2.6.0"
   isRoot: true
+cloudpickle:
+  version: "3.1.2"
+  dependents:
+    - joblib
 comm:
   version: "0.2.3"
   dependents:
     - ipykernel
 compel:
   version: "2.3.1"
+  isRoot: true
+conformer:
+  version: "0.3.2"
   isRoot: true
 contourpy:
   version: "1.3.3"
@@ -142,6 +154,7 @@ decorator:
   version: "5.3.1"
   dependents:
     - ipython
+    - librosa
 defusedxml:
   version: "0.7.1"
   dependents:
@@ -185,6 +198,7 @@ einops:
   version: "0.8.2"
   isRoot: true
   dependents:
+    - conformer
     - controlnet-aux
     - diffsynth
     - spandrel
@@ -224,7 +238,6 @@ filelock:
     - datasets
     - diffusers
     - huggingface-hub
-    - modelscope
     - python-discovery
     - torch
     - transformers
@@ -303,6 +316,9 @@ huggingface-hub:
     - timm
     - tokenizers
     - transformers
+hyperpyyaml:
+  version: "1.2.2"
+  isRoot: true
 idna:
   version: "3.4"
   dependents:
@@ -329,6 +345,13 @@ importlib-metadata:
   dependents:
     - controlnet-aux
     - diffusers
+importlib-resources:
+  version: "7.1.0"
+  dependents:
+    - wetextprocessing
+inflect:
+  version: "7.6.0"
+  isRoot: true
 ipykernel:
   version: "7.3.0"
   dependents:
@@ -345,6 +368,10 @@ isoduration:
   version: "20.11.0"
   dependents:
     - jsonschema
+jaraco-functools:
+  version: "4.6.0"
+  dependents:
+    - inflect
 jedi:
   version: "0.20.0"
   dependents:
@@ -358,6 +385,11 @@ jinja2:
     - jupyterlab-server
     - nbconvert
     - torch
+joblib:
+  version: "1.6.0"
+  dependents:
+    - librosa
+    - scikit-learn
 json5:
   version: "0.15.0"
   dependents:
@@ -444,7 +476,11 @@ lark:
 lazy-loader:
   version: "0.5"
   dependents:
+    - librosa
     - scikit-image
+librosa:
+  version: "0.11.0"
+  isRoot: true
 llvmlite:
   version: "0.47.0"
   dependents:
@@ -486,16 +522,27 @@ ml-dtypes:
   dependents:
     - onnx
 modelscope:
-  version: "1.37.1"
+  version: "1.26.0"
+  isRoot: true
   dependents:
     - diffsynth
 moderngl:
   version: "5.12.0"
   isRoot: true
+more-itertools:
+  version: "11.2.1"
+  dependents:
+    - inflect
+    - jaraco-functools
+    - openai-whisper
 mpmath:
   version: "1.3.0"
   dependents:
     - sympy
+msgpack:
+  version: "1.2.4"
+  dependents:
+    - librosa
 multidict:
   version: "6.7.1"
   dependents:
@@ -505,6 +552,10 @@ multiprocess:
   version: "0.70.19"
   dependents:
     - datasets
+narwhals:
+  version: "2.28.0"
+  dependents:
+    - scikit-learn
 nbclient:
   version: "0.11.0"
   dependents:
@@ -540,6 +591,8 @@ notebook-shim:
 numba:
   version: "0.65.1"
   dependents:
+    - librosa
+    - openai-whisper
     - pymatting
 numpy:
   version: "2.4.4"
@@ -551,12 +604,14 @@ numpy:
     - diffusers
     - gguf
     - imageio
+    - librosa
     - matplotlib
     - mediapipe
     - ml-dtypes
     - numba
     - onnx
     - onnxruntime
+    - openai-whisper
     - opencv-contrib-python
     - opencv-python-headless
     - pandas
@@ -567,18 +622,27 @@ numpy:
     - pyvista
     - rembg
     - scikit-image
+    - scikit-learn
     - scipy
+    - soundfile
+    - soxr
     - spandrel
     - tifffile
     - torchsde
     - torchvision
     - transformers
     - trimesh
+omegaconf:
+  version: "2.4.0"
+  isRoot: true
 onnx:
   version: "1.22.0"
   isRoot: true
 onnxruntime:
   version: "1.27.0"
+  isRoot: true
+openai-whisper:
+  version: "20240930"
   isRoot: true
 opencv-contrib-python:
   version: "4.13.0.92"
@@ -602,7 +666,6 @@ packaging:
     - kornia
     - lazy-loader
     - matplotlib
-    - modelscope
     - nbconvert
     - onnxruntime
     - peft
@@ -660,6 +723,7 @@ plyfile:
 pooch:
   version: "1.9.0"
   dependents:
+    - librosa
     - pyvista
     - rembg
 prometheus-client:
@@ -742,6 +806,9 @@ pymatting:
 pymeshfix:
   version: "0.18.1"
   isRoot: true
+pynini:
+  version: "2.1.7"
+  isRoot: true
 pyparsing:
   version: "3.3.2"
   dependents:
@@ -781,7 +848,9 @@ pyyaml:
     - accelerate
     - gguf
     - huggingface-hub
+    - hyperpyyaml
     - jupyter-events
+    - omegaconf
     - peft
     - timm
     - transformers
@@ -803,6 +872,7 @@ regex:
   dependents:
     - clip-anytorch
     - diffusers
+    - tiktoken
     - transformers
 rembg:
   version: "2.0.69"
@@ -817,6 +887,7 @@ requests:
     - jupyterlab-server
     - modelscope
     - pooch
+    - tiktoken
     - transformers
 restrictedpython:
   version: "8.3"
@@ -882,6 +953,15 @@ rpds-py:
   dependents:
     - jsonschema
     - referencing
+ruamel-yaml:
+  version: "0.18.17"
+  isRoot: true
+  dependents:
+    - hyperpyyaml
+ruamel-yaml-clib:
+  version: "0.2.15"
+  dependents:
+    - ruamel-yaml
 safetensors:
   version: "0.8.0"
   isRoot: true
@@ -898,14 +978,20 @@ scikit-image:
   dependents:
     - controlnet-aux
     - rembg
+scikit-learn:
+  version: "1.9.1"
+  dependents:
+    - librosa
 scipy:
   version: "1.18.0"
   isRoot: true
   dependents:
     - controlnet-aux
+    - librosa
     - pymatting
     - rembg
     - scikit-image
+    - scikit-learn
     - torchsde
 scooby:
   version: "0.11.2"
@@ -926,7 +1012,6 @@ sentry-sdk:
 setuptools:
   version: "70.2.0"
   dependents:
-    - modelscope
     - torch
 shellingham:
   version: "1.5.4"
@@ -941,10 +1026,19 @@ sounddevice:
   version: "0.5.5"
   dependents:
     - mediapipe
+soundfile:
+  version: "0.14.0"
+  isRoot: true
+  dependents:
+    - librosa
 soupsieve:
   version: "2.8.4"
   dependents:
     - beautifulsoup4
+soxr:
+  version: "1.1.0"
+  dependents:
+    - librosa
 spandrel:
   version: "0.4.2"
   isRoot: true
@@ -969,10 +1063,19 @@ texttable:
   version: "1.7.0"
   dependents:
     - igraph
+threadpoolctl:
+  version: "3.8.0"
+  dependents:
+    - scikit-learn
 tifffile:
   version: "2026.6.1"
   dependents:
     - scikit-image
+tiktoken:
+  version: "0.14.0"
+  isRoot: true
+  dependents:
+    - openai-whisper
 timm:
   version: "1.0.27"
   dependents:
@@ -994,10 +1097,12 @@ torch:
     - accelerate
     - clip-anytorch
     - compel
+    - conformer
     - controlnet-aux
     - diffsynth
     - diffusers
     - kornia
+    - openai-whisper
     - peft
     - spandrel
     - timm
@@ -1038,6 +1143,7 @@ tqdm:
     - gguf
     - huggingface-hub
     - modelscope
+    - openai-whisper
     - peft
     - rembg
     - transformers
@@ -1069,6 +1175,14 @@ transformers:
 trimesh:
   version: "4.12.2"
   isRoot: true
+triton:
+  version: "3.9.0"
+  dependents:
+    - openai-whisper
+typeguard:
+  version: "4.6.0"
+  dependents:
+    - inflect
 typer:
   version: "0.25.1"
   dependents:
@@ -1084,6 +1198,7 @@ typing-extensions:
     - fastapi
     - huggingface-hub
     - jupyter-client
+    - librosa
     - onnx
     - pydantic
     - pydantic-core
@@ -1091,9 +1206,11 @@ typing-extensions:
     - pyvista
     - referencing
     - rich-toolkit
+    - soundfile
     - spandrel
     - starlette
     - torch
+    - typeguard
     - typing-inspection
 typing-inspection:
   version: "0.4.2"
@@ -1159,6 +1276,10 @@ websockets:
   isRoot: true
   dependents:
     - uvicorn
+wetextprocessing:
+  version: "1.0.4"
+  url: "https://github.com/sunxfancy/pynini-2.1.6.post1/releases/download/2.1.6.post1/WeTextProcessing-1.0.4-py3-none-any.whl"
+  isRoot: true
 wrapt:
   version: "2.2.2"
   dependents:

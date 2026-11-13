@@ -169,7 +169,7 @@ jobs:
       - name: Install Linux build and runtime dependencies
         if: runner.os == 'Linux'
         run: |
-          sudo apt-get update
+          sudo apt-get -o APT::Update::Error-Mode=any -o Acquire::Retries=3 update
           sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf libglib2.0-dev pkg-config xvfb libgl1-mesa-dev libx11-dev gstreamer1.0-plugins-base gstreamer1.0-plugins-good gstreamer1.0-libav
 
       - name: Download native Intel macOS wheels
@@ -182,7 +182,13 @@ jobs:
         if: matrix.id == 'macos-x86_64'
         run: |
           node dependencies/native_wheels.cjs "$RUNNER_TEMP/native-wheels"
+          cp "$RUNNER_TEMP/native-wheels/macosx-x86_64.lock" dependencies/macosx-x86_64.lock
           echo "SSUI_NATIVE_WHEELHOUSE=$RUNNER_TEMP/native-wheels" >> "$GITHUB_ENV"
+
+      - name: Prepare native OpenFst GRM prerequisites
+        if: runner.os == 'macOS' || matrix.id == 'linux-arm64'
+        timeout-minutes: 15
+        run: node dependencies/native_prerequisites.cjs --github-env
 
       - name: Install requirements
         timeout-minutes: 30
@@ -360,7 +366,7 @@ jobs:
       - name: Prepare Linux display
         if: runner.os == 'Linux'
         run: |
-          sudo apt-get update
+          sudo apt-get -o APT::Update::Error-Mode=any -o Acquire::Retries=3 update
           sudo apt-get install -y xvfb libwebkit2gtk-4.1-0 libayatana-appindicator3-1 librsvg2-2 gstreamer1.0-plugins-good gstreamer1.0-plugins-bad gstreamer1.0-libav
       - name: Smoke test installed app (NSIS)
         if: runner.os == 'Windows'

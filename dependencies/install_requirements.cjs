@@ -1,5 +1,5 @@
 const { resolveConfig, root, executable } = require('./dev_config.cjs');
-const devEnv = resolveConfig();
+let devEnv = resolveConfig();
 const { execSync, execFileSync } = require('child_process');
 const path = require('path');
 const fs = require('fs');
@@ -17,6 +17,7 @@ function getRequirementsFile() {
 }
 
 try {
+    devEnv = require('./native_prerequisites.cjs').prepare({ env: devEnv });
     const requirementsFile = getRequirementsFile();
     const pythonRuntime = JSON.parse(execFileSync(executable('python', devEnv), [
         '-c', 'import json, platform, sys; print(json.dumps({"os": sys.platform, "arch": platform.machine()}))'

@@ -63,10 +63,10 @@ flux:
     sha256: "afc8e28272cd15db3919bacdb6918ce9c1ed22e96cb12c4d5ed0fba823529e38"
 
 cosyvoice:
-  repo: "iic/CosyVoice2-0.5B"
+  repo: "FunAudioLLM/CosyVoice2-0.5B"
   snapshot: true
-  revision: "main"
-  size_gb: 1.0
+  revision: "eec1ae6c79877dbd9379285cf8789c9e0879293d"
+  size_gb: 4.5
   sha256: ""
 
 llm:

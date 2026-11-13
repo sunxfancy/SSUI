@@ -7,6 +7,7 @@ aioshutil>=1.5
 blake3>=1.0.4
 clip-anytorch>=2.6.0
 compel>=2.0.3
+conformer>=0.3.2
 controlnet-aux>=0.0.7
 deprecated>=1.2.18
 diffsynth>=1.1.7
@@ -16,13 +17,19 @@ einops>=0.8.0
 fastapi[standard]>=0.115.6
 gguf>=0.14.0
 huggingface_hub[hf-transfer,hf_xet]>=0.31
+HyperPyYAML==1.2.2
 igraph>=0.11.8
+inflect>=7.3,<8
 kornia>=0.8.0
+librosa==0.11.0
 matplotlib>=3.10.1
 mediapipe>=0.10.21
+modelscope==1.26.0
 moderngl>=5.12.0
+omegaconf>=2.3,<3
 onnx>=1.17.0
 onnxruntime>=1.21.0
+openai-whisper==20240930
 peft==0.17.1
 picklescan>=0.0.24
 pillow>=11.0.0
@@ -30,6 +37,7 @@ plyfile>=1.1
 pydantic>=2.10.4
 pydantic-settings>=2.7.0
 pymeshfix>=0.17.0
+pynini>=2.1.6,<2.2
 pyvista>=0.44.2
 pyyaml>=6.0.2
 rembg>=2.0.65
@@ -38,9 +46,12 @@ rocm @ https://repo.radeon.com/rocm/windows/rocm-rel-7.2.1/rocm-7.2.1.tar.gz
 rocm_sdk_core @ https://repo.radeon.com/rocm/windows/rocm-rel-7.2.1/rocm_sdk_core-7.2.1-py3-none-win_amd64.whl
 rocm_sdk_devel @ https://repo.radeon.com/rocm/windows/rocm-rel-7.2.1/rocm_sdk_devel-7.2.1-py3-none-win_amd64.whl
 rocm_sdk_libraries_custom @ https://repo.radeon.com/rocm/windows/rocm-rel-7.2.1/rocm_sdk_libraries_custom-7.2.1-py3-none-win_amd64.whl
+ruamel.yaml>=0.17.28,<0.19
 safetensors>=0.4.5
 scipy>=1.15.2
+soundfile>=0.12.1
 spandrel>=0.4.1
+tiktoken>=0.9.0
 tokenizers>=0.20.0
 torch @ https://repo.radeon.com/rocm/windows/rocm-rel-7.2.1/torch-2.9.1%2Brocm7.2.1-cp312-cp312-win_amd64.whl
 torchaudio @ https://repo.radeon.com/rocm/windows/rocm-rel-7.2.1/torchaudio-2.9.1%2Brocm7.2.1-cp312-cp312-win_amd64.whl
@@ -50,4 +61,5 @@ transformers>=4.51.3,<5
 trimesh>=4.6.5
 virtualenv>=20.28.0
 websockets>=14.1
+WeTextProcessing @ https://github.com/sunxfancy/pynini-2.1.6.post1/releases/download/2.1.6.post1/WeTextProcessing-1.0.4-py3-none-any.whl
 xatlas>=0.0.9

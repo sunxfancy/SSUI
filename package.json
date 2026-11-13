@@ -32,6 +32,7 @@
     "test:mcp:server": "node dependencies/venv.cjs python -m uvicorn tests.mcp_ui_app:app --host 127.0.0.1 --port 17424",
     "test:mcp:ui": "playwright test --config playwright.mcp.config.ts",
     "probe:cumesh": "node dependencies/venv.cjs python -u scripts/probe_cumesh.py",
+    "probe:cosyvoice": "node dependencies/venv.cjs python -u scripts/probe_cosyvoice.py",
     "probe:large-sparse": "node dependencies/venv.cjs python -u scripts/probe_large_sparse.py",
     "prepare:cumesh-rocm": "node dependencies/venv.cjs python dependencies/prepare_cumesh_rocm.py",
     "build:cumesh-rocm": "powershell -NoProfile -ExecutionPolicy Bypass -File dependencies/build_nvdiffrast_rocm.ps1 -Source .build/cumesh-rocm/source -DevelInclude .build/cumesh-rocm/headers",
